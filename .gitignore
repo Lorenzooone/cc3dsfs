@@ -1,0 +1,10 @@
+# Byte-compiled / optimized / DLL files
+*.o
+cc3dsfs
+cc3dsfs.exe
+*.conf
+*.a
+ftd3xx/
+presets/
+build/
+.config/
