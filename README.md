@@ -9,7 +9,7 @@ The main goal is to offer the ability to use the Capture Card with a TV, via ful
 - Option to split the screens in separate windows, to address them separately.
 - Make your game run in fullscreen mode. If you own multiple displays, you can even use one per-window.
 - Many builtin crop options for the screens.
-- Many other settings, explained in the [####Controls] section.
+- Many other settings, explained in the [Controls](####Controls) section.
 
 _Note: On 3DS, DS, GBA, GBC and GB games boot in scaled resolution mode by default. Holding START or SELECT while launching these games will boot in native resolution mode._
 _Note: Make sure the 3DS audio is not set to Surround._
