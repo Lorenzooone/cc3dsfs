@@ -24,19 +24,23 @@
 
 #define FIX_PARTIAL_FIRST_FRAME_NUM 3
 
-struct  __attribute__ ((packed)) VideoInputData {
+#pragma pack(push, 1)
+
+struct PACKED VideoInputData {
 	uint8_t screen_data[IN_VIDEO_SIZE][3];
 };
 
-struct  __attribute__ ((packed)) CaptureReceived {
+struct PACKED CaptureReceived {
 	VideoInputData video_data;
 	uint16_t audio_data[MAX_SAMPLES_IN];
 };
 
+#pragma pack(pop)
+
 struct CaptureData {
 	FT_HANDLE handle;
 	CaptureReceived capture_buf[NUM_CONCURRENT_DATA_BUFFERS];
-	uint32_t read[NUM_CONCURRENT_DATA_BUFFERS];
+	ULONG read[NUM_CONCURRENT_DATA_BUFFERS];
 	double time_in_buf[NUM_CONCURRENT_DATA_BUFFERS];
 	volatile int curr_in = 0;
 	volatile int cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;

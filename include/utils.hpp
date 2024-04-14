@@ -5,6 +5,12 @@
 #include <condition_variable>
 #include <chrono>
 
+#if _MSC_VER && !__INTEL_COMPILER
+#define PACKED
+#else
+#define PACKED __attribute__((packed))
+#endif
+
 #define NAME "cc3dsfs"
 
 // This isn't precise, however we can use it...

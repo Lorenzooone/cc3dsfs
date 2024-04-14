@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 *.o
+openal32.dll
 cc3dsfs
 cc3dsfs.exe
 *.conf

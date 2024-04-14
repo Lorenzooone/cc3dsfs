@@ -31,9 +31,13 @@ struct DisplayData {
 	bool split;
 };
 
-struct  __attribute__ ((packed)) VideoOutputData {
+#pragma pack(push, 1)
+
+struct PACKED VideoOutputData {
 	uint8_t screen_data[IN_VIDEO_SIZE][4];
 };
+
+#pragma pack(pop)
 
 struct SFEvent {
 	SFEvent(sf::Event::EventType type, sf::Keyboard::Key code, uint32_t unicode) : type(type), code(code), unicode(unicode) {}
