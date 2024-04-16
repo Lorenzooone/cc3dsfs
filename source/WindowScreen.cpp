@@ -524,36 +524,52 @@ void WindowScreen::window_factory(bool is_main_thread) {
 	this->is_window_factory_done = true;
 }
 
-void WindowScreen::window_render_call() {
-	this->m_win.setVerticalSyncEnabled(this->loaded_info.v_sync_enabled);
-	this->m_win.setMouseCursorVisible(this->loaded_info.show_mouse);
+void WindowScreen::pre_texture_conversion_processing() {
+	//Place preprocessing effects here
 	this->in_tex.update((uint8_t*)this->saved_buf, IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT, 0, 0);
+}
 
-	if((this->m_stype == WindowScreen::ScreenType::TOP) || (this->m_stype == WindowScreen::ScreenType::JOINT)) {
-		this->m_out_rect_top.out_tex.clear();
-		this->m_out_rect_top.out_tex.draw(this->m_in_rect_top);
-		this->m_out_rect_top.out_tex.display();
+void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top) {
+	if((is_top && this->m_stype == WindowScreen::ScreenType::BOTTOM) || ((!is_top) && this->m_stype == WindowScreen::ScreenType::TOP))
+		return;
+
+	rect_data.out_tex.clear();
+	if(actually_draw) {
+		rect_data.out_tex.draw(in_rect);
+		//Place postprocessing effects here
 	}
-	if((this->m_stype == WindowScreen::ScreenType::BOTTOM) || (this->m_stype == WindowScreen::ScreenType::JOINT)) {
-		this->m_out_rect_bot.out_tex.clear();
-		this->m_out_rect_bot.out_tex.draw(this->m_in_rect_bot);
-		this->m_out_rect_bot.out_tex.display();
-	}
+	rect_data.out_tex.display();
+}
+
+void WindowScreen::window_bg_processing() {
+	//Place BG processing here
+}
+
+void WindowScreen::display_data_to_window(bool actually_draw) {
+	this->post_texture_conversion_processing(this->m_out_rect_top, this->m_in_rect_top, actually_draw, true);
+	this->post_texture_conversion_processing(this->m_out_rect_bot, this->m_in_rect_bot, actually_draw, false);
 
 	this->m_win.clear();
-	if((this->m_stype == WindowScreen::ScreenType::TOP) || (this->m_stype == WindowScreen::ScreenType::JOINT))
+	this->window_bg_processing();
+	if(this->m_stype != WindowScreen::ScreenType::BOTTOM)
 		this->m_win.draw(this->m_out_rect_top.out_rect);
-	if((this->m_stype == WindowScreen::ScreenType::BOTTOM) || (this->m_stype == WindowScreen::ScreenType::JOINT))
+	if(this->m_stype != WindowScreen::ScreenType::TOP)
 		this->m_win.draw(this->m_out_rect_bot.out_rect);
 	this->notification->draw(this->m_win);
 	this->m_win.display();
+}
+
+void WindowScreen::window_render_call() {
+	this->m_win.setVerticalSyncEnabled(this->loaded_info.v_sync_enabled);
+	this->m_win.setMouseCursorVisible(this->loaded_info.show_mouse);
+	this->pre_texture_conversion_processing();
+
+	this->display_data_to_window(true);
 
 	if(this->loaded_info.bfi) {
 		if(this->frame_time > 0.0) {
 			sf::sleep(sf::seconds(frame_time / (this->loaded_info.bfi_divider * 1.1)));
-			this->m_win.clear();
-			this->notification->draw(this->m_win);
-			this->m_win.display();
+			this->display_data_to_window(false);
 		}
 	}
 }

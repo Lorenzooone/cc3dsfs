@@ -186,6 +186,10 @@ private:
 	void prepare_screen_rendering();
 	bool window_needs_work();
 	void window_factory(bool is_main_thread);
+	void pre_texture_conversion_processing();
+	void post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top);
+	void window_bg_processing();
+	void display_data_to_window(bool actually_draw);
 	void window_render_call();
 	int apply_offset_algo(int offset_contribute, OffsetAlgorithm chosen_algo);
 	void set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y);
