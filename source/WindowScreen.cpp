@@ -742,7 +742,7 @@ void WindowScreen::prepare_size_ratios(bool top_increase, bool bot_increase) {
 	}
 	bool prioritize_top = (!bot_increase) && (top_increase || (this->m_info.bottom_pos == UNDER_TOP) || (this->m_info.bottom_pos == RIGHT_TOP));
 	if(prioritize_top)
-		calc_scaling_resize_screens(top_screen_size, bot_screen_size, this->m_info.top_scaling, this->m_info.bot_scaling, this->m_info.top_rotation, this->loaded_info.bot_rotation, top_increase, try_mantain_ratio, this->m_stype == WindowScreen::ScreenType::BOTTOM);
+		calc_scaling_resize_screens(top_screen_size, bot_screen_size, this->m_info.top_scaling, this->m_info.bot_scaling, this->m_info.top_rotation, this->m_info.bot_rotation, top_increase, try_mantain_ratio, this->m_stype == WindowScreen::ScreenType::BOTTOM);
 	else
 		calc_scaling_resize_screens(bot_screen_size, top_screen_size, this->m_info.bot_scaling, this->m_info.top_scaling, this->m_info.bot_rotation, this->m_info.top_rotation, bot_increase, try_mantain_ratio, this->m_stype == WindowScreen::ScreenType::TOP);
 }
