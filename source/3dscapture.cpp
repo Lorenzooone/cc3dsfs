@@ -61,6 +61,8 @@ static void list_devices(DevicesList &devices_list) {
 }
 
 static int choose_device(DevicesList &devices_list) {
+	if(devices_list.numValidDevices == 1)
+		return 0;
 	return 0;
 }
 
