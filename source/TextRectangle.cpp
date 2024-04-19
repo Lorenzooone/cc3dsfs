@@ -19,6 +19,14 @@ TextRectangle::TextRectangle(bool font_load_success, sf::Font &text_font) {
 	this->reset_data(this->future_data);
 }
 
+TextRectangle::~TextRectangle() {
+	delete this->base_bg_color;
+	delete this->selected_bg_color;
+	delete this->success_bg_color;
+	delete this->warning_bg_color;
+	delete this->error_bg_color;
+}
+
 void TextRectangle::setSize(int width, int height) {
 	this->width = width;
 	this->height = height;

@@ -59,6 +59,7 @@ std::string save_screen_info(std::string base, const ScreenInfo &info);
 class TextRectangle {
 public:
 	TextRectangle(bool font_load_success, sf::Font &text_font);
+	~TextRectangle();
 	enum TextRectangleKind {TEXT_NORMAL, TEXT_SELECTED, TEXT_SUCCESS, TEXT_WARNING, TEXT_ERROR};
 	void setSize(int width, int height);
 	void setRectangleKind(TextRectangleKind kind);
