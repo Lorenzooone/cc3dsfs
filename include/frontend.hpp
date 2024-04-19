@@ -59,8 +59,9 @@ std::string save_screen_info(std::string base, const ScreenInfo &info);
 class TextRectangle {
 public:
 	TextRectangle(bool font_load_success, sf::Font &text_font);
+	enum TextRectangleKind {TEXT_NORMAL, TEXT_SELECTED, TEXT_SUCCESS, TEXT_WARNING, TEXT_ERROR};
 	void setSize(int width, int height);
-	void setSelected(bool selected);
+	void setRectangleKind(TextRectangleKind kind);
 	void setDuration(float on_seconds);
 	void startTimer(bool do_start);
 	void setProportionalBox(bool proportional_box);
@@ -79,13 +80,16 @@ private:
 	int time_phase;
 	sf::Color *base_bg_color;
 	sf::Color *selected_bg_color;
+	sf::Color *success_bg_color;
+	sf::Color *warning_bg_color;
+	sf::Color *error_bg_color;
 	const float base_time_slide_factor = 0.5;
 	const float base_pixel_slide_factor = 48.0;
 
 	struct TextData {
 		bool is_timed;
 		bool start_timer;
-		bool selected;
+		TextRectangleKind kind;
 		bool show_text;
 		bool render_text;
 		bool proportional_box;

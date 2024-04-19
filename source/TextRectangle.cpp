@@ -12,7 +12,10 @@ TextRectangle::TextRectangle(bool font_load_success, sf::Font &text_font) {
 		this->actual_text.setFont(text_font);
 	this->time_phase = 0;
 	this->base_bg_color = new sf::Color(40, 40, 80, 192);
-	this->selected_bg_color = new sf::Color(120, 120, 180, 192);
+	this->selected_bg_color = new sf::Color(90, 150, 210, 192);
+	this->success_bg_color = new sf::Color(90, 210, 90, 192);
+	this->warning_bg_color = new sf::Color(200, 200, 90, 192);
+	this->error_bg_color = new sf::Color(210, 90, 90, 192);
 	this->reset_data(this->future_data);
 }
 
@@ -24,11 +27,11 @@ void TextRectangle::setSize(int width, int height) {
 	this->text_rect.out_rect.setTextureRect(sf::IntRect(0, 0, this->width, this->height));
 }
 
-void TextRectangle::setSelected(bool selected) {
-	if(this->future_data.selected != selected) {
+void TextRectangle::setRectangleKind(TextRectangleKind kind) {
+	if(this->future_data.kind != kind) {
 		this->future_data.render_text = true;
 	}
-	this->future_data.selected = selected;
+	this->future_data.kind = kind;
 }
 
 void TextRectangle::setDuration(float on_seconds) {
@@ -107,7 +110,7 @@ void TextRectangle::draw(sf::RenderTarget &window) {
 void TextRectangle::reset_data(TextData &data) {
 	data.is_timed = false;
 	data.start_timer = false;
-	data.selected = false;
+	data.kind = TEXT_NORMAL;
 	data.show_text = false;
 	data.render_text = false;
 	data.proportional_box = true;
@@ -145,10 +148,24 @@ void TextRectangle::updateText() {
 		globalBounds = this->actual_text.getGlobalBounds();
 		this->actual_text.setPosition((new_width - (globalBounds.width + (globalBounds.left * 4))) / 2, (new_height - (globalBounds.height + (globalBounds.top * 4))) / 2);
 	}
-	if(!this->loaded_data.selected)
-		this->text_rect.out_tex.clear(*this->base_bg_color);
-	else
-		this->text_rect.out_tex.clear(*this->selected_bg_color);
+	sf::Color *used_color = this->base_bg_color;
+	switch(this->loaded_data.kind) {
+		case TEXT_SELECTED:
+			used_color = this->selected_bg_color;
+			break;
+		case TEXT_SUCCESS:
+			used_color = this->success_bg_color;
+			break;
+		case TEXT_WARNING:
+			used_color = this->warning_bg_color;
+			break;
+		case TEXT_ERROR:
+			used_color = this->error_bg_color;
+			break;
+		default:
+			break;
+	}
+	this->text_rect.out_tex.clear(*used_color);
 	this->text_rect.out_tex.draw(this->actual_text);
 	this->text_rect.out_tex.display();
 	this->is_done_showing_text = false;
