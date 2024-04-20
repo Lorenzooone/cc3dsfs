@@ -359,6 +359,13 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 	}
 }
 
+void WindowScreen::print_notification(std::string text, TextKind kind) {
+	this->notification->setText(text);
+	this->notification->setRectangleKind(kind);
+	this->notification->startTimer(true);
+	this->notification->setShowText(true);
+}
+
 int WindowScreen::load_data() {
 	int ret_val = this->m_prepare_load;
 	this->m_prepare_load = 0;
@@ -427,12 +434,6 @@ int WindowScreen::get_screen_corner_modifier_y(int rotation, int height) {
 		return height;
 	}
 	return 0;
-}
-
-void WindowScreen::print_notification(std::string text) {
-	this->notification->setText(text);
-	this->notification->startTimer(true);
-	this->notification->setShowText(true);
 }
 
 void WindowScreen::print_notification_on_off(std::string base_text, bool value) {

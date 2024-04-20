@@ -35,7 +35,7 @@ void TextRectangle::setSize(int width, int height) {
 	this->text_rect.out_rect.setTextureRect(sf::IntRect(0, 0, this->width, this->height));
 }
 
-void TextRectangle::setRectangleKind(TextRectangleKind kind) {
+void TextRectangle::setRectangleKind(TextKind kind) {
 	if(this->future_data.kind != kind) {
 		this->future_data.render_text = true;
 	}
@@ -118,7 +118,7 @@ void TextRectangle::draw(sf::RenderTarget &window) {
 void TextRectangle::reset_data(TextData &data) {
 	data.is_timed = false;
 	data.start_timer = false;
-	data.kind = TEXT_NORMAL;
+	data.kind = TEXT_KIND_NORMAL;
 	data.show_text = false;
 	data.render_text = false;
 	data.proportional_box = true;
@@ -158,16 +158,16 @@ void TextRectangle::updateText() {
 	}
 	sf::Color *used_color = this->base_bg_color;
 	switch(this->loaded_data.kind) {
-		case TEXT_SELECTED:
+		case TEXT_KIND_SELECTED:
 			used_color = this->selected_bg_color;
 			break;
-		case TEXT_SUCCESS:
+		case TEXT_KIND_SUCCESS:
 			used_color = this->success_bg_color;
 			break;
-		case TEXT_WARNING:
+		case TEXT_KIND_WARNING:
 			used_color = this->warning_bg_color;
 			break;
-		case TEXT_ERROR:
+		case TEXT_KIND_ERROR:
 			used_color = this->error_bg_color;
 			break;
 		default:

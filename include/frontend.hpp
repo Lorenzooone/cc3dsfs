@@ -56,13 +56,14 @@ void reset_screen_info(ScreenInfo &info);
 void load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
 std::string save_screen_info(std::string base, const ScreenInfo &info);
 
+enum TextKind {TEXT_KIND_NORMAL, TEXT_KIND_SELECTED, TEXT_KIND_SUCCESS, TEXT_KIND_WARNING, TEXT_KIND_ERROR};
+
 class TextRectangle {
 public:
 	TextRectangle(bool font_load_success, sf::Font &text_font);
 	~TextRectangle();
-	enum TextRectangleKind {TEXT_NORMAL, TEXT_SELECTED, TEXT_SUCCESS, TEXT_WARNING, TEXT_ERROR};
 	void setSize(int width, int height);
-	void setRectangleKind(TextRectangleKind kind);
+	void setRectangleKind(TextKind kind);
 	void setDuration(float on_seconds);
 	void startTimer(bool do_start);
 	void setProportionalBox(bool proportional_box);
@@ -90,7 +91,7 @@ private:
 	struct TextData {
 		bool is_timed;
 		bool start_timer;
-		TextRectangleKind kind;
+		TextKind kind;
 		bool show_text;
 		bool render_text;
 		bool proportional_box;
@@ -124,6 +125,7 @@ public:
 	void end();
 	void draw(double frame_time, VideoOutputData* out_buf);
 
+	void print_notification(std::string text, TextKind kind = TEXT_KIND_NORMAL);
 	int load_data();
 	int save_data();
 	bool open_capture();
@@ -185,7 +187,6 @@ private:
 	void resize_in_rect(sf::RectangleShape &in_rect, int start_x, int start_y, int width, int height);
 	int get_screen_corner_modifier_x(int rotation, int width);
 	int get_screen_corner_modifier_y(int rotation, int height);
-	void print_notification(std::string text);
 	void print_notification_on_off(std::string base_text, bool value);
 	void poll_window();
 	void prepare_screen_rendering();

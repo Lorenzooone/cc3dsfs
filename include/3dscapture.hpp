@@ -39,6 +39,9 @@ struct PACKED CaptureReceived {
 
 struct CaptureData {
 	FT_HANDLE handle;
+	char chosen_serial_number[17];
+	std::string error_text;
+	bool new_error_text;
 	CaptureReceived capture_buf[NUM_CONCURRENT_DATA_BUFFERS];
 	ULONG read[NUM_CONCURRENT_DATA_BUFFERS];
 	double time_in_buf[NUM_CONCURRENT_DATA_BUFFERS];

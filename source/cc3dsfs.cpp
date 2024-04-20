@@ -9,6 +9,7 @@
 #else
 #include <experimental/filesystem>
 #endif
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <cstring>
@@ -30,7 +31,35 @@
 #define AUDIO_LATENCY_LIMIT 4
 #define NUM_CONCURRENT_AUDIO_BUFFERS ((AUDIO_LATENCY_LIMIT * 2) + 1)
 
-bool load(const std::string path, const std::string name, ScreenInfo &top_info, ScreenInfo &bottom_info, ScreenInfo &joint_info, DisplayData &display_data, AudioData *audio_data) {
+struct OutTextData {
+	std::string full_text;
+	std::string small_text;
+	bool consumed;
+	TextKind kind;
+};
+
+void ConsoleOutText(std::string full_text) {
+	std::cout << "[" << NAME << "] " << full_text << std::endl;
+}
+
+void UpdateOutText(OutTextData &out_text_data, std::string full_text, std::string small_text, TextKind kind) {
+	if(!out_text_data.consumed)
+		ConsoleOutText(out_text_data.full_text);
+	out_text_data.full_text = full_text;
+	out_text_data.small_text = small_text;
+	out_text_data.kind = kind;
+	out_text_data.consumed = false;
+}
+
+void ConnectedOutTextGenerator(OutTextData &out_text_data, CaptureData* capture_data) {
+	UpdateOutText(out_text_data, "Connected to " + std::string(capture_data->chosen_serial_number), "Connected", TEXT_KIND_SUCCESS);
+}
+
+std::string LayoutNameGenerator(int index) {
+	return "layout" + std::to_string(index) + ".cfg";
+}
+
+bool load(const std::string path, const std::string name, ScreenInfo &top_info, ScreenInfo &bottom_info, ScreenInfo &joint_info, DisplayData &display_data, AudioData *audio_data, OutTextData &out_text_data) {
 	std::ifstream file(path + name);
 	std::string line;
 
@@ -39,7 +68,7 @@ bool load(const std::string path, const std::string name, ScreenInfo &top_info, 
 	reset_screen_info(joint_info);
 
 	if (!file.good()) {
-		printf("[%s] File \"%s\" load failed.\nDefaults re-loaded.\n", NAME, (path + name).c_str());
+		UpdateOutText(out_text_data, "File " + path + name + " load failed.\nDefaults re-loaded.", "Load failed\nDefaults re-loaded", TEXT_KIND_ERROR);
 		return false;
 	}
 
@@ -85,7 +114,7 @@ bool load(const std::string path, const std::string name, ScreenInfo &top_info, 
 	return true;
 }
 
-void save(const std::string path, const std::string name, const ScreenInfo &top_info, const ScreenInfo &bottom_info, const ScreenInfo &joint_info, DisplayData &display_data, AudioData *audio_data) {
+bool save(const std::string path, const std::string name, const ScreenInfo &top_info, const ScreenInfo &bottom_info, const ScreenInfo &joint_info, DisplayData &display_data, AudioData *audio_data, OutTextData &out_text_data) {
 	#if (!defined(_MSC_VER)) || (_MSC_VER > 1916)
 	std::filesystem::create_directories(path);
 	#else
@@ -93,8 +122,8 @@ void save(const std::string path, const std::string name, const ScreenInfo &top_
 	#endif
 	std::ofstream file(path + name);
 	if (!file.good()) {
-		printf("[%s] File \"%s\" save failed.\n", NAME, (path + name).c_str());
-		return;
+		UpdateOutText(out_text_data, "File " + path + name + " save failed.", "Save failed", TEXT_KIND_ERROR);
+		return false;
 	}
 
 	file << save_screen_info("bot_", bottom_info);
@@ -105,6 +134,7 @@ void save(const std::string path, const std::string name, const ScreenInfo &top_
 	file << "volume=" << audio_data->volume << std::endl;
 
 	file.close();
+	return true;
 }
 
 void soundCall(AudioData *audio_data, CaptureData* capture_data) {
@@ -180,12 +210,17 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 	int num_allowed_blanks = MAX_ALLOWED_BLANKS;
 	double last_frame_time = 0;
 	std::mutex events_access;
+	OutTextData out_text_data;
+	out_text_data.consumed = true;
 
 	#if not(defined(_WIN32) || defined(_WIN64))
 	std::string cfg_dir = std::string(std::getenv("HOME")) + "/.config/" + std::string(NAME);
 	#else
 	std::string cfg_dir = ".config/" + std::string(NAME);
 	#endif
+	std::string base_path = cfg_dir + "/";
+	std::string base_name = std::string(NAME) + ".cfg";
+	std::string layout_path = cfg_dir + "/presets/";
 
 	out_buf = new VideoOutputData;
 	null_buf = new VideoOutputData;
@@ -197,8 +232,11 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 	WindowScreen bot_screen(WindowScreen::ScreenType::BOTTOM, &display_data, audio_data, &events_access);
 	WindowScreen joint_screen(WindowScreen::ScreenType::JOINT, &display_data, audio_data, &events_access);
 
+	if(capture_data->connected)
+		ConnectedOutTextGenerator(out_text_data, capture_data);
+
 	if(!skip_io) {
-		load(cfg_dir + "/", std::string(NAME) + ".cfg", top_screen.m_info, bot_screen.m_info, joint_screen.m_info, display_data, audio_data);
+		load(base_path, base_name, top_screen.m_info, bot_screen.m_info, joint_screen.m_info, display_data, audio_data, out_text_data);
 	}
 
 	top_screen.build();
@@ -275,6 +313,8 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 
 		if(top_screen.open_capture() || bot_screen.open_capture() || joint_screen.open_capture()) {
 			capture_data->connected = connect(true, capture_data);
+			if(capture_data->connected)
+				ConnectedOutTextGenerator(out_text_data, capture_data);
 		}
 
 		if(top_screen.close_capture() || bot_screen.close_capture() || joint_screen.close_capture()) {
@@ -283,15 +323,34 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 		
 		if((load_index = top_screen.load_data()) || (load_index = bot_screen.load_data()) || (load_index = joint_screen.load_data())) {
 			if (!skip_io) {
-				load(cfg_dir + "/presets/", "layout" + std::to_string(load_index) + ".cfg", top_screen.m_info, bot_screen.m_info, joint_screen.m_info, display_data, audio_data);
+				std::string layout_name = LayoutNameGenerator(load_index);
+				bool op_success = load(layout_path, layout_name, top_screen.m_info, bot_screen.m_info, joint_screen.m_info, display_data, audio_data, out_text_data);
+				if(op_success)
+					UpdateOutText(out_text_data, "Layout loaded from: " + layout_path + layout_name, "Layout loaded", TEXT_KIND_SUCCESS);
 				reload = true;
 			}
 		}
 		
 		if((save_index = top_screen.save_data()) || (save_index = bot_screen.save_data()) || (save_index = joint_screen.save_data())) {
 			if (!skip_io) {
-				save(cfg_dir + "/presets/", "layout" + std::to_string(save_index) + ".cfg", top_screen.m_info, bot_screen.m_info, joint_screen.m_info, display_data, audio_data);
+				std::string layout_name = LayoutNameGenerator(save_index);
+				bool op_success = save(layout_path, layout_name, top_screen.m_info, bot_screen.m_info, joint_screen.m_info, display_data, audio_data, out_text_data);
+				if(op_success)
+					UpdateOutText(out_text_data, "Layout saved to: " + layout_path + layout_name, "Layout saved", TEXT_KIND_SUCCESS);
 			}
+		}
+
+		if(capture_data->new_error_text) {
+			UpdateOutText(out_text_data, capture_data->error_text, capture_data->error_text, TEXT_KIND_ERROR);
+			capture_data->new_error_text = false;
+		}
+
+		if(!out_text_data.consumed) {
+			ConsoleOutText(out_text_data.full_text);
+			top_screen.print_notification(out_text_data.small_text, out_text_data.kind);
+			bot_screen.print_notification(out_text_data.small_text, out_text_data.kind);
+			joint_screen.print_notification(out_text_data.small_text, out_text_data.kind);
+			out_text_data.consumed = true;
 		}
 	}
 
@@ -304,7 +363,12 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 	joint_thread.join();
 
 	if (!skip_io) {
-		save(cfg_dir + "/", std::string(NAME) + ".cfg", top_screen.m_info, bot_screen.m_info, joint_screen.m_info, display_data, audio_data);
+		save(base_path, base_name, top_screen.m_info, bot_screen.m_info, joint_screen.m_info, display_data, audio_data, out_text_data);
+	}
+
+	if(!out_text_data.consumed) {
+		ConsoleOutText(out_text_data.full_text);
+		out_text_data.consumed = true;
 	}
 
 	delete out_buf;

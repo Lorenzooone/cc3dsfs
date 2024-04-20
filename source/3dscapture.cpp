@@ -67,12 +67,17 @@ static int choose_device(DevicesList &devices_list) {
 }
 
 bool connect(bool print_failed, CaptureData* capture_data) {
+	capture_data->new_error_text = false;
 	if (capture_data->connected) {
 		capture_data->close_success = false;
 		return false;
 	}
 	
 	if(!capture_data->close_success) {
+		if(print_failed) {
+			capture_data->error_text = "Previous device still closing...";
+			capture_data->new_error_text = true;
+		}
 		return false;
 	}
 
@@ -80,8 +85,10 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 	list_devices(devices_list);
 
 	if(devices_list.numValidDevices <= 0) {
-		if(print_failed)
-			printf("[%s] No device was found.\n", NAME);
+		if(print_failed) {
+			capture_data->error_text = "No device was found";
+			capture_data->new_error_text = true;
+		}
 		if(devices_list.numAllocedDevices > 0)
 			delete []devices_list.serialNumbers;
 		return false;
@@ -89,52 +96,67 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 
 	int chosen_device = choose_device(devices_list);
 	if(chosen_device == -1) {
-		if(print_failed)
-			printf("[%s] No device was selected.\n", NAME);
+		if(print_failed) {
+			capture_data->error_text = "No device was selected";
+			capture_data->new_error_text = true;
+		}
 		delete []devices_list.serialNumbers;
 		return false;
 	}
 
-	if (FT_Create(&devices_list.serialNumbers[17 * chosen_device], FT_OPEN_BY_SERIAL_NUMBER, &capture_data->handle)) {
-		if(print_failed)
-			printf("[%s] Create failed.\n", NAME);
-		delete []devices_list.serialNumbers;
-		return false;
-	}
-
+	for(int i = 0; i < 17; i++)
+		capture_data->chosen_serial_number[i] = devices_list.serialNumbers[(17 * chosen_device) + i];
 	delete []devices_list.serialNumbers;
+
+	if (FT_Create(capture_data->chosen_serial_number, FT_OPEN_BY_SERIAL_NUMBER, &capture_data->handle)) {
+		if(print_failed) {
+			capture_data->error_text = "Create failed";
+			capture_data->new_error_text = true;
+		}
+		return false;
+	}
 
 	UCHAR buf[4] = {0x40, 0x80, 0x00, 0x00};
 	ULONG written = 0;
 
 	if (FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
-		if(print_failed)
-			printf("[%s] Write failed.\n", NAME);
+		if(print_failed) {
+			capture_data->error_text = "Write failed";
+			capture_data->new_error_text = true;
+		}
 		return false;
 	}
 
 	buf[1] = 0x00;
 
 	if (FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
-		if(print_failed)
-			printf("[%s] Write failed.\n", NAME);
+		if(print_failed) {
+			capture_data->error_text = "Write failed";
+			capture_data->new_error_text = true;
+		}
 		return false;
 	}
 
 	if (FT_SetStreamPipe(capture_data->handle, false, false, BULK_IN, sizeof(CaptureReceived))) {
-		if(print_failed)
-			printf("[%s] Stream failed.\n", NAME);
+		if(print_failed) {
+			capture_data->error_text = "Stream failed";
+			capture_data->new_error_text = true;
+		}
 		return false;
 	}
 
 	if(FT_AbortPipe(capture_data->handle, BULK_IN)) {
-		if(print_failed)
-			printf("[%s] Abort failed.\n", NAME);
+		if(print_failed) {
+			capture_data->error_text = "Abort failed";
+			capture_data->new_error_text = true;
+		}
 	}
 
 	if (FT_SetStreamPipe(capture_data->handle, false, false, BULK_IN, sizeof(CaptureReceived))) {
-		if(print_failed)
-			printf("[%s] Stream failed.\n", NAME);
+		if(print_failed) {
+			capture_data->error_text = "Stream failed";
+			capture_data->new_error_text = true;
+		}
 		return false;
 	}
 
@@ -151,7 +173,8 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 	for (inner_curr_in = 0; inner_curr_in < NUM_CONCURRENT_DATA_BUFFERS; ++inner_curr_in) {
 		ftStatus = FT_InitializeOverlapped(capture_data->handle, &overlap[inner_curr_in]);
 		if (ftStatus) {
-			printf("[%s] Initialize failed.\n", NAME);
+			capture_data->error_text = "Initialize failed";
+			capture_data->new_error_text = true;
 			return;
 		}
 	}
@@ -159,7 +182,8 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 	for (inner_curr_in = 0; inner_curr_in < NUM_CONCURRENT_DATA_BUFFERS - 1; ++inner_curr_in) {
 		ftStatus = FT_ASYNC_CALL(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&capture_data->capture_buf[inner_curr_in], sizeof(CaptureReceived), &capture_data->read[inner_curr_in], &overlap[inner_curr_in]);
 		if (ftStatus != FT_IO_PENDING) {
-			printf("[%s] Read failed.\n", NAME);
+			capture_data->error_text = "Read failed";
+			capture_data->new_error_text = true;
 			return;
 		}
 	}
@@ -172,7 +196,8 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 
 		ftStatus = FT_ASYNC_CALL(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&capture_data->capture_buf[inner_curr_in], sizeof(CaptureReceived), &capture_data->read[inner_curr_in], &overlap[inner_curr_in]);
 		if (ftStatus != FT_IO_PENDING) {
-			printf("[%s] Read failed.\n", NAME);
+			capture_data->error_text = "Read failed";
+			capture_data->new_error_text = true;
 			return;
 		}
 
@@ -180,7 +205,8 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 
 		ftStatus = FT_GetOverlappedResult(capture_data->handle, &overlap[inner_curr_in], &capture_data->read[inner_curr_in], true);
 		if(FT_FAILED(ftStatus)) {
-			printf("[%s] USB error.\n", NAME);
+			capture_data->error_text = "USB error";
+			capture_data->new_error_text = true;
 			return;
 		}
 		const auto curr_time = std::chrono::high_resolution_clock::now();
@@ -207,7 +233,8 @@ static bool safe_capture_call(CaptureData* capture_data) {
 
 		FT_STATUS ftStatus = FT_ReadPipeEx(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&capture_data->capture_buf[inner_curr_in], sizeof(CaptureReceived), &capture_data->read[inner_curr_in], 1000);
 		if(FT_FAILED(ftStatus)) {
-			printf("[%s] Read failed.\n", NAME);
+			capture_data->error_text = "Read failed";
+			capture_data->new_error_text = true;
 			return true;
 		}
 
@@ -272,17 +299,20 @@ void captureCall(CaptureData* capture_data) {
 			for (inner_curr_in = 0; inner_curr_in < NUM_CONCURRENT_DATA_BUFFERS; ++inner_curr_in) {
 				ftStatus = FT_GetOverlappedResult(capture_data->handle, &overlap[inner_curr_in], &capture_data->read[inner_curr_in], true);
 				if (FT_ReleaseOverlapped(capture_data->handle, &overlap[inner_curr_in])) {
-					printf("[%s] Release failed.\n", NAME);
+					capture_data->error_text = "Release failed";
+					capture_data->new_error_text = true;
 				}
 			}
 		}
 
 		if(FT_AbortPipe(capture_data->handle, BULK_IN)) {
-			printf("[%s] Abort failed.\n", NAME);
+			capture_data->error_text = "Abort failed";
+			capture_data->new_error_text = true;
 		}
 
 		if (FT_Close(capture_data->handle)) {
-			printf("[%s] Close failed.\n", NAME);
+			capture_data->error_text = "Close failed";
+			capture_data->new_error_text = true;
 		}
 
 		capture_data->close_success = false;
