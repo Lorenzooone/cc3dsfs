@@ -326,7 +326,7 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 				std::string layout_name = LayoutNameGenerator(load_index);
 				bool op_success = load(layout_path, layout_name, top_screen.m_info, bot_screen.m_info, joint_screen.m_info, display_data, audio_data, out_text_data);
 				if(op_success)
-					UpdateOutText(out_text_data, "Layout loaded from: " + layout_path + layout_name, "Layout loaded", TEXT_KIND_SUCCESS);
+					UpdateOutText(out_text_data, "Layout loaded from: " + layout_path + layout_name, "Layout " + std::to_string(load_index) + " loaded", TEXT_KIND_SUCCESS);
 				reload = true;
 			}
 		}
@@ -336,7 +336,7 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 				std::string layout_name = LayoutNameGenerator(save_index);
 				bool op_success = save(layout_path, layout_name, top_screen.m_info, bot_screen.m_info, joint_screen.m_info, display_data, audio_data, out_text_data);
 				if(op_success)
-					UpdateOutText(out_text_data, "Layout saved to: " + layout_path + layout_name, "Layout saved", TEXT_KIND_SUCCESS);
+					UpdateOutText(out_text_data, "Layout saved to: " + layout_path + layout_name, "Layout " + std::to_string(save_index) + " saved", TEXT_KIND_SUCCESS);
 			}
 		}
 
