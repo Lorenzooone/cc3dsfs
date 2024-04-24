@@ -66,6 +66,11 @@ static int choose_device(DevicesList &devices_list) {
 	return 0;
 }
 
+static void preemptive_close_connection(CaptureData* capture_data) {
+	FT_AbortPipe(capture_data->handle, BULK_IN);
+	FT_Close(capture_data->handle);
+}
+
 bool connect(bool print_failed, CaptureData* capture_data) {
 	capture_data->new_error_text = false;
 	if (capture_data->connected) {
@@ -124,6 +129,7 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 			capture_data->error_text = "Write failed";
 			capture_data->new_error_text = true;
 		}
+		preemptive_close_connection(capture_data);
 		return false;
 	}
 
@@ -134,6 +140,7 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 			capture_data->error_text = "Write failed";
 			capture_data->new_error_text = true;
 		}
+		preemptive_close_connection(capture_data);
 		return false;
 	}
 
@@ -142,6 +149,7 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 			capture_data->error_text = "Stream failed";
 			capture_data->new_error_text = true;
 		}
+		preemptive_close_connection(capture_data);
 		return false;
 	}
 
@@ -150,6 +158,8 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 			capture_data->error_text = "Abort failed";
 			capture_data->new_error_text = true;
 		}
+		preemptive_close_connection(capture_data);
+		return false;
 	}
 
 	if (FT_SetStreamPipe(capture_data->handle, false, false, BULK_IN, sizeof(CaptureReceived))) {
@@ -157,6 +167,7 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 			capture_data->error_text = "Stream failed";
 			capture_data->new_error_text = true;
 		}
+		preemptive_close_connection(capture_data);
 		return false;
 	}
 
@@ -173,7 +184,7 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 	for (inner_curr_in = 0; inner_curr_in < NUM_CONCURRENT_DATA_BUFFERS; ++inner_curr_in) {
 		ftStatus = FT_InitializeOverlapped(capture_data->handle, &overlap[inner_curr_in]);
 		if (ftStatus) {
-			capture_data->error_text = "Initialize failed";
+			capture_data->error_text = "Disconnected: Initialize failed";
 			capture_data->new_error_text = true;
 			return;
 		}
@@ -182,7 +193,7 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 	for (inner_curr_in = 0; inner_curr_in < NUM_CONCURRENT_DATA_BUFFERS - 1; ++inner_curr_in) {
 		ftStatus = FT_ASYNC_CALL(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&capture_data->capture_buf[inner_curr_in], sizeof(CaptureReceived), &capture_data->read[inner_curr_in], &overlap[inner_curr_in]);
 		if (ftStatus != FT_IO_PENDING) {
-			capture_data->error_text = "Read failed";
+			capture_data->error_text = "Disconnected: Read failed";
 			capture_data->new_error_text = true;
 			return;
 		}
@@ -196,7 +207,7 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 
 		ftStatus = FT_ASYNC_CALL(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&capture_data->capture_buf[inner_curr_in], sizeof(CaptureReceived), &capture_data->read[inner_curr_in], &overlap[inner_curr_in]);
 		if (ftStatus != FT_IO_PENDING) {
-			capture_data->error_text = "Read failed";
+			capture_data->error_text = "Disconnected: Read failed";
 			capture_data->new_error_text = true;
 			return;
 		}
@@ -205,7 +216,7 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 
 		ftStatus = FT_GetOverlappedResult(capture_data->handle, &overlap[inner_curr_in], &capture_data->read[inner_curr_in], true);
 		if(FT_FAILED(ftStatus)) {
-			capture_data->error_text = "USB error";
+			capture_data->error_text = "Disconnected: USB error";
 			capture_data->new_error_text = true;
 			return;
 		}
@@ -233,7 +244,7 @@ static bool safe_capture_call(CaptureData* capture_data) {
 
 		FT_STATUS ftStatus = FT_ReadPipeEx(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&capture_data->capture_buf[inner_curr_in], sizeof(CaptureReceived), &capture_data->read[inner_curr_in], 1000);
 		if(FT_FAILED(ftStatus)) {
-			capture_data->error_text = "Read failed";
+			capture_data->error_text = "Disconnected: Read failed";
 			capture_data->new_error_text = true;
 			return true;
 		}
@@ -299,19 +310,19 @@ void captureCall(CaptureData* capture_data) {
 			for (inner_curr_in = 0; inner_curr_in < NUM_CONCURRENT_DATA_BUFFERS; ++inner_curr_in) {
 				ftStatus = FT_GetOverlappedResult(capture_data->handle, &overlap[inner_curr_in], &capture_data->read[inner_curr_in], true);
 				if (FT_ReleaseOverlapped(capture_data->handle, &overlap[inner_curr_in])) {
-					capture_data->error_text = "Release failed";
+					capture_data->error_text = "Disconnected: Release failed";
 					capture_data->new_error_text = true;
 				}
 			}
 		}
 
 		if(FT_AbortPipe(capture_data->handle, BULK_IN)) {
-			capture_data->error_text = "Abort failed";
+			capture_data->error_text = "Disconnected: Abort failed";
 			capture_data->new_error_text = true;
 		}
 
 		if (FT_Close(capture_data->handle)) {
-			capture_data->error_text = "Close failed";
+			capture_data->error_text = "Disconnected: Close failed";
 			capture_data->new_error_text = true;
 		}
 
