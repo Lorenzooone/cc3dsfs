@@ -291,6 +291,8 @@ void WindowScreen::poll() {
 			}
 
 			break;
+		default:
+			break;
 		}
 	}
 }
@@ -324,8 +326,8 @@ void WindowScreen::display_thread(CaptureData* capture_data) {
 			this->display_call(false);
 		}
 	}
-	if(this->m_win.isOpen())
-		this->m_win.close();
+	if(!this->main_thread_owns_window)
+		this->m_win.setActive(false);
 	this->done_display = true;
 }
 
@@ -333,6 +335,13 @@ void WindowScreen::end() {
 	if(this->main_thread_owns_window)
 		this->m_win.setActive(false);
 	this->display_lock.unlock();
+}
+
+void WindowScreen::after_thread_join() {
+	if(this->m_win.isOpen()) {
+		this->m_win.setActive(true);
+		this->m_win.close();
+	}
 }
 
 void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
@@ -537,7 +546,7 @@ void WindowScreen::window_factory(bool is_main_thread) {
 }
 
 void WindowScreen::pre_texture_conversion_processing() {
-	//Place preprocessing effects here
+	//Place preprocessing window-specific effects here
 	this->in_tex.update((uint8_t*)this->saved_buf, IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT, 0, 0);
 }
 

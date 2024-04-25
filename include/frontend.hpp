@@ -127,6 +127,7 @@ public:
 	void display_call(bool is_main_thread);
 	void display_thread(CaptureData* capture_data);
 	void end();
+	void after_thread_join();
 	void draw(double frame_time, VideoOutputData* out_buf);
 
 	void print_notification(std::string text, TextKind kind = TEXT_KIND_NORMAL);

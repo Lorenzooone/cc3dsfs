@@ -356,6 +356,10 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 	bot_thread.join();
 	joint_thread.join();
 
+	top_screen.after_thread_join();
+	bot_screen.after_thread_join();
+	joint_screen.after_thread_join();
+
 	if (!skip_io) {
 		save(base_path, base_name, top_screen.m_info, bot_screen.m_info, joint_screen.m_info, display_data, audio_data, out_text_data);
 	}
