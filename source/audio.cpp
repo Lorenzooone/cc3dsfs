@@ -14,7 +14,8 @@ Sample::Sample(sf::Int16 *bytes, std::size_t size, float time) : bytes(bytes), s
 
 //============================================================================
 
-Audio::Audio() {
+Audio::Audio(AudioData *audio_data) {
+	this->audio_data = audio_data;
 	sf::SoundStream::initialize(AUDIO_CHANNELS, SAMPLE_RATE);
 	#if (SFML_VERSION_MAJOR > 2) || ((SFML_VERSION_MAJOR == 2) && (SFML_VERSION_MINOR >= 6))
 	// Since we receive data every 16.6 ms, this is useless,
@@ -22,30 +23,15 @@ Audio::Audio() {
 	//sf::SoundStream::setProcessingInterval(sf::Time::Zero);
 	#endif
 	start_audio();
+	setVolume(0);
+	this->final_volume = 0;
 }
 	
-void Audio::update_volume(int volume, bool mute) {
-	if(mute && (mute == loaded_mute)) {
-		return;
-	}
-
-	if(volume < 0)
-		volume = 0;
-	if(volume > 100)
-		volume = 100;
-
-	if(mute != loaded_mute) {
-		loaded_mute = mute;
-		loaded_volume = volume;
-	}
-	else if(volume != loaded_volume) {
-		loaded_mute = mute;
-		loaded_volume = volume;
-	}
-	else {
-		return;
-	}
-	setVolume(mute ? 0 : volume);
+void Audio::update_volume() {
+	int new_final_volume = this->audio_data->get_final_volume();
+	if(this->final_volume != new_final_volume)
+		setVolume(new_final_volume);
+	this->final_volume = new_final_volume;
 }
 	
 void Audio::start_audio() {

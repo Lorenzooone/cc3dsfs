@@ -4,8 +4,11 @@
 #include <SFML/Graphics.hpp>
 
 #include <mutex>
+#include <queue>
 #include "utils.hpp"
-#include "audio.hpp"
+#include "audio_data.hpp"
+#include "3dscapture.hpp"
+#include "hw_defs.hpp"
 
 enum Crop { DEFAULT_3DS, SPECIAL_DS, SCALED_DS, NATIVE_DS, SCALED_GBA, NATIVE_GBA, SCALED_GB, NATIVE_GB, NATIVE_SNES, NATIVE_NES, CROP_END };
 enum BottomRelativePosition { UNDER_TOP, LEFT_TOP, ABOVE_TOP, RIGHT_TOP, BOT_REL_POS_END };
@@ -53,7 +56,7 @@ struct out_rect_data {
 };
 
 void reset_screen_info(ScreenInfo &info);
-void load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
+bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
 std::string save_screen_info(std::string base, const ScreenInfo &info);
 
 enum TextKind {TEXT_KIND_NORMAL, TEXT_KIND_SELECTED, TEXT_KIND_SUCCESS, TEXT_KIND_WARNING, TEXT_KIND_ERROR};

@@ -84,7 +84,7 @@ set(OUTPUT_NAME cc3dsfs)
 
 add_custom_target(CMakeFTD3XX)
 add_custom_target(CMakeBin2C)
-add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/3dscapture.cpp source/conversions.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp)
+add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/3dscapture.cpp source/conversions.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp)
 add_dependencies(${OUTPUT_NAME} CMakeFTD3XX)
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 target_link_libraries(${OUTPUT_NAME} PRIVATE sfml-graphics sfml-audio sfml-window sfml-system FTD3XX)

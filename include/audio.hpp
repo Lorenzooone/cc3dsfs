@@ -3,15 +3,11 @@
 
 #include <SFML/Audio.hpp>
 #include <queue>
+#include "audio_data.hpp"
 #include "utils.hpp"
 #include "audio.hpp"
 #include "3dscapture.hpp"
 #include "hw_defs.hpp"
-
-struct AudioData {
-	int volume;
-	bool mute;
-};
 
 struct Sample {
 	Sample(sf::Int16 *bytes, std::size_t size, float time);
@@ -27,14 +23,14 @@ public:
 	std::queue<Sample> samples;
 	ConsumerMutex samples_wait;
 
-	Audio();
-	void update_volume(int volume, bool mute);
+	Audio(AudioData *audio_data);
+	void update_volume();
 	void start_audio();
 	void stop_audio();
 
 private:
-	int loaded_volume = -1;
-	bool loaded_mute = false;
+	AudioData *audio_data;
+	int final_volume = -1;
 	bool terminate;
 	int num_consecutive_fast_seek;
 	sf::Int16 buffer[MAX_SAMPLES_IN];

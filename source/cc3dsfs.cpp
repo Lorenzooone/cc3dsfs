@@ -39,7 +39,8 @@ struct OutTextData {
 };
 
 void ConsoleOutText(std::string full_text) {
-	std::cout << "[" << NAME << "] " << full_text << std::endl;
+	if(full_text != "")
+		std::cout << "[" << NAME << "] " << full_text << std::endl;
 }
 
 void UpdateOutText(OutTextData &out_text_data, std::string full_text, std::string small_text, TextKind kind) {
@@ -81,31 +82,23 @@ bool load(const std::string path, const std::string name, ScreenInfo &top_info, 
 
 			if (std::getline(kvp, value)) {
 
-				load_screen_info(key, value, "bot_", bottom_info);
-				load_screen_info(key, value, "joint_", joint_info);
-				load_screen_info(key, value, "top_", top_info);
-
-				if(bottom_info.crop_kind != Crop::NATIVE_DS)
-					bottom_info.crop_kind = Crop::DEFAULT_3DS;
-				if (key == "mute") {
-					audio_data->mute = std::stoi(value);
+				if(load_screen_info(key, value, "bot_", bottom_info)) {
+					if(bottom_info.crop_kind != Crop::NATIVE_DS)
+						bottom_info.crop_kind = Crop::DEFAULT_3DS;
 					continue;
 				}
+				if(load_screen_info(key, value, "joint_", joint_info))
+					continue;
+				if(load_screen_info(key, value, "top_", top_info))
+					continue;
 
 				if (key == "split") {
 					display_data.split = std::stoi(value);
 					continue;
 				}
 
-				if (key == "volume") {
-					int pre_loaded_volume = std::stoi(value);
-					if(pre_loaded_volume < 0)
-						pre_loaded_volume = 0;
-					if(pre_loaded_volume > 100)
-						pre_loaded_volume = 100;
-					audio_data->volume = pre_loaded_volume;
+				if(audio_data->load_audio_data(key, value))
 					continue;
-				}
 			}
 		}
 	}
@@ -129,21 +122,18 @@ bool save(const std::string path, const std::string name, const ScreenInfo &top_
 	file << save_screen_info("bot_", bottom_info);
 	file << save_screen_info("joint_", joint_info);
 	file << save_screen_info("top_", top_info);
-	file << "mute=" << audio_data->mute << std::endl;
 	file << "split=" << display_data.split << std::endl;
-	file << "volume=" << audio_data->volume << std::endl;
+	file << audio_data->save_audio_data();
 
 	file.close();
 	return true;
 }
 
 void soundCall(AudioData *audio_data, CaptureData* capture_data) {
-	Audio audio;
+	Audio audio(audio_data);
 	sf::Int16 out_buf[NUM_CONCURRENT_AUDIO_BUFFERS][MAX_SAMPLES_IN];
 	int curr_out, prev_out = NUM_CONCURRENT_DATA_BUFFERS - 1, audio_buf_counter = 0;
 	const bool endianness = is_big_endian();
-
-	audio.update_volume(0, true);
 	volatile int loaded_samples;
 
 	while (capture_data->running) {
@@ -176,14 +166,14 @@ void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 					if(audio.restart) {
 						audio.stop();
 						audio.~Audio();
-						::new(&audio) Audio();
+						::new(&audio) Audio(audio_data);
 					}
 					audio.start_audio();
 					audio.play();
 				}
 			}
 			else {
-				audio.update_volume(audio_data->volume, audio_data->mute);
+				audio.update_volume();
 			}
 		}
 		else {
@@ -340,6 +330,10 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 			}
 		}
 
+		if(audio_data->has_text_to_print()) {
+			UpdateOutText(out_text_data, "", audio_data->text_to_print(), TEXT_KIND_NORMAL);
+		}
+
 		if(capture_data->new_error_text) {
 			UpdateOutText(out_text_data, capture_data->error_text, capture_data->error_text, TEXT_KIND_ERROR);
 			capture_data->new_error_text = false;
@@ -381,9 +375,8 @@ int main(int argc, char **argv) {
 	XInitThreads();
 	#endif
 	AudioData audio_data;
+	audio_data.reset();
 	CaptureData* capture_data = new CaptureData;
-	audio_data.volume = 50;
-	audio_data.mute = false;
 
 	capture_data->connected = connect(true, capture_data);
 	std::thread capture_thread(captureCall, capture_data);

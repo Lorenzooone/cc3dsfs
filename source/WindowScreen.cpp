@@ -84,6 +84,7 @@ void WindowScreen::reload() {
 }
 
 void WindowScreen::poll() {
+	float old_scaling = 0.0;
 	this->poll_window();
 	while(!events_queue.empty()) {
 		SFEvent event_data = events_queue.front();
@@ -124,6 +125,7 @@ void WindowScreen::poll() {
 			case 'b':
 				this->m_info.is_blurred = !this->m_info.is_blurred;
 				this->future_operations.call_blur = true;
+				this->print_notification_on_off("Blur", this->m_info.is_blurred);
 				break;
 
 			case 'v':
@@ -137,15 +139,25 @@ void WindowScreen::poll() {
 				break;
 
 			case '-':
+				if(this->m_info.is_fullscreen)
+					break;
+				old_scaling = this->m_info.scaling;
 				this->m_info.scaling -= 0.5;
 				if (this->m_info.scaling < 1.25)
 					this->m_info.scaling = 1.0;
+				if(old_scaling != this->m_info.scaling)
+					this->print_notification("Scaling: " + std::to_string(this->m_info.scaling));
 				break;
 
 			case '0':
+				if(this->m_info.is_fullscreen)
+					break;
+				old_scaling = this->m_info.scaling;
 				this->m_info.scaling += 0.5;
 				if (this->m_info.scaling > 44.75)
 					this->m_info.scaling = 45.0;
+				if(old_scaling != this->m_info.scaling)
+					this->print_notification("Scaling: " + std::to_string(this->m_info.scaling));
 				break;
 
 			case 'o':
@@ -237,21 +249,15 @@ void WindowScreen::poll() {
 				break;
 
 			case 'm':
-				audio_data->mute = !audio_data->mute;
+				audio_data->change_audio_mute();
 				break;
 
 			case ',':
-				audio_data->mute = false;
-				audio_data->volume -= 5;
-				if(audio_data->volume < 0)
-					audio_data->volume = 0;
+				audio_data->change_audio_volume(false);
 				break;
 
 			case '.':
-				audio_data->mute = false;
-				audio_data->volume += 5;
-				if(audio_data->volume > 100)
-					audio_data->volume = 100;
+				audio_data->change_audio_volume(true);
 				break;
 
 			default:

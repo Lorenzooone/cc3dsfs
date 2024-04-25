@@ -27,14 +27,14 @@ void reset_screen_info(ScreenInfo &info) {
 	info.bfi_divider = 2.0;
 }
 
-void load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info) {
+bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info) {
 	if(key == (base + "blur")) {
 		info.is_blurred = std::stoi(value);
-		return;
+		return true;
 	}
 	if(key == (base + "crop")) {
 		info.crop_kind = static_cast<Crop>(std::stoi(value) % Crop::CROP_END);
-		return;
+		return true;
 	}
 	if(key == (base + "scale")) {
 		info.scaling = std::stod(value);
@@ -42,70 +42,71 @@ void load_screen_info(std::string key, std::string value, std::string base, Scre
 			info.scaling = 1.0;
 		if(info.scaling > 44.75)
 			info.scaling = 45.0;
-		return;
+		return true;
 	}
 	if(key == (base + "fullscreen")) {
 		info.is_fullscreen = std::stoi(value);
-		return;
+		return true;
 	}
 	if(key == (base + "bot_pos")) {
 		info.bottom_pos = static_cast<BottomRelativePosition>(std::stoi(value) % BottomRelativePosition::BOT_REL_POS_END);
-		return;
+		return true;
 	}
 	if(key == (base + "sub_off_algo")) {
 		info.subscreen_offset_algorithm = static_cast<OffsetAlgorithm>(std::stoi(value) % OffsetAlgorithm::OFF_ALGO_END);
-		return;
+		return true;
 	}
 	if(key == (base + "sub_att_off_algo")) {
 		info.subscreen_attached_offset_algorithm = static_cast<OffsetAlgorithm>(std::stoi(value) % OffsetAlgorithm::OFF_ALGO_END);
-		return;
+		return true;
 	}
 	if(key == (base + "off_algo_x")) {
 		info.total_offset_algorithm_x = static_cast<OffsetAlgorithm>(std::stoi(value) % OffsetAlgorithm::OFF_ALGO_END);
-		return;
+		return true;
 	}
 	if(key == (base + "off_algo_y")) {
 		info.total_offset_algorithm_y = static_cast<OffsetAlgorithm>(std::stoi(value) % OffsetAlgorithm::OFF_ALGO_END);
-		return;
+		return true;
 	}
 	if(key == (base + "top_rot")) {
 		info.top_rotation = std::stoi(value);
 		info.top_rotation %= 360;
 		info.top_rotation += (info.top_rotation < 0) ? 360 : 0;
-		return;
+		return true;
 	}
 	if(key == (base + "bot_rot")) {
 		info.bot_rotation = std::stoi(value);
 		info.bot_rotation %= 360;
 		info.bot_rotation += (info.bot_rotation < 0) ? 360 : 0;
-		return;
+		return true;
 	}
 	if(key == (base + "vsync")) {
 		info.v_sync_enabled = std::stoi(value);
-		return;
+		return true;
 	}
 	if(key == (base + "async")) {
 		info.async = std::stoi(value);
-		return;
+		return true;
 	}
 	if(key == (base + "top_scaling")) {
 		info.top_scaling = std::stoi(value);
-		return;
+		return true;
 	}
 	if(key == (base + "bot_scaling")) {
 		info.bot_scaling = std::stoi(value);
-		return;
+		return true;
 	}
 	if(key == (base + "bfi")) {
 		info.bfi = std::stoi(value);
-		return;
+		return true;
 	}
 	if(key == (base + "bfi_divider")) {
 		info.bfi_divider = std::stod(value);
 		if(info.bfi_divider < 1.0)
 			info.bfi_divider = 1.0;
-		return;
+		return true;
 	}
+	return false;
 }
 
 std::string save_screen_info(std::string base, const ScreenInfo &info) {
