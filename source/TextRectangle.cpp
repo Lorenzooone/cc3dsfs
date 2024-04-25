@@ -4,6 +4,8 @@
 
 #include <chrono>
 
+#define BASE_PIXEL_FONT_HEIGHT 24
+
 TextRectangle::TextRectangle(bool font_load_success, sf::Font &text_font) {
 	this->font_load_success = font_load_success;
 	this->setSize(1, 1);
@@ -40,6 +42,11 @@ void TextRectangle::setRectangleKind(TextKind kind) {
 		this->future_data.render_text = true;
 	}
 	this->future_data.kind = kind;
+}
+
+void TextRectangle::setTextFactor(float size_multiplier) {
+	int new_pixel_height = BASE_PIXEL_FONT_HEIGHT * size_multiplier;
+	this->future_data.font_pixel_height = new_pixel_height;
 }
 
 void TextRectangle::setDuration(float on_seconds) {
@@ -124,7 +131,7 @@ void TextRectangle::reset_data(TextData &data) {
 	data.proportional_box = true;
 	data.printed_text = "Sample Text";
 	data.duration = 2.5;
-	data.font_pixel_height = 24;
+	data.font_pixel_height = BASE_PIXEL_FONT_HEIGHT;
 }
 
 void TextRectangle::setTextWithLineWrapping(int x_limit) {
@@ -182,7 +189,7 @@ void TextRectangle::updateText(int x_limit) {
 	if((new_width != this->width) || (new_height != this->height))
 		this->setSize(new_width, new_height);
 	if(this->loaded_data.proportional_box) {
-		this->actual_text.setPosition(5, 0);
+		this->actual_text.setPosition((int)(5 * (((float)this->loaded_data.font_pixel_height) / BASE_PIXEL_FONT_HEIGHT)), 0);
 		globalBounds = this->actual_text.getGlobalBounds();
 		this->setSize(globalBounds.width + (globalBounds.left * 2), globalBounds.height + (globalBounds.top * 2));
 	}

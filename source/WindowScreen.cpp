@@ -6,6 +6,7 @@
 #include "frontend.hpp"
 
 #include <cstring>
+#include <cmath>
 #include <mutex>
 #include <queue>
 #include "font_ttf.h"
@@ -84,7 +85,7 @@ void WindowScreen::reload() {
 }
 
 void WindowScreen::poll() {
-	float old_scaling = 0.0;
+	double old_scaling = 0.0;
 	this->poll_window();
 	while(!events_queue.empty()) {
 		SFEvent event_data = events_queue.front();
@@ -146,7 +147,7 @@ void WindowScreen::poll() {
 				if (this->m_info.scaling < 1.25)
 					this->m_info.scaling = 1.0;
 				if(old_scaling != this->m_info.scaling) {
-					this->print_notification("Scaling: " + std::to_string(this->m_info.scaling));
+					this->print_notification_float("Scaling", this->m_info.scaling, 1);
 					this->future_operations.call_screen_settings_update = true;
 				}
 				break;
@@ -159,7 +160,7 @@ void WindowScreen::poll() {
 				if (this->m_info.scaling > 44.75)
 					this->m_info.scaling = 45.0;
 				if(old_scaling != this->m_info.scaling) {
-					this->print_notification("Scaling: " + std::to_string(this->m_info.scaling));
+					this->print_notification_float("Scaling", this->m_info.scaling, 1);
 					this->future_operations.call_screen_settings_update = true;
 				}
 				break;
@@ -250,6 +251,27 @@ void WindowScreen::poll() {
 				this->prepare_size_ratios(false, false);
 				this->future_operations.call_rotate = true;
 
+				break;
+
+			case 'z':
+				old_scaling = this->m_info.menu_scaling_factor;
+				this->m_info.menu_scaling_factor -= 0.1;
+				if(this->m_info.menu_scaling_factor < 0.35)
+					this->m_info.menu_scaling_factor = 0.3;
+				if(old_scaling != this->m_info.menu_scaling_factor) {
+					this->print_notification_float("Menu Scaling", this->m_info.menu_scaling_factor, 1);
+				}
+				break;
+
+
+			case 'x':
+				old_scaling = this->m_info.menu_scaling_factor;
+				this->m_info.menu_scaling_factor += 0.1;
+				if(this->m_info.menu_scaling_factor > 4.95)
+					this->m_info.menu_scaling_factor = 5.0;
+				if(old_scaling != this->m_info.menu_scaling_factor) {
+					this->print_notification_float("Menu Scaling", this->m_info.menu_scaling_factor, 1);
+				}
 				break;
 
 			case 'm':
@@ -362,6 +384,7 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 		WindowScreen::reset_operations(future_operations);
 		memcpy(this->saved_buf, out_buf, sizeof(VideoOutputData));
 		loaded_info = m_info;
+		this->notification->setTextFactor(this->loaded_info.menu_scaling_factor);
 		this->notification->prepareRenderText();
 		this->frame_time = frame_time;
 		this->scheduled_work_on_window = this->window_needs_work();
@@ -459,6 +482,24 @@ void WindowScreen::print_notification_on_off(std::string base_text, bool value) 
 	std::string status_text = "On";
 	if(!value)
 		status_text = "Off";
+	this->print_notification(base_text + ": " + status_text);
+}
+
+void WindowScreen::print_notification_float(std::string base_text, float value, int decimals) {
+	float approx_factor = pow(0.1, decimals) * (0.5);
+	int int_part = (int)(value + approx_factor);
+	int dec_part = (int)((value + approx_factor - int_part) * pow(10, decimals));
+	std::string status_text = std::to_string(int_part);
+
+	if(decimals > 0) {
+		if(!dec_part) {
+			status_text += ".";
+			for(int i = 0; i < decimals; i++)
+				status_text += "0";
+		}
+		else
+			status_text += "." + std::to_string(dec_part);
+	}
 	this->print_notification(base_text + ": " + status_text);
 }
 

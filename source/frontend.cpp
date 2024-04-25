@@ -25,6 +25,7 @@ void reset_screen_info(ScreenInfo &info) {
 	info.bot_scaling = -1;
 	info.bfi = false;
 	info.bfi_divider = 2.0;
+	info.menu_scaling_factor = 1.0;
 }
 
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info) {
@@ -106,6 +107,14 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 			info.bfi_divider = 1.0;
 		return true;
 	}
+	if(key == (base + "menu_scaling_factor")) {
+		info.menu_scaling_factor = std::stod(value);
+		if(info.menu_scaling_factor < 0.3)
+			info.menu_scaling_factor = 0.3;
+		if(info.menu_scaling_factor > 5.0)
+			info.menu_scaling_factor = 5.0;
+		return true;
+	}
 	return false;
 }
 
@@ -128,6 +137,7 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "bot_scaling=" + std::to_string(info.bot_scaling) + "\n";
 	out += base + "bfi=" + std::to_string(info.bfi) + "\n";
 	out += base + "bfi_divider=" + std::to_string(info.bfi_divider) + "\n";
+	out += base + "menu_scaling_factor=" + std::to_string(info.menu_scaling_factor) + "\n";
 	return out;
 }
 

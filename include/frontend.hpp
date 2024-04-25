@@ -28,6 +28,7 @@ struct ScreenInfo {
 	int top_scaling, bot_scaling;
 	bool bfi;
 	double bfi_divider;
+	double menu_scaling_factor;
 };
 
 struct DisplayData {
@@ -67,6 +68,7 @@ public:
 	~TextRectangle();
 	void setSize(int width, int height);
 	void setRectangleKind(TextKind kind);
+	void setTextFactor(float size_multiplier);
 	void setDuration(float on_seconds);
 	void startTimer(bool do_start);
 	void setProportionalBox(bool proportional_box);
@@ -193,6 +195,7 @@ private:
 	int get_screen_corner_modifier_x(int rotation, int width);
 	int get_screen_corner_modifier_y(int rotation, int height);
 	void print_notification_on_off(std::string base_text, bool value);
+	void print_notification_float(std::string base_text, float value, int decimals);
 	void poll_window();
 	void prepare_screen_rendering();
 	bool window_needs_work();
