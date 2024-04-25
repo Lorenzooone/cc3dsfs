@@ -145,8 +145,10 @@ void WindowScreen::poll() {
 				this->m_info.scaling -= 0.5;
 				if (this->m_info.scaling < 1.25)
 					this->m_info.scaling = 1.0;
-				if(old_scaling != this->m_info.scaling)
+				if(old_scaling != this->m_info.scaling) {
 					this->print_notification("Scaling: " + std::to_string(this->m_info.scaling));
+					this->future_operations.call_screen_settings_update = true;
+				}
 				break;
 
 			case '0':
@@ -156,8 +158,10 @@ void WindowScreen::poll() {
 				this->m_info.scaling += 0.5;
 				if (this->m_info.scaling > 44.75)
 					this->m_info.scaling = 45.0;
-				if(old_scaling != this->m_info.scaling)
+				if(old_scaling != this->m_info.scaling) {
 					this->print_notification("Scaling: " + std::to_string(this->m_info.scaling));
+					this->future_operations.call_screen_settings_update = true;
+				}
 				break;
 
 			case 'o':
@@ -482,8 +486,8 @@ bool WindowScreen::window_needs_work() {
 		return true;
 	if(this->loaded_operations.call_create)
 		return true;
-	int width = this->m_width * this->loaded_info.scaling;
-	int height = this->m_height * this->loaded_info.scaling;
+	int width = this->m_width;
+	int height = this->m_height;
 	if(this->loaded_info.is_fullscreen) {
 		width = this->m_window_width;
 		height = this->m_window_height;
@@ -514,7 +518,7 @@ void WindowScreen::window_factory(bool is_main_thread) {
 		this->main_thread_owns_window = is_main_thread;
 		if(!this->loaded_info.is_fullscreen) {
 			this->update_screen_settings();
-			this->m_win.create(sf::VideoMode(this->m_width * this->loaded_info.scaling, this->m_height * this->loaded_info.scaling), this->win_title);
+			this->m_win.create(sf::VideoMode(this->m_width, this->m_height), this->win_title);
 			this->update_view_size();
 		}
 		else
@@ -806,31 +810,32 @@ int WindowScreen::get_fullscreen_offset_y(int top_width, int top_height, int bot
 void WindowScreen::resize_window_and_out_rects() {
 	sf::Vector2f top_screen_size = getShownScreenSize(true, this->loaded_info.crop_kind);
 	sf::Vector2f bot_screen_size = getShownScreenSize(false, this->loaded_info.crop_kind);
+	int top_height = this->loaded_info.scaling * top_screen_size.y;
+	int top_width = this->loaded_info.scaling * top_screen_size.x;
+	int bot_height = this->loaded_info.scaling * bot_screen_size.y;
+	int bot_width = this->loaded_info.scaling * bot_screen_size.x;
+	int offset_x = 0;
+	int offset_y = 0;
+	int max_x = 0;
+	int max_y = 0;
 
-	if(!this->loaded_info.is_fullscreen) {
-		this->m_out_rect_top.out_rect.setSize(top_screen_size);
-		this->m_out_rect_top.out_rect.setTextureRect(sf::IntRect(0, 0, top_screen_size.x, top_screen_size.y));
-		this->m_out_rect_bot.out_rect.setSize(bot_screen_size);
-		this->m_out_rect_bot.out_rect.setTextureRect(sf::IntRect(0, 0, bot_screen_size.x, bot_screen_size.y));
-		this->set_position_screens(top_screen_size, bot_screen_size, 0, 0, 0, 0);
+	if(this->loaded_info.is_fullscreen) {
+		top_height = this->loaded_info.top_scaling * top_screen_size.y;
+		top_width = this->loaded_info.top_scaling * top_screen_size.x;
+		bot_height = this->loaded_info.bot_scaling * bot_screen_size.y;
+		bot_width = this->loaded_info.bot_scaling * bot_screen_size.x;
+		offset_x = get_fullscreen_offset_x(top_width, top_height, bot_width, bot_height);
+		offset_y = get_fullscreen_offset_y(top_width, top_height, bot_width, bot_height);
+		max_x = curr_desk_mode.width;
+		max_y = curr_desk_mode.height;
 	}
-	else {
-		int top_height = this->loaded_info.top_scaling * top_screen_size.y;
-		int top_width = this->loaded_info.top_scaling * top_screen_size.x;
-		int bot_height = this->loaded_info.bot_scaling * bot_screen_size.y;
-		int bot_width = this->loaded_info.bot_scaling * bot_screen_size.x;
-		sf::Vector2f new_top_screen_size = sf::Vector2f(top_width, top_height);
-		sf::Vector2f new_bot_screen_size = sf::Vector2f(bot_width, bot_height);
-		this->m_out_rect_top.out_rect.setSize(new_top_screen_size);
-		this->m_out_rect_top.out_rect.setTextureRect(sf::IntRect(0, 0, top_screen_size.x, top_screen_size.y));
-		this->m_out_rect_bot.out_rect.setSize(new_bot_screen_size);
-		this->m_out_rect_bot.out_rect.setTextureRect(sf::IntRect(0, 0, bot_screen_size.x, bot_screen_size.y));
-		
-		int offset_x = get_fullscreen_offset_x(top_width, top_height, bot_width, bot_height);
-		int offset_y = get_fullscreen_offset_y(top_width, top_height, bot_width, bot_height);
-		
-		this->set_position_screens(new_top_screen_size, new_bot_screen_size, offset_x, offset_y, curr_desk_mode.width, curr_desk_mode.height);
-	}
+	sf::Vector2f new_top_screen_size = sf::Vector2f(top_width, top_height);
+	sf::Vector2f new_bot_screen_size = sf::Vector2f(bot_width, bot_height);
+	this->m_out_rect_top.out_rect.setSize(new_top_screen_size);
+	this->m_out_rect_top.out_rect.setTextureRect(sf::IntRect(0, 0, top_screen_size.x, top_screen_size.y));
+	this->m_out_rect_bot.out_rect.setSize(new_bot_screen_size);
+	this->m_out_rect_bot.out_rect.setTextureRect(sf::IntRect(0, 0, bot_screen_size.x, bot_screen_size.y));
+	this->set_position_screens(new_top_screen_size, new_bot_screen_size, offset_x, offset_y, max_x, max_y);
 }
 
 void WindowScreen::create_window(bool re_prepare_size) {
@@ -899,8 +904,8 @@ void WindowScreen::crop() {
 }
 
 void WindowScreen::setWinSize(bool is_main_thread) {
-	int width = this->m_width * this->loaded_info.scaling;
-	int height = this->m_height * this->loaded_info.scaling;
+	int width = this->m_width;
+	int height = this->m_height;
 	if(this->loaded_info.is_fullscreen) {
 		width = this->m_window_width;
 		height = this->m_window_height;
