@@ -77,7 +77,7 @@ void TextRectangle::setShowText(bool show_text) {
 
 void TextRectangle::draw(sf::RenderTarget &window) {
 	if(this->loaded_data.render_text) {
-		this->updateText();
+		this->updateText(window.getView().getSize().x);
 	}
 	if(font_load_success && this->loaded_data.show_text && (!this->is_done_showing_text)) {
 		if(this->loaded_data.is_timed) {
@@ -127,21 +127,56 @@ void TextRectangle::reset_data(TextData &data) {
 	data.font_pixel_height = 24;
 }
 
-void TextRectangle::updateText() {
-	this->actual_text.setString(this->loaded_data.printed_text);
+void TextRectangle::setTextWithLineWrapping(int x_limit) {
+	if(x_limit == 0) {
+		this->actual_text.setString(this->loaded_data.printed_text);
+		return;
+	}
+	bool is_done = false;
+	bool line_started = false;
+	std::string new_text = "";
+	int pos = 0;
+	while(!is_done) {
+		std::string curr_text = new_text;
+		if(line_started)
+			curr_text += " ";
+		auto space_pos = this->loaded_data.printed_text.find(' ', pos);
+		if(space_pos == std::string::npos) {
+			is_done = true;
+			space_pos = this->loaded_data.printed_text.length();
+		}
+		for(int i = pos; i < space_pos; i++)
+			curr_text += this->loaded_data.printed_text[i];
+		this->actual_text.setString(curr_text);
+		sf::FloatRect globalBounds = this->actual_text.getGlobalBounds();
+		int bounds_width = globalBounds.width + (globalBounds.left * 2);
+		if(line_started && (bounds_width > x_limit)) {
+			curr_text = new_text + "\n";
+			for(int i = pos; i < space_pos; i++)
+				curr_text += this->loaded_data.printed_text[i];
+		}
+		pos = space_pos + 1;
+		line_started = true;
+		new_text = curr_text;
+	}
+	this->actual_text.setString(new_text);
+}
+
+void TextRectangle::updateText(int x_limit) {
 	// set the character size
 	this->actual_text.setCharacterSize(this->loaded_data.font_pixel_height); // in pixels, not points!
 	// set the color
 	this->actual_text.setFillColor(sf::Color::White);
 	// set the text style
 	//this->actual_text.setStyle(sf::Text::Bold);
+	this->setTextWithLineWrapping(x_limit);
 	sf::FloatRect globalBounds = this->actual_text.getGlobalBounds();
 	int new_width = this->width;
 	int new_height = this->height;
 	int bounds_width = globalBounds.width + (globalBounds.left * 2);
 	int bounds_height = globalBounds.height + (globalBounds.top * 2);
 	if(new_width < bounds_width)
-		new_width = bounds_width ;
+		new_width = bounds_width;
 	if(new_height < bounds_height)
 		new_height = bounds_height;
 	if((new_width != this->width) || (new_height != this->height))
@@ -181,7 +216,7 @@ void TextRectangle::updateText() {
 }
 
 void TextRectangle::updateSlides(float* time_seconds) {
-	time_seconds[0] = base_time_slide_factor * (this->height / base_pixel_slide_factor);
+	time_seconds[0] = base_time_slide_factor * (this->height / (loaded_data.font_pixel_height * base_pixel_slide_factor));
 	time_seconds[1] = loaded_data.duration;
-	time_seconds[2] = base_time_slide_factor * (this->height / base_pixel_slide_factor);
+	time_seconds[2] = base_time_slide_factor * (this->height / (loaded_data.font_pixel_height * base_pixel_slide_factor));
 }

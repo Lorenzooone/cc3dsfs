@@ -86,7 +86,7 @@ private:
 	sf::Color *warning_bg_color;
 	sf::Color *error_bg_color;
 	const float base_time_slide_factor = 0.5;
-	const float base_pixel_slide_factor = 48.0;
+	const float base_pixel_slide_factor = 2.0;
 
 	struct TextData {
 		bool is_timed;
@@ -104,7 +104,8 @@ private:
 	TextData loaded_data;
 
 	void reset_data(TextData &data);
-	void updateText();
+	void setTextWithLineWrapping(int x_limit = 0);
+	void updateText(int x_limit = 0);
 	void updateSlides(float* time_seconds);
 };
 

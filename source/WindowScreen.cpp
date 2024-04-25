@@ -502,6 +502,7 @@ void WindowScreen::window_factory(bool is_main_thread) {
 		this->loaded_operations.call_create = false;
 	}
 	if(this->loaded_operations.call_create) {
+		this->notification->setShowText(false);
 		this->events_access->lock();
 		this->m_win.setActive(true);
 		this->main_thread_owns_window = is_main_thread;
