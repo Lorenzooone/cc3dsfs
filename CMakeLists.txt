@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(CMakeSFMLProject LANGUAGES CXX)
+include(ExternalProject)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
@@ -7,14 +8,22 @@ set(CMAKE_HOST_CXX_COMPILER "g++" CACHE STRING "Host Compiler")
 set(WINDOWS_FTD3XX_USE_SHARED_LIB 0)
 set(FETCHCONTENT_QUIET FALSE)
 set(EXTRA_LINUX_CXX_FLAGS "-DXLIB_BASED 1" CACHE STRING "Extra Linux CXX flags")
+set(SFML_BUILD_NETWORK FALSE)
+
+# Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP in CMake 3.24:
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
+    cmake_policy(SET CMP0135 NEW)
+endif()
 
 include(FetchContent)
 FetchContent_Declare(SFML
     GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG 2.6.1)
+    GIT_TAG 2.6.1
+    EXCLUDE_FROM_ALL)
 
 set(FTD3XX_BASE_URL https://ftdichip.com/wp-content/uploads/)
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+    set(FTD3XX_BUILD_COMMAND )
     set(FTD3XX_URL_TIME 2024/01)
     set(FTD3XX_VER 1.3.0.9)
     set(FTD3XX_VOL FTD3XXLibrary_v${FTD3XX_VER})
@@ -28,6 +37,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
         set(WINDOWS_PATH_SPECIFIER Static_Lib)
     endif()
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+    set(FTD3XX_BUILD_COMMAND ${CMAKE_SOURCE_DIR}/macos_setup_ftd3xx.sh)
     set(FTD3XX_URL_TIME 2023/03)
     set(FTD3XX_VER 1.0.5)
     set(FTD3XX_VOL d3xx-osx.${FTD3XX_VER})
@@ -36,6 +46,7 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     set(FTD3XX_MOUNTED_FOLDER /Volumes/${FTD3XX_VOL})
     set(FTD3XX_SUBFOLDER macos)
 else()
+    set(FTD3XX_BUILD_COMMAND ${CMAKE_SOURCE_DIR}/linux_setup_ftd3xx.sh)
     set(FTD3XX_URL_TIME 2023/03)
     set(FTD3XX_VER 1.0.5)
     if((${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch") OR (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm"))
@@ -56,21 +67,32 @@ else()
     set(FTD3XX_SUBFOLDER linux)
 endif()
 
+set(ftd3xx_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/ftd3xx-src)
+set(ftd3xx_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/ftd3xx-build)
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 FetchContent_Declare(FTD3XX
     URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
     DOWNLOAD_NO_EXTRACT TRUE
+    SOURCE_DIR ${ftd3xx_SOURCE_DIR}
+    BINARY_DIR ${ftd3xx_BINARY_DIR}
+    BUILD_COMMAND ${FTD3XX_BUILD_COMMAND} ${ftd3xx_SOURCE_DIR}/${FTD3XX_ARCHIVE} ${FTD3XX_MOUNTED_FOLDER} ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${FTD3XX_LIB}
+    UPDATE_COMMAND ""
+    CONFIGURE_COMMAND ""
+    INSTALL_COMMAND ""
 )
 else()
-FetchContent_Declare(FTD3XX
+ExternalProject_Add(FTD3XX
     URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
+    SOURCE_DIR ${ftd3xx_SOURCE_DIR}
+    BINARY_DIR ${ftd3xx_BINARY_DIR}
+    BUILD_COMMAND ${FTD3XX_BUILD_COMMAND} ${ftd3xx_SOURCE_DIR} ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${FTD3XX_LIB}
+    UPDATE_COMMAND ""
+    CONFIGURE_COMMAND ""
+    INSTALL_COMMAND ""
 )
 endif()
 
-FetchContent_MakeAvailable(FTD3XX SFML)
-file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/win)
-file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/macos)
-file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/linux)
+FetchContent_MakeAvailable(SFML)
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 
@@ -85,7 +107,6 @@ set(OUTPUT_NAME cc3dsfs)
 add_custom_target(CMakeFTD3XX)
 add_custom_target(CMakeBin2C)
 add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/3dscapture.cpp source/conversions.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp)
-add_dependencies(${OUTPUT_NAME} CMakeFTD3XX)
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 target_link_libraries(${OUTPUT_NAME} PRIVATE sfml-graphics sfml-audio sfml-window sfml-system FTD3XX)
 else()
@@ -132,23 +153,6 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
             PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${ftd3xx_SOURCE_DIR}/${PATH_WINDOWS_ARCH}/${WINDOWS_PATH_SPECIFIER}/FTD3XX.dll ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}
         )
     endif()
-elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-    add_custom_command(
-        TARGET CMakeFTD3XX
-        COMMENT "Copy FTD3XX files"
-        PRE_BUILD COMMAND macos_setup_ftd3xx.sh ${ftd3xx_SOURCE_DIR}/${FTD3XX_ARCHIVE} ${FTD3XX_MOUNTED_FOLDER} ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${FTD3XX_LIB}
-    )
-else()
-    add_custom_command(
-        TARGET CMakeFTD3XX
-        COMMENT "Copy FTD3XX headers"
-        PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${ftd3xx_SOURCE_DIR}/*.h ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}
-    )
-    add_custom_command(
-        TARGET CMakeFTD3XX
-        COMMENT "Copy FTD3XX lib files"
-        PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${ftd3xx_SOURCE_DIR}/${FTD3XX_LIB} ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}
-    )
 endif()
 
 if(WIN32)
@@ -159,9 +163,10 @@ if(WIN32)
         VERBATIM
     )
 endif()
+
 add_custom_command(
     TARGET ${OUTPUT_NAME}
-    COMMENT "Copy OpenAL DLL"
+    COMMENT "Copy Output"
     POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${OUTPUT_NAME}> ${CMAKE_SOURCE_DIR}
     VERBATIM
 )
