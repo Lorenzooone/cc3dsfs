@@ -44,11 +44,15 @@ struct PACKED VideoOutputData {
 #pragma pack(pop)
 
 struct SFEvent {
-	SFEvent(sf::Event::EventType type, sf::Keyboard::Key code, uint32_t unicode) : type(type), code(code), unicode(unicode) {}
+	SFEvent(sf::Event::EventType type, sf::Keyboard::Key code, uint32_t unicode, uint32_t joystickId, uint32_t button, sf::Joystick::Axis axis, float position) : type(type), code(code), unicode(unicode), joystickId(joystickId), button(button), axis(axis), position(position) {}
 
 	sf::Event::EventType type;
 	sf::Keyboard::Key code;
 	uint32_t unicode;
+	uint32_t joystickId;
+	uint32_t button;
+	sf::Joystick::Axis axis;
+	float position;
 };
 
 struct out_rect_data {

@@ -313,6 +313,10 @@ void WindowScreen::poll() {
 			}
 
 			break;
+		case sf::Event::JoystickButtonPressed:
+			break;
+		case sf::Event::JoystickMoved:
+			break;
 		default:
 			break;
 		}
@@ -508,7 +512,12 @@ void WindowScreen::poll_window() {
 		sf::Event event;
 		this->events_access->lock();
 		while(this->m_win.pollEvent(event)) {
-			events_queue.emplace(event.type, event.key.code, event.text.unicode);
+			int joystickId = event.joystickConnect.joystickId;
+			if(event.type == sf::Event::JoystickButtonPressed)
+				joystickId = event.joystickButton.joystickId;
+			else if(event.type == sf::Event::JoystickMoved)
+				joystickId = event.joystickMove.joystickId;
+			events_queue.emplace(event.type, event.key.code, event.text.unicode, joystickId, event.joystickButton.button, event.joystickMove.axis, event.joystickMove.position);
 		}
 		this->events_access->unlock();
 	}
