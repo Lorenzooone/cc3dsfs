@@ -5,9 +5,10 @@
 
 #include <mutex>
 #include <queue>
+#include <chrono>
 #include "utils.hpp"
 #include "audio_data.hpp"
-#include "3dscapture.hpp"
+#include "capture_structs.hpp"
 #include "hw_defs.hpp"
 
 enum Crop { DEFAULT_3DS, SPECIAL_DS, SCALED_DS, NATIVE_DS, SCALED_GBA, NATIVE_GBA, SCALED_GB, NATIVE_GB, NATIVE_SNES, NATIVE_NES, CROP_END };
@@ -134,7 +135,7 @@ public:
 	void poll();
 	void close();
 	void display_call(bool is_main_thread);
-	void display_thread(CaptureData* capture_data);
+	void display_thread(CaptureStatus* capture_status);
 	void end();
 	void after_thread_join();
 	void draw(double frame_time, VideoOutputData* out_buf);
@@ -231,5 +232,5 @@ private:
 };
 
 void update_output(WindowScreen &top_screen, WindowScreen &bot_screen, WindowScreen &joint_screen, bool &reload, bool split, double frame_time, VideoOutputData *out_buf);
-void screen_display_thread(WindowScreen *screen, CaptureData* capture_data);
+void screen_display_thread(WindowScreen *screen, CaptureStatus* capture_status);
 #endif

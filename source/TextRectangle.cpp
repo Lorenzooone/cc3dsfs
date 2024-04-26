@@ -1,8 +1,4 @@
-#include <SFML/Graphics.hpp>
-
 #include "frontend.hpp"
-
-#include <chrono>
 
 #define BASE_PIXEL_FONT_HEIGHT 24
 

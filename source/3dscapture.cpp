@@ -1,14 +1,4 @@
-#include "utils.hpp"
 #include "3dscapture.hpp"
-
-#if defined(_WIN32) || defined(_WIN64)
-#define FTD3XX_STATIC
-#include <FTD3XX.h>
-#define FT_ASYNC_CALL FT_ReadPipeEx
-#else
-#include <ftd3xx.h>
-#define FT_ASYNC_CALL FT_ReadPipeAsync
-#endif
 
 #include <cstring>
 #include <thread>
@@ -72,16 +62,16 @@ static void preemptive_close_connection(CaptureData* capture_data) {
 }
 
 bool connect(bool print_failed, CaptureData* capture_data) {
-	capture_data->new_error_text = false;
-	if (capture_data->connected) {
-		capture_data->close_success = false;
+	capture_data->status.new_error_text = false;
+	if (capture_data->status.connected) {
+		capture_data->status.close_success = false;
 		return false;
 	}
 	
-	if(!capture_data->close_success) {
+	if(!capture_data->status.close_success) {
 		if(print_failed) {
-			capture_data->error_text = "Previous device still closing...";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "Previous device still closing...";
+			capture_data->status.new_error_text = true;
 		}
 		return false;
 	}
@@ -91,8 +81,8 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 
 	if(devices_list.numValidDevices <= 0) {
 		if(print_failed) {
-			capture_data->error_text = "No device was found";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "No device was found";
+			capture_data->status.new_error_text = true;
 		}
 		if(devices_list.numAllocedDevices > 0)
 			delete []devices_list.serialNumbers;
@@ -102,8 +92,8 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 	int chosen_device = choose_device(devices_list);
 	if(chosen_device == -1) {
 		if(print_failed) {
-			capture_data->error_text = "No device was selected";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "No device was selected";
+			capture_data->status.new_error_text = true;
 		}
 		delete []devices_list.serialNumbers;
 		return false;
@@ -115,8 +105,8 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 
 	if (FT_Create(capture_data->chosen_serial_number, FT_OPEN_BY_SERIAL_NUMBER, &capture_data->handle)) {
 		if(print_failed) {
-			capture_data->error_text = "Create failed";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "Create failed";
+			capture_data->status.new_error_text = true;
 		}
 		return false;
 	}
@@ -126,8 +116,8 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 
 	if (FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
 		if(print_failed) {
-			capture_data->error_text = "Write failed";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "Write failed";
+			capture_data->status.new_error_text = true;
 		}
 		preemptive_close_connection(capture_data);
 		return false;
@@ -137,8 +127,8 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 
 	if (FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
 		if(print_failed) {
-			capture_data->error_text = "Write failed";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "Write failed";
+			capture_data->status.new_error_text = true;
 		}
 		preemptive_close_connection(capture_data);
 		return false;
@@ -146,8 +136,8 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 
 	if (FT_SetStreamPipe(capture_data->handle, false, false, BULK_IN, sizeof(CaptureReceived))) {
 		if(print_failed) {
-			capture_data->error_text = "Stream failed";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "Stream failed";
+			capture_data->status.new_error_text = true;
 		}
 		preemptive_close_connection(capture_data);
 		return false;
@@ -155,8 +145,8 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 
 	if(FT_AbortPipe(capture_data->handle, BULK_IN)) {
 		if(print_failed) {
-			capture_data->error_text = "Abort failed";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "Abort failed";
+			capture_data->status.new_error_text = true;
 		}
 		preemptive_close_connection(capture_data);
 		return false;
@@ -164,16 +154,16 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 
 	if (FT_SetStreamPipe(capture_data->handle, false, false, BULK_IN, sizeof(CaptureReceived))) {
 		if(print_failed) {
-			capture_data->error_text = "Stream failed";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "Stream failed";
+			capture_data->status.new_error_text = true;
 		}
 		preemptive_close_connection(capture_data);
 		return false;
 	}
 
 	// Avoid having old open locks
-	capture_data->video_wait.try_lock();
-	capture_data->audio_wait.try_lock();
+	capture_data->status.video_wait.try_lock();
+	capture_data->status.audio_wait.try_lock();
 
 	return true;
 }
@@ -184,8 +174,8 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 	for (inner_curr_in = 0; inner_curr_in < NUM_CONCURRENT_DATA_BUFFERS; ++inner_curr_in) {
 		ftStatus = FT_InitializeOverlapped(capture_data->handle, &overlap[inner_curr_in]);
 		if (ftStatus) {
-			capture_data->error_text = "Disconnected: Initialize failed";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "Disconnected: Initialize failed";
+			capture_data->status.new_error_text = true;
 			return;
 		}
 	}
@@ -193,8 +183,8 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 	for (inner_curr_in = 0; inner_curr_in < NUM_CONCURRENT_DATA_BUFFERS - 1; ++inner_curr_in) {
 		ftStatus = FT_ASYNC_CALL(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&capture_data->capture_buf[inner_curr_in], sizeof(CaptureReceived), &capture_data->read[inner_curr_in], &overlap[inner_curr_in]);
 		if (ftStatus != FT_IO_PENDING) {
-			capture_data->error_text = "Disconnected: Read failed";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "Disconnected: Read failed";
+			capture_data->status.new_error_text = true;
 			return;
 		}
 	}
@@ -203,12 +193,12 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 
 	auto clock_start = std::chrono::high_resolution_clock::now();
 
-	while (capture_data->connected && capture_data->running) {
+	while (capture_data->status.connected && capture_data->status.running) {
 
 		ftStatus = FT_ASYNC_CALL(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&capture_data->capture_buf[inner_curr_in], sizeof(CaptureReceived), &capture_data->read[inner_curr_in], &overlap[inner_curr_in]);
 		if (ftStatus != FT_IO_PENDING) {
-			capture_data->error_text = "Disconnected: Read failed";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "Disconnected: Read failed";
+			capture_data->status.new_error_text = true;
 			return;
 		}
 
@@ -216,8 +206,8 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 
 		ftStatus = FT_GetOverlappedResult(capture_data->handle, &overlap[inner_curr_in], &capture_data->read[inner_curr_in], true);
 		if(FT_FAILED(ftStatus)) {
-			capture_data->error_text = "Disconnected: USB error";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "Disconnected: USB error";
+			capture_data->status.new_error_text = true;
 			return;
 		}
 		const auto curr_time = std::chrono::high_resolution_clock::now();
@@ -225,12 +215,12 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 		capture_data->time_in_buf[inner_curr_in] = diff.count();
 		clock_start = curr_time;
 
-		capture_data->curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
-		if(capture_data->cooldown_curr_in)
-			capture_data->cooldown_curr_in--;
+		capture_data->status.curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
+		if(capture_data->status.cooldown_curr_in)
+			capture_data->status.cooldown_curr_in--;
 		// Signal that there is data available
-		capture_data->video_wait.unlock();
-		capture_data->audio_wait.unlock();
+		capture_data->status.video_wait.unlock();
+		capture_data->status.audio_wait.unlock();
 	}
 }
 
@@ -238,14 +228,14 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 static bool safe_capture_call(CaptureData* capture_data) {
 	int inner_curr_in = 0;
 
-	while (capture_data->connected && capture_data->running) {
+	while (capture_data->status.connected && capture_data->status.running) {
 
 		auto clock_start = std::chrono::high_resolution_clock::now();
 
 		FT_STATUS ftStatus = FT_ReadPipeEx(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&capture_data->capture_buf[inner_curr_in], sizeof(CaptureReceived), &capture_data->read[inner_curr_in], 1000);
 		if(FT_FAILED(ftStatus)) {
-			capture_data->error_text = "Disconnected: Read failed";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "Disconnected: Read failed";
+			capture_data->status.new_error_text = true;
 			return true;
 		}
 
@@ -254,11 +244,11 @@ static bool safe_capture_call(CaptureData* capture_data) {
 		capture_data->time_in_buf[inner_curr_in] = diff.count();
 
 		inner_curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
-		capture_data->curr_in = inner_curr_in;
-		if(capture_data->cooldown_curr_in)
-			capture_data->cooldown_curr_in--;
-		capture_data->video_wait.unlock();
-		capture_data->audio_wait.unlock();
+		capture_data->status.curr_in = inner_curr_in;
+		if(capture_data->status.cooldown_curr_in)
+			capture_data->status.cooldown_curr_in--;
+		capture_data->status.video_wait.unlock();
+		capture_data->status.audio_wait.unlock();
 	}
 
 	return false;
@@ -269,8 +259,8 @@ void captureCall(CaptureData* capture_data) {
 	OVERLAPPED overlap[NUM_CONCURRENT_DATA_BUFFERS];
 	FT_STATUS ftStatus;
 	int inner_curr_in = 0;
-	capture_data->curr_in = inner_curr_in;
-	capture_data->cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
+	capture_data->status.curr_in = inner_curr_in;
+	capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
 	bool is_bad_ftd3xx = false;
 	DWORD ftd3xx_lib_version;
 
@@ -281,8 +271,8 @@ void captureCall(CaptureData* capture_data) {
 		is_bad_ftd3xx = true;
 	}
 
-	while(capture_data->running) {
-		if (!capture_data->connected) {
+	while(capture_data->status.running) {
+		if (!capture_data->status.connected) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000/USB_CHECKS_PER_SECOND));
 			continue;
 		}
@@ -298,37 +288,37 @@ void captureCall(CaptureData* capture_data) {
 			fast_capture_call(capture_data, overlap);
 		#endif
 
-		capture_data->close_success = false;
-		capture_data->connected = false;
-		capture_data->cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
+		capture_data->status.close_success = false;
+		capture_data->status.connected = false;
+		capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
 		// Needed in case the threads went in the connected loop
 		// before it is set right above, and they are waiting on the locks!
-		capture_data->video_wait.unlock();
-		capture_data->audio_wait.unlock();
+		capture_data->status.video_wait.unlock();
+		capture_data->status.audio_wait.unlock();
 
 		if(!is_bad_ftd3xx) {
 			for (inner_curr_in = 0; inner_curr_in < NUM_CONCURRENT_DATA_BUFFERS; ++inner_curr_in) {
 				ftStatus = FT_GetOverlappedResult(capture_data->handle, &overlap[inner_curr_in], &capture_data->read[inner_curr_in], true);
 				if (FT_ReleaseOverlapped(capture_data->handle, &overlap[inner_curr_in])) {
-					capture_data->error_text = "Disconnected: Release failed";
-					capture_data->new_error_text = true;
+					capture_data->status.error_text = "Disconnected: Release failed";
+					capture_data->status.new_error_text = true;
 				}
 			}
 		}
 
 		if(FT_AbortPipe(capture_data->handle, BULK_IN)) {
-			capture_data->error_text = "Disconnected: Abort failed";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "Disconnected: Abort failed";
+			capture_data->status.new_error_text = true;
 		}
 
 		if (FT_Close(capture_data->handle)) {
-			capture_data->error_text = "Disconnected: Close failed";
-			capture_data->new_error_text = true;
+			capture_data->status.error_text = "Disconnected: Close failed";
+			capture_data->status.new_error_text = true;
 		}
 
-		capture_data->close_success = false;
-		capture_data->connected = false;
+		capture_data->status.close_success = false;
+		capture_data->status.connected = false;
 
-		capture_data->close_success = true;
+		capture_data->status.close_success = true;
 	}
 }

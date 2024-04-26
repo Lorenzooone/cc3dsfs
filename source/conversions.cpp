@@ -1,6 +1,4 @@
 #include <SFML/Audio.hpp>
-#include "3dscapture.hpp"
-#include "frontend.hpp"
 #include "conversions.hpp"
 
 #include <cstring>

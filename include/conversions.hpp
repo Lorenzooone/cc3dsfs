@@ -2,7 +2,7 @@
 #define __CONVERSIONS_HPP
 
 #include <SFML/Audio.hpp>
-#include "3dscapture.hpp"
+#include "capture_structs.hpp"
 #include "frontend.hpp"
 
 void convertVideoToOutput(VideoInputData *p_in, VideoOutputData *p_out);

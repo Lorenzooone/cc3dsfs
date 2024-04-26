@@ -1,14 +1,7 @@
-#include <SFML/Graphics.hpp>
-
-#include "utils.hpp"
-#include "hw_defs.hpp"
-#include "3dscapture.hpp"
 #include "frontend.hpp"
 
 #include <cstring>
 #include <cmath>
-#include <mutex>
-#include <queue>
 #include "font_ttf.h"
 
 static int top_screen_crop_widths[] = {TOP_WIDTH_3DS, TOP_SPECIAL_DS_WIDTH_3DS, TOP_SCALED_DS_WIDTH_3DS, WIDTH_DS, WIDTH_SCALED_GBA, WIDTH_GBA, WIDTH_SCALED_GB, WIDTH_GB, WIDTH_SNES, WIDTH_NES};
@@ -341,10 +334,10 @@ void WindowScreen::display_call(bool is_main_thread) {
 	this->done_display = true;
 }
 
-void WindowScreen::display_thread(CaptureData* capture_data) {
-	while(capture_data->running) {
+void WindowScreen::display_thread(CaptureStatus* capture_status) {
+	while(capture_status->running) {
 		this->display_lock.lock();
-		if(!capture_data->running)
+		if(!capture_status->running)
 			break;
 		this->free_ownership_of_window(false);
 		this->is_thread_done = true;

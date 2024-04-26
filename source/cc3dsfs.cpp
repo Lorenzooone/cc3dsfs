@@ -136,12 +136,12 @@ void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 	const bool endianness = is_big_endian();
 	volatile int loaded_samples;
 
-	while (capture_data->running) {
-		if(capture_data->connected) {
-			bool timed_out = !capture_data->audio_wait.timed_lock();
-			curr_out = (capture_data->curr_in - 1 + NUM_CONCURRENT_DATA_BUFFERS) % NUM_CONCURRENT_DATA_BUFFERS;
+	while (capture_data->status.running) {
+		if(capture_data->status.connected) {
+			bool timed_out = !capture_data->status.audio_wait.timed_lock();
+			curr_out = (capture_data->status.curr_in - 1 + NUM_CONCURRENT_DATA_BUFFERS) % NUM_CONCURRENT_DATA_BUFFERS;
 
-			if((!capture_data->cooldown_curr_in) && (curr_out != prev_out)) {
+			if((!capture_data->status.cooldown_curr_in) && (curr_out != prev_out)) {
 				loaded_samples = audio.samples.size();
 				if((capture_data->read[curr_out] > sizeof(VideoInputData)) && (loaded_samples < AUDIO_LATENCY_LIMIT)) {
 					int n_samples = (capture_data->read[curr_out] - sizeof(VideoInputData)) / 2;
@@ -222,9 +222,6 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 	WindowScreen bot_screen(WindowScreen::ScreenType::BOTTOM, &display_data, audio_data, &events_access);
 	WindowScreen joint_screen(WindowScreen::ScreenType::JOINT, &display_data, audio_data, &events_access);
 
-	if(capture_data->connected)
-		ConnectedOutTextGenerator(out_text_data, capture_data);
-
 	if(!skip_io) {
 		load(base_path, base_name, top_screen.m_info, bot_screen.m_info, joint_screen.m_info, display_data, audio_data, out_text_data);
 	}
@@ -233,17 +230,21 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 	bot_screen.build();
 	joint_screen.build();
 
-	std::thread top_thread(screen_display_thread, &top_screen, capture_data);
-	std::thread bot_thread(screen_display_thread, &bot_screen, capture_data);
-	std::thread joint_thread(screen_display_thread, &joint_screen, capture_data);
+	std::thread top_thread(screen_display_thread, &top_screen, &capture_data->status);
+	std::thread bot_thread(screen_display_thread, &bot_screen, &capture_data->status);
+	std::thread joint_thread(screen_display_thread, &joint_screen, &capture_data->status);
 
-	while (capture_data->running) {
+	capture_data->status.connected = connect(true, capture_data);
+	if(capture_data->status.connected)
+		ConnectedOutTextGenerator(out_text_data, capture_data);
 
-		if(capture_data->connected) {
-			bool timed_out = !capture_data->video_wait.timed_lock();
-			curr_out = (capture_data->curr_in - 1 + NUM_CONCURRENT_DATA_BUFFERS) % NUM_CONCURRENT_DATA_BUFFERS;
+	while (capture_data->status.running) {
 
-			if ((!capture_data->cooldown_curr_in) && (curr_out != prev_out)) {
+		if(capture_data->status.connected) {
+			bool timed_out = !capture_data->status.video_wait.timed_lock();
+			curr_out = (capture_data->status.curr_in - 1 + NUM_CONCURRENT_DATA_BUFFERS) % NUM_CONCURRENT_DATA_BUFFERS;
+
+			if ((!capture_data->status.cooldown_curr_in) && (curr_out != prev_out)) {
 				double frame_time = capture_data->time_in_buf[curr_out];
 				if(capture_data->read[curr_out] >= sizeof(VideoInputData)) {
 					convertVideoToOutput(&capture_data->capture_buf[curr_out].video_data, out_buf);
@@ -268,7 +269,7 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 			}
 			else {
 				VideoOutputData *chosen_buf = out_buf;
-				if(capture_data->cooldown_curr_in) {
+				if(capture_data->status.cooldown_curr_in) {
 					last_frame_time = 0;
 					chosen_buf = null_buf;
 				}
@@ -292,7 +293,7 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 		for(int i = 0; i < available_fps; i++)
 			fps_sum += curr_fps_array[i];
 
-		if(!capture_data->connected)
+		if(!capture_data->status.connected)
 			update_output(top_screen, bot_screen, joint_screen, reload, display_data.split, 0, null_buf);
 
 		int load_index = 0;
@@ -302,13 +303,13 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 		joint_screen.poll();
 
 		if(top_screen.open_capture() || bot_screen.open_capture() || joint_screen.open_capture()) {
-			capture_data->connected = connect(true, capture_data);
-			if(capture_data->connected)
+			capture_data->status.connected = connect(true, capture_data);
+			if(capture_data->status.connected)
 				ConnectedOutTextGenerator(out_text_data, capture_data);
 		}
 
 		if(top_screen.close_capture() || bot_screen.close_capture() || joint_screen.close_capture()) {
-			capture_data->running = false;
+			capture_data->status.running = false;
 		}
 		
 		if((load_index = top_screen.load_data()) || (load_index = bot_screen.load_data()) || (load_index = joint_screen.load_data())) {
@@ -334,9 +335,9 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 			UpdateOutText(out_text_data, "", audio_data->text_to_print(), TEXT_KIND_NORMAL);
 		}
 
-		if(capture_data->new_error_text) {
-			UpdateOutText(out_text_data, capture_data->error_text, capture_data->error_text, TEXT_KIND_ERROR);
-			capture_data->new_error_text = false;
+		if(capture_data->status.new_error_text) {
+			UpdateOutText(out_text_data, capture_data->status.error_text, capture_data->status.error_text, TEXT_KIND_ERROR);
+			capture_data->status.new_error_text = false;
 		}
 
 		if(!out_text_data.consumed) {
@@ -382,7 +383,6 @@ int main(int argc, char **argv) {
 	audio_data.reset();
 	CaptureData* capture_data = new CaptureData;
 
-	capture_data->connected = connect(true, capture_data);
 	std::thread capture_thread(captureCall, capture_data);
 	std::thread audio_thread(soundCall, &audio_data, capture_data);
 

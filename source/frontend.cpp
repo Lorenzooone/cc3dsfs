@@ -1,5 +1,3 @@
-#include "utils.hpp"
-#include "3dscapture.hpp"
 #include "frontend.hpp"
 
 void reset_screen_info(ScreenInfo &info) {
@@ -157,6 +155,6 @@ void update_output(WindowScreen &top_screen, WindowScreen &bot_screen, WindowScr
 		joint_screen.draw(frame_time, out_buf);
 }
 
-void screen_display_thread(WindowScreen *screen, CaptureData* capture_data) {
-	screen->display_thread(capture_data);
+void screen_display_thread(WindowScreen *screen, CaptureStatus* capture_status) {
+	screen->display_thread(capture_status);
 }

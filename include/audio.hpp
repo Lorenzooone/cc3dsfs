@@ -6,7 +6,7 @@
 #include "audio_data.hpp"
 #include "utils.hpp"
 #include "audio.hpp"
-#include "3dscapture.hpp"
+#include "capture_structs.hpp"
 #include "hw_defs.hpp"
 
 struct Sample {
