@@ -517,7 +517,13 @@ void WindowScreen::poll_window() {
 				joystickId = event.joystickButton.joystickId;
 			else if(event.type == sf::Event::JoystickMoved)
 				joystickId = event.joystickMove.joystickId;
-			events_queue.emplace(event.type, event.key.code, event.text.unicode, joystickId, event.joystickButton.button, event.joystickMove.axis, event.joystickMove.position);
+			int mouse_x = event.mouseButton.x;
+			int mouse_y = event.mouseButton.y;
+			if(event.type == sf::Event::MouseMoved) {
+				mouse_x = event.mouseMove.x;
+				mouse_y = event.mouseMove.y;
+			}
+			events_queue.emplace(event.type, event.key.code, event.text.unicode, joystickId, event.joystickButton.button, event.joystickMove.axis, event.joystickMove.position, event.mouseButton.button, mouse_x, mouse_y);
 		}
 		this->events_access->unlock();
 	}

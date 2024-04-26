@@ -13,6 +13,8 @@
 #define FT_ASYNC_CALL FT_ReadPipeAsync
 #endif
 
+#define REAL_SERIAL_NUMBER_SIZE 16
+#define SERIAL_NUMBER_SIZE (REAL_SERIAL_NUMBER_SIZE+1)
 #define MAX_SAMPLES_IN 1096
 
 // Max value supported by old FTD3XX versions...
@@ -39,7 +41,7 @@ struct PACKED CaptureReceived {
 
 struct CaptureData {
 	FT_HANDLE handle;
-	char chosen_serial_number[17];
+	char chosen_serial_number[SERIAL_NUMBER_SIZE];
 	std::string error_text;
 	bool new_error_text;
 	CaptureReceived capture_buf[NUM_CONCURRENT_DATA_BUFFERS];

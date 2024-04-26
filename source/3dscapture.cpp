@@ -33,12 +33,12 @@ static void list_devices(DevicesList &devices_list) {
 	if (!FT_FAILED(ftStatus) && numDevs > 0)
 	{
 		devices_list.numAllocedDevices = numDevs;
-		devices_list.serialNumbers = new char[devices_list.numAllocedDevices * 17];
+		devices_list.serialNumbers = new char[devices_list.numAllocedDevices * SERIAL_NUMBER_SIZE];
 		FT_HANDLE ftHandle = NULL;
 		DWORD Flags = 0;
 		DWORD Type = 0;
 		DWORD ID = 0;
-		char SerialNumber[16] = { 0 };
+		char SerialNumber[REAL_SERIAL_NUMBER_SIZE] = { 0 };
 		char Description[32] = { 0 };
 		for (DWORD i = 0; i < numDevs; i++)
 		{
@@ -48,9 +48,9 @@ static void list_devices(DevicesList &devices_list) {
 			{
 				for(int i = 0; i < sizeof(valid_descriptions) / sizeof(*valid_descriptions); i++) {
 					if(Description == valid_descriptions[i]) {
-						for(int i = 0; i < 16; i++)
-							devices_list.serialNumbers[(17 * devices_list.numValidDevices) + i] = SerialNumber[i];
-						devices_list.serialNumbers[(17 * devices_list.numValidDevices) + 16] = 0;
+						for(int i = 0; i < REAL_SERIAL_NUMBER_SIZE; i++)
+							devices_list.serialNumbers[(SERIAL_NUMBER_SIZE * devices_list.numValidDevices) + i] = SerialNumber[i];
+						devices_list.serialNumbers[(SERIAL_NUMBER_SIZE * devices_list.numValidDevices) + REAL_SERIAL_NUMBER_SIZE] = 0;
 						++devices_list.numValidDevices;
 						break;
 					}
@@ -109,8 +109,8 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 		return false;
 	}
 
-	for(int i = 0; i < 17; i++)
-		capture_data->chosen_serial_number[i] = devices_list.serialNumbers[(17 * chosen_device) + i];
+	for(int i = 0; i < SERIAL_NUMBER_SIZE; i++)
+		capture_data->chosen_serial_number[i] = devices_list.serialNumbers[(SERIAL_NUMBER_SIZE * chosen_device) + i];
 	delete []devices_list.serialNumbers;
 
 	if (FT_Create(capture_data->chosen_serial_number, FT_OPEN_BY_SERIAL_NUMBER, &capture_data->handle)) {
