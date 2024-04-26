@@ -23,18 +23,23 @@ FetchContent_Declare(SFML
 
 set(FTD3XX_BASE_URL https://ftdichip.com/wp-content/uploads/)
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    set(FTD3XX_BUILD_COMMAND )
+    set(FTD3XX_BUILD_COMMAND ${CMAKE_SOURCE_DIR}/windows_setup_ftd3xx.bat)
     set(FTD3XX_URL_TIME 2024/01)
     set(FTD3XX_VER 1.3.0.9)
     set(FTD3XX_VOL FTD3XXLibrary_v${FTD3XX_VER})
     set(FTD3XX_ARCHIVE ${FTD3XX_VOL}.zip)
-    set(FTD3XX_LIB libftd3xx.lib)
-    set(FTD3XX_DLL FTD3XX.dll)
     set(FTD3XX_SUBFOLDER win)
     if(${WINDOWS_FTD3XX_USE_SHARED_LIB})
         set(WINDOWS_PATH_SPECIFIER DLL)
+        set(FTD3XX_LIB FTD3XX.dll)
     else()
         set(WINDOWS_PATH_SPECIFIER Static_Lib)
+        set(FTD3XX_LIB FTD3XX.lib)
+    endif()
+    if(WIN32)
+        set(PATH_WINDOWS_ARCH Win32)
+    else ()
+        set(PATH_WINDOWS_ARCH x64)
     endif()
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     set(FTD3XX_BUILD_COMMAND ${CMAKE_SOURCE_DIR}/macos_setup_ftd3xx.sh)
@@ -69,13 +74,26 @@ endif()
 
 set(ftd3xx_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/ftd3xx-src)
 set(ftd3xx_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/ftd3xx-build)
+file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/win)
+file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/macos)
+file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/linux)
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-FetchContent_Declare(FTD3XX
+ExternalProject_Add(FTD3XX
     URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
     DOWNLOAD_NO_EXTRACT TRUE
     SOURCE_DIR ${ftd3xx_SOURCE_DIR}
     BINARY_DIR ${ftd3xx_BINARY_DIR}
     BUILD_COMMAND ${FTD3XX_BUILD_COMMAND} ${ftd3xx_SOURCE_DIR}/${FTD3XX_ARCHIVE} ${FTD3XX_MOUNTED_FOLDER} ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${FTD3XX_LIB}
+    UPDATE_COMMAND ""
+    CONFIGURE_COMMAND ""
+    INSTALL_COMMAND ""
+)
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+ExternalProject_Add(FTD3XX
+    URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
+    SOURCE_DIR ${ftd3xx_SOURCE_DIR}
+    BINARY_DIR ${ftd3xx_BINARY_DIR}
+    BUILD_COMMAND ${FTD3XX_BUILD_COMMAND} ${ftd3xx_SOURCE_DIR} ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${PATH_WINDOWS_ARCH}/${WINDOWS_PATH_SPECIFIER}/${FTD3XX_LIB}
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     INSTALL_COMMAND ""
@@ -104,14 +122,9 @@ file(MAKE_DIRECTORY ${TOOLS_DATA_DIR})
 
 set(OUTPUT_NAME cc3dsfs)
 
-add_custom_target(CMakeFTD3XX)
 add_custom_target(CMakeBin2C)
 add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/3dscapture.cpp source/conversions.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp)
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-target_link_libraries(${OUTPUT_NAME} PRIVATE sfml-graphics sfml-audio sfml-window sfml-system FTD3XX)
-else()
-target_link_libraries(${OUTPUT_NAME} PRIVATE sfml-graphics sfml-audio sfml-window sfml-system ftd3xx-static)
-endif()
+target_link_libraries(${OUTPUT_NAME} PRIVATE sfml-graphics sfml-audio sfml-window sfml-system ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}/${FTD3XX_LIB})
 target_link_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER})
 target_include_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${TOOLS_DATA_DIR} ${CMAKE_SOURCE_DIR}/include)
 target_compile_features(${OUTPUT_NAME} PRIVATE cxx_std_17)
@@ -129,31 +142,6 @@ add_custom_command(
     COMMAND ${TOOLS_DATA_DIR}/bin2c ${CMAKE_SOURCE_DIR}/data/font.ttf ${TOOLS_DATA_DIR} font_ttf font_ttf
     DEPENDS ${CMAKE_SOURCE_DIR}/data/font.ttf CMakeBin2C
 )
-
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    add_custom_command(
-        TARGET CMakeFTD3XX
-        COMMENT "Copy FTD3XX header"
-        PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${ftd3xx_SOURCE_DIR}/FTD3XX.h ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}
-    )
-    if(WIN32)
-        set(PATH_WINDOWS_ARCH Win32)
-    else ()
-        set(PATH_WINDOWS_ARCH x64)
-    endif()
-    add_custom_command(
-        TARGET CMakeFTD3XX
-        COMMENT "Copy FTD3XX lib file"
-        PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${ftd3xx_SOURCE_DIR}/${PATH_WINDOWS_ARCH}/${WINDOWS_PATH_SPECIFIER}/FTD3XX.lib ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}
-    )
-    if(${WINDOWS_FTD3XX_USE_SHARED_LIB})
-        add_custom_command(
-            TARGET CMakeFTD3XX
-            COMMENT "Copy FTD3XX lib file"
-            PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${ftd3xx_SOURCE_DIR}/${PATH_WINDOWS_ARCH}/${WINDOWS_PATH_SPECIFIER}/FTD3XX.dll ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}
-        )
-    endif()
-endif()
 
 if(WIN32)
     add_custom_command(
