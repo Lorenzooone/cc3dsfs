@@ -97,6 +97,16 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 			this->create_window(true);
 			break;
 
+		case 'a':
+			this->m_info.async = !this->m_info.async;
+			this->print_notification_on_off("Async", this->m_info.async);
+			break;
+
+		case 'v':
+			this->m_info.v_sync_enabled = !this->m_info.v_sync_enabled;
+			this->print_notification_on_off("VSync", this->m_info.v_sync_enabled);
+			break;
+
 		case 'z':
 			old_scaling = this->m_info.menu_scaling_factor;
 			this->m_info.menu_scaling_factor -= 0.1;
@@ -216,20 +226,10 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 
 			break;
 
-		case 'a':
-			this->m_info.async = !this->m_info.async;
-			this->print_notification_on_off("Async", this->m_info.async);
-			break;
-
 		case 'b':
 			this->m_info.is_blurred = !this->m_info.is_blurred;
 			this->future_operations.call_blur = true;
 			this->print_notification_on_off("Blur", this->m_info.is_blurred);
-			break;
-
-		case 'v':
-			this->m_info.v_sync_enabled = !this->m_info.v_sync_enabled;
-			this->print_notification_on_off("VSync", this->m_info.v_sync_enabled);
 			break;
 
 		case 'i':
