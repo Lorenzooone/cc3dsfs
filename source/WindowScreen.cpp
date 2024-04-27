@@ -77,8 +77,312 @@ void WindowScreen::reload() {
 	this->prepare_size_ratios(true, true);
 }
 
-void WindowScreen::poll() {
+bool WindowScreen::common_poll(SFEvent &event_data) {
 	double old_scaling = 0.0;
+	bool consumed = true;
+	switch (event_data.type) {
+	case sf::Event::Closed:
+		this->m_prepare_quit = true;
+		break;
+
+	case sf::Event::TextEntered:
+		switch (event_data.unicode) {
+		case 's':
+			this->m_info.is_fullscreen = false;
+			this->display_data->split = !this->display_data->split;
+			break;
+
+		case 'f':
+			this->m_info.is_fullscreen = !this->m_info.is_fullscreen;
+			this->create_window(true);
+			break;
+
+		case 'z':
+			old_scaling = this->m_info.menu_scaling_factor;
+			this->m_info.menu_scaling_factor -= 0.1;
+			if(this->m_info.menu_scaling_factor < 0.35)
+				this->m_info.menu_scaling_factor = 0.3;
+			if(old_scaling != this->m_info.menu_scaling_factor) {
+				this->print_notification_float("Menu Scaling", this->m_info.menu_scaling_factor, 1);
+			}
+			break;
+
+
+		case 'x':
+			old_scaling = this->m_info.menu_scaling_factor;
+			this->m_info.menu_scaling_factor += 0.1;
+			if(this->m_info.menu_scaling_factor > 4.95)
+				this->m_info.menu_scaling_factor = 5.0;
+			if(old_scaling != this->m_info.menu_scaling_factor) {
+				this->print_notification_float("Menu Scaling", this->m_info.menu_scaling_factor, 1);
+			}
+			break;
+
+		case '-':
+			if(this->m_info.is_fullscreen)
+				break;
+			old_scaling = this->m_info.scaling;
+			this->m_info.scaling -= 0.5;
+			if (this->m_info.scaling < 1.25)
+				this->m_info.scaling = 1.0;
+			if(old_scaling != this->m_info.scaling) {
+				this->print_notification_float("Scaling", this->m_info.scaling, 1);
+				this->future_operations.call_screen_settings_update = true;
+			}
+			break;
+
+		case '0':
+			if(this->m_info.is_fullscreen)
+				break;
+			old_scaling = this->m_info.scaling;
+			this->m_info.scaling += 0.5;
+			if (this->m_info.scaling > 44.75)
+				this->m_info.scaling = 45.0;
+			if(old_scaling != this->m_info.scaling) {
+				this->print_notification_float("Scaling", this->m_info.scaling, 1);
+				this->future_operations.call_screen_settings_update = true;
+			}
+			break;
+		default:
+			consumed = false;
+			break;
+		}
+
+		break;
+		
+	case sf::Event::KeyPressed:
+		switch (event_data.code) {
+		case sf::Keyboard::Escape:
+			this->m_prepare_quit = true;
+			break;
+		default:
+			consumed = false;
+			break;
+		}
+
+		break;
+	case sf::Event::MouseMoved:
+		if(this->m_info.is_fullscreen) {
+			this->m_info.show_mouse = true;
+			this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
+		}
+		consumed = false;
+		break;
+	case sf::Event::MouseButtonPressed:
+		if(this->m_info.is_fullscreen) {
+			this->m_info.show_mouse = true;
+			this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
+		}
+		consumed = false;
+		break;
+	case sf::Event::MouseButtonReleased:
+		if(this->m_info.is_fullscreen) {
+			this->m_info.show_mouse = true;
+			this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
+		}
+		consumed = false;
+		break;
+	case sf::Event::JoystickButtonPressed:
+		consumed = false;
+		break;
+	case sf::Event::JoystickMoved:
+		consumed = false;
+		break;
+	default:
+		consumed = false;
+		break;
+	}
+	return consumed;
+}
+
+bool WindowScreen::main_poll(SFEvent &event_data) {
+	bool consumed = true;
+	switch (event_data.type) {
+	case sf::Event::TextEntered:
+		switch (event_data.unicode) {
+		case 'c':
+			if(this->m_stype == WindowScreen::ScreenType::BOTTOM) {
+				if(this->m_info.crop_kind == Crop::DEFAULT_3DS)
+					this->m_info.crop_kind = Crop::NATIVE_DS;
+				else
+					this->m_info.crop_kind = Crop::DEFAULT_3DS;
+			}
+			else {
+				this->m_info.crop_kind = static_cast<Crop>((this->m_info.crop_kind + 1) % Crop::CROP_END);
+			}
+			this->print_notification("Crop: " + crop_names[this->m_info.crop_kind]);
+			this->prepare_size_ratios(false, false);
+			this->future_operations.call_crop = true;
+
+			break;
+
+		case 'a':
+			this->m_info.async = !this->m_info.async;
+			this->print_notification_on_off("Async", this->m_info.async);
+			break;
+
+		case 'b':
+			this->m_info.is_blurred = !this->m_info.is_blurred;
+			this->future_operations.call_blur = true;
+			this->print_notification_on_off("Blur", this->m_info.is_blurred);
+			break;
+
+		case 'v':
+			this->m_info.v_sync_enabled = !this->m_info.v_sync_enabled;
+			this->print_notification_on_off("VSync", this->m_info.v_sync_enabled);
+			break;
+
+		case 'i':
+			this->m_info.bfi = !this->m_info.bfi;
+			this->print_notification_on_off("BFI", this->m_info.bfi);
+			break;
+
+		case 'o':
+			this->m_prepare_open = true;
+			break;
+
+		case 't':
+			this->m_info.bottom_pos = static_cast<BottomRelativePosition>((this->m_info.bottom_pos + 1) % (BottomRelativePosition::BOT_REL_POS_END));
+			this->prepare_size_ratios(false, false);
+			this->future_operations.call_screen_settings_update = true;
+			break;
+
+		case '6':
+			this->m_info.subscreen_offset_algorithm = static_cast<OffsetAlgorithm>((this->m_info.subscreen_offset_algorithm + 1) % (OffsetAlgorithm::OFF_ALGO_END));
+			this->future_operations.call_screen_settings_update = true;
+			break;
+
+		case '7':
+			this->m_info.subscreen_attached_offset_algorithm = static_cast<OffsetAlgorithm>((this->m_info.subscreen_attached_offset_algorithm + 1) % (OffsetAlgorithm::OFF_ALGO_END));
+			this->future_operations.call_screen_settings_update = true;
+			break;
+
+		case '4':
+			this->m_info.total_offset_algorithm_x = static_cast<OffsetAlgorithm>((this->m_info.total_offset_algorithm_x + 1) % (OffsetAlgorithm::OFF_ALGO_END));
+			this->future_operations.call_screen_settings_update = true;
+			break;
+
+		case '5':
+			this->m_info.total_offset_algorithm_y = static_cast<OffsetAlgorithm>((this->m_info.total_offset_algorithm_y + 1) % (OffsetAlgorithm::OFF_ALGO_END));
+			this->future_operations.call_screen_settings_update = true;
+			break;
+
+		case 'y':
+			this->prepare_size_ratios(true, false);
+			this->future_operations.call_screen_settings_update = true;
+			break;
+
+		case 'u':
+			this->prepare_size_ratios(false, true);
+			this->future_operations.call_screen_settings_update = true;
+			break;
+
+		case '8':
+			this->m_info.top_rotation = (this->m_info.top_rotation + 270) % 360;
+			this->m_info.bot_rotation = (this->m_info.bot_rotation + 270) % 360;
+			this->prepare_size_ratios(false, false);
+			this->future_operations.call_rotate = true;
+
+			break;
+
+		case '9':
+			this->m_info.top_rotation = (this->m_info.top_rotation + 90) % 360;
+			this->m_info.bot_rotation = (this->m_info.bot_rotation + 90) % 360;
+			this->prepare_size_ratios(false, false);
+			this->future_operations.call_rotate = true;
+			break;
+
+		case 'h':
+			this->m_info.top_rotation = (this->m_info.top_rotation + 270) % 360;
+			this->prepare_size_ratios(false, false);
+			this->future_operations.call_rotate = true;
+
+			break;
+
+		case 'j':
+			this->m_info.top_rotation = (this->m_info.top_rotation + 90) % 360;
+			this->prepare_size_ratios(false, false);
+			this->future_operations.call_rotate = true;
+
+			break;
+
+		case 'k':
+			this->m_info.bot_rotation = (this->m_info.bot_rotation + 270) % 360;
+			this->prepare_size_ratios(false, false);
+			this->future_operations.call_rotate = true;
+
+			break;
+
+		case 'l':
+			this->m_info.bot_rotation = (this->m_info.bot_rotation + 90) % 360;
+			this->prepare_size_ratios(false, false);
+			this->future_operations.call_rotate = true;
+
+			break;
+
+		case 'm':
+			audio_data->change_audio_mute();
+			break;
+
+		case ',':
+			audio_data->change_audio_volume(false);
+			break;
+
+		case '.':
+			audio_data->change_audio_volume(true);
+			break;
+
+		default:
+			consumed = false;
+			break;
+		}
+
+		break;
+		
+	case sf::Event::KeyPressed:
+		switch (event_data.code) {
+		case sf::Keyboard::F1:
+		case sf::Keyboard::F2:
+		case sf::Keyboard::F3:
+		case sf::Keyboard::F4:
+			this->m_prepare_load = event_data.code - sf::Keyboard::F1 + 1;
+			break;
+
+		case sf::Keyboard::F5:
+		case sf::Keyboard::F6:
+		case sf::Keyboard::F7:
+		case sf::Keyboard::F8:
+			this->m_prepare_save = event_data.code - sf::Keyboard::F5 + 1;
+			break;
+		default:
+			consumed = false;
+			break;
+		}
+
+		break;
+	case sf::Event::MouseMoved:
+		consumed = false;
+		break;
+	case sf::Event::MouseButtonPressed:
+		consumed = false;
+		break;
+	case sf::Event::MouseButtonReleased:
+		consumed = false;
+		break;
+	case sf::Event::JoystickButtonPressed:
+		consumed = false;
+		break;
+	case sf::Event::JoystickMoved:
+		consumed = false;
+		break;
+	default:
+		consumed = false;
+		break;
+	}
+	return consumed;
+}
+
+void WindowScreen::poll() {
 	if(this->m_info.is_fullscreen && this->m_info.show_mouse) {
 		auto curr_time = std::chrono::high_resolution_clock::now();
 		const std::chrono::duration<double> diff = curr_time - this->last_mouse_action_time;
@@ -89,254 +393,10 @@ void WindowScreen::poll() {
 	while(!events_queue.empty()) {
 		SFEvent event_data = events_queue.front();
 		events_queue.pop();
-		switch (event_data.type) {
-		case sf::Event::Closed:
-			this->m_prepare_quit = true;
-			break;
-
-		case sf::Event::TextEntered:
-			switch (event_data.unicode) {
-			case 'c':
-				if(this->m_stype == WindowScreen::ScreenType::BOTTOM) {
-					if(this->m_info.crop_kind == Crop::DEFAULT_3DS)
-						this->m_info.crop_kind = Crop::NATIVE_DS;
-					else
-						this->m_info.crop_kind = Crop::DEFAULT_3DS;
-				}
-				else {
-					this->m_info.crop_kind = static_cast<Crop>((this->m_info.crop_kind + 1) % Crop::CROP_END);
-				}
-				this->print_notification("Crop: " + crop_names[this->m_info.crop_kind]);
-				this->prepare_size_ratios(false, false);
-				this->future_operations.call_crop = true;
-
-				break;
-
-			case 's':
-				this->m_info.is_fullscreen = false;
-				this->display_data->split = !this->display_data->split;
-				break;
-
-			case 'a':
-				this->m_info.async = !this->m_info.async;
-				this->print_notification_on_off("Async", this->m_info.async);
-				break;
-
-			case 'b':
-				this->m_info.is_blurred = !this->m_info.is_blurred;
-				this->future_operations.call_blur = true;
-				this->print_notification_on_off("Blur", this->m_info.is_blurred);
-				break;
-
-			case 'v':
-				this->m_info.v_sync_enabled = !this->m_info.v_sync_enabled;
-				this->print_notification_on_off("VSync", this->m_info.v_sync_enabled);
-				break;
-
-			case 'i':
-				this->m_info.bfi = !this->m_info.bfi;
-				this->print_notification_on_off("BFI", this->m_info.bfi);
-				break;
-
-			case '-':
-				if(this->m_info.is_fullscreen)
-					break;
-				old_scaling = this->m_info.scaling;
-				this->m_info.scaling -= 0.5;
-				if (this->m_info.scaling < 1.25)
-					this->m_info.scaling = 1.0;
-				if(old_scaling != this->m_info.scaling) {
-					this->print_notification_float("Scaling", this->m_info.scaling, 1);
-					this->future_operations.call_screen_settings_update = true;
-				}
-				break;
-
-			case '0':
-				if(this->m_info.is_fullscreen)
-					break;
-				old_scaling = this->m_info.scaling;
-				this->m_info.scaling += 0.5;
-				if (this->m_info.scaling > 44.75)
-					this->m_info.scaling = 45.0;
-				if(old_scaling != this->m_info.scaling) {
-					this->print_notification_float("Scaling", this->m_info.scaling, 1);
-					this->future_operations.call_screen_settings_update = true;
-				}
-				break;
-
-			case 'o':
-				this->m_prepare_open = true;
-				break;
-
-			case 't':
-				this->m_info.bottom_pos = static_cast<BottomRelativePosition>((this->m_info.bottom_pos + 1) % (BottomRelativePosition::BOT_REL_POS_END));
-				this->prepare_size_ratios(false, false);
-				this->future_operations.call_screen_settings_update = true;
-				break;
-
-			case '6':
-				this->m_info.subscreen_offset_algorithm = static_cast<OffsetAlgorithm>((this->m_info.subscreen_offset_algorithm + 1) % (OffsetAlgorithm::OFF_ALGO_END));
-				this->future_operations.call_screen_settings_update = true;
-				break;
-
-			case '7':
-				this->m_info.subscreen_attached_offset_algorithm = static_cast<OffsetAlgorithm>((this->m_info.subscreen_attached_offset_algorithm + 1) % (OffsetAlgorithm::OFF_ALGO_END));
-				this->future_operations.call_screen_settings_update = true;
-				break;
-
-			case '4':
-				this->m_info.total_offset_algorithm_x = static_cast<OffsetAlgorithm>((this->m_info.total_offset_algorithm_x + 1) % (OffsetAlgorithm::OFF_ALGO_END));
-				this->future_operations.call_screen_settings_update = true;
-				break;
-
-			case '5':
-				this->m_info.total_offset_algorithm_y = static_cast<OffsetAlgorithm>((this->m_info.total_offset_algorithm_y + 1) % (OffsetAlgorithm::OFF_ALGO_END));
-				this->future_operations.call_screen_settings_update = true;
-				break;
-
-			case 'y':
-				this->prepare_size_ratios(true, false);
-				this->future_operations.call_screen_settings_update = true;
-				break;
-
-			case 'u':
-				this->prepare_size_ratios(false, true);
-				this->future_operations.call_screen_settings_update = true;
-				break;
-
-			case 'f':
-				this->m_info.is_fullscreen = !this->m_info.is_fullscreen;
-				this->create_window(true);
-				break;
-
-			case '8':
-				this->m_info.top_rotation = (this->m_info.top_rotation + 270) % 360;
-				this->m_info.bot_rotation = (this->m_info.bot_rotation + 270) % 360;
-				this->prepare_size_ratios(false, false);
-				this->future_operations.call_rotate = true;
-
-				break;
-
-			case '9':
-				this->m_info.top_rotation = (this->m_info.top_rotation + 90) % 360;
-				this->m_info.bot_rotation = (this->m_info.bot_rotation + 90) % 360;
-				this->prepare_size_ratios(false, false);
-				this->future_operations.call_rotate = true;
-				break;
-
-			case 'h':
-				this->m_info.top_rotation = (this->m_info.top_rotation + 270) % 360;
-				this->prepare_size_ratios(false, false);
-				this->future_operations.call_rotate = true;
-
-				break;
-
-			case 'j':
-				this->m_info.top_rotation = (this->m_info.top_rotation + 90) % 360;
-				this->prepare_size_ratios(false, false);
-				this->future_operations.call_rotate = true;
-
-				break;
-
-			case 'k':
-				this->m_info.bot_rotation = (this->m_info.bot_rotation + 270) % 360;
-				this->prepare_size_ratios(false, false);
-				this->future_operations.call_rotate = true;
-
-				break;
-
-			case 'l':
-				this->m_info.bot_rotation = (this->m_info.bot_rotation + 90) % 360;
-				this->prepare_size_ratios(false, false);
-				this->future_operations.call_rotate = true;
-
-				break;
-
-			case 'z':
-				old_scaling = this->m_info.menu_scaling_factor;
-				this->m_info.menu_scaling_factor -= 0.1;
-				if(this->m_info.menu_scaling_factor < 0.35)
-					this->m_info.menu_scaling_factor = 0.3;
-				if(old_scaling != this->m_info.menu_scaling_factor) {
-					this->print_notification_float("Menu Scaling", this->m_info.menu_scaling_factor, 1);
-				}
-				break;
-
-
-			case 'x':
-				old_scaling = this->m_info.menu_scaling_factor;
-				this->m_info.menu_scaling_factor += 0.1;
-				if(this->m_info.menu_scaling_factor > 4.95)
-					this->m_info.menu_scaling_factor = 5.0;
-				if(old_scaling != this->m_info.menu_scaling_factor) {
-					this->print_notification_float("Menu Scaling", this->m_info.menu_scaling_factor, 1);
-				}
-				break;
-
-			case 'm':
-				audio_data->change_audio_mute();
-				break;
-
-			case ',':
-				audio_data->change_audio_volume(false);
-				break;
-
-			case '.':
-				audio_data->change_audio_volume(true);
-				break;
-
-			default:
-				break;
-			}
-
-			break;
-			
-		case sf::Event::KeyPressed:
-			switch (event_data.code) {
-			case sf::Keyboard::Escape:
-				this->m_prepare_quit = true;
-				break;
-			case sf::Keyboard::F1:
-			case sf::Keyboard::F2:
-			case sf::Keyboard::F3:
-			case sf::Keyboard::F4:
-				this->m_prepare_load = event_data.code - sf::Keyboard::F1 + 1;
-				break;
-
-			case sf::Keyboard::F5:
-			case sf::Keyboard::F6:
-			case sf::Keyboard::F7:
-			case sf::Keyboard::F8:
-				this->m_prepare_save = event_data.code - sf::Keyboard::F5 + 1;
-				break;
-			}
-
-			break;
-		case sf::Event::MouseMoved:
-			if(this->m_info.is_fullscreen) {
-				this->m_info.show_mouse = true;
-				this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
-			}
-			break;
-		case sf::Event::MouseButtonPressed:
-			if(this->m_info.is_fullscreen) {
-				this->m_info.show_mouse = true;
-				this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
-			}
-			break;
-		case sf::Event::MouseButtonReleased:
-			if(this->m_info.is_fullscreen) {
-				this->m_info.show_mouse = true;
-				this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
-			}
-			break;
-		case sf::Event::JoystickButtonPressed:
-			break;
-		case sf::Event::JoystickMoved:
-			break;
-		default:
-			break;
-		}
+		if(this->common_poll(event_data))
+			continue;
+		if(this->main_poll(event_data))
+			continue;
 	}
 }
 

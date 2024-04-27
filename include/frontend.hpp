@@ -207,6 +207,8 @@ private:
 	void print_notification_on_off(std::string base_text, bool value);
 	void print_notification_float(std::string base_text, float value, int decimals);
 	void poll_window();
+	bool common_poll(SFEvent &event_data);
+	bool main_poll(SFEvent &event_data);
 	void prepare_screen_rendering();
 	bool window_needs_work();
 	void window_factory(bool is_main_thread);
