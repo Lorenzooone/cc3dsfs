@@ -139,20 +139,20 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	return out;
 }
 
-void update_output(WindowScreen &top_screen, WindowScreen &bot_screen, WindowScreen &joint_screen, bool &reload, bool split, double frame_time, VideoOutputData *out_buf) {
-	if(reload) {
-		top_screen.reload();
-		bot_screen.reload();
-		joint_screen.reload();
-		reload = false;
+void update_output(FrontendData* frontend_data, double frame_time, VideoOutputData *out_buf) {
+	if(frontend_data->reload) {
+		frontend_data->top_screen->reload();
+		frontend_data->bot_screen->reload();
+		frontend_data->joint_screen->reload();
+		frontend_data->reload = false;
 	}
 	// Make sure the window is closed before showing split/non-split
-	if(split)
-		joint_screen.draw(frame_time, out_buf);
-	top_screen.draw(frame_time, out_buf);
-	bot_screen.draw(frame_time, out_buf);
-	if(!split)
-		joint_screen.draw(frame_time, out_buf);
+	if(frontend_data->display_data.split)
+		frontend_data->joint_screen->draw(frame_time, out_buf);
+	frontend_data->top_screen->draw(frame_time, out_buf);
+	frontend_data->bot_screen->draw(frame_time, out_buf);
+	if(!frontend_data->display_data.split)
+		frontend_data->joint_screen->draw(frame_time, out_buf);
 }
 
 void screen_display_thread(WindowScreen *screen, CaptureStatus* capture_status) {

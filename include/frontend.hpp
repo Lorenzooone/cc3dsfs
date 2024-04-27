@@ -167,6 +167,8 @@ private:
 	DisplayData* display_data;
 	AudioData* audio_data;
 	std::mutex* events_access;
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_mouse_action_time;
+	const float mouse_timeout = 5.0f;
 
 	sf::Texture in_tex;
 
@@ -231,6 +233,14 @@ private:
 	void setWinSize(bool is_main_thread);
 };
 
-void update_output(WindowScreen &top_screen, WindowScreen &bot_screen, WindowScreen &joint_screen, bool &reload, bool split, double frame_time, VideoOutputData *out_buf);
+struct FrontendData {
+	WindowScreen *top_screen;
+	WindowScreen *bot_screen;
+	WindowScreen *joint_screen;
+	DisplayData display_data;
+	bool reload;
+};
+
+void update_output(FrontendData* frontend_data, double frame_time = 0, VideoOutputData *out_buf = NULL);
 void screen_display_thread(WindowScreen *screen, CaptureStatus* capture_status);
 #endif

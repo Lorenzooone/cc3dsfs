@@ -50,7 +50,7 @@ static void list_devices(DevicesList &devices_list) {
 	}
 }
 
-static int choose_device(DevicesList &devices_list) {
+static int choose_device(DevicesList &devices_list, FrontendData* frontend_data) {
 	if(devices_list.numValidDevices == 1)
 		return 0;
 	return 0;
@@ -61,7 +61,7 @@ static void preemptive_close_connection(CaptureData* capture_data) {
 	FT_Close(capture_data->handle);
 }
 
-bool connect(bool print_failed, CaptureData* capture_data) {
+bool connect(bool print_failed, CaptureData* capture_data, FrontendData* frontend_data) {
 	capture_data->status.new_error_text = false;
 	if (capture_data->status.connected) {
 		capture_data->status.close_success = false;
@@ -89,7 +89,7 @@ bool connect(bool print_failed, CaptureData* capture_data) {
 		return false;
 	}
 
-	int chosen_device = choose_device(devices_list);
+	int chosen_device = choose_device(devices_list, frontend_data);
 	if(chosen_device == -1) {
 		if(print_failed) {
 			capture_data->status.error_text = "No device was selected";

@@ -79,6 +79,12 @@ void WindowScreen::reload() {
 
 void WindowScreen::poll() {
 	double old_scaling = 0.0;
+	if(this->m_info.is_fullscreen && this->m_info.show_mouse) {
+		auto curr_time = std::chrono::high_resolution_clock::now();
+		const std::chrono::duration<double> diff = curr_time - this->last_mouse_action_time;
+		if(diff.count() > this->mouse_timeout)
+			this->m_info.show_mouse = false;
+	}
 	this->poll_window();
 	while(!events_queue.empty()) {
 		SFEvent event_data = events_queue.front();
@@ -306,6 +312,24 @@ void WindowScreen::poll() {
 			}
 
 			break;
+		case sf::Event::MouseMoved:
+			if(this->m_info.is_fullscreen) {
+				this->m_info.show_mouse = true;
+				this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
+			}
+			break;
+		case sf::Event::MouseButtonPressed:
+			if(this->m_info.is_fullscreen) {
+				this->m_info.show_mouse = true;
+				this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
+			}
+			break;
+		case sf::Event::MouseButtonReleased:
+			if(this->m_info.is_fullscreen) {
+				this->m_info.show_mouse = true;
+				this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
+			}
+			break;
 		case sf::Event::JoystickButtonPressed:
 			break;
 		case sf::Event::JoystickMoved:
@@ -379,7 +403,10 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 	loaded_operations = future_operations;
 	if(this->m_win.isOpen() || this->loaded_operations.call_create) {
 		WindowScreen::reset_operations(future_operations);
-		memcpy(this->saved_buf, out_buf, sizeof(VideoOutputData));
+		if(out_buf != NULL)
+			memcpy(this->saved_buf, out_buf, sizeof(VideoOutputData));
+		else
+			memset(this->saved_buf, 0, sizeof(VideoOutputData));
 		loaded_info = m_info;
 		this->notification->setTextFactor(this->loaded_info.menu_scaling_factor);
 		this->notification->prepareRenderText();

@@ -4,6 +4,7 @@
 #include "utils.hpp"
 #include "hw_defs.hpp"
 #include "capture_structs.hpp"
+#include "frontend.hpp"
 
 #if defined(_WIN32) || defined(_WIN64)
 #define FTD3XX_STATIC
@@ -33,6 +34,6 @@ struct CaptureData {
 	CaptureStatus status;
 };
 
-bool connect(bool print_failed, CaptureData* capture_data);
+bool connect(bool print_failed, CaptureData* capture_data, FrontendData* frontend_data);
 void captureCall(CaptureData* capture_data);
 #endif
