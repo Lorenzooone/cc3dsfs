@@ -14,6 +14,7 @@
 enum Crop { DEFAULT_3DS, SPECIAL_DS, SCALED_DS, NATIVE_DS, SCALED_GBA, NATIVE_GBA, SCALED_GB, NATIVE_GB, NATIVE_SNES, NATIVE_NES, CROP_END };
 enum BottomRelativePosition { UNDER_TOP, LEFT_TOP, ABOVE_TOP, RIGHT_TOP, BOT_REL_POS_END };
 enum OffsetAlgorithm { NO_DISTANCE, HALF_DISTANCE, MAX_DISTANCE, OFF_ALGO_END };
+enum CurrMenuType { DEFAULT_MENU_TYPE, CONNECT_MENU_TYPE };
 
 struct ScreenInfo {
 	bool is_blurred;
@@ -33,7 +34,8 @@ struct ScreenInfo {
 };
 
 struct DisplayData {
-	bool split;
+	bool split = false;
+	CurrMenuType curr_menu = DEFAULT_MENU_TYPE;
 };
 
 #pragma pack(push, 1)

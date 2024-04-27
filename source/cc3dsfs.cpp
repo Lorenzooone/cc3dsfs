@@ -193,7 +193,6 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 	int num_elements_fps_array = 0;
 	int curr_out, prev_out = NUM_CONCURRENT_DATA_BUFFERS - 1;
 	FrontendData frontend_data;
-	frontend_data.display_data.split = false;
 	frontend_data.reload = true;
 	bool skip_io = false;
 	int num_allowed_blanks = MAX_ALLOWED_BLANKS;

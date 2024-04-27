@@ -395,8 +395,16 @@ void WindowScreen::poll() {
 		events_queue.pop();
 		if(this->common_poll(event_data))
 			continue;
-		if(this->main_poll(event_data))
-			continue;
+		switch(this->display_data->curr_menu) {
+		case DEFAULT_MENU_TYPE:
+			if(this->main_poll(event_data))
+				continue;
+			break;
+		case CONNECT_MENU_TYPE:
+			break;
+		default:
+			break;
+		}
 	}
 }
 
