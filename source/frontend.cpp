@@ -176,8 +176,6 @@ JoystickDirection get_joystick_direction(uint32_t joystickId, sf::Joystick::Axis
 }
 
 JoystickAction get_joystick_action(uint32_t joystickId, uint32_t joy_button) {
-	sf::Joystick::Identification joystick_data = sf::Joystick::getIdentification(joystickId);
-	std::cout << std::string(joystick_data.name) << ": " << joystick_data.vendorId << " - " << joystick_data.productId << std::endl;
 	if((joy_button == 0) || (joy_button == 1))
 		return JOY_ACTION_CONFIRM;
 	if((joy_button == 2) || (joy_button == 3))
