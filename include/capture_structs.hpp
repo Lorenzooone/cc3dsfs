@@ -5,6 +5,9 @@
 #include "hw_defs.hpp"
 #include <string>
 
+#define REAL_SERIAL_NUMBER_SIZE 16
+#define SERIAL_NUMBER_SIZE (REAL_SERIAL_NUMBER_SIZE+1)
+
 #define MAX_SAMPLES_IN 1096
 
 #define FIX_PARTIAL_FIRST_FRAME_NUM 3

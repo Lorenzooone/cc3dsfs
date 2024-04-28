@@ -179,7 +179,7 @@ void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 		else {
 			audio.stop_audio();
 			audio.stop();
-			sf::sleep(sf::milliseconds(1000/USB_CHECKS_PER_SECOND));
+			default_sleep();
 		}
 	}
 
@@ -282,7 +282,7 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 			num_elements_fps_array++;
 			if(num_elements_fps_array >= (2 * FPS_WINDOW_SIZE))
 				num_elements_fps_array -= FPS_WINDOW_SIZE;
-			sf::sleep(sf::milliseconds(1000/USB_CHECKS_PER_SECOND));
+			default_sleep();
 		}
 		
 		int available_fps = FPS_WINDOW_SIZE;

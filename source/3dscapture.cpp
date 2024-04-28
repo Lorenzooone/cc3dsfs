@@ -50,10 +50,43 @@ static void list_devices(DevicesList &devices_list) {
 	}
 }
 
-static int choose_device(DevicesList &devices_list, FrontendData* frontend_data) {
-	if(devices_list.numValidDevices == 1)
+static bool poll_connection_window_screen(WindowScreen *screen, int &chosen_index) {
+	screen->poll();
+	if(screen->check_connection_menu_result() != -1) {
+		chosen_index = screen->check_connection_menu_result();
+		return true;
+	}
+	if(screen->close_capture()) {
+		return true;
+	}
+	return false;
+}
+
+static int choose_device(DevicesList *devices_list, FrontendData* frontend_data) {
+	if(devices_list->numValidDevices == 1)
 		return 0;
-	return 0;
+	int chosen_index = -1;
+	frontend_data->top_screen->setup_connection_menu(devices_list);
+	frontend_data->bot_screen->setup_connection_menu(devices_list);
+	frontend_data->joint_screen->setup_connection_menu(devices_list);
+	bool done = false;
+	while(!done) {
+		update_output(frontend_data);
+		done = poll_connection_window_screen(frontend_data->top_screen, chosen_index);
+		if(done)
+			break;
+		done = poll_connection_window_screen(frontend_data->bot_screen, chosen_index);
+		if(done)
+			break;
+		done = poll_connection_window_screen(frontend_data->joint_screen, chosen_index);
+		if(done)
+			break;
+		default_sleep();
+	}
+	frontend_data->top_screen->end_connection_menu();
+	frontend_data->bot_screen->end_connection_menu();
+	frontend_data->joint_screen->end_connection_menu();
+	return chosen_index;
 }
 
 static void preemptive_close_connection(CaptureData* capture_data) {
@@ -89,7 +122,7 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 		return false;
 	}
 
-	int chosen_device = choose_device(devices_list, frontend_data);
+	int chosen_device = choose_device(&devices_list, frontend_data);
 	if(chosen_device == -1) {
 		if(print_failed) {
 			capture_data->status.error_text = "No device was selected";

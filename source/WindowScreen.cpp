@@ -26,6 +26,7 @@ WindowScreen::WindowScreen(WindowScreen::ScreenType stype, DisplayData* display_
 	reset_screen_info(this->m_info);
 	this->font_load_success = this->text_font.loadFromMemory(font_ttf, font_ttf_len);
 	this->notification = new TextRectangle(this->font_load_success, this->text_font);
+	this->connection_menu = new ConnectionMenu(this->font_load_success, this->text_font);
 	this->in_tex.create(IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT);
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
@@ -43,7 +44,8 @@ WindowScreen::WindowScreen(WindowScreen::ScreenType stype, DisplayData* display_
 
 WindowScreen::~WindowScreen() {
 	delete this->saved_buf;
-	this->saved_buf = NULL;
+	delete this->notification;
+	delete this->connection_menu;
 }
 
 void WindowScreen::build() {
@@ -383,6 +385,8 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 }
 
 void WindowScreen::poll() {
+	if(this->close_capture())
+		return;
 	if(this->m_info.is_fullscreen && this->m_info.show_mouse) {
 		auto curr_time = std::chrono::high_resolution_clock::now();
 		const std::chrono::duration<double> diff = curr_time - this->last_mouse_action_time;
@@ -393,14 +397,22 @@ void WindowScreen::poll() {
 	while(!events_queue.empty()) {
 		SFEvent event_data = events_queue.front();
 		events_queue.pop();
-		if(this->common_poll(event_data))
+		if(this->common_poll(event_data)) {
+			if(this->close_capture())
+				return;
 			continue;
-		switch(this->display_data->curr_menu) {
+		}
+		switch(this->loaded_menu) {
 		case DEFAULT_MENU_TYPE:
 			if(this->main_poll(event_data))
 				continue;
 			break;
 		case CONNECT_MENU_TYPE:
+			if(this->connection_menu->poll(event_data)) {
+				if(this->check_connection_menu_result() != -1)
+					return;
+				continue;
+			}
 			break;
 		default:
 			break;
@@ -468,6 +480,7 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 		else
 			this->open();
 	}
+	this->loaded_menu = this->display_data->curr_menu;
 	loaded_operations = future_operations;
 	if(this->m_win.isOpen() || this->loaded_operations.call_create) {
 		WindowScreen::reset_operations(future_operations);
@@ -480,6 +493,15 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 		this->notification->prepareRenderText();
 		this->frame_time = frame_time;
 		this->scheduled_work_on_window = this->window_needs_work();
+		if(this->loaded_menu == CONNECT_MENU_TYPE) {
+			int view_size_x = this->m_window_width;
+			int view_size_y = this->m_window_height;
+			if(!this->loaded_info.is_fullscreen) {
+				view_size_x = this->m_width;
+				view_size_y = this->m_height;
+			}
+			this->connection_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+		}
 		this->is_window_factory_done = false;
 		this->is_thread_done = false;
 		this->done_display = false;
@@ -491,6 +513,19 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 		if(!this->loaded_info.async)
 			this->display_call(true);
 	}
+}
+
+void WindowScreen::setup_connection_menu(DevicesList *devices_list) {
+	this->display_data->curr_menu = CONNECT_MENU_TYPE;
+	this->connection_menu->insert_data(devices_list);
+}
+
+int WindowScreen::check_connection_menu_result() {
+	return this->connection_menu->selected_index;
+}
+
+void WindowScreen::end_connection_menu() {
+	this->display_data->curr_menu = DEFAULT_MENU_TYPE;
 }
 
 void WindowScreen::print_notification(std::string text, TextKind kind) {
@@ -611,8 +646,10 @@ void WindowScreen::poll_window() {
 				mouse_x = event.mouseMove.x;
 				mouse_y = event.mouseMove.y;
 			}
-			events_queue.emplace(event.type, event.key.code, event.text.unicode, joystickId, event.joystickButton.button, event.joystickMove.axis, event.joystickMove.position, event.mouseButton.button, mouse_x, mouse_y);
+			events_queue.emplace(event.type, event.key.code, event.text.unicode, joystickId, event.joystickButton.button, event.joystickMove.axis, 0.0, event.mouseButton.button, mouse_x, mouse_y);
 		}
+		if(this->m_win.hasFocus())
+			joystick_axis_poll(this->events_queue);
 		this->events_access->unlock();
 	}
 }
@@ -690,12 +727,16 @@ void WindowScreen::window_factory(bool is_main_thread) {
 }
 
 void WindowScreen::pre_texture_conversion_processing() {
+	if(this->loaded_menu != DEFAULT_MENU_TYPE)
+		return;
 	//Place preprocessing window-specific effects here
 	this->in_tex.update((uint8_t*)this->saved_buf, IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT, 0, 0);
 }
 
 void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top) {
 	if((is_top && this->m_stype == WindowScreen::ScreenType::BOTTOM) || ((!is_top) && this->m_stype == WindowScreen::ScreenType::TOP))
+		return;
+	if(this->loaded_menu != DEFAULT_MENU_TYPE)
 		return;
 
 	rect_data.out_tex.clear();
@@ -716,10 +757,19 @@ void WindowScreen::display_data_to_window(bool actually_draw) {
 
 	this->m_win.clear();
 	this->window_bg_processing();
-	if(this->m_stype != WindowScreen::ScreenType::BOTTOM)
-		this->m_win.draw(this->m_out_rect_top.out_rect);
-	if(this->m_stype != WindowScreen::ScreenType::TOP)
-		this->m_win.draw(this->m_out_rect_bot.out_rect);
+	switch(this->loaded_menu) {
+	case DEFAULT_MENU_TYPE:
+		if(this->m_stype != WindowScreen::ScreenType::BOTTOM)
+			this->m_win.draw(this->m_out_rect_top.out_rect);
+		if(this->m_stype != WindowScreen::ScreenType::TOP)
+			this->m_win.draw(this->m_out_rect_bot.out_rect);
+		break;
+	case CONNECT_MENU_TYPE:
+		this->connection_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+		break;
+	default:
+		break;
+	}
 	this->notification->draw(this->m_win);
 	this->m_win.display();
 }
@@ -752,7 +802,7 @@ int WindowScreen::apply_offset_algo(int offset_contribute, OffsetAlgorithm chose
 	}
 }
 
-void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y) {
+void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, bool do_work) {
 	int top_screen_x = 0, top_screen_y = 0;
 	int bot_screen_x = 0, bot_screen_y = 0;
 	int top_screen_width = curr_top_screen_size.x;
@@ -815,8 +865,10 @@ void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::
 				break;
 		}
 	}
-	this->m_out_rect_top.out_rect.setPosition(top_screen_x + offset_x + get_screen_corner_modifier_x(this->loaded_info.top_rotation, top_screen_width), top_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.top_rotation, top_screen_height));
-	this->m_out_rect_bot.out_rect.setPosition(bot_screen_x + offset_x + get_screen_corner_modifier_x(this->loaded_info.bot_rotation, bot_screen_width), bot_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.bot_rotation, bot_screen_height));
+	if(do_work) {
+		this->m_out_rect_top.out_rect.setPosition(top_screen_x + offset_x + get_screen_corner_modifier_x(this->loaded_info.top_rotation, top_screen_width), top_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.top_rotation, top_screen_height));
+		this->m_out_rect_bot.out_rect.setPosition(bot_screen_x + offset_x + get_screen_corner_modifier_x(this->loaded_info.bot_rotation, bot_screen_width), bot_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.bot_rotation, bot_screen_height));
+	}
 
 	int top_end_x = top_screen_x + offset_x + top_screen_width;
 	int top_end_y = top_screen_y + offset_y + top_screen_height;
@@ -960,7 +1012,7 @@ int WindowScreen::get_fullscreen_offset_y(int top_width, int top_height, int bot
 	return apply_offset_algo(curr_desk_mode.height - offset_contribute, this->loaded_info.total_offset_algorithm_y);
 }
 
-void WindowScreen::resize_window_and_out_rects() {
+void WindowScreen::resize_window_and_out_rects(bool do_work) {
 	sf::Vector2f top_screen_size = getShownScreenSize(true, this->loaded_info.crop_kind);
 	sf::Vector2f bot_screen_size = getShownScreenSize(false, this->loaded_info.crop_kind);
 	int top_height = this->loaded_info.scaling * top_screen_size.y;
@@ -984,11 +1036,13 @@ void WindowScreen::resize_window_and_out_rects() {
 	}
 	sf::Vector2f new_top_screen_size = sf::Vector2f(top_width, top_height);
 	sf::Vector2f new_bot_screen_size = sf::Vector2f(bot_width, bot_height);
-	this->m_out_rect_top.out_rect.setSize(new_top_screen_size);
-	this->m_out_rect_top.out_rect.setTextureRect(sf::IntRect(0, 0, top_screen_size.x, top_screen_size.y));
-	this->m_out_rect_bot.out_rect.setSize(new_bot_screen_size);
-	this->m_out_rect_bot.out_rect.setTextureRect(sf::IntRect(0, 0, bot_screen_size.x, bot_screen_size.y));
-	this->set_position_screens(new_top_screen_size, new_bot_screen_size, offset_x, offset_y, max_x, max_y);
+	if(do_work) {
+		this->m_out_rect_top.out_rect.setSize(new_top_screen_size);
+		this->m_out_rect_top.out_rect.setTextureRect(sf::IntRect(0, 0, top_screen_size.x, top_screen_size.y));
+		this->m_out_rect_bot.out_rect.setSize(new_bot_screen_size);
+		this->m_out_rect_bot.out_rect.setTextureRect(sf::IntRect(0, 0, bot_screen_size.x, bot_screen_size.y));
+	}
+	this->set_position_screens(new_top_screen_size, new_bot_screen_size, offset_x, offset_y, max_x, max_y, do_work);
 }
 
 void WindowScreen::create_window(bool re_prepare_size) {

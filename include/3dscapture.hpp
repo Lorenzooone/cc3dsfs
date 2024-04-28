@@ -15,9 +15,6 @@
 #define FT_ASYNC_CALL FT_ReadPipeAsync
 #endif
 
-#define REAL_SERIAL_NUMBER_SIZE 16
-#define SERIAL_NUMBER_SIZE (REAL_SERIAL_NUMBER_SIZE+1)
-
 // Max value (Due to support of old FTD3XX versions...)
 #define NUM_CONCURRENT_DATA_BUFFERS 8
 

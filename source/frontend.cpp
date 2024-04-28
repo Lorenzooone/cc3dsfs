@@ -1,4 +1,5 @@
 #include "frontend.hpp"
+#include <iostream>
 
 void reset_screen_info(ScreenInfo &info) {
 	info.is_blurred = false;
@@ -137,6 +138,55 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "bfi_divider=" + std::to_string(info.bfi_divider) + "\n";
 	out += base + "menu_scaling_factor=" + std::to_string(info.menu_scaling_factor) + "\n";
 	return out;
+}
+
+void joystick_axis_poll(std::queue<SFEvent> &events_queue) {
+	for(int i = 0; i < sf::Joystick::Count; i++) {
+		if(!sf::Joystick::isConnected(i))
+			continue;
+		for(int j = 0; j < sf::Joystick::AxisCount; j++) {
+			sf::Joystick::Axis axis = sf::Joystick::Axis(sf::Joystick::Axis::X + j);
+			if(sf::Joystick::hasAxis(i, axis))
+				events_queue.emplace(sf::Event::JoystickMoved, sf::Keyboard::Backspace, 0, i, 0, axis, sf::Joystick::getAxisPosition(i, axis), sf::Mouse::Left, 0, 0);
+		}
+	}
+}
+
+JoystickDirection get_joystick_direction(uint32_t joystickId, sf::Joystick::Axis axis, float position) {
+	bool is_horizontal = false;
+	if((axis == sf::Joystick::Z) || (axis == sf::Joystick::R))
+		return JOY_DIR_NONE;
+	if((axis == sf::Joystick::X) || (axis == sf::Joystick::U) || (axis == sf::Joystick::PovX))
+		is_horizontal = true;
+	int direction = 0;
+	if(position >= 90.0)
+		direction = 1;
+	if(position <= -90.0)
+		direction = -1;
+	if(direction == 0)
+		return JOY_DIR_NONE;
+	if(direction > 0) {
+		if(is_horizontal)
+			return JOY_DIR_RIGHT;
+		return JOY_DIR_DOWN;
+	}
+	if(is_horizontal)
+		return JOY_DIR_LEFT;
+	return JOY_DIR_UP;
+}
+
+JoystickAction get_joystick_action(uint32_t joystickId, uint32_t joy_button) {
+	sf::Joystick::Identification joystick_data = sf::Joystick::getIdentification(joystickId);
+	std::cout << std::string(joystick_data.name) << ": " << joystick_data.vendorId << " - " << joystick_data.productId << std::endl;
+	if((joy_button == 0) || (joy_button == 1))
+		return JOY_ACTION_CONFIRM;
+	if((joy_button == 2) || (joy_button == 3))
+		return JOY_ACTION_NEGATE;
+	return JOY_ACTION_NONE;
+}
+
+void default_sleep() {
+	sf::sleep(sf::milliseconds(1000/USB_CHECKS_PER_SECOND));
 }
 
 void update_output(FrontendData* frontend_data, double frame_time, VideoOutputData *out_buf) {

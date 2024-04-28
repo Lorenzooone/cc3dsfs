@@ -10,6 +10,9 @@
 #include "audio_data.hpp"
 #include "capture_structs.hpp"
 #include "hw_defs.hpp"
+#include "TextRectangle.hpp"
+#include "sfml_gfx_structs.hpp"
+#include "ConnectionMenu.hpp"
 
 enum Crop { DEFAULT_3DS, SPECIAL_DS, SCALED_DS, NATIVE_DS, SCALED_GBA, NATIVE_GBA, SCALED_GB, NATIVE_GB, NATIVE_SNES, NATIVE_NES, CROP_END };
 enum BottomRelativePosition { UNDER_TOP, LEFT_TOP, ABOVE_TOP, RIGHT_TOP, BOT_REL_POS_END };
@@ -46,83 +49,9 @@ struct PACKED VideoOutputData {
 
 #pragma pack(pop)
 
-struct SFEvent {
-	SFEvent(sf::Event::EventType type, sf::Keyboard::Key code, uint32_t unicode, uint32_t joystickId, uint32_t joy_button, sf::Joystick::Axis axis, float position, sf::Mouse::Button mouse_button, int mouse_x, int mouse_y) : type(type), code(code), unicode(unicode), joystickId(joystickId), joy_button(joy_button), axis(axis), position(position), mouse_button(mouse_button), mouse_x(mouse_x), mouse_y(mouse_y) {}
-
-	sf::Event::EventType type;
-	sf::Keyboard::Key code;
-	uint32_t unicode;
-	uint32_t joystickId;
-	uint32_t joy_button;
-	sf::Joystick::Axis axis;
-	float position;
-	sf::Mouse::Button mouse_button;
-	int mouse_x;
-	int mouse_y;
-};
-
-struct out_rect_data {
-	sf::RectangleShape out_rect;
-	sf::RenderTexture out_tex;
-};
-
 void reset_screen_info(ScreenInfo &info);
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
 std::string save_screen_info(std::string base, const ScreenInfo &info);
-
-enum TextKind {TEXT_KIND_NORMAL, TEXT_KIND_SELECTED, TEXT_KIND_SUCCESS, TEXT_KIND_WARNING, TEXT_KIND_ERROR};
-
-class TextRectangle {
-public:
-	TextRectangle(bool font_load_success, sf::Font &text_font);
-	~TextRectangle();
-	void setSize(int width, int height);
-	void setRectangleKind(TextKind kind);
-	void setTextFactor(float size_multiplier);
-	void setDuration(float on_seconds);
-	void startTimer(bool do_start);
-	void setProportionalBox(bool proportional_box);
-	void prepareRenderText();
-	void setText(std::string text);
-	void setShowText(bool show_text);
-	void draw(sf::RenderTarget &window);
-
-private:
-	out_rect_data text_rect;
-	sf::Text actual_text;
-	int width, height;
-	bool font_load_success;
-	bool is_done_showing_text;
-	std::chrono::time_point<std::chrono::high_resolution_clock> clock_time_start;
-	int time_phase;
-	sf::Color *base_bg_color;
-	sf::Color *selected_bg_color;
-	sf::Color *success_bg_color;
-	sf::Color *warning_bg_color;
-	sf::Color *error_bg_color;
-	const float base_time_slide_factor = 0.5;
-	const float base_pixel_slide_factor = 2.0;
-
-	struct TextData {
-		bool is_timed;
-		bool start_timer;
-		TextKind kind;
-		bool show_text;
-		bool render_text;
-		bool proportional_box;
-		std::string printed_text;
-		float duration;
-		float font_pixel_height;
-	};
-
-	TextData future_data;
-	TextData loaded_data;
-
-	void reset_data(TextData &data);
-	void setTextWithLineWrapping(int x_limit = 0);
-	void updateText(int x_limit = 0);
-	void updateSlides(float* time_seconds);
-};
 
 class WindowScreen {
 public:
@@ -141,6 +70,9 @@ public:
 	void end();
 	void after_thread_join();
 	void draw(double frame_time, VideoOutputData* out_buf);
+	void setup_connection_menu(DevicesList *devices_list);
+	int check_connection_menu_result();
+	void end_connection_menu();
 
 	void print_notification(std::string text, TextKind kind = TEXT_KIND_NORMAL);
 	int load_data();
@@ -165,17 +97,19 @@ private:
 	int m_prepare_save;
 	bool m_prepare_open;
 	bool m_prepare_quit;
+	bool font_load_success;
 	double frame_time;
 	DisplayData* display_data;
 	AudioData* audio_data;
 	std::mutex* events_access;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_mouse_action_time;
 	const float mouse_timeout = 5.0f;
+	CurrMenuType loaded_menu;
+	ConnectionMenu *connection_menu;
 
 	sf::Texture in_tex;
 
 	sf::Font text_font;
-	bool font_load_success;
 
 	volatile bool main_thread_owns_window;
 	volatile bool is_window_factory_done;
@@ -220,13 +154,13 @@ private:
 	void display_data_to_window(bool actually_draw);
 	void window_render_call();
 	int apply_offset_algo(int offset_contribute, OffsetAlgorithm chosen_algo);
-	void set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y);
+	void set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, bool do_work = true);
 	int prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotation, int width_limit, int height_limit, int other_rotation);
 	void calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf::Vector2f &other_screen_size, int &own_scaling, int &other_scaling, int own_rotation, int other_rotation, bool increase, bool mantain, bool set_to_zero);
 	void prepare_size_ratios(bool top_increase, bool bot_increase);
 	int get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height);
 	int get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height);
-	void resize_window_and_out_rects();
+	void resize_window_and_out_rects(bool do_work = true);
 	void create_window(bool re_prepare_size);
 	void update_view_size();
 	void open();
@@ -245,6 +179,7 @@ struct FrontendData {
 	bool reload;
 };
 
+void default_sleep();
 void update_output(FrontendData* frontend_data, double frame_time = 0, VideoOutputData *out_buf = NULL);
 void screen_display_thread(WindowScreen *screen, CaptureStatus* capture_status);
 #endif
