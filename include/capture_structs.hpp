@@ -26,6 +26,7 @@ struct PACKED CaptureReceived {
 #pragma pack(pop)
 
 struct CaptureStatus {
+	std::string serial_number;
 	std::string error_text;
 	bool new_error_text;
 	volatile int curr_in = 0;

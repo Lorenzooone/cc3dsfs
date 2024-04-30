@@ -16,7 +16,7 @@ static int bot_screen_crop_x[] = {0, 0, 0, (BOT_WIDTH_3DS - WIDTH_DS) / 2, 0, 0,
 static int bot_screen_crop_y[] = {0, 0, 0, HEIGHT_3DS - HEIGHT_DS, 0, 0, 0, 0, 0, 0};
 static std::string crop_names[] = {"3DS", "16:10", "Scaled DS", "Native DS", "Scaled GBA", "Native GBA", "Scaled VC GB", "VC GB", "VC SNES", "VC NES"};
 
-WindowScreen::WindowScreen(WindowScreen::ScreenType stype, DisplayData* display_data, AudioData* audio_data, std::mutex* events_access) {
+WindowScreen::WindowScreen(WindowScreen::ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, std::mutex* events_access) {
 	this->m_stype = stype;
 	this->events_access = events_access;
 	this->m_prepare_save = 0;
@@ -40,6 +40,8 @@ WindowScreen::WindowScreen(WindowScreen::ScreenType stype, DisplayData* display_
 		this->win_title += "_top";
 	if(this->m_stype == WindowScreen::ScreenType::BOTTOM)
 		this->win_title += "_bot";
+	this->last_connected_status = false;
+	this->capture_status = capture_status;
 }
 
 WindowScreen::~WindowScreen() {
@@ -438,10 +440,10 @@ void WindowScreen::display_call(bool is_main_thread) {
 	this->done_display = true;
 }
 
-void WindowScreen::display_thread(CaptureStatus* capture_status) {
-	while(capture_status->running) {
+void WindowScreen::display_thread() {
+	while(this->capture_status->running) {
 		this->display_lock.lock();
-		if(!capture_status->running)
+		if(!this->capture_status->running)
 			break;
 		this->free_ownership_of_window(false);
 		this->is_thread_done = true;
@@ -526,6 +528,15 @@ int WindowScreen::check_connection_menu_result() {
 
 void WindowScreen::end_connection_menu() {
 	this->display_data->curr_menu = DEFAULT_MENU_TYPE;
+}
+
+void WindowScreen::update_connection() {
+	if(this->last_connected_status == this->capture_status->connected)
+		return;
+	this->last_connected_status = this->capture_status->connected;
+	if(this->m_win.isOpen()) {
+		this->m_win.setTitle(this->title_factory());
+	}
 }
 
 void WindowScreen::print_notification(std::string text, TextKind kind) {
@@ -686,6 +697,8 @@ bool WindowScreen::window_needs_work() {
 	int win_height = this->m_win.getSize().y;
 	if((win_width != width) || (win_height != height))
 		return true;
+	if(this->last_connected_status != this->capture_status->connected)
+		return true;
 	return false;
 }
 
@@ -708,11 +721,11 @@ void WindowScreen::window_factory(bool is_main_thread) {
 		this->main_thread_owns_window = is_main_thread;
 		if(!this->loaded_info.is_fullscreen) {
 			this->update_screen_settings();
-			this->m_win.create(sf::VideoMode(this->m_width, this->m_height), this->win_title);
+			this->m_win.create(sf::VideoMode(this->m_width, this->m_height), this->title_factory());
 			this->update_view_size();
 		}
 		else
-			this->m_win.create(this->curr_desk_mode, this->win_title, sf::Style::Fullscreen);
+			this->m_win.create(this->curr_desk_mode, this->title_factory(), sf::Style::Fullscreen);
 		this->update_screen_settings();
 		this->events_access->unlock();
 		this->loaded_operations.call_create = false;
@@ -723,7 +736,15 @@ void WindowScreen::window_factory(bool is_main_thread) {
 	if((is_main_thread == this->main_thread_owns_window) && (this->main_thread_owns_window == this->loaded_info.async)) {
 		this->m_win.setActive(false);
 	}
+	this->update_connection();
 	this->is_window_factory_done = true;
+}
+
+std::string WindowScreen::title_factory() {
+	std::string title = this->win_title;
+	if(this->capture_status->connected)
+		title += " - " + this->capture_status->serial_number;
+	return title;
 }
 
 void WindowScreen::pre_texture_conversion_processing() {

@@ -58,7 +58,7 @@ public:
 	enum ScreenType { TOP, BOTTOM, JOINT };
 	ScreenInfo m_info;
 
-	WindowScreen(WindowScreen::ScreenType stype, DisplayData* display_data, AudioData* audio_data, std::mutex* events_access);
+	WindowScreen(WindowScreen::ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, std::mutex* events_access);
 	~WindowScreen();
 
 	void build();
@@ -66,7 +66,7 @@ public:
 	void poll();
 	void close();
 	void display_call(bool is_main_thread);
-	void display_thread(CaptureStatus* capture_status);
+	void display_thread();
 	void end();
 	void after_thread_join();
 	void draw(double frame_time, VideoOutputData* out_buf);
@@ -89,12 +89,14 @@ private:
 		bool call_blur;
 		bool call_screen_settings_update;
 	};
+	CaptureStatus* capture_status;
 	std::string win_title;
 	sf::RenderWindow m_win;
 	int m_width, m_height;
 	int m_window_width, m_window_height;
 	int m_prepare_load;
 	int m_prepare_save;
+	bool last_connected_status;
 	bool m_prepare_open;
 	bool m_prepare_quit;
 	bool font_load_success;
@@ -162,6 +164,7 @@ private:
 	int get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height);
 	void resize_window_and_out_rects(bool do_work = true);
 	void create_window(bool re_prepare_size);
+	std::string title_factory();
 	void update_view_size();
 	void open();
 	void update_screen_settings();
@@ -169,6 +172,7 @@ private:
 	sf::Vector2f getShownScreenSize(bool is_top, Crop &crop_kind);
 	void crop();
 	void setWinSize(bool is_main_thread);
+	void update_connection();
 };
 
 struct FrontendData {
@@ -181,5 +185,5 @@ struct FrontendData {
 
 void default_sleep();
 void update_output(FrontendData* frontend_data, double frame_time = 0, VideoOutputData *out_buf = NULL);
-void screen_display_thread(WindowScreen *screen, CaptureStatus* capture_status);
+void screen_display_thread(WindowScreen *screen);
 #endif

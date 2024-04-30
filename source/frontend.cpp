@@ -203,6 +203,6 @@ void update_output(FrontendData* frontend_data, double frame_time, VideoOutputDa
 		frontend_data->joint_screen->draw(frame_time, out_buf);
 }
 
-void screen_display_thread(WindowScreen *screen, CaptureStatus* capture_status) {
-	screen->display_thread(capture_status);
+void screen_display_thread(WindowScreen *screen) {
+	screen->display_thread();
 }

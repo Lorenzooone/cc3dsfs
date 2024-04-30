@@ -53,7 +53,7 @@ void UpdateOutText(OutTextData &out_text_data, std::string full_text, std::strin
 }
 
 void ConnectedOutTextGenerator(OutTextData &out_text_data, CaptureData* capture_data) {
-	UpdateOutText(out_text_data, "Connected to " + std::string(capture_data->chosen_serial_number), "Connected", TEXT_KIND_SUCCESS);
+	UpdateOutText(out_text_data, "Connected to " + capture_data->status.serial_number, "Connected", TEXT_KIND_SUCCESS);
 }
 
 std::string LayoutNameGenerator(int index) {
@@ -214,9 +214,9 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 	curr_fps_array = new double[FPS_WINDOW_SIZE];
 	memset(out_buf, 0, sizeof(VideoOutputData));
 
-	WindowScreen top_screen(WindowScreen::ScreenType::TOP, &frontend_data.display_data, audio_data, &events_access);
-	WindowScreen bot_screen(WindowScreen::ScreenType::BOTTOM, &frontend_data.display_data, audio_data, &events_access);
-	WindowScreen joint_screen(WindowScreen::ScreenType::JOINT, &frontend_data.display_data, audio_data, &events_access);
+	WindowScreen top_screen(WindowScreen::ScreenType::TOP, &capture_data->status, &frontend_data.display_data, audio_data, &events_access);
+	WindowScreen bot_screen(WindowScreen::ScreenType::BOTTOM, &capture_data->status, &frontend_data.display_data, audio_data, &events_access);
+	WindowScreen joint_screen(WindowScreen::ScreenType::JOINT, &capture_data->status, &frontend_data.display_data, audio_data, &events_access);
 	frontend_data.top_screen = &top_screen;
 	frontend_data.bot_screen = &bot_screen;
 	frontend_data.joint_screen = &joint_screen;
@@ -229,9 +229,9 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 	bot_screen.build();
 	joint_screen.build();
 
-	std::thread top_thread(screen_display_thread, &top_screen, &capture_data->status);
-	std::thread bot_thread(screen_display_thread, &bot_screen, &capture_data->status);
-	std::thread joint_thread(screen_display_thread, &joint_screen, &capture_data->status);
+	std::thread top_thread(screen_display_thread, &top_screen);
+	std::thread bot_thread(screen_display_thread, &bot_screen);
+	std::thread joint_thread(screen_display_thread, &joint_screen);
 
 	capture_data->status.connected = connect(true, capture_data, &frontend_data);
 	if(capture_data->status.connected)

@@ -27,7 +27,6 @@ struct CaptureData {
 	ULONG read[NUM_CONCURRENT_DATA_BUFFERS];
 	CaptureReceived capture_buf[NUM_CONCURRENT_DATA_BUFFERS];
 	double time_in_buf[NUM_CONCURRENT_DATA_BUFFERS];
-	char chosen_serial_number[SERIAL_NUMBER_SIZE];
 	CaptureStatus status;
 };
 

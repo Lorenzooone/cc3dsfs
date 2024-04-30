@@ -3,6 +3,7 @@
 #include <cstring>
 #include <thread>
 #include <chrono>
+#include <iostream>
 
 #define BULK_OUT 0x02
 #define BULK_IN 0x82
@@ -12,6 +13,8 @@
 #else
 #define FIFO_CHANNEL 0
 #endif
+
+//#define DEBUG_DEVICES_PRINT_DESCRIPTION_INFOS
 
 static void list_devices(DevicesList &devices_list) {
 	FT_STATUS ftStatus;
@@ -34,12 +37,15 @@ static void list_devices(DevicesList &devices_list) {
 		{
 			ftStatus = FT_GetDeviceInfoDetail(i, &Flags, &Type, &ID, NULL,
 			SerialNumber, Description, &ftHandle);
+			#ifdef DEBUG_DEVICES_PRINT_DESCRIPTION_INFOS
+			std::cout << "Total: " << numDevs << " - Index: " << i << " - " << std::string(Description) << " - " << std::string(SerialNumber) << std::endl;
+			#endif
 			if (!FT_FAILED(ftStatus))
 			{
-				for(int i = 0; i < sizeof(valid_descriptions) / sizeof(*valid_descriptions); i++) {
-					if(Description == valid_descriptions[i]) {
-						for(int i = 0; i < REAL_SERIAL_NUMBER_SIZE; i++)
-							devices_list.serialNumbers[(SERIAL_NUMBER_SIZE * devices_list.numValidDevices) + i] = SerialNumber[i];
+				for(int j = 0; j < sizeof(valid_descriptions) / sizeof(*valid_descriptions); j++) {
+					if(Description == valid_descriptions[j]) {
+						for(int k = 0; k < REAL_SERIAL_NUMBER_SIZE; k++)
+							devices_list.serialNumbers[(SERIAL_NUMBER_SIZE * devices_list.numValidDevices) + k] = SerialNumber[k];
 						devices_list.serialNumbers[(SERIAL_NUMBER_SIZE * devices_list.numValidDevices) + REAL_SERIAL_NUMBER_SIZE] = 0;
 						++devices_list.numValidDevices;
 						break;
@@ -132,11 +138,14 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 		return false;
 	}
 
-	for(int i = 0; i < SERIAL_NUMBER_SIZE; i++)
-		capture_data->chosen_serial_number[i] = devices_list.serialNumbers[(SERIAL_NUMBER_SIZE * chosen_device) + i];
+	char SerialNumber[SERIAL_NUMBER_SIZE] = { 0 };
+	for(int i = 0; i < REAL_SERIAL_NUMBER_SIZE; i++)
+		SerialNumber[i] = devices_list.serialNumbers[(SERIAL_NUMBER_SIZE * chosen_device) + i];
+	SerialNumber[REAL_SERIAL_NUMBER_SIZE] = 0;
 	delete []devices_list.serialNumbers;
+	capture_data->status.serial_number = "N3DSXL - " + std::string(SerialNumber);
 
-	if (FT_Create(capture_data->chosen_serial_number, FT_OPEN_BY_SERIAL_NUMBER, &capture_data->handle)) {
+	if (FT_Create(SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, &capture_data->handle)) {
 		if(print_failed) {
 			capture_data->status.error_text = "Create failed";
 			capture_data->status.new_error_text = true;
@@ -306,7 +315,7 @@ void captureCall(CaptureData* capture_data) {
 
 	while(capture_data->status.running) {
 		if (!capture_data->status.connected) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000/USB_CHECKS_PER_SECOND));
+			default_sleep();
 			continue;
 		}
 
