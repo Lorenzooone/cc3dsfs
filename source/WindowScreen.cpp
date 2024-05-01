@@ -4,17 +4,17 @@
 #include <cmath>
 #include "font_ttf.h"
 
-static int top_screen_crop_widths[] = {TOP_WIDTH_3DS, TOP_SPECIAL_DS_WIDTH_3DS, TOP_SCALED_DS_WIDTH_3DS, WIDTH_DS, WIDTH_SCALED_GBA, WIDTH_GBA, WIDTH_SCALED_GB, WIDTH_GB, WIDTH_SNES, WIDTH_NES};
-static int top_screen_crop_heights[] = {HEIGHT_3DS, HEIGHT_3DS, HEIGHT_3DS, HEIGHT_DS, HEIGHT_SCALED_GBA, HEIGHT_GBA, HEIGHT_SCALED_GB, HEIGHT_GB, HEIGHT_SNES, HEIGHT_NES};
-static int bot_screen_crop_widths[] = {BOT_WIDTH_3DS, BOT_WIDTH_3DS, BOT_WIDTH_3DS, WIDTH_DS, 0, 0, 0, 0, 0, 0};
-static int bot_screen_crop_heights[] = {HEIGHT_3DS, HEIGHT_3DS, HEIGHT_3DS, HEIGHT_DS, 0, 0, 0, 0, 0, 0};
+static int top_screen_crop_widths[] = {TOP_WIDTH_3DS, TOP_SPECIAL_DS_WIDTH_3DS, TOP_SCALED_DS_WIDTH_3DS, WIDTH_DS, WIDTH_SCALED_GBA, WIDTH_GBA, WIDTH_SCALED_GB, WIDTH_GB, WIDTH_SCALED_SNES, WIDTH_SNES, WIDTH_NES};
+static int top_screen_crop_heights[] = {HEIGHT_3DS, HEIGHT_3DS, HEIGHT_3DS, HEIGHT_DS, HEIGHT_SCALED_GBA, HEIGHT_GBA, HEIGHT_SCALED_GB, HEIGHT_GB, HEIGHT_SCALED_SNES, HEIGHT_SNES, HEIGHT_NES};
+static int bot_screen_crop_widths[] = {BOT_WIDTH_3DS, BOT_WIDTH_3DS, BOT_WIDTH_3DS, WIDTH_DS, 0, 0, 0, 0, 0, 0, 0};
+static int bot_screen_crop_heights[] = {HEIGHT_3DS, HEIGHT_3DS, HEIGHT_3DS, HEIGHT_DS, 0, 0, 0, 0, 0, 0, 0};
 static int top_screen_crop_x[] = {0, (TOP_WIDTH_3DS - TOP_SPECIAL_DS_WIDTH_3DS) / 2, (TOP_WIDTH_3DS - TOP_SCALED_DS_WIDTH_3DS) / 2, (TOP_WIDTH_3DS - WIDTH_DS) / 2,
 								(TOP_WIDTH_3DS - WIDTH_SCALED_GBA) / 2,	(TOP_WIDTH_3DS - WIDTH_GBA) / 2, (TOP_WIDTH_3DS - WIDTH_SCALED_GB) / 2, (TOP_WIDTH_3DS - WIDTH_GB) / 2,
-								(TOP_WIDTH_3DS - WIDTH_SNES) / 2, (TOP_WIDTH_3DS - WIDTH_NES) / 2};
-static int top_screen_crop_y[] = {0, 0, 0, 0, (HEIGHT_3DS - HEIGHT_SCALED_GBA) / 2, (HEIGHT_3DS - HEIGHT_GBA) / 2, (HEIGHT_3DS - HEIGHT_SCALED_GB) / 2, (HEIGHT_3DS - HEIGHT_GB) / 2, (HEIGHT_3DS - HEIGHT_SNES) / 2, (HEIGHT_3DS - HEIGHT_NES) / 2};
-static int bot_screen_crop_x[] = {0, 0, 0, (BOT_WIDTH_3DS - WIDTH_DS) / 2, 0, 0, 0, 0, 0, 0};
-static int bot_screen_crop_y[] = {0, 0, 0, HEIGHT_3DS - HEIGHT_DS, 0, 0, 0, 0, 0, 0};
-static std::string crop_names[] = {"3DS", "16:10", "Scaled DS", "Native DS", "Scaled GBA", "Native GBA", "Scaled VC GB", "VC GB", "VC SNES", "VC NES"};
+								(TOP_WIDTH_3DS - WIDTH_SCALED_SNES) / 2, (TOP_WIDTH_3DS - WIDTH_SNES) / 2, (TOP_WIDTH_3DS - WIDTH_NES) / 2};
+static int top_screen_crop_y[] = {0, 0, 0, 0, (HEIGHT_3DS - HEIGHT_SCALED_GBA) / 2, (HEIGHT_3DS - HEIGHT_GBA) / 2, (HEIGHT_3DS - HEIGHT_SCALED_GB) / 2, (HEIGHT_3DS - HEIGHT_GB) / 2, (HEIGHT_3DS - HEIGHT_SCALED_SNES) / 2, (HEIGHT_3DS - HEIGHT_SNES) / 2, (HEIGHT_3DS - HEIGHT_NES) / 2};
+static int bot_screen_crop_x[] = {0, 0, 0, (BOT_WIDTH_3DS - WIDTH_DS) / 2, 0, 0, 0, 0, 0, 0, 0};
+static int bot_screen_crop_y[] = {0, 0, 0, HEIGHT_3DS - HEIGHT_DS, 0, 0, 0, 0, 0, 0, 0};
+static std::string crop_names[] = {"3DS", "16:10", "Scaled DS", "Native DS", "Scaled GBA", "Native GBA", "Scaled VC GB", "VC GB", "Scaled SNES", "VC SNES", "VC NES"};
 
 WindowScreen::WindowScreen(WindowScreen::ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, std::mutex* events_access) {
 	this->m_stype = stype;
