@@ -77,6 +77,8 @@ On MacOS, you may also be prompted to install the Apple Command Line Developer T
 - __6 key__: In Joint mode, changes the position of the smaller screen relative to the bigger one between 0, 1/2 Max and Max.
 - __7 key__: In Joint Fullscreen mode, changes the distance from the upper screen between 0, 1/2 Max and Max.
 - __I key__: Toggles BFI (Motion Blur Reduction) on/off. Best used on 120+hz monitors. DO NOT USE THIS IF YOU'RE AT RISK OF SEIZURES!!!
+- __Z key__: Decreases the Menu Scaling multiplier by 0.1. 0.3 is the minimum.
+- __X key__: Increases the Menu Scaling multiplier by 0.1. 5.0 is the maximum.
 - __M key__: Toggles mute on/off.
 - __, key__: Decrements the volume by 5 units. 0 is the minimum.
 - __. key__: Increments the volume by 5 units. 100 is the maximum.
