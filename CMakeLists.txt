@@ -122,24 +122,19 @@ file(MAKE_DIRECTORY ${TOOLS_DATA_DIR})
 
 set(OUTPUT_NAME cc3dsfs)
 
-add_custom_target(CMakeBin2C)
+add_executable(CMakeBin2C tools/bin2c.cpp)
 add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/3dscapture.cpp source/conversions.cpp source/ConnectionMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp)
 target_link_libraries(${OUTPUT_NAME} PRIVATE sfml-graphics sfml-audio sfml-window sfml-system ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}/${FTD3XX_LIB})
 target_link_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER})
 target_include_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${TOOLS_DATA_DIR} ${CMAKE_SOURCE_DIR}/include)
 target_compile_features(${OUTPUT_NAME} PRIVATE cxx_std_17)
-target_compile_options(${OUTPUT_NAME} PRIVATE "-std=c++17" ${EXTRA_LINUX_CXX_FLAGS})
-
-add_custom_command(
-    TARGET CMakeBin2C
-    COMMENT "Create Bin2C"
-    PRE_BUILD COMMAND ${CMAKE_HOST_CXX_COMPILER} ${CMAKE_SOURCE_DIR}/tools/bin2c.cpp -o ${TOOLS_DATA_DIR}/bin2c
-)
+target_compile_options(${OUTPUT_NAME} PRIVATE ${EXTRA_LINUX_CXX_FLAGS})
+target_compile_features(CMakeBin2C PRIVATE cxx_std_17)
 
 add_custom_command(
     OUTPUT ${TOOLS_DATA_DIR}/font_ttf.cpp
     COMMENT "Convert font to binary"
-    COMMAND ${TOOLS_DATA_DIR}/bin2c ${CMAKE_SOURCE_DIR}/data/font.ttf ${TOOLS_DATA_DIR} font_ttf font_ttf
+    COMMAND $<TARGET_FILE:CMakeBin2C> ${CMAKE_SOURCE_DIR}/data/font.ttf ${TOOLS_DATA_DIR} font_ttf font_ttf
     DEPENDS ${CMAKE_SOURCE_DIR}/data/font.ttf CMakeBin2C
 )
 

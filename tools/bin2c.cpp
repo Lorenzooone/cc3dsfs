@@ -3,6 +3,12 @@
 #include <vector>
 #include <string>
 
+#if (!defined(_MSC_VER)) || (_MSC_VER > 1916)
+#include <filesystem>
+#else
+#include <experimental/filesystem>
+#endif
+
 using namespace std;
 
 int main(int argc, char *argv[]) {
@@ -28,7 +34,8 @@ int main(int argc, char *argv[]) {
 	string name_len_array = base_array_name + "_len";
 	int len = buffer.size();
 
-	ofstream output(output_folder + "/" + output_base_filename + ".cpp", ios::out);
+	std::filesystem::path out_path(output_folder + "/" + output_base_filename + ".cpp");
+	ofstream output(out_path.make_preferred(), ios::out);
 	if(!output) {
 		cout << "Couldn't open output cpp file!" << endl;
 		return -2;
@@ -57,7 +64,8 @@ int main(int argc, char *argv[]) {
 
 	output.close();
 
-	ofstream output2(output_folder + "/" + output_base_filename + ".h", ios::out);
+	std::filesystem::path out_path2(output_folder + "/" + output_base_filename + ".h");
+	ofstream output2(out_path2.make_preferred(), ios::out);
 	if(!output2) {
 		cout << "Couldn't open output h file!" << endl;
 		return -3;
