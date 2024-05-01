@@ -16,6 +16,23 @@
 
 //#define DEBUG_DEVICES_PRINT_DESCRIPTION_INFOS
 
+static bool get_is_bad_ftd3xx() {
+	#if (defined(_WIN32) || defined(_WIN64))
+	return false;
+	#endif
+
+	bool is_bad_ftd3xx = false;
+	DWORD ftd3xx_lib_version;
+
+	if(FT_FAILED(FT_GetLibraryVersion(&ftd3xx_lib_version))) {
+		ftd3xx_lib_version = 0;
+	}
+	if(ftd3xx_lib_version == 0x0100001A) {
+		is_bad_ftd3xx = true;
+	}
+	return is_bad_ftd3xx;
+}
+
 static void list_devices(DevicesList &devices_list) {
 	FT_STATUS ftStatus;
 	DWORD numDevs = 0;
@@ -185,25 +202,25 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 		return false;
 	}
 
-	#if (defined(_WIN32) || defined(_WIN64))
-	if(FT_AbortPipe(capture_data->handle, BULK_IN)) {
-		if(print_failed) {
-			capture_data->status.error_text = "Abort failed";
-			capture_data->status.new_error_text = true;
+	if(!get_is_bad_ftd3xx()) {
+		if(FT_AbortPipe(capture_data->handle, BULK_IN)) {
+			if(print_failed) {
+				capture_data->status.error_text = "Abort failed";
+				capture_data->status.new_error_text = true;
+			}
+			preemptive_close_connection(capture_data);
+			return false;
 		}
-		preemptive_close_connection(capture_data);
-		return false;
-	}
 
-	if (FT_SetStreamPipe(capture_data->handle, false, false, BULK_IN, sizeof(CaptureReceived))) {
-		if(print_failed) {
-			capture_data->status.error_text = "Stream failed";
-			capture_data->status.new_error_text = true;
+		if (FT_SetStreamPipe(capture_data->handle, false, false, BULK_IN, sizeof(CaptureReceived))) {
+			if(print_failed) {
+				capture_data->status.error_text = "Stream failed";
+				capture_data->status.new_error_text = true;
+			}
+			preemptive_close_connection(capture_data);
+			return false;
 		}
-		preemptive_close_connection(capture_data);
-		return false;
 	}
-	#endif
 
 	// Avoid having old open locks
 	capture_data->status.video_wait.try_lock();
@@ -305,15 +322,7 @@ void captureCall(CaptureData* capture_data) {
 	int inner_curr_in = 0;
 	capture_data->status.curr_in = inner_curr_in;
 	capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
-	bool is_bad_ftd3xx = false;
-	DWORD ftd3xx_lib_version;
-
-	if(FT_FAILED(FT_GetLibraryVersion(&ftd3xx_lib_version))) {
-		ftd3xx_lib_version = 0;
-	}
-	if(ftd3xx_lib_version == 0x0100001A) {
-		is_bad_ftd3xx = true;
-	}
+	bool is_bad_ftd3xx = get_is_bad_ftd3xx();
 
 	while(capture_data->status.running) {
 		if (!capture_data->status.connected) {
@@ -328,7 +337,6 @@ void captureCall(CaptureData* capture_data) {
 		else
 			bad_close = safe_capture_call(capture_data);
 		#else
-			is_bad_ftd3xx = false;
 			fast_capture_call(capture_data, overlap);
 		#endif
 

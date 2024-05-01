@@ -38,12 +38,12 @@ struct OutTextData {
 	TextKind kind;
 };
 
-void ConsoleOutText(std::string full_text) {
+static void ConsoleOutText(std::string full_text) {
 	if(full_text != "")
 		std::cout << "[" << NAME << "] " << full_text << std::endl;
 }
 
-void UpdateOutText(OutTextData &out_text_data, std::string full_text, std::string small_text, TextKind kind) {
+static void UpdateOutText(OutTextData &out_text_data, std::string full_text, std::string small_text, TextKind kind) {
 	if(!out_text_data.consumed)
 		ConsoleOutText(out_text_data.full_text);
 	out_text_data.full_text = full_text;
@@ -52,15 +52,19 @@ void UpdateOutText(OutTextData &out_text_data, std::string full_text, std::strin
 	out_text_data.consumed = false;
 }
 
-void ConnectedOutTextGenerator(OutTextData &out_text_data, CaptureData* capture_data) {
-	UpdateOutText(out_text_data, "Connected to " + capture_data->status.serial_number, "Connected", TEXT_KIND_SUCCESS);
+static void SuccessConnectionOutTextGenerator(OutTextData &out_text_data, CaptureData* capture_data) {
+	if(capture_data->status.connected)
+		UpdateOutText(out_text_data, "Connected to " + capture_data->status.serial_number, "Connected", TEXT_KIND_SUCCESS);
+	else if(!capture_data->status.new_error_text) {
+		UpdateOutText(out_text_data, "Disconnected", "Disconnected", TEXT_KIND_WARNING);
+	}
 }
 
-std::string LayoutNameGenerator(int index) {
+static std::string LayoutNameGenerator(int index) {
 	return "layout" + std::to_string(index) + ".cfg";
 }
 
-bool load(const std::string path, const std::string name, ScreenInfo &top_info, ScreenInfo &bottom_info, ScreenInfo &joint_info, DisplayData &display_data, AudioData *audio_data, OutTextData &out_text_data) {
+static bool load(const std::string path, const std::string name, ScreenInfo &top_info, ScreenInfo &bottom_info, ScreenInfo &joint_info, DisplayData &display_data, AudioData *audio_data, OutTextData &out_text_data) {
 	std::ifstream file(path + name);
 	std::string line;
 
@@ -107,7 +111,7 @@ bool load(const std::string path, const std::string name, ScreenInfo &top_info, 
 	return true;
 }
 
-bool save(const std::string path, const std::string name, const ScreenInfo &top_info, const ScreenInfo &bottom_info, const ScreenInfo &joint_info, DisplayData &display_data, AudioData *audio_data, OutTextData &out_text_data) {
+static bool save(const std::string path, const std::string name, const ScreenInfo &top_info, const ScreenInfo &bottom_info, const ScreenInfo &joint_info, DisplayData &display_data, AudioData *audio_data, OutTextData &out_text_data) {
 	#if (!defined(_MSC_VER)) || (_MSC_VER > 1916)
 	std::filesystem::create_directories(path);
 	#else
@@ -129,7 +133,7 @@ bool save(const std::string path, const std::string name, const ScreenInfo &top_
 	return true;
 }
 
-void soundCall(AudioData *audio_data, CaptureData* capture_data) {
+static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 	Audio audio(audio_data);
 	sf::Int16 out_buf[NUM_CONCURRENT_AUDIO_BUFFERS][MAX_SAMPLES_IN];
 	int curr_out, prev_out = NUM_CONCURRENT_DATA_BUFFERS - 1, audio_buf_counter = 0;
@@ -187,7 +191,7 @@ void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 	audio.stop();
 }
 
-void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
+static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 	VideoOutputData *out_buf;
 	double *curr_fps_array;
 	int num_elements_fps_array = 0;
@@ -234,8 +238,7 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 	std::thread joint_thread(screen_display_thread, &joint_screen);
 
 	capture_data->status.connected = connect(true, capture_data, &frontend_data);
-	if(capture_data->status.connected)
-		ConnectedOutTextGenerator(out_text_data, capture_data);
+	SuccessConnectionOutTextGenerator(out_text_data, capture_data);
 
 	while (capture_data->status.running) {
 
@@ -303,8 +306,7 @@ void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 
 		if(top_screen.open_capture() || bot_screen.open_capture() || joint_screen.open_capture()) {
 			capture_data->status.connected = connect(true, capture_data, &frontend_data);
-			if(capture_data->status.connected)
-				ConnectedOutTextGenerator(out_text_data, capture_data);
+			SuccessConnectionOutTextGenerator(out_text_data, capture_data);
 		}
 
 		if(top_screen.close_capture() || bot_screen.close_capture() || joint_screen.close_capture()) {
