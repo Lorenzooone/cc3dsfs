@@ -185,6 +185,7 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 		return false;
 	}
 
+	#if (defined(_WIN32) || defined(_WIN64))
 	if(FT_AbortPipe(capture_data->handle, BULK_IN)) {
 		if(print_failed) {
 			capture_data->status.error_text = "Abort failed";
@@ -202,6 +203,7 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 		preemptive_close_connection(capture_data);
 		return false;
 	}
+	#endif
 
 	// Avoid having old open locks
 	capture_data->status.video_wait.try_lock();
@@ -266,7 +268,7 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 	}
 }
 
-#if not(defined(_WIN32) || defined(_WIN64))
+#if !(defined(_WIN32) || defined(_WIN64))
 static bool safe_capture_call(CaptureData* capture_data) {
 	int inner_curr_in = 0;
 
@@ -320,7 +322,7 @@ void captureCall(CaptureData* capture_data) {
 		}
 
 		bool bad_close = false;
-		#if not(defined(_WIN32) || defined(_WIN64))
+		#if !(defined(_WIN32) || defined(_WIN64))
 		if(!is_bad_ftd3xx)
 			fast_capture_call(capture_data, overlap);
 		else
