@@ -2,7 +2,6 @@
 #include <fstream>
 #include <vector>
 #include <string>
-#include <filesystem>
 
 using namespace std;
 
@@ -29,7 +28,7 @@ int main(int argc, char *argv[]) {
 	string name_len_array = base_array_name + "_len";
 	int len = buffer.size();
 
-	ofstream output(output_folder + filesystem::path::preferred_separator + output_base_filename + ".cpp", ios::out);
+	ofstream output(output_folder + "/" + output_base_filename + ".cpp", ios::out);
 	if(!output) {
 		cout << "Couldn't open output cpp file!" << endl;
 		return -2;
@@ -58,7 +57,7 @@ int main(int argc, char *argv[]) {
 
 	output.close();
 
-	ofstream output2(output_folder + filesystem::path::preferred_separator + output_base_filename + ".h", ios::out);
+	ofstream output2(output_folder + "/" + output_base_filename + ".h", ios::out);
 	if(!output2) {
 		cout << "Couldn't open output h file!" << endl;
 		return -3;
