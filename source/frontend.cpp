@@ -25,6 +25,7 @@ void reset_screen_info(ScreenInfo &info) {
 	info.bfi = false;
 	info.bfi_divider = 2.0;
 	info.menu_scaling_factor = 1.0;
+	info.rounded_corners_fix = false;
 }
 
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info) {
@@ -114,6 +115,10 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 			info.menu_scaling_factor = 5.0;
 		return true;
 	}
+	if(key == (base + "rounded_corners_fix")) {
+		info.rounded_corners_fix = std::stoi(value);
+		return true;
+	}
 	return false;
 }
 
@@ -137,6 +142,7 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "bfi=" + std::to_string(info.bfi) + "\n";
 	out += base + "bfi_divider=" + std::to_string(info.bfi_divider) + "\n";
 	out += base + "menu_scaling_factor=" + std::to_string(info.menu_scaling_factor) + "\n";
+	out += base + "rounded_corners_fix=" + std::to_string(info.rounded_corners_fix) + "\n";
 	return out;
 }
 

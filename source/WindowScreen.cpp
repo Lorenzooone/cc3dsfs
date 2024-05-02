@@ -4,6 +4,11 @@
 #include <cmath>
 #include "font_ttf.h"
 
+#define LEFT_ROUNDED_PADDING 5
+#define RIGHT_ROUNDED_PADDING 5
+#define TOP_ROUNDED_PADDING 0
+#define BOTTOM_ROUNDED_PADDING 5
+
 static int top_screen_crop_widths[] = {TOP_WIDTH_3DS, TOP_SPECIAL_DS_WIDTH_3DS, TOP_SCALED_DS_WIDTH_3DS, WIDTH_DS, WIDTH_SCALED_GBA, WIDTH_GBA, WIDTH_SCALED_GB, WIDTH_GB, WIDTH_SCALED_SNES, WIDTH_SNES, WIDTH_NES};
 static int top_screen_crop_heights[] = {HEIGHT_3DS, HEIGHT_3DS, HEIGHT_3DS, HEIGHT_DS, HEIGHT_SCALED_GBA, HEIGHT_GBA, HEIGHT_SCALED_GB, HEIGHT_GB, HEIGHT_SCALED_SNES, HEIGHT_SNES, HEIGHT_NES};
 static int bot_screen_crop_widths[] = {BOT_WIDTH_3DS, BOT_WIDTH_3DS, BOT_WIDTH_3DS, WIDTH_DS, 0, 0, 0, 0, 0, 0, 0};
@@ -321,6 +326,15 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 			this->m_info.bot_rotation = (this->m_info.bot_rotation + 90) % 360;
 			this->prepare_size_ratios(false, false);
 			this->future_operations.call_rotate = true;
+
+			break;
+
+		case 'r':
+			if(this->m_info.is_fullscreen)
+				break;
+			this->m_info.rounded_corners_fix = !this->m_info.rounded_corners_fix;
+			this->future_operations.call_screen_settings_update = true;
+			this->print_notification_on_off("Extra Padding", this->m_info.rounded_corners_fix);
 
 			break;
 
@@ -1045,6 +1059,11 @@ void WindowScreen::resize_window_and_out_rects(bool do_work) {
 	int max_x = 0;
 	int max_y = 0;
 
+	if((!this->loaded_info.is_fullscreen) && this->loaded_info.rounded_corners_fix) {
+		offset_y = TOP_ROUNDED_PADDING;
+		offset_x = LEFT_ROUNDED_PADDING;
+	}
+
 	if(this->loaded_info.is_fullscreen) {
 		top_height = this->loaded_info.top_scaling * top_screen_size.y;
 		top_width = this->loaded_info.top_scaling * top_screen_size.x;
@@ -1064,6 +1083,10 @@ void WindowScreen::resize_window_and_out_rects(bool do_work) {
 		this->m_out_rect_bot.out_rect.setTextureRect(sf::IntRect(0, 0, bot_screen_size.x, bot_screen_size.y));
 	}
 	this->set_position_screens(new_top_screen_size, new_bot_screen_size, offset_x, offset_y, max_x, max_y, do_work);
+	if((!this->loaded_info.is_fullscreen) && this->loaded_info.rounded_corners_fix) {
+		this->m_height += BOTTOM_ROUNDED_PADDING;
+		this->m_width += RIGHT_ROUNDED_PADDING;
+	}
 }
 
 void WindowScreen::create_window(bool re_prepare_size) {

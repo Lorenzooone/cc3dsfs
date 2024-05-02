@@ -34,6 +34,7 @@ struct ScreenInfo {
 	bool bfi;
 	double bfi_divider;
 	double menu_scaling_factor;
+	bool rounded_corners_fix;
 };
 
 struct DisplayData {
