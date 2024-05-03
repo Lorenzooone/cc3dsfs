@@ -15,6 +15,7 @@
 #include "ConnectionMenu.hpp"
 
 enum Crop { DEFAULT_3DS, SPECIAL_DS, SCALED_DS, NATIVE_DS, SCALED_GBA, NATIVE_GBA, SCALED_GB, NATIVE_GB, SCALED_SNES, NATIVE_SNES, NATIVE_NES, CROP_END };
+enum ParCorrection { PAR_NORMAL, PAR_SNES_HORIZONTAL, PAR_SNES_VERTICAL, PAR_END };
 enum BottomRelativePosition { UNDER_TOP, LEFT_TOP, ABOVE_TOP, RIGHT_TOP, BOT_REL_POS_END };
 enum OffsetAlgorithm { NO_DISTANCE, HALF_DISTANCE, MAX_DISTANCE, OFF_ALGO_END };
 enum CurrMenuType { DEFAULT_MENU_TYPE, CONNECT_MENU_TYPE };
@@ -35,6 +36,8 @@ struct ScreenInfo {
 	double bfi_divider;
 	double menu_scaling_factor;
 	bool rounded_corners_fix;
+	ParCorrection top_par;
+	ParCorrection bot_par;
 };
 
 struct DisplayData {
@@ -158,8 +161,8 @@ private:
 	void window_render_call();
 	int apply_offset_algo(int offset_contribute, OffsetAlgorithm chosen_algo);
 	void set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, bool do_work = true);
-	int prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotation, int width_limit, int height_limit, int other_rotation);
-	void calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf::Vector2f &other_screen_size, int &own_scaling, int &other_scaling, int own_rotation, int other_rotation, bool increase, bool mantain, bool set_to_zero);
+	int prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotation, int width_limit, int height_limit, int other_rotation, ParCorrection own_par);
+	void calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf::Vector2f &other_screen_size, int &own_scaling, int &other_scaling, int own_rotation, int other_rotation, bool increase, bool mantain, bool set_to_zero, ParCorrection own_par, ParCorrection other_par);
 	void prepare_size_ratios(bool top_increase, bool bot_increase);
 	int get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height);
 	int get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height);
@@ -184,6 +187,8 @@ struct FrontendData {
 	bool reload;
 };
 
+void get_par_size(float &width, float &height, float multiplier_factor, ParCorrection &correction_factor);
+void get_par_size(int &width, int &height, float multiplier_factor, ParCorrection &correction_factor);
 void default_sleep();
 void update_output(FrontendData* frontend_data, double frame_time = 0, VideoOutputData *out_buf = NULL);
 void screen_display_thread(WindowScreen *screen);

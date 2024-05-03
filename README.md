@@ -80,6 +80,8 @@ On MacOS, you may also be prompted to install the Apple Command Line Developer T
 - __Z key__: Decreases the Menu Scaling multiplier by 0.1. 0.3 is the minimum.
 - __X key__: Increases the Menu Scaling multiplier by 0.1. 5.0 is the maximum.
 - __R key__: Toggles extra padding on/off. It can be used to account for windows with rounded corners.
+- __2 key__: Changes the Pixel Aspect Ratio (PAR) for the top screen.
+- __3 key__: Changes the Pixel Aspect Ratio (PAR) for the bottom screen.
 - __M key__: Toggles mute on/off.
 - __, key__: Decrements the volume by 5 units. 0 is the minimum.
 - __. key__: Increments the volume by 5 units. 100 is the maximum.

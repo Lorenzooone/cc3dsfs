@@ -1,6 +1,10 @@
 #include "frontend.hpp"
 #include <iostream>
 
+static float par_width_multiplier[] = {1.0, 8.0, 8.0};
+static float par_width_divisor[] = {1.0, 7.0, 7.0};
+static bool par_width_main[] = {true, true, false};
+
 void reset_screen_info(ScreenInfo &info) {
 	info.is_blurred = false;
 	info.crop_kind = DEFAULT_3DS;
@@ -26,6 +30,8 @@ void reset_screen_info(ScreenInfo &info) {
 	info.bfi_divider = 2.0;
 	info.menu_scaling_factor = 1.0;
 	info.rounded_corners_fix = false;
+	info.top_par = ParCorrection::PAR_NORMAL;
+	info.bot_par = ParCorrection::PAR_NORMAL;
 }
 
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info) {
@@ -119,6 +125,14 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		info.rounded_corners_fix = std::stoi(value);
 		return true;
 	}
+	if(key == (base + "top_par")) {
+		info.top_par = static_cast<ParCorrection>(std::stoi(value) % ParCorrection::PAR_END);
+		return true;
+	}
+	if(key == (base + "bot_par")) {
+		info.bot_par = static_cast<ParCorrection>(std::stoi(value) % ParCorrection::PAR_END);
+		return true;
+	}
 	return false;
 }
 
@@ -143,6 +157,8 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "bfi_divider=" + std::to_string(info.bfi_divider) + "\n";
 	out += base + "menu_scaling_factor=" + std::to_string(info.menu_scaling_factor) + "\n";
 	out += base + "rounded_corners_fix=" + std::to_string(info.rounded_corners_fix) + "\n";
+	out += base + "top_par=" + std::to_string(info.top_par) + "\n";
+	out += base + "bot_par=" + std::to_string(info.bot_par) + "\n";
 	return out;
 }
 
@@ -156,6 +172,31 @@ void joystick_axis_poll(std::queue<SFEvent> &events_queue) {
 				events_queue.emplace(sf::Event::JoystickMoved, sf::Keyboard::Backspace, 0, i, 0, axis, sf::Joystick::getAxisPosition(i, axis), sf::Mouse::Left, 0, 0);
 		}
 	}
+}
+
+void get_par_size(int &width, int &height, float multiplier_factor, ParCorrection &correction_factor) {
+	if(correction_factor >= ParCorrection::PAR_END)
+		correction_factor = ParCorrection::PAR_NORMAL;
+	int par_corr_index = correction_factor - ParCorrection::PAR_NORMAL;
+	width *= multiplier_factor;
+	height *= multiplier_factor;
+	if(par_width_main[par_corr_index])
+		width = (width * par_width_multiplier[par_corr_index]) / par_width_divisor[par_corr_index];
+	else
+		height = (height * par_width_divisor[par_corr_index]) / par_width_multiplier[par_corr_index];
+}
+
+void get_par_size(float &width, float &height, float multiplier_factor, ParCorrection &correction_factor) {
+	if(correction_factor >= ParCorrection::PAR_END)
+		correction_factor = ParCorrection::PAR_NORMAL;
+	int par_corr_index = correction_factor - ParCorrection::PAR_NORMAL;
+	width *= multiplier_factor;
+	height *= multiplier_factor;
+	if(par_width_main[par_corr_index]) {
+		width = (width * par_width_multiplier[par_corr_index]) / par_width_divisor[par_corr_index];
+	}
+	else
+		height = (height * par_width_divisor[par_corr_index]) / par_width_multiplier[par_corr_index];
 }
 
 JoystickDirection get_joystick_direction(uint32_t joystickId, sf::Joystick::Axis axis, float position) {
