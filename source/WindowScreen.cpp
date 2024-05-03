@@ -39,6 +39,8 @@ WindowScreen::WindowScreen(WindowScreen::ScreenType stype, CaptureStatus* captur
 	this->m_in_rect_bot.setTexture(&this->in_tex);
 	this->display_data = display_data;
 	this->audio_data = audio_data;
+	this->last_window_creation_time = std::chrono::high_resolution_clock::now();
+	this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
 	WindowScreen::reset_operations(future_operations);
 	this->done_display = true;
 	this->saved_buf = new VideoOutputData;
@@ -762,6 +764,7 @@ void WindowScreen::window_factory(bool is_main_thread) {
 		}
 		else
 			this->m_win.create(this->curr_desk_mode, this->title_factory(), sf::Style::Fullscreen);
+		this->last_window_creation_time = std::chrono::high_resolution_clock::now();
 		this->update_screen_settings();
 		this->events_access->unlock();
 		this->loaded_operations.call_create = false;
@@ -832,7 +835,12 @@ void WindowScreen::display_data_to_window(bool actually_draw) {
 }
 
 void WindowScreen::window_render_call() {
-	this->m_win.setVerticalSyncEnabled(this->loaded_info.v_sync_enabled);
+	auto curr_time = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> diff = curr_time - this->last_window_creation_time;
+	if(diff.count() > this->v_sync_timeout)
+		this->m_win.setVerticalSyncEnabled(this->loaded_info.v_sync_enabled);
+	else
+		this->m_win.setVerticalSyncEnabled(false);
 	this->m_win.setMouseCursorVisible(this->loaded_info.show_mouse);
 	this->pre_texture_conversion_processing();
 

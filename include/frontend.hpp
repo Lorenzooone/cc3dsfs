@@ -109,7 +109,9 @@ private:
 	AudioData* audio_data;
 	std::mutex* events_access;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_mouse_action_time;
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_window_creation_time;
 	const float mouse_timeout = 5.0f;
+	const float v_sync_timeout = 5.0f;
 	CurrMenuType loaded_menu;
 	ConnectionMenu *connection_menu;
 
