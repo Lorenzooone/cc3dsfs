@@ -18,8 +18,7 @@ endif()
 include(FetchContent)
 FetchContent_Declare(SFML
     GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG 2.6.1
-    EXCLUDE_FROM_ALL)
+    GIT_TAG 2.6.1)
 
 set(FTD3XX_BASE_URL https://ftdichip.com/wp-content/uploads/)
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
@@ -72,15 +71,29 @@ else()
     set(FTD3XX_SUBFOLDER linux)
 endif()
 
-set(ftd3xx_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/ftd3xx-src)
-set(ftd3xx_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/ftd3xx-build)
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+FetchContent_Declare(FTD3XX
+    URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
+    DOWNLOAD_NO_EXTRACT TRUE
+)
+else()
+FetchContent_Declare(FTD3XX
+    URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
+)
+endif()
+
+FetchContent_MakeAvailable(SFML FTD3XX)
+
+if(IS_DIRECTORY "${sfml_SOURCE_DIR}")
+    set_property(DIRECTORY ${sfml_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL YES)
+endif()
+
 file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/win)
 file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/macos)
 file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/linux)
+
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-ExternalProject_Add(FTD3XX
-    URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
-    DOWNLOAD_NO_EXTRACT TRUE
+ExternalProject_Add(FTD3XX_BUILD_PROJECT
     SOURCE_DIR ${ftd3xx_SOURCE_DIR}
     BINARY_DIR ${ftd3xx_BINARY_DIR}
     BUILD_COMMAND ${FTD3XX_BUILD_COMMAND} ${ftd3xx_SOURCE_DIR}/${FTD3XX_ARCHIVE} ${FTD3XX_MOUNTED_FOLDER} ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${FTD3XX_LIB}
@@ -89,8 +102,7 @@ ExternalProject_Add(FTD3XX
     INSTALL_COMMAND ""
 )
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-ExternalProject_Add(FTD3XX
-    URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
+ExternalProject_Add(FTD3XX_BUILD_PROJECT
     SOURCE_DIR ${ftd3xx_SOURCE_DIR}
     BINARY_DIR ${ftd3xx_BINARY_DIR}
     BUILD_COMMAND ${FTD3XX_BUILD_COMMAND} ${ftd3xx_SOURCE_DIR} ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${PATH_WINDOWS_ARCH}/${WINDOWS_PATH_SPECIFIER}/${FTD3XX_LIB}
@@ -99,8 +111,7 @@ ExternalProject_Add(FTD3XX
     INSTALL_COMMAND ""
 )
 else()
-ExternalProject_Add(FTD3XX
-    URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
+ExternalProject_Add(FTD3XX_BUILD_PROJECT
     SOURCE_DIR ${ftd3xx_SOURCE_DIR}
     BINARY_DIR ${ftd3xx_BINARY_DIR}
     BUILD_COMMAND ${FTD3XX_BUILD_COMMAND} ${ftd3xx_SOURCE_DIR} ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${FTD3XX_LIB}
@@ -109,8 +120,6 @@ ExternalProject_Add(FTD3XX
     INSTALL_COMMAND ""
 )
 endif()
-
-FetchContent_MakeAvailable(SFML)
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 
@@ -124,6 +133,7 @@ set(OUTPUT_NAME cc3dsfs)
 
 add_executable(CMakeBin2C tools/bin2c.cpp)
 add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/3dscapture.cpp source/conversions.cpp source/ConnectionMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp)
+add_dependencies(${OUTPUT_NAME} FTD3XX_BUILD_PROJECT CMakeBin2C)
 target_link_libraries(${OUTPUT_NAME} PRIVATE sfml-graphics sfml-audio sfml-window sfml-system ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}/${FTD3XX_LIB})
 target_link_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER})
 target_include_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${TOOLS_DATA_DIR} ${CMAKE_SOURCE_DIR}/include)
