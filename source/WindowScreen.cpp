@@ -533,14 +533,18 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 		this->notification->prepareRenderText();
 		this->frame_time = frame_time;
 		this->scheduled_work_on_window = this->window_needs_work();
-		if(this->loaded_menu == CONNECT_MENU_TYPE) {
-			int view_size_x = this->m_window_width;
-			int view_size_y = this->m_window_height;
-			if(!this->loaded_info.is_fullscreen) {
-				view_size_x = this->m_width;
-				view_size_y = this->m_height;
-			}
-			this->connection_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+		int view_size_x = this->m_window_width;
+		int view_size_y = this->m_window_height;
+		if(!this->loaded_info.is_fullscreen) {
+			view_size_x = this->m_width;
+			view_size_y = this->m_height;
+		}
+		switch(this->loaded_menu) {
+			case CONNECT_MENU_TYPE:
+				this->connection_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+				break;
+			default:
+				break;
 		}
 		this->is_window_factory_done = false;
 		this->is_thread_done = false;

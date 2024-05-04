@@ -14,8 +14,6 @@
 #define FIFO_CHANNEL 0
 #endif
 
-//#define DEBUG_DEVICES_PRINT_DESCRIPTION_INFOS
-
 static bool get_is_bad_ftd3xx() {
 	#if (defined(_WIN32) || defined(_WIN64))
 	return false;
@@ -42,7 +40,8 @@ static void list_devices(DevicesList &devices_list) {
 	devices_list.numValidDevices = 0;
 	if (!FT_FAILED(ftStatus) && numDevs > 0)
 	{
-		devices_list.numAllocedDevices = numDevs;
+		const int debug_multiplier = 1;
+		devices_list.numAllocedDevices = numDevs * debug_multiplier;
 		devices_list.serialNumbers = new char[devices_list.numAllocedDevices * SERIAL_NUMBER_SIZE];
 		FT_HANDLE ftHandle = NULL;
 		DWORD Flags = 0;
@@ -54,17 +53,16 @@ static void list_devices(DevicesList &devices_list) {
 		{
 			ftStatus = FT_GetDeviceInfoDetail(i, &Flags, &Type, &ID, NULL,
 			SerialNumber, Description, &ftHandle);
-			#ifdef DEBUG_DEVICES_PRINT_DESCRIPTION_INFOS
-			std::cout << "Total: " << numDevs << " - Index: " << i << " - " << std::string(Description) << " - " << std::string(SerialNumber) << std::endl;
-			#endif
 			if (!FT_FAILED(ftStatus))
 			{
 				for(int j = 0; j < sizeof(valid_descriptions) / sizeof(*valid_descriptions); j++) {
 					if(Description == valid_descriptions[j]) {
-						for(int k = 0; k < REAL_SERIAL_NUMBER_SIZE; k++)
-							devices_list.serialNumbers[(SERIAL_NUMBER_SIZE * devices_list.numValidDevices) + k] = SerialNumber[k];
-						devices_list.serialNumbers[(SERIAL_NUMBER_SIZE * devices_list.numValidDevices) + REAL_SERIAL_NUMBER_SIZE] = 0;
-						++devices_list.numValidDevices;
+						for(int u = 0; u < debug_multiplier; u++) {
+							for(int k = 0; k < REAL_SERIAL_NUMBER_SIZE; k++)
+								devices_list.serialNumbers[(SERIAL_NUMBER_SIZE * devices_list.numValidDevices) + k] = SerialNumber[k];
+							devices_list.serialNumbers[(SERIAL_NUMBER_SIZE * devices_list.numValidDevices) + REAL_SERIAL_NUMBER_SIZE] = 0;
+							++devices_list.numValidDevices;
+						}
 						break;
 					}
 				}

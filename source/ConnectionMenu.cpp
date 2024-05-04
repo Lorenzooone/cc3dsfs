@@ -1,8 +1,9 @@
 #include "ConnectionMenu.hpp"
 
-#define CONNECTION_PREV_PAGE_ID (CONNECTION_NUM_ELEMENTS_DISPLAYED_PER_SCREEN - 3)
-#define CONNECTION_INFO_PAGES_ID (CONNECTION_NUM_ELEMENTS_DISPLAYED_PER_SCREEN - 2)
-#define CONNECTION_NEXT_PAGE_ID (CONNECTION_NUM_ELEMENTS_DISPLAYED_PER_SCREEN - 1)
+#define CONNECTION_NUM_PAGE_ELEMENTS_START_ID CONNECTION_NUM_ELEMENTS_PER_SCREEN
+#define CONNECTION_PREV_PAGE_ID (CONNECTION_NUM_PAGE_ELEMENTS_START_ID)
+#define CONNECTION_INFO_PAGES_ID (CONNECTION_NUM_PAGE_ELEMENTS_START_ID + 1)
+#define CONNECTION_NEXT_PAGE_ID (CONNECTION_NUM_PAGE_ELEMENTS_START_ID + 2)
 
 ConnectionMenu::ConnectionMenu(bool font_load_success, sf::Font &text_font) {
 	for(int i = 0; i < CONNECTION_NUM_ELEMENTS_DISPLAYED_PER_SCREEN; i++) {
@@ -276,11 +277,7 @@ void ConnectionMenu::draw(float scaling_factor, sf::RenderTarget &window) {
 	menu_rectangle.setFillColor(sf::Color(30, 30, 60, 192));
 	menu_rectangle.setPosition(this->loaded_data.pos_x, this->loaded_data.pos_y);
 	window.draw(menu_rectangle);
-	for(int i = 0; i < CONNECTION_NUM_ELEMENTS_PER_SCREEN; i++) {
-		if(this->loaded_data.enabled_labels[i])
-			this->labels[i]->draw(window);
-	}
-	for(int i = CONNECTION_NUM_ELEMENTS_PER_SCREEN; i < CONNECTION_NUM_ELEMENTS_DISPLAYED_PER_SCREEN; i++) {
+	for(int i = 0; i < CONNECTION_NUM_ELEMENTS_DISPLAYED_PER_SCREEN; i++) {
 		if(this->loaded_data.enabled_labels[i])
 			this->labels[i]->draw(window);
 	}
@@ -292,12 +289,12 @@ void ConnectionMenu::prepare(float menu_scaling_factor, int view_size_x, int vie
 		if(this->future_data.enabled_labels[i])
 			num_elements++;
 	bool has_bottom = false;
-	for(int i = CONNECTION_NUM_ELEMENTS_PER_SCREEN; i < CONNECTION_NUM_ELEMENTS_DISPLAYED_PER_SCREEN; i++)
-		if(this->future_data.enabled_labels[i])
+	for(int i = 0; i < CONNECTION_NUM_PAGE_ELEMENTS; i++)
+		if(this->future_data.enabled_labels[i + CONNECTION_NUM_PAGE_ELEMENTS_START_ID])
 			has_bottom = true;
 	if(has_bottom)
 		num_elements += 1;
-	const float base_height = ((CONNECTION_NUM_ELEMENTS_PER_SCREEN + 1) * (BASE_PIXEL_FONT_HEIGHT * 8)) / 6;
+	const float base_height = (CONNECTION_NUM_VERTICAL_SLICES * (BASE_PIXEL_FONT_HEIGHT * 8)) / 6;
 	int max_width = (view_size_x * 9) / 10;
 	int max_height = (view_size_y * 9) / 10;
 	float max_scaling_factor = max_height / base_height;
@@ -308,7 +305,7 @@ void ConnectionMenu::prepare(float menu_scaling_factor, int view_size_x, int vie
 	int num_elements_text_scaling_factor = num_elements;
 	if(num_elements_text_scaling_factor < 3)
 		num_elements_text_scaling_factor = 3;
-	float text_scaling_factor = (menu_scaling_factor * (CONNECTION_NUM_ELEMENTS_PER_SCREEN + 1)) / num_elements_text_scaling_factor;
+	float text_scaling_factor = (menu_scaling_factor * CONNECTION_NUM_VERTICAL_SLICES) / num_elements_text_scaling_factor;
 	int menu_height = base_height * menu_scaling_factor;
 	int menu_width = (menu_height * 16) / 9;
 	if(menu_width > max_width)
@@ -316,33 +313,43 @@ void ConnectionMenu::prepare(float menu_scaling_factor, int view_size_x, int vie
 	int pos_x = (view_size_x - menu_width) / 2;
 	int pos_y = (view_size_y - menu_height) / 2;
 	int slice_y_size = menu_height / num_elements;
-	int slice_x_size = menu_width / (CONNECTION_NUM_ELEMENTS_DISPLAYED_PER_SCREEN - CONNECTION_NUM_ELEMENTS_PER_SCREEN);
+	int slice_x_size = menu_width / CONNECTION_NUM_PAGE_ELEMENTS;
+	int num_rendered_y = 0;
 	for(int i = 0; i < CONNECTION_NUM_ELEMENTS_PER_SCREEN; i++) {
 		if(!this->future_data.enabled_labels[i])
 			continue;
 		this->labels[i]->setTextFactor(text_scaling_factor);
-		this->labels[i]->setSize(menu_width, slice_y_size);
+		int x_size = menu_width;
+		int y_size = slice_y_size;
+		if(i == (num_elements - 1))
+			y_size = menu_height - (slice_y_size * (num_elements - 1));
+		this->labels[i]->setSize(x_size, y_size);
 		this->labels[i]->setPosition(pos_x, pos_y + (slice_y_size * i));
 		if(i == this->future_data.option_selected)
 			this->labels[i]->setRectangleKind(TEXT_KIND_SELECTED);
 		else
 			this->labels[i]->setRectangleKind(TEXT_KIND_NORMAL);
 		this->labels[i]->prepareRenderText();
+		++num_rendered_y;
 	}
-	for(int i = CONNECTION_NUM_ELEMENTS_PER_SCREEN; i < CONNECTION_NUM_ELEMENTS_DISPLAYED_PER_SCREEN; i++) {
-		if(!this->future_data.enabled_labels[i])
+	for(int i = 0; i < CONNECTION_NUM_PAGE_ELEMENTS; i++) {
+		int index = i + CONNECTION_NUM_PAGE_ELEMENTS_START_ID;
+		if(!this->future_data.enabled_labels[index])
 			continue;
-		this->labels[i]->setTextFactor(text_scaling_factor);
+		this->labels[index]->setTextFactor(text_scaling_factor);
 		int x_size = slice_x_size;
-		if(i == (CONNECTION_NUM_ELEMENTS_DISPLAYED_PER_SCREEN - 1))
-			x_size = menu_width - (slice_x_size * (CONNECTION_NUM_ELEMENTS_DISPLAYED_PER_SCREEN - CONNECTION_NUM_ELEMENTS_PER_SCREEN - 1));
-		this->labels[i]->setSize(x_size, menu_height - (slice_y_size * (num_elements - 1)));
-		this->labels[i]->setPosition(pos_x + (slice_x_size * (i - CONNECTION_NUM_ELEMENTS_PER_SCREEN)), pos_y + (slice_y_size * (num_elements - 1)));
-		if(i == this->future_data.option_selected)
-			this->labels[i]->setRectangleKind(TEXT_KIND_SELECTED);
+		if(i == (CONNECTION_NUM_PAGE_ELEMENTS - 1))
+			x_size = menu_width - (slice_x_size * (CONNECTION_NUM_PAGE_ELEMENTS - 1));
+		int y_size = slice_y_size;
+		if(num_rendered_y == (num_elements - 1))
+			y_size = menu_height - (slice_y_size * (num_elements - 1));
+		this->labels[index]->setSize(x_size, y_size);
+		this->labels[index]->setPosition(pos_x + (slice_x_size * i), pos_y + (slice_y_size * num_rendered_y));
+		if(index == this->future_data.option_selected)
+			this->labels[index]->setRectangleKind(TEXT_KIND_SELECTED);
 		else
-			this->labels[i]->setRectangleKind(TEXT_KIND_NORMAL);
-		this->labels[i]->prepareRenderText();
+			this->labels[index]->setRectangleKind(TEXT_KIND_NORMAL);
+		this->labels[index]->prepareRenderText();
 	}
 	this->loaded_data = this->future_data;
 }
