@@ -61,7 +61,7 @@ private:
 	TextData future_data;
 	TextData loaded_data;
 
-	void setRealSize(int width, int height);
+	void setRealSize(int width, int height, bool check_previous = true);
 	void reset_data(TextData &data);
 	void setTextWithLineWrapping(int x_limit = 0);
 	void updateText(int x_limit = 0);

@@ -3,6 +3,7 @@
 TextRectangle::TextRectangle(bool font_load_success, sf::Font &text_font) {
 	this->font_load_success = font_load_success;
 	this->setSize(1, 1);
+	this->setRealSize(1, 1, false);
 	this->text_rect.out_rect.setTexture(&this->text_rect.out_tex.getTexture());
 	if(this->font_load_success)
 		this->actual_text.setFont(text_font);
@@ -153,6 +154,8 @@ void TextRectangle::reset_data(TextData &data) {
 	data.printed_text = "Sample Text";
 	data.duration = 2.5;
 	data.font_pixel_height = BASE_PIXEL_FONT_HEIGHT;
+	data.width = 1;
+	data.height = 1;
 	data.pos_x = 0;
 	data.pos_y = 0;
 }
@@ -192,11 +195,13 @@ void TextRectangle::setTextWithLineWrapping(int x_limit) {
 	this->actual_text.setString(new_text);
 }
 
-void TextRectangle::setRealSize(int width, int height) {
+void TextRectangle::setRealSize(int width, int height, bool check_previous) {
 	this->loaded_data.width = width;
 	this->loaded_data.height = height;
-	if((height == this->text_rect.out_rect.getSize().y) && (width == this->text_rect.out_rect.getSize().x))
-		return;
+	if(check_previous) {
+		if((height == this->text_rect.out_rect.getSize().y) && (width == this->text_rect.out_rect.getSize().x))
+			return;
+	}
 	this->text_rect.out_rect.setSize(sf::Vector2f(this->loaded_data.width, this->loaded_data.height));
 	this->text_rect.out_tex.create(this->loaded_data.width, this->loaded_data.height);
 	this->text_rect.out_rect.setTextureRect(sf::IntRect(0, 0, this->loaded_data.width, this->loaded_data.height));

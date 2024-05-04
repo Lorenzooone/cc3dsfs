@@ -29,6 +29,9 @@ Below, the command for Debian-based distributions, which also lists the required
 ```
 sudo apt update
 sudo apt install \
+    g++ \
+    git \
+    cmake \
     libxrandr-dev \
     libxcursor-dev \
     libudev-dev \
