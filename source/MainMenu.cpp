@@ -1,10 +1,5 @@
 #include "MainMenu.hpp"
 
-#define MAIN_NUM_PAGE_ELEMENTS_START_ID MAIN_NUM_ELEMENTS_PER_SCREEN
-#define MAIN_PREV_PAGE_ID (MAIN_NUM_PAGE_ELEMENTS_START_ID)
-#define MAIN_INFO_PAGES_ID (MAIN_NUM_PAGE_ELEMENTS_START_ID + 1)
-#define MAIN_NEXT_PAGE_ID (MAIN_NUM_PAGE_ELEMENTS_START_ID + 2)
-
 static std::string main_menu_option_strings[NUM_TOTAL_MAIN_MENU_OPTIONS] = {"Disconnect", "Connect", "Close Menu", "Quit Application"};
 static bool usable_fullscreen[NUM_TOTAL_MAIN_MENU_OPTIONS] = {true, false, true, true};
 static bool usable_normal_screen[NUM_TOTAL_MAIN_MENU_OPTIONS] = {true, false, true, true};
@@ -74,6 +69,12 @@ std::string MainMenu::get_string_option(int index) {
 	return main_menu_option_strings[this->options_indexes[index]];
 }
 
+static std::string setTextOptionBool(int option_index, bool value) {
+	if(value)
+		return main_menu_option_strings[option_index];
+	return main_menu_option_strings[option_index + 1];
+}
+
 void MainMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info, bool connected) {
 	int num_pages = 1 + ((this->get_num_options() - 1) / this->num_elements_per_screen);
 	if(this->future_data.page >= num_pages)
@@ -85,10 +86,7 @@ void MainMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size
 		int option_index = this->options_indexes[start + i];
 		switch(main_menu_out_actions[option_index]) {
 			case MAIN_MENU_OPEN:
-				if(connected)
-					this->labels[i]->setText(main_menu_option_strings[option_index]);
-				else
-					this->labels[i]->setText(main_menu_option_strings[option_index + 1]);
+				this->labels[i]->setText(setTextOptionBool(option_index, connected));
 				break;
 			default:
 				break;
