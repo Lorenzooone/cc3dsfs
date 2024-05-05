@@ -218,9 +218,9 @@ static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data
 	curr_fps_array = new double[FPS_WINDOW_SIZE];
 	memset(out_buf, 0, sizeof(VideoOutputData));
 
-	WindowScreen top_screen(WindowScreen::ScreenType::TOP, &capture_data->status, &frontend_data.display_data, audio_data, &events_access);
-	WindowScreen bot_screen(WindowScreen::ScreenType::BOTTOM, &capture_data->status, &frontend_data.display_data, audio_data, &events_access);
-	WindowScreen joint_screen(WindowScreen::ScreenType::JOINT, &capture_data->status, &frontend_data.display_data, audio_data, &events_access);
+	WindowScreen top_screen(ScreenType::TOP, &capture_data->status, &frontend_data.display_data, audio_data, &events_access);
+	WindowScreen bot_screen(ScreenType::BOTTOM, &capture_data->status, &frontend_data.display_data, audio_data, &events_access);
+	WindowScreen joint_screen(ScreenType::JOINT, &capture_data->status, &frontend_data.display_data, audio_data, &events_access);
 	frontend_data.top_screen = &top_screen;
 	frontend_data.bot_screen = &bot_screen;
 	frontend_data.joint_screen = &joint_screen;

@@ -227,6 +227,8 @@ JoystickAction get_joystick_action(uint32_t joystickId, uint32_t joy_button) {
 		return JOY_ACTION_CONFIRM;
 	if((joy_button == 2) || (joy_button == 3))
 		return JOY_ACTION_NEGATE;
+	if((joy_button == 4) || (joy_button == 5))
+		return JOY_ACTION_MENU;
 	return JOY_ACTION_NONE;
 }
 

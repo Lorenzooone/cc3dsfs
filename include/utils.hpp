@@ -21,6 +21,7 @@
 #define USB_CHECKS_PER_SECOND ((USB_FPS + (USB_FPS / 12)) * USB_NUM_CHECKS)
 
 bool is_big_endian(void);
+std::string get_float_str_decimals(float value, int decimals);
 
 class ConsumerMutex {
 public:

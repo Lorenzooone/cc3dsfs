@@ -1,7 +1,6 @@
 #include "frontend.hpp"
 
 #include <cstring>
-#include <cmath>
 #include "font_ttf.h"
 
 #define LEFT_ROUNDED_PADDING 5
@@ -23,7 +22,7 @@ static std::string crop_names[] = {"3DS", "16:10", "Scaled DS", "Native DS", "Sc
 
 static std::string par_width_names[] = {"1:1", "SNES Horizontal", "SNES Vertical"};
 
-WindowScreen::WindowScreen(WindowScreen::ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, std::mutex* events_access) {
+WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, std::mutex* events_access) {
 	this->m_stype = stype;
 	this->events_access = events_access;
 	this->m_prepare_save = 0;
@@ -34,6 +33,7 @@ WindowScreen::WindowScreen(WindowScreen::ScreenType stype, CaptureStatus* captur
 	this->font_load_success = this->text_font.loadFromMemory(font_ttf, font_ttf_len);
 	this->notification = new TextRectangle(this->font_load_success, this->text_font);
 	this->connection_menu = new ConnectionMenu(this->font_load_success, this->text_font);
+	this->main_menu = new MainMenu(this->font_load_success, this->text_font);
 	this->in_tex.create(IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT);
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
@@ -45,9 +45,9 @@ WindowScreen::WindowScreen(WindowScreen::ScreenType stype, CaptureStatus* captur
 	this->done_display = true;
 	this->saved_buf = new VideoOutputData;
 	this->win_title = NAME;
-	if(this->m_stype == WindowScreen::ScreenType::TOP)
+	if(this->m_stype == ScreenType::TOP)
 		this->win_title += "_top";
-	if(this->m_stype == WindowScreen::ScreenType::BOTTOM)
+	if(this->m_stype == ScreenType::BOTTOM)
 		this->win_title += "_bot";
 	this->last_connected_status = false;
 	this->capture_status = capture_status;
@@ -57,6 +57,7 @@ WindowScreen::~WindowScreen() {
 	delete this->saved_buf;
 	delete this->notification;
 	delete this->connection_menu;
+	delete this->main_menu;
 }
 
 void WindowScreen::build() {
@@ -64,7 +65,7 @@ void WindowScreen::build() {
 	sf::Vector2f bot_screen_size = sf::Vector2f(BOT_WIDTH_3DS, HEIGHT_3DS);
 
 	int width = TOP_WIDTH_3DS;
-	if(this->m_stype == WindowScreen::ScreenType::BOTTOM)
+	if(this->m_stype == ScreenType::BOTTOM)
 		width = BOT_WIDTH_3DS;
 
 	this->reload();
@@ -93,333 +94,396 @@ void WindowScreen::reload() {
 bool WindowScreen::common_poll(SFEvent &event_data) {
 	double old_scaling = 0.0;
 	bool consumed = true;
-	switch (event_data.type) {
-	case sf::Event::Closed:
-		this->m_prepare_quit = true;
-		break;
-
-	case sf::Event::TextEntered:
-		switch (event_data.unicode) {
-		case 's':
-			this->m_info.is_fullscreen = false;
-			this->display_data->split = !this->display_data->split;
-			break;
-
-		case 'f':
-			this->m_info.is_fullscreen = !this->m_info.is_fullscreen;
-			this->create_window(true);
-			break;
-
-		case 'a':
-			this->m_info.async = !this->m_info.async;
-			this->print_notification_on_off("Async", this->m_info.async);
-			break;
-
-		case 'v':
-			this->m_info.v_sync_enabled = !this->m_info.v_sync_enabled;
-			this->print_notification_on_off("VSync", this->m_info.v_sync_enabled);
-			break;
-
-		case 'z':
-			old_scaling = this->m_info.menu_scaling_factor;
-			this->m_info.menu_scaling_factor -= 0.1;
-			if(this->m_info.menu_scaling_factor < 0.35)
-				this->m_info.menu_scaling_factor = 0.3;
-			if(old_scaling != this->m_info.menu_scaling_factor) {
-				this->print_notification_float("Menu Scaling", this->m_info.menu_scaling_factor, 1);
-			}
-			break;
-
-
-		case 'x':
-			old_scaling = this->m_info.menu_scaling_factor;
-			this->m_info.menu_scaling_factor += 0.1;
-			if(this->m_info.menu_scaling_factor > 4.95)
-				this->m_info.menu_scaling_factor = 5.0;
-			if(old_scaling != this->m_info.menu_scaling_factor) {
-				this->print_notification_float("Menu Scaling", this->m_info.menu_scaling_factor, 1);
-			}
-			break;
-
-		case '-':
-			if(this->m_info.is_fullscreen)
-				break;
-			old_scaling = this->m_info.scaling;
-			this->m_info.scaling -= 0.5;
-			if (this->m_info.scaling < 1.25)
-				this->m_info.scaling = 1.0;
-			if(old_scaling != this->m_info.scaling) {
-				this->print_notification_float("Scaling", this->m_info.scaling, 1);
-				this->future_operations.call_screen_settings_update = true;
-			}
-			break;
-
-		case '0':
-			if(this->m_info.is_fullscreen)
-				break;
-			old_scaling = this->m_info.scaling;
-			this->m_info.scaling += 0.5;
-			if (this->m_info.scaling > 44.75)
-				this->m_info.scaling = 45.0;
-			if(old_scaling != this->m_info.scaling) {
-				this->print_notification_float("Scaling", this->m_info.scaling, 1);
-				this->future_operations.call_screen_settings_update = true;
-			}
-			break;
-		default:
-			consumed = false;
-			break;
-		}
-
-		break;
-		
-	case sf::Event::KeyPressed:
-		switch (event_data.code) {
-		case sf::Keyboard::Escape:
+	switch(event_data.type) {
+		case sf::Event::Closed:
 			this->m_prepare_quit = true;
 			break;
+
+		case sf::Event::TextEntered:
+			switch(event_data.unicode) {
+				case 's':
+					if(this->curr_menu != CONNECT_MENU_TYPE)
+						this->curr_menu = DEFAULT_MENU_TYPE;
+					this->m_info.is_fullscreen = false;
+					this->display_data->split = !this->display_data->split;
+					break;
+
+				case 'f':
+					if(this->curr_menu != CONNECT_MENU_TYPE)
+						this->curr_menu = DEFAULT_MENU_TYPE;
+					this->m_info.is_fullscreen = !this->m_info.is_fullscreen;
+					this->create_window(true);
+					break;
+
+				case 'a':
+					this->m_info.async = !this->m_info.async;
+					this->print_notification_on_off("Async", this->m_info.async);
+					break;
+
+				case 'v':
+					this->m_info.v_sync_enabled = !this->m_info.v_sync_enabled;
+					this->print_notification_on_off("VSync", this->m_info.v_sync_enabled);
+					break;
+
+				case 'z':
+					old_scaling = this->m_info.menu_scaling_factor;
+					this->m_info.menu_scaling_factor -= 0.1;
+					if(this->m_info.menu_scaling_factor < 0.35)
+						this->m_info.menu_scaling_factor = 0.3;
+					if(old_scaling != this->m_info.menu_scaling_factor) {
+						this->print_notification_float("Menu Scaling", this->m_info.menu_scaling_factor, 1);
+					}
+					break;
+
+
+				case 'x':
+					old_scaling = this->m_info.menu_scaling_factor;
+					this->m_info.menu_scaling_factor += 0.1;
+					if(this->m_info.menu_scaling_factor > 4.95)
+						this->m_info.menu_scaling_factor = 5.0;
+					if(old_scaling != this->m_info.menu_scaling_factor) {
+						this->print_notification_float("Menu Scaling", this->m_info.menu_scaling_factor, 1);
+					}
+					break;
+
+				case '-':
+					if(this->m_info.is_fullscreen)
+						break;
+					old_scaling = this->m_info.scaling;
+					this->m_info.scaling -= 0.5;
+					if (this->m_info.scaling < 1.25)
+						this->m_info.scaling = 1.0;
+					if(old_scaling != this->m_info.scaling) {
+						this->print_notification_float("Scaling", this->m_info.scaling, 1);
+						this->future_operations.call_screen_settings_update = true;
+					}
+					break;
+
+				case '0':
+					if(this->m_info.is_fullscreen)
+						break;
+					old_scaling = this->m_info.scaling;
+					this->m_info.scaling += 0.5;
+					if (this->m_info.scaling > 44.75)
+						this->m_info.scaling = 45.0;
+					if(old_scaling != this->m_info.scaling) {
+						this->print_notification_float("Scaling", this->m_info.scaling, 1);
+						this->future_operations.call_screen_settings_update = true;
+					}
+					break;
+				default:
+					consumed = false;
+					break;
+			}
+
+			break;
+			
+		case sf::Event::KeyPressed:
+			switch(event_data.code) {
+				case sf::Keyboard::Escape:
+					this->m_prepare_quit = true;
+					break;
+				default:
+					consumed = false;
+					break;
+			}
+
+			break;
+		case sf::Event::MouseMoved:
+			if(this->m_info.is_fullscreen) {
+				this->m_info.show_mouse = true;
+				this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
+			}
+			consumed = false;
+			break;
+		case sf::Event::MouseButtonPressed:
+			if(this->m_info.is_fullscreen) {
+				this->m_info.show_mouse = true;
+				this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
+			}
+			consumed = false;
+			break;
+		case sf::Event::MouseButtonReleased:
+			if(this->m_info.is_fullscreen) {
+				this->m_info.show_mouse = true;
+				this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
+			}
+			consumed = false;
+			break;
+		case sf::Event::JoystickButtonPressed:
+			consumed = false;
+			break;
+		case sf::Event::JoystickMoved:
+			consumed = false;
+			break;
 		default:
 			consumed = false;
 			break;
-		}
+	}
+	return consumed;
+}
 
-		break;
-	case sf::Event::MouseMoved:
-		if(this->m_info.is_fullscreen) {
-			this->m_info.show_mouse = true;
-			this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
-		}
-		consumed = false;
-		break;
-	case sf::Event::MouseButtonPressed:
-		if(this->m_info.is_fullscreen) {
-			this->m_info.show_mouse = true;
-			this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
-		}
-		consumed = false;
-		break;
-	case sf::Event::MouseButtonReleased:
-		if(this->m_info.is_fullscreen) {
-			this->m_info.show_mouse = true;
-			this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
-		}
-		consumed = false;
-		break;
-	case sf::Event::JoystickButtonPressed:
-		consumed = false;
-		break;
-	case sf::Event::JoystickMoved:
-		consumed = false;
-		break;
-	default:
-		consumed = false;
-		break;
+void WindowScreen::setup_main_menu() {
+	if(this->curr_menu != MAIN_MENU_TYPE) {
+		this->curr_menu = MAIN_MENU_TYPE;
+		this->main_menu->reset_data();
+		this->main_menu->insert_data(this->m_stype, this->m_info.is_fullscreen);
+	}
+}
+
+bool WindowScreen::no_menu_poll(SFEvent &event_data) {
+	bool consumed = true;
+	switch(event_data.type) {
+		case sf::Event::TextEntered:
+			switch(event_data.unicode) {
+				default:
+					consumed = false;
+					break;
+			}
+			break;
+		case sf::Event::KeyPressed:
+			switch(event_data.code) {
+				case sf::Keyboard::Enter:
+					this->setup_main_menu();
+					break;
+				default:
+					consumed = false;
+					break;
+			}
+			break;
+		case sf::Event::MouseMoved:
+			consumed = false;
+			break;
+		case sf::Event::MouseButtonPressed:
+			if(event_data.mouse_button == sf::Mouse::Right)
+				this->setup_main_menu();
+			else
+				consumed = false;
+			break;
+		case sf::Event::MouseButtonReleased:
+			consumed = false;
+			break;
+		case sf::Event::JoystickButtonPressed:switch(get_joystick_action(event_data.joystickId, event_data.joy_button)) {
+			case JOY_ACTION_MENU:
+				this->setup_main_menu();
+				break;
+			default:
+				consumed = false;
+				break;
+			}
+			break;
+		case sf::Event::JoystickMoved:
+			consumed = false;
+			break;
+		default:
+			consumed = false;
+			break;
 	}
 	return consumed;
 }
 
 bool WindowScreen::main_poll(SFEvent &event_data) {
 	bool consumed = true;
-	switch (event_data.type) {
-	case sf::Event::TextEntered:
-		switch (event_data.unicode) {
-		case 'c':
-			if(this->m_stype == WindowScreen::ScreenType::BOTTOM) {
-				if(this->m_info.crop_kind == Crop::DEFAULT_3DS)
-					this->m_info.crop_kind = Crop::NATIVE_DS;
-				else
-					this->m_info.crop_kind = Crop::DEFAULT_3DS;
+	switch(event_data.type) {
+		case sf::Event::TextEntered:
+			switch(event_data.unicode) {
+				case 'c':
+					if(this->m_stype == ScreenType::BOTTOM) {
+						if(this->m_info.crop_kind == Crop::DEFAULT_3DS)
+							this->m_info.crop_kind = Crop::NATIVE_DS;
+						else
+							this->m_info.crop_kind = Crop::DEFAULT_3DS;
+					}
+					else {
+						this->m_info.crop_kind = static_cast<Crop>((this->m_info.crop_kind + 1) % Crop::CROP_END);
+					}
+					this->print_notification("Crop: " + crop_names[this->m_info.crop_kind]);
+					this->prepare_size_ratios(false, false);
+					this->future_operations.call_crop = true;
+
+					break;
+
+				case 'b':
+					this->m_info.is_blurred = !this->m_info.is_blurred;
+					this->future_operations.call_blur = true;
+					this->print_notification_on_off("Blur", this->m_info.is_blurred);
+					break;
+
+				case 'i':
+					this->m_info.bfi = !this->m_info.bfi;
+					this->print_notification_on_off("BFI", this->m_info.bfi);
+					break;
+
+				case 'o':
+					this->m_prepare_open = true;
+					break;
+
+				case 't':
+					this->m_info.bottom_pos = static_cast<BottomRelativePosition>((this->m_info.bottom_pos + 1) % (BottomRelativePosition::BOT_REL_POS_END));
+					this->prepare_size_ratios(false, false);
+					this->future_operations.call_screen_settings_update = true;
+					break;
+
+				case '6':
+					this->m_info.subscreen_offset_algorithm = static_cast<OffsetAlgorithm>((this->m_info.subscreen_offset_algorithm + 1) % (OffsetAlgorithm::OFF_ALGO_END));
+					this->future_operations.call_screen_settings_update = true;
+					break;
+
+				case '7':
+					this->m_info.subscreen_attached_offset_algorithm = static_cast<OffsetAlgorithm>((this->m_info.subscreen_attached_offset_algorithm + 1) % (OffsetAlgorithm::OFF_ALGO_END));
+					this->future_operations.call_screen_settings_update = true;
+					break;
+
+				case '4':
+					this->m_info.total_offset_algorithm_x = static_cast<OffsetAlgorithm>((this->m_info.total_offset_algorithm_x + 1) % (OffsetAlgorithm::OFF_ALGO_END));
+					this->future_operations.call_screen_settings_update = true;
+					break;
+
+				case '5':
+					this->m_info.total_offset_algorithm_y = static_cast<OffsetAlgorithm>((this->m_info.total_offset_algorithm_y + 1) % (OffsetAlgorithm::OFF_ALGO_END));
+					this->future_operations.call_screen_settings_update = true;
+					break;
+
+				case 'y':
+					this->prepare_size_ratios(true, false);
+					this->future_operations.call_screen_settings_update = true;
+					break;
+
+				case 'u':
+					this->prepare_size_ratios(false, true);
+					this->future_operations.call_screen_settings_update = true;
+					break;
+
+				case '8':
+					this->m_info.top_rotation = (this->m_info.top_rotation + 270) % 360;
+					this->m_info.bot_rotation = (this->m_info.bot_rotation + 270) % 360;
+					this->prepare_size_ratios(false, false);
+					this->future_operations.call_rotate = true;
+
+					break;
+
+				case '9':
+					this->m_info.top_rotation = (this->m_info.top_rotation + 90) % 360;
+					this->m_info.bot_rotation = (this->m_info.bot_rotation + 90) % 360;
+					this->prepare_size_ratios(false, false);
+					this->future_operations.call_rotate = true;
+					break;
+
+				case 'h':
+					this->m_info.top_rotation = (this->m_info.top_rotation + 270) % 360;
+					this->prepare_size_ratios(false, false);
+					this->future_operations.call_rotate = true;
+
+					break;
+
+				case 'j':
+					this->m_info.top_rotation = (this->m_info.top_rotation + 90) % 360;
+					this->prepare_size_ratios(false, false);
+					this->future_operations.call_rotate = true;
+
+					break;
+
+				case 'k':
+					this->m_info.bot_rotation = (this->m_info.bot_rotation + 270) % 360;
+					this->prepare_size_ratios(false, false);
+					this->future_operations.call_rotate = true;
+
+					break;
+
+				case 'l':
+					this->m_info.bot_rotation = (this->m_info.bot_rotation + 90) % 360;
+					this->prepare_size_ratios(false, false);
+					this->future_operations.call_rotate = true;
+
+					break;
+
+				case 'r':
+					if(this->m_info.is_fullscreen)
+						break;
+					this->m_info.rounded_corners_fix = !this->m_info.rounded_corners_fix;
+					this->future_operations.call_screen_settings_update = true;
+					this->print_notification_on_off("Extra Padding", this->m_info.rounded_corners_fix);
+
+					break;
+
+				case '2':
+					if(this->m_stype == ScreenType::BOTTOM)
+						break;
+					this->m_info.top_par = static_cast<ParCorrection>((this->m_info.top_par + 1) % (ParCorrection::PAR_END));
+					this->prepare_size_ratios(false, false);
+					this->future_operations.call_screen_settings_update = true;
+					this->print_notification("Top PAR: " + par_width_names[this->m_info.top_par]);
+
+					break;
+
+				case '3':
+					if(this->m_stype == ScreenType::TOP)
+						break;
+					this->m_info.bot_par = static_cast<ParCorrection>((this->m_info.bot_par + 1) % (ParCorrection::PAR_END));
+					this->prepare_size_ratios(false, false);
+					this->future_operations.call_screen_settings_update = true;
+					this->print_notification("Bottom PAR: " + par_width_names[this->m_info.bot_par]);
+
+					break;
+
+				case 'm':
+					audio_data->change_audio_mute();
+					break;
+
+				case ',':
+					audio_data->change_audio_volume(false);
+					break;
+
+				case '.':
+					audio_data->change_audio_volume(true);
+					break;
+
+				default:
+					consumed = false;
+					break;
 			}
-			else {
-				this->m_info.crop_kind = static_cast<Crop>((this->m_info.crop_kind + 1) % Crop::CROP_END);
+
+			break;
+			
+		case sf::Event::KeyPressed:
+			switch(event_data.code) {
+				case sf::Keyboard::F1:
+				case sf::Keyboard::F2:
+				case sf::Keyboard::F3:
+				case sf::Keyboard::F4:
+					this->m_prepare_load = event_data.code - sf::Keyboard::F1 + 1;
+					break;
+
+				case sf::Keyboard::F5:
+				case sf::Keyboard::F6:
+				case sf::Keyboard::F7:
+				case sf::Keyboard::F8:
+					this->m_prepare_save = event_data.code - sf::Keyboard::F5 + 1;
+					break;
+				default:
+					consumed = false;
+					break;
 			}
-			this->print_notification("Crop: " + crop_names[this->m_info.crop_kind]);
-			this->prepare_size_ratios(false, false);
-			this->future_operations.call_crop = true;
 
 			break;
-
-		case 'b':
-			this->m_info.is_blurred = !this->m_info.is_blurred;
-			this->future_operations.call_blur = true;
-			this->print_notification_on_off("Blur", this->m_info.is_blurred);
+		case sf::Event::MouseMoved:
+			consumed = false;
 			break;
-
-		case 'i':
-			this->m_info.bfi = !this->m_info.bfi;
-			this->print_notification_on_off("BFI", this->m_info.bfi);
+		case sf::Event::MouseButtonPressed:
+			consumed = false;
 			break;
-
-		case 'o':
-			this->m_prepare_open = true;
+		case sf::Event::MouseButtonReleased:
+			consumed = false;
 			break;
-
-		case 't':
-			this->m_info.bottom_pos = static_cast<BottomRelativePosition>((this->m_info.bottom_pos + 1) % (BottomRelativePosition::BOT_REL_POS_END));
-			this->prepare_size_ratios(false, false);
-			this->future_operations.call_screen_settings_update = true;
+		case sf::Event::JoystickButtonPressed:
+			consumed = false;
 			break;
-
-		case '6':
-			this->m_info.subscreen_offset_algorithm = static_cast<OffsetAlgorithm>((this->m_info.subscreen_offset_algorithm + 1) % (OffsetAlgorithm::OFF_ALGO_END));
-			this->future_operations.call_screen_settings_update = true;
+		case sf::Event::JoystickMoved:
+			consumed = false;
 			break;
-
-		case '7':
-			this->m_info.subscreen_attached_offset_algorithm = static_cast<OffsetAlgorithm>((this->m_info.subscreen_attached_offset_algorithm + 1) % (OffsetAlgorithm::OFF_ALGO_END));
-			this->future_operations.call_screen_settings_update = true;
-			break;
-
-		case '4':
-			this->m_info.total_offset_algorithm_x = static_cast<OffsetAlgorithm>((this->m_info.total_offset_algorithm_x + 1) % (OffsetAlgorithm::OFF_ALGO_END));
-			this->future_operations.call_screen_settings_update = true;
-			break;
-
-		case '5':
-			this->m_info.total_offset_algorithm_y = static_cast<OffsetAlgorithm>((this->m_info.total_offset_algorithm_y + 1) % (OffsetAlgorithm::OFF_ALGO_END));
-			this->future_operations.call_screen_settings_update = true;
-			break;
-
-		case 'y':
-			this->prepare_size_ratios(true, false);
-			this->future_operations.call_screen_settings_update = true;
-			break;
-
-		case 'u':
-			this->prepare_size_ratios(false, true);
-			this->future_operations.call_screen_settings_update = true;
-			break;
-
-		case '8':
-			this->m_info.top_rotation = (this->m_info.top_rotation + 270) % 360;
-			this->m_info.bot_rotation = (this->m_info.bot_rotation + 270) % 360;
-			this->prepare_size_ratios(false, false);
-			this->future_operations.call_rotate = true;
-
-			break;
-
-		case '9':
-			this->m_info.top_rotation = (this->m_info.top_rotation + 90) % 360;
-			this->m_info.bot_rotation = (this->m_info.bot_rotation + 90) % 360;
-			this->prepare_size_ratios(false, false);
-			this->future_operations.call_rotate = true;
-			break;
-
-		case 'h':
-			this->m_info.top_rotation = (this->m_info.top_rotation + 270) % 360;
-			this->prepare_size_ratios(false, false);
-			this->future_operations.call_rotate = true;
-
-			break;
-
-		case 'j':
-			this->m_info.top_rotation = (this->m_info.top_rotation + 90) % 360;
-			this->prepare_size_ratios(false, false);
-			this->future_operations.call_rotate = true;
-
-			break;
-
-		case 'k':
-			this->m_info.bot_rotation = (this->m_info.bot_rotation + 270) % 360;
-			this->prepare_size_ratios(false, false);
-			this->future_operations.call_rotate = true;
-
-			break;
-
-		case 'l':
-			this->m_info.bot_rotation = (this->m_info.bot_rotation + 90) % 360;
-			this->prepare_size_ratios(false, false);
-			this->future_operations.call_rotate = true;
-
-			break;
-
-		case 'r':
-			if(this->m_info.is_fullscreen)
-				break;
-			this->m_info.rounded_corners_fix = !this->m_info.rounded_corners_fix;
-			this->future_operations.call_screen_settings_update = true;
-			this->print_notification_on_off("Extra Padding", this->m_info.rounded_corners_fix);
-
-			break;
-
-		case '2':
-			if(this->m_stype == WindowScreen::ScreenType::BOTTOM)
-				break;
-			this->m_info.top_par = static_cast<ParCorrection>((this->m_info.top_par + 1) % (ParCorrection::PAR_END));
-			this->prepare_size_ratios(false, false);
-			this->future_operations.call_screen_settings_update = true;
-			this->print_notification("Top PAR: " + par_width_names[this->m_info.top_par]);
-
-			break;
-
-		case '3':
-			if(this->m_stype == WindowScreen::ScreenType::TOP)
-				break;
-			this->m_info.bot_par = static_cast<ParCorrection>((this->m_info.bot_par + 1) % (ParCorrection::PAR_END));
-			this->prepare_size_ratios(false, false);
-			this->future_operations.call_screen_settings_update = true;
-			this->print_notification("Bottom PAR: " + par_width_names[this->m_info.bot_par]);
-
-			break;
-
-		case 'm':
-			audio_data->change_audio_mute();
-			break;
-
-		case ',':
-			audio_data->change_audio_volume(false);
-			break;
-
-		case '.':
-			audio_data->change_audio_volume(true);
-			break;
-
 		default:
 			consumed = false;
 			break;
-		}
-
-		break;
-		
-	case sf::Event::KeyPressed:
-		switch (event_data.code) {
-		case sf::Keyboard::F1:
-		case sf::Keyboard::F2:
-		case sf::Keyboard::F3:
-		case sf::Keyboard::F4:
-			this->m_prepare_load = event_data.code - sf::Keyboard::F1 + 1;
-			break;
-
-		case sf::Keyboard::F5:
-		case sf::Keyboard::F6:
-		case sf::Keyboard::F7:
-		case sf::Keyboard::F8:
-			this->m_prepare_save = event_data.code - sf::Keyboard::F5 + 1;
-			break;
-		default:
-			consumed = false;
-			break;
-		}
-
-		break;
-	case sf::Event::MouseMoved:
-		consumed = false;
-		break;
-	case sf::Event::MouseButtonPressed:
-		consumed = false;
-		break;
-	case sf::Event::MouseButtonReleased:
-		consumed = false;
-		break;
-	case sf::Event::JoystickButtonPressed:
-		consumed = false;
-		break;
-	case sf::Event::JoystickMoved:
-		consumed = false;
-		break;
-	default:
-		consumed = false;
-		break;
 	}
 	return consumed;
 }
@@ -442,20 +506,46 @@ void WindowScreen::poll() {
 				return;
 			continue;
 		}
-		switch(this->loaded_menu) {
-		case DEFAULT_MENU_TYPE:
+		if(this->loaded_menu != CONNECT_MENU_TYPE) {
 			if(this->main_poll(event_data))
 				continue;
-			break;
-		case CONNECT_MENU_TYPE:
-			if(this->connection_menu->poll(event_data)) {
-				if(this->check_connection_menu_result() != -1)
-					return;
-				continue;
-			}
-			break;
-		default:
-			break;
+		}
+		switch(this->loaded_menu) {
+			case DEFAULT_MENU_TYPE:
+				if(this->no_menu_poll(event_data))
+					continue;
+				break;
+			case CONNECT_MENU_TYPE:
+				if(this->connection_menu->poll(event_data)) {
+					if(this->check_connection_menu_result() != -1)
+						return;
+					continue;
+				}
+				break;
+			case MAIN_MENU_TYPE:
+				if(this->main_menu->poll(event_data)) {
+					switch(this->main_menu->selected_index) {
+						case MAIN_MENU_OPEN:
+							this->m_prepare_open = true;
+							break;
+						case MAIN_MENU_CLOSE_MENU:
+							this->curr_menu = DEFAULT_MENU_TYPE;
+							return;
+							break;
+						case MAIN_MENU_QUIT_APPLICATION:
+							this->m_prepare_quit = true;
+							this->curr_menu = DEFAULT_MENU_TYPE;
+							return;
+							break;
+						default:
+							break;
+					}
+					this->main_menu->selected_index = MAIN_MENU_NO_ACTION;
+					continue;
+				}
+				break;
+			default:
+				break;
 		}
 	}
 }
@@ -512,7 +602,7 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 		return;
 
 	bool should_be_open = this->display_data->split;
-	if(this->m_stype == WindowScreen::ScreenType::JOINT)
+	if(this->m_stype == ScreenType::JOINT)
 		should_be_open = !should_be_open;
 	if(this->m_win.isOpen() ^ should_be_open) {
 		if(this->m_win.isOpen())
@@ -520,7 +610,7 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 		else
 			this->open();
 	}
-	this->loaded_menu = this->display_data->curr_menu;
+	this->loaded_menu = this->curr_menu;
 	loaded_operations = future_operations;
 	if(this->m_win.isOpen() || this->loaded_operations.call_create) {
 		WindowScreen::reset_operations(future_operations);
@@ -543,6 +633,9 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 			case CONNECT_MENU_TYPE:
 				this->connection_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
 				break;
+			case MAIN_MENU_TYPE:
+				this->main_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info, this->capture_status->connected);
+				break;
 			default:
 				break;
 		}
@@ -560,7 +653,8 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 }
 
 void WindowScreen::setup_connection_menu(DevicesList *devices_list) {
-	this->display_data->curr_menu = CONNECT_MENU_TYPE;
+	this->curr_menu = CONNECT_MENU_TYPE;
+	this->connection_menu->reset_data();
 	this->connection_menu->insert_data(devices_list);
 }
 
@@ -569,7 +663,7 @@ int WindowScreen::check_connection_menu_result() {
 }
 
 void WindowScreen::end_connection_menu() {
-	this->display_data->curr_menu = DEFAULT_MENU_TYPE;
+	this->curr_menu = DEFAULT_MENU_TYPE;
 }
 
 void WindowScreen::update_connection() {
@@ -666,21 +760,7 @@ void WindowScreen::print_notification_on_off(std::string base_text, bool value) 
 }
 
 void WindowScreen::print_notification_float(std::string base_text, float value, int decimals) {
-	float approx_factor = pow(0.1, decimals) * (0.5);
-	int int_part = (int)(value + approx_factor);
-	int dec_part = (int)((value + approx_factor - int_part) * pow(10, decimals));
-	std::string status_text = std::to_string(int_part);
-
-	if(decimals > 0) {
-		if(!dec_part) {
-			status_text += ".";
-			for(int i = 0; i < decimals; i++)
-				status_text += "0";
-		}
-		else
-			status_text += "." + std::to_string(dec_part);
-	}
-	this->print_notification(base_text + ": " + status_text);
+	this->print_notification(base_text + ": " + get_float_str_decimals(value, decimals));
 }
 
 void WindowScreen::poll_window() {
@@ -791,16 +871,16 @@ std::string WindowScreen::title_factory() {
 }
 
 void WindowScreen::pre_texture_conversion_processing() {
-	if(this->loaded_menu != DEFAULT_MENU_TYPE)
+	if(this->loaded_menu == CONNECT_MENU_TYPE)
 		return;
 	//Place preprocessing window-specific effects here
 	this->in_tex.update((uint8_t*)this->saved_buf, IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT, 0, 0);
 }
 
 void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top) {
-	if((is_top && this->m_stype == WindowScreen::ScreenType::BOTTOM) || ((!is_top) && this->m_stype == WindowScreen::ScreenType::TOP))
+	if((is_top && this->m_stype == ScreenType::BOTTOM) || ((!is_top) && this->m_stype == ScreenType::TOP))
 		return;
-	if(this->loaded_menu != DEFAULT_MENU_TYPE)
+	if(this->loaded_menu == CONNECT_MENU_TYPE)
 		return;
 
 	rect_data.out_tex.clear();
@@ -821,18 +901,21 @@ void WindowScreen::display_data_to_window(bool actually_draw) {
 
 	this->m_win.clear();
 	this->window_bg_processing();
-	switch(this->loaded_menu) {
-	case DEFAULT_MENU_TYPE:
-		if(this->m_stype != WindowScreen::ScreenType::BOTTOM)
+	if(this->loaded_menu != CONNECT_MENU_TYPE) {
+		if(this->m_stype != ScreenType::BOTTOM)
 			this->m_win.draw(this->m_out_rect_top.out_rect);
-		if(this->m_stype != WindowScreen::ScreenType::TOP)
+		if(this->m_stype != ScreenType::TOP)
 			this->m_win.draw(this->m_out_rect_bot.out_rect);
-		break;
-	case CONNECT_MENU_TYPE:
-		this->connection_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
-		break;
-	default:
-		break;
+	}
+	switch(this->loaded_menu) {
+		case CONNECT_MENU_TYPE:
+			this->connection_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case MAIN_MENU_TYPE:
+			this->main_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		default:
+			break;
 	}
 	this->notification->draw(this->m_win);
 	this->m_win.display();
@@ -888,9 +971,9 @@ void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::
 		bot_screen_height = curr_bot_screen_size.x;
 	}
 
-	if(this->m_stype == WindowScreen::ScreenType::TOP)
+	if(this->m_stype == ScreenType::TOP)
 		bot_screen_width = bot_screen_height = 0;
-	if(this->m_stype == WindowScreen::ScreenType::BOTTOM)
+	if(this->m_stype == ScreenType::BOTTOM)
 		top_screen_width = top_screen_height = 0;
 
 	int greatest_width = top_screen_width;
@@ -900,7 +983,7 @@ void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::
 	if(greatest_height < bot_screen_height)
 		greatest_height = bot_screen_height;
 
-	if(this->m_stype == WindowScreen::ScreenType::JOINT) {
+	if(this->m_stype == ScreenType::JOINT) {
 		switch(this->loaded_info.bottom_pos) {
 			case UNDER_TOP:
 				bot_screen_x = apply_offset_algo(greatest_width - bot_screen_width, this->loaded_info.subscreen_offset_algorithm);
@@ -1002,7 +1085,7 @@ void WindowScreen::calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf
 	int own_width = own_screen_size.x;
 	get_par_size(own_width, own_height, own_scaling, own_par);
 	other_scaling = prepare_screen_ratio(other_screen_size, other_rotation, own_width, own_height, own_rotation, other_par);
-	if(this->m_stype == WindowScreen::ScreenType::JOINT) {
+	if(this->m_stype == ScreenType::JOINT) {
 		// Due to size differences, it may be possible that
 		// the chosen screen might be able to increase its
 		// scaling even more without compromising the other one...
@@ -1020,11 +1103,11 @@ void WindowScreen::prepare_size_ratios(bool top_increase, bool bot_increase) {
 	sf::Vector2f top_screen_size = getShownScreenSize(true, this->m_info.crop_kind);
 	sf::Vector2f bot_screen_size = getShownScreenSize(false, this->m_info.crop_kind);
 
-	if(this->m_stype == WindowScreen::ScreenType::TOP) {
+	if(this->m_stype == ScreenType::TOP) {
 		bot_increase = true;
 		top_increase = false;
 	}
-	if(this->m_stype == WindowScreen::ScreenType::BOTTOM) {
+	if(this->m_stype == ScreenType::BOTTOM) {
 		bot_increase = false;
 		top_increase = true;
 	}
@@ -1035,9 +1118,9 @@ void WindowScreen::prepare_size_ratios(bool top_increase, bool bot_increase) {
 	}
 	bool prioritize_top = (!bot_increase) && (top_increase || (this->m_info.bottom_pos == UNDER_TOP) || (this->m_info.bottom_pos == RIGHT_TOP));
 	if(prioritize_top)
-		calc_scaling_resize_screens(top_screen_size, bot_screen_size, this->m_info.top_scaling, this->m_info.bot_scaling, this->m_info.top_rotation, this->m_info.bot_rotation, top_increase, try_mantain_ratio, this->m_stype == WindowScreen::ScreenType::BOTTOM, this->m_info.top_par, this->m_info.bot_par);
+		calc_scaling_resize_screens(top_screen_size, bot_screen_size, this->m_info.top_scaling, this->m_info.bot_scaling, this->m_info.top_rotation, this->m_info.bot_rotation, top_increase, try_mantain_ratio, this->m_stype == ScreenType::BOTTOM, this->m_info.top_par, this->m_info.bot_par);
 	else
-		calc_scaling_resize_screens(bot_screen_size, top_screen_size, this->m_info.bot_scaling, this->m_info.top_scaling, this->m_info.bot_rotation, this->m_info.top_rotation, bot_increase, try_mantain_ratio, this->m_stype == WindowScreen::ScreenType::TOP, this->m_info.bot_par, this->m_info.top_par);
+		calc_scaling_resize_screens(bot_screen_size, top_screen_size, this->m_info.bot_scaling, this->m_info.top_scaling, this->m_info.bot_rotation, this->m_info.top_rotation, bot_increase, try_mantain_ratio, this->m_stype == ScreenType::TOP, this->m_info.bot_par, this->m_info.top_par);
 }
 
 int WindowScreen::get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height) {

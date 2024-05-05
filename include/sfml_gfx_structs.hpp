@@ -5,7 +5,7 @@
 #include <SFML/Graphics.hpp>
 
 enum JoystickDirection {JOY_DIR_NONE, JOY_DIR_UP, JOY_DIR_DOWN, JOY_DIR_LEFT, JOY_DIR_RIGHT};
-enum JoystickAction {JOY_ACTION_NONE, JOY_ACTION_CONFIRM, JOY_ACTION_NEGATE};
+enum JoystickAction {JOY_ACTION_NONE, JOY_ACTION_CONFIRM, JOY_ACTION_NEGATE, JOY_ACTION_MENU};
 
 struct out_rect_data {
 	sf::RectangleShape out_rect;

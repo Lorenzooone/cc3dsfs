@@ -93,14 +93,17 @@ void TextRectangle::prepareRenderText() {
 }
 
 void TextRectangle::setText(std::string text) {
+	if(this->future_data.printed_text != text)
+		this->future_data.render_text = true;
 	this->future_data.printed_text = text;
-	this->future_data.render_text = true;
 }
 
 void TextRectangle::setShowText(bool show_text) {
 	this->future_data.show_text = show_text;
 	if(!this->future_data.show_text)
 		this->startTimer(false);
+	if(this->future_data.show_text)
+		this->future_data.render_text = true;
 }
 
 void TextRectangle::draw(sf::RenderTarget &window) {
@@ -214,6 +217,7 @@ void TextRectangle::updateText(int x_limit) {
 	this->actual_text.setFillColor(sf::Color::White);
 	// set the text style
 	//this->actual_text.setStyle(sf::Text::Bold);
+	this->actual_text.setPosition(0, 0);
 	this->setTextWithLineWrapping(x_limit);
 	sf::FloatRect globalBounds;
 	if(this->loaded_data.proportional_box) {

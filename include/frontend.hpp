@@ -9,60 +9,17 @@
 #include "utils.hpp"
 #include "audio_data.hpp"
 #include "capture_structs.hpp"
-#include "hw_defs.hpp"
 #include "TextRectangle.hpp"
 #include "sfml_gfx_structs.hpp"
 #include "ConnectionMenu.hpp"
-
-enum Crop { DEFAULT_3DS, SPECIAL_DS, SCALED_DS, NATIVE_DS, SCALED_GBA, NATIVE_GBA, SCALED_GB, NATIVE_GB, SCALED_SNES, NATIVE_SNES, NATIVE_NES, CROP_END };
-enum ParCorrection { PAR_NORMAL, PAR_SNES_HORIZONTAL, PAR_SNES_VERTICAL, PAR_END };
-enum BottomRelativePosition { UNDER_TOP, LEFT_TOP, ABOVE_TOP, RIGHT_TOP, BOT_REL_POS_END };
-enum OffsetAlgorithm { NO_DISTANCE, HALF_DISTANCE, MAX_DISTANCE, OFF_ALGO_END };
-enum CurrMenuType { DEFAULT_MENU_TYPE, CONNECT_MENU_TYPE };
-
-struct ScreenInfo {
-	bool is_blurred;
-	Crop crop_kind;
-	double scaling;
-	bool is_fullscreen;
-	BottomRelativePosition bottom_pos;
-	OffsetAlgorithm subscreen_offset_algorithm, subscreen_attached_offset_algorithm, total_offset_algorithm_x, total_offset_algorithm_y;
-	int top_rotation, bot_rotation;
-	bool show_mouse;
-	bool v_sync_enabled;
-	bool async;
-	int top_scaling, bot_scaling;
-	bool bfi;
-	double bfi_divider;
-	double menu_scaling_factor;
-	bool rounded_corners_fix;
-	ParCorrection top_par;
-	ParCorrection bot_par;
-};
-
-struct DisplayData {
-	bool split = false;
-	CurrMenuType curr_menu = DEFAULT_MENU_TYPE;
-};
-
-#pragma pack(push, 1)
-
-struct PACKED VideoOutputData {
-	uint8_t screen_data[IN_VIDEO_SIZE][4];
-};
-
-#pragma pack(pop)
-
-void reset_screen_info(ScreenInfo &info);
-bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
-std::string save_screen_info(std::string base, const ScreenInfo &info);
+#include "MainMenu.hpp"
+#include "display_structs.hpp"
 
 class WindowScreen {
 public:
-	enum ScreenType { TOP, BOTTOM, JOINT };
 	ScreenInfo m_info;
 
-	WindowScreen(WindowScreen::ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, std::mutex* events_access);
+	WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, std::mutex* events_access);
 	~WindowScreen();
 
 	void build();
@@ -112,8 +69,10 @@ private:
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_window_creation_time;
 	const float mouse_timeout = 5.0f;
 	const float v_sync_timeout = 5.0f;
+	CurrMenuType curr_menu = DEFAULT_MENU_TYPE;
 	CurrMenuType loaded_menu;
 	ConnectionMenu *connection_menu;
+	MainMenu *main_menu;
 
 	sf::Texture in_tex;
 
@@ -126,7 +85,7 @@ private:
 
 	sf::RectangleShape m_in_rect_top, m_in_rect_bot;
 	out_rect_data m_out_rect_top, m_out_rect_bot;
-	WindowScreen::ScreenType m_stype;
+	ScreenType m_stype;
 
 	std::queue<SFEvent> events_queue;
 
@@ -153,6 +112,7 @@ private:
 	void poll_window();
 	bool common_poll(SFEvent &event_data);
 	bool main_poll(SFEvent &event_data);
+	bool no_menu_poll(SFEvent &event_data);
 	void prepare_screen_rendering();
 	bool window_needs_work();
 	void window_factory(bool is_main_thread);
@@ -178,6 +138,7 @@ private:
 	sf::Vector2f getShownScreenSize(bool is_top, Crop &crop_kind);
 	void crop();
 	void setWinSize(bool is_main_thread);
+	void setup_main_menu();
 	void update_connection();
 };
 
@@ -189,6 +150,9 @@ struct FrontendData {
 	bool reload;
 };
 
+void reset_screen_info(ScreenInfo &info);
+bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
+std::string save_screen_info(std::string base, const ScreenInfo &info);
 void get_par_size(float &width, float &height, float multiplier_factor, ParCorrection &correction_factor);
 void get_par_size(int &width, int &height, float multiplier_factor, ParCorrection &correction_factor);
 void default_sleep();
