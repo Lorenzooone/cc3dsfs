@@ -41,6 +41,9 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->audio_data = audio_data;
 	this->last_window_creation_time = std::chrono::high_resolution_clock::now();
 	this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
+	this->start_touch_action_time = std::chrono::high_resolution_clock::now();
+	this->active_touch = false;
+	this->consumed_touch_long_press = false;
 	WindowScreen::reset_operations(future_operations);
 	this->done_display = true;
 	this->saved_buf = new VideoOutputData;
@@ -139,8 +142,8 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 				case 'x':
 					old_scaling = this->m_info.menu_scaling_factor;
 					this->m_info.menu_scaling_factor += 0.1;
-					if(this->m_info.menu_scaling_factor > 4.95)
-						this->m_info.menu_scaling_factor = 5.0;
+					if(this->m_info.menu_scaling_factor > 9.95)
+						this->m_info.menu_scaling_factor = 10.0;
 					if(old_scaling != this->m_info.menu_scaling_factor) {
 						this->print_notification_float("Menu Scaling", this->m_info.menu_scaling_factor, 1);
 					}
@@ -781,8 +784,28 @@ void WindowScreen::poll_window() {
 			}
 			events_queue.emplace(event.type, event.key.code, event.text.unicode, joystickId, event.joystickButton.button, event.joystickMove.axis, 0.0, event.mouseButton.button, mouse_x, mouse_y);
 		}
-		if(this->m_win.hasFocus())
+		if(this->m_win.hasFocus()) {
+			if(sf::Touch::isDown(0)) {
+				sf::Vector2i touch_pos = sf::Touch::getPosition(0, this->m_win);
+				if(!this->active_touch) {
+					this->start_touch_action_time = std::chrono::high_resolution_clock::now();
+					this->active_touch = true;
+				}
+				else {
+					auto curr_time = std::chrono::high_resolution_clock::now();
+					const std::chrono::duration<double> diff = curr_time - this->start_touch_action_time;
+					if(diff.count() > this->touch_long_press_timer) {
+						events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Right, touch_pos.x, touch_pos.y);
+						this->start_touch_action_time = std::chrono::high_resolution_clock::now();
+					}
+				}
+				events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Left, touch_pos.x, touch_pos.y);
+				
+			}
+			else
+				this->active_touch = false;
 			joystick_axis_poll(this->events_queue);
+		}
 		this->events_access->unlock();
 	}
 }

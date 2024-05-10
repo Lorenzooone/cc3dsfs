@@ -117,8 +117,8 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		info.menu_scaling_factor = std::stod(value);
 		if(info.menu_scaling_factor < 0.3)
 			info.menu_scaling_factor = 0.3;
-		if(info.menu_scaling_factor > 5.0)
-			info.menu_scaling_factor = 5.0;
+		if(info.menu_scaling_factor > 10.0)
+			info.menu_scaling_factor = 10.0;
 		return true;
 	}
 	if(key == (base + "rounded_corners_fix")) {
@@ -227,7 +227,7 @@ JoystickAction get_joystick_action(uint32_t joystickId, uint32_t joy_button) {
 		return JOY_ACTION_CONFIRM;
 	if((joy_button == 2) || (joy_button == 3))
 		return JOY_ACTION_NEGATE;
-	if((joy_button == 4) || (joy_button == 5))
+	if((joy_button == 6) || (joy_button == 7))
 		return JOY_ACTION_MENU;
 	return JOY_ACTION_NONE;
 }

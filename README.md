@@ -81,7 +81,7 @@ On MacOS, you may also be prompted to install the Apple Command Line Developer T
 - __7 key__: In Joint Fullscreen mode, changes the distance from the upper screen between 0, 1/2 Max and Max.
 - __I key__: Toggles BFI (Motion Blur Reduction) on/off. Best used on 120+hz monitors. DO NOT USE THIS IF YOU'RE AT RISK OF SEIZURES!!!
 - __Z key__: Decreases the Menu Scaling multiplier by 0.1. 0.3 is the minimum.
-- __X key__: Increases the Menu Scaling multiplier by 0.1. 5.0 is the maximum.
+- __X key__: Increases the Menu Scaling multiplier by 0.1. 10.0 is the maximum.
 - __R key__: Toggles extra padding on/off. It can be used to account for windows with rounded corners.
 - __2 key__: Changes the Pixel Aspect Ratio (PAR) for the top screen.
 - __3 key__: Changes the Pixel Aspect Ratio (PAR) for the bottom screen.

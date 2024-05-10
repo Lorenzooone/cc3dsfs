@@ -67,6 +67,10 @@ private:
 	std::mutex* events_access;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_mouse_action_time;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_window_creation_time;
+	std::chrono::time_point<std::chrono::high_resolution_clock> start_touch_action_time;
+	bool active_touch;
+	bool consumed_touch_long_press;
+	const float touch_long_press_timer = 1.5f;
 	const float mouse_timeout = 5.0f;
 	const float v_sync_timeout = 5.0f;
 	CurrMenuType curr_menu = DEFAULT_MENU_TYPE;
