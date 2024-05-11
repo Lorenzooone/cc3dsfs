@@ -3,6 +3,7 @@
 void AudioData::reset() {
 	this->volume = 50;
 	this->mute = false;
+	this->restart_request = false;
 	this->text_updated = false;
 }
 
@@ -23,9 +24,21 @@ void AudioData::change_audio_mute() {
 	this->text_updated = true;
 }
 
+void AudioData::request_audio_restart() {
+	this->restart_request = true;
+}
+
+bool AudioData::check_audio_restart_request() {
+	bool retval = this->restart_request;
+	if(retval)
+		this->restart_request = false;
+	return retval;
+}
+
 bool AudioData::has_text_to_print() {
 	bool retval = this->text_updated;
-	this->text_updated = false;
+	if(retval)
+		this->text_updated = false;
 	return retval;
 }
 

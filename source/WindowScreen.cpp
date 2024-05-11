@@ -441,6 +441,11 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 					audio_data->change_audio_volume(true);
 					break;
 
+				case 'n':
+					audio_data->request_audio_restart();
+					this->print_notification("Restarting audio...");
+					break;
+
 				default:
 					consumed = false;
 					break;

@@ -16,6 +16,8 @@ Sample::Sample(sf::Int16 *bytes, std::size_t size, float time) : bytes(bytes), s
 
 Audio::Audio(AudioData *audio_data) {
 	this->audio_data = audio_data;
+	// Consume old events
+	this->audio_data->check_audio_restart_request();
 	sf::SoundStream::initialize(AUDIO_CHANNELS, SAMPLE_RATE);
 	#if (SFML_VERSION_MAJOR > 2) || ((SFML_VERSION_MAJOR == 2) && (SFML_VERSION_MINOR >= 6))
 	// Since we receive data every 16.6 ms, this is useless,
@@ -59,6 +61,8 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 	else
 		num_consecutive_fast_seek = 0;
 	if(num_consecutive_fast_seek > AUDIO_FAILURE_THRESHOLD)
+		restart = true;
+	if(this->audio_data->check_audio_restart_request())
 		restart = true;
 
 	if(restart) {

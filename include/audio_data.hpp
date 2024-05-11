@@ -8,6 +8,8 @@ public:
 	void reset();
 	void change_audio_volume(bool is_change_positive);
 	void change_audio_mute();
+	void request_audio_restart();
+	bool check_audio_restart_request();
 	int get_final_volume();
 	bool has_text_to_print();
 	std::string text_to_print();
@@ -18,6 +20,7 @@ public:
 private:
 	int volume;
 	bool mute;
+	bool restart_request = false;
 	bool text_updated;
 	void set_audio_volume(int new_volume);
 	void set_audio_mute(bool new_mute);

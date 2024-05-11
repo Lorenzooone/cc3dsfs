@@ -88,6 +88,7 @@ On MacOS, you may also be prompted to install the Apple Command Line Developer T
 - __M key__: Toggles mute on/off.
 - __, key__: Decrements the volume by 5 units. 0 is the minimum.
 - __. key__: Increments the volume by 5 units. 100 is the maximum.
+- __N key__: Restarts the audio output. Useful if the audio stops working after changing system settings.
 - __O key__: Open/Close connection to the 3DS.
 - __F1 - F4 keys__: Loads from layouts 1 through 4 respectively.
 - __F5 - F8 keys__: Saves to layouts 1 through 4 respectively.
