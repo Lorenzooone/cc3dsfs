@@ -86,11 +86,8 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 
 			if (std::getline(kvp, value)) {
 
-				if(load_screen_info(key, value, "bot_", bottom_info)) {
-					if(bottom_info.crop_kind != Crop::NATIVE_DS)
-						bottom_info.crop_kind = Crop::DEFAULT_3DS;
+				if(load_screen_info(key, value, "bot_", bottom_info))
 					continue;
-				}
 				if(load_screen_info(key, value, "joint_", joint_info))
 					continue;
 				if(load_screen_info(key, value, "top_", top_info))

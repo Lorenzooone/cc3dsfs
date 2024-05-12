@@ -1,13 +1,154 @@
 #include "frontend.hpp"
 #include <iostream>
 
-static float par_width_multiplier[] = {1.0, 8.0, 8.0};
-static float par_width_divisor[] = {1.0, 7.0, 7.0};
-static bool par_width_main[] = {true, true, false};
+const CropData default_3ds_crop = {
+.top_width = TOP_WIDTH_3DS, .top_height = HEIGHT_3DS,
+.top_x = 0, .top_y = 0,
+.bot_width = BOT_WIDTH_3DS, .bot_height = HEIGHT_3DS,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
+.name = "3DS"};
+
+const CropData special_ds_crop = {
+.top_width = TOP_SPECIAL_DS_WIDTH_3DS, .top_height = HEIGHT_3DS,
+.top_x = (TOP_WIDTH_3DS - TOP_SPECIAL_DS_WIDTH_3DS) / 2, .top_y = 0,
+.bot_width = BOT_WIDTH_3DS, .bot_height = HEIGHT_3DS,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.name = "16:10"};
+
+const CropData scaled_ds_crop = {
+.top_width = TOP_SCALED_DS_WIDTH_3DS, .top_height = HEIGHT_3DS,
+.top_x = (TOP_WIDTH_3DS - TOP_SCALED_DS_WIDTH_3DS) / 2, .top_y = 0,
+.bot_width = BOT_WIDTH_3DS, .bot_height = HEIGHT_3DS,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.name = "Scaled DS"};
+
+const CropData native_ds_crop = {
+.top_width = WIDTH_DS, .top_height = HEIGHT_DS,
+.top_x = (TOP_WIDTH_3DS - WIDTH_DS) / 2, .top_y = 0,
+.bot_width = WIDTH_DS, .bot_height = HEIGHT_DS,
+.bot_x = (BOT_WIDTH_3DS - HEIGHT_DS) / 2, .bot_y = HEIGHT_3DS - HEIGHT_DS,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
+.name = "Native DS"};
+
+const CropData scaled_gba_crop = {
+.top_width = WIDTH_SCALED_GBA, .top_height = HEIGHT_SCALED_GBA,
+.top_x = (TOP_WIDTH_3DS - WIDTH_SCALED_GBA) / 2, .top_y = (HEIGHT_3DS - HEIGHT_SCALED_GBA) / 2,
+.bot_width = 0, .bot_height = 0,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.name = "Scaled GBA"};
+
+const CropData native_gba_crop = {
+.top_width = WIDTH_GBA, .top_height = HEIGHT_GBA,
+.top_x = (TOP_WIDTH_3DS - WIDTH_GBA) / 2, .top_y = (HEIGHT_3DS - HEIGHT_GBA) / 2,
+.bot_width = 0, .bot_height = 0,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.name = "Native GBA"};
+
+const CropData scaled_vc_gb_crop = {
+.top_width = WIDTH_SCALED_GB, .top_height = HEIGHT_SCALED_GB,
+.top_x = (TOP_WIDTH_3DS - WIDTH_SCALED_GB) / 2, .top_y = (HEIGHT_3DS - HEIGHT_SCALED_GB) / 2,
+.bot_width = 0, .bot_height = 0,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.name = "Scaled VC GB"};
+
+const CropData vc_gb_crop = {
+.top_width = WIDTH_GB, .top_height = HEIGHT_GB,
+.top_x = (TOP_WIDTH_3DS - WIDTH_GB) / 2, .top_y = (HEIGHT_3DS - HEIGHT_GB) / 2,
+.bot_width = 0, .bot_height = 0,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.name = "VC GB"};
+
+const CropData scaled_snes_crop = {
+.top_width = WIDTH_SCALED_SNES, .top_height = HEIGHT_SCALED_SNES,
+.top_x = (TOP_WIDTH_3DS - WIDTH_SCALED_SNES) / 2, .top_y = (HEIGHT_3DS - HEIGHT_SCALED_SNES) / 2,
+.bot_width = 0, .bot_height = 0,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.name = "Scaled SNES"};
+
+const CropData vc_snes_crop = {
+.top_width = WIDTH_SNES, .top_height = HEIGHT_SNES,
+.top_x = (TOP_WIDTH_3DS - WIDTH_SNES) / 2, .top_y = (HEIGHT_3DS - HEIGHT_SNES) / 2,
+.bot_width = 0, .bot_height = 0,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.name = "VC SNES"};
+
+const CropData vc_nes_crop = {
+.top_width = WIDTH_NES, .top_height = HEIGHT_NES,
+.top_x = (TOP_WIDTH_3DS - WIDTH_NES) / 2, .top_y = (HEIGHT_3DS - HEIGHT_NES) / 2,
+.bot_width = 0, .bot_height = 0,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.name = "VC NES"};
+
+static const CropData* basic_possible_crops[] = {
+&default_3ds_crop,
+&special_ds_crop,
+&scaled_ds_crop,
+&native_ds_crop,
+&scaled_gba_crop,
+&native_gba_crop,
+&scaled_vc_gb_crop,
+&vc_gb_crop,
+&scaled_snes_crop,
+&vc_snes_crop,
+&vc_nes_crop,
+};
+
+const PARData base_par = {
+.width_multiplier = 1.0, .width_divisor = 1.0,
+.is_width_main = true,
+.name = "1:1"};
+
+const PARData snes_horizontal_par = {
+.width_multiplier = 8.0, .width_divisor = 7.0,
+.is_width_main = true,
+.name = "SNES Horizontal"};
+
+const PARData snes_vertical_par = {
+.width_multiplier = 8.0, .width_divisor = 7.0,
+.is_width_main = false,
+.name = "SNES Vertical"};
+
+static const PARData* basic_possible_pars[] = {
+&base_par,
+&snes_horizontal_par,
+&snes_vertical_par,
+};
+
+bool is_allowed_crop(const CropData* crop_data, ScreenType s_type) {
+	if(s_type == ScreenType::JOINT && crop_data->allowed_joint)
+		return true;
+	if(s_type == ScreenType::TOP && crop_data->allowed_top)
+		return true;
+	if(s_type == ScreenType::BOTTOM && crop_data->allowed_bottom)
+		return true;
+	return false;
+}
+
+void insert_basic_crops(std::vector<const CropData*> &crop_vector) {
+	for(int i = 0; i < (sizeof(basic_possible_crops) / sizeof(basic_possible_crops[0])); i++) {
+		crop_vector.push_back(basic_possible_crops[i]);
+	}
+}
+
+void insert_basic_pars(std::vector<const PARData*> &par_vector) {
+	for(int i = 0; i < (sizeof(basic_possible_pars) / sizeof(basic_possible_pars[0])); i++) {
+		par_vector.push_back(basic_possible_pars[i]);
+	}
+}
 
 void reset_screen_info(ScreenInfo &info) {
 	info.is_blurred = false;
-	info.crop_kind = DEFAULT_3DS;
+	info.crop_kind = 0;
 	info.scaling = 1.0;
 	info.is_fullscreen = false;
 	info.bottom_pos = UNDER_TOP;
@@ -30,8 +171,8 @@ void reset_screen_info(ScreenInfo &info) {
 	info.bfi_divider = 2.0;
 	info.menu_scaling_factor = 1.0;
 	info.rounded_corners_fix = false;
-	info.top_par = ParCorrection::PAR_NORMAL;
-	info.bot_par = ParCorrection::PAR_NORMAL;
+	info.top_par = 0;
+	info.bot_par = 0;
 }
 
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info) {
@@ -40,7 +181,7 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		return true;
 	}
 	if(key == (base + "crop")) {
-		info.crop_kind = static_cast<Crop>(std::stoi(value) % Crop::CROP_END);
+		info.crop_kind = std::stoi(value);
 		return true;
 	}
 	if(key == (base + "scale")) {
@@ -126,11 +267,11 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		return true;
 	}
 	if(key == (base + "top_par")) {
-		info.top_par = static_cast<ParCorrection>(std::stoi(value) % ParCorrection::PAR_END);
+		info.top_par = std::stoi(value);
 		return true;
 	}
 	if(key == (base + "bot_par")) {
-		info.bot_par = static_cast<ParCorrection>(std::stoi(value) % ParCorrection::PAR_END);
+		info.bot_par = std::stoi(value);
 		return true;
 	}
 	return false;
@@ -174,29 +315,23 @@ void joystick_axis_poll(std::queue<SFEvent> &events_queue) {
 	}
 }
 
-void get_par_size(int &width, int &height, float multiplier_factor, ParCorrection &correction_factor) {
-	if(correction_factor >= ParCorrection::PAR_END)
-		correction_factor = ParCorrection::PAR_NORMAL;
-	int par_corr_index = correction_factor - ParCorrection::PAR_NORMAL;
+void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor) {
 	width *= multiplier_factor;
 	height *= multiplier_factor;
-	if(par_width_main[par_corr_index])
-		width = (width * par_width_multiplier[par_corr_index]) / par_width_divisor[par_corr_index];
+	if(correction_factor->is_width_main)
+		width = (width * correction_factor->width_multiplier) / correction_factor->width_divisor;
 	else
-		height = (height * par_width_divisor[par_corr_index]) / par_width_multiplier[par_corr_index];
+		height = (height * correction_factor->width_divisor) / correction_factor->width_multiplier;
 }
 
-void get_par_size(float &width, float &height, float multiplier_factor, ParCorrection &correction_factor) {
-	if(correction_factor >= ParCorrection::PAR_END)
-		correction_factor = ParCorrection::PAR_NORMAL;
-	int par_corr_index = correction_factor - ParCorrection::PAR_NORMAL;
+void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor) {
 	width *= multiplier_factor;
 	height *= multiplier_factor;
-	if(par_width_main[par_corr_index]) {
-		width = (width * par_width_multiplier[par_corr_index]) / par_width_divisor[par_corr_index];
+	if(correction_factor->is_width_main) {
+		width = (width * correction_factor->width_multiplier) / correction_factor->width_divisor;
 	}
 	else
-		height = (height * par_width_divisor[par_corr_index]) / par_width_multiplier[par_corr_index];
+		height = (height * correction_factor->width_divisor) / correction_factor->width_multiplier;
 }
 
 JoystickDirection get_joystick_direction(uint32_t joystickId, sf::Joystick::Axis axis, float position) {

@@ -31,6 +31,7 @@ protected:
 	int base_height_factor_menu = 1;
 	int base_height_divisor_menu = 1;
 	float min_text_size = 0.3;
+	float max_width_slack = 1.1;
 	virtual void reset_output_option();
 	virtual void set_output_option(int index);
 	virtual int get_num_options();

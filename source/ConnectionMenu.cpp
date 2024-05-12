@@ -23,6 +23,7 @@ void ConnectionMenu::class_setup() {
 	this->base_height_factor_menu = 10;
 	this->base_height_divisor_menu = 6;
 	this->min_text_size = 0.3;
+	this->max_width_slack = 1.1;
 }
 
 void ConnectionMenu::insert_data(DevicesList *devices_list) {

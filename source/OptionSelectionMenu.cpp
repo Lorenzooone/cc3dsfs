@@ -51,6 +51,7 @@ void OptionSelectionMenu::class_setup() {
 	this->base_height_factor_menu = 1;
 	this->base_height_divisor_menu = 1;
 	this->min_text_size = 0.3;
+	this->max_width_slack = 1.1;
 }
 
 bool OptionSelectionMenu::can_execute_action() {
@@ -357,7 +358,10 @@ void OptionSelectionMenu::base_prepare(float menu_scaling_factor, int view_size_
 	const float base_height = (this->num_vertical_slices * BASE_PIXEL_FONT_HEIGHT * 10) / 9;
 	int max_width = (view_size_x * 9) / 10;
 	int max_height = (view_size_y * 9) / 10;
+	float max_width_corresponding_height = (max_width * this->width_divisor_menu * this->max_width_slack) / this->width_factor_menu;
 	float max_scaling_factor = max_height / base_height;
+	if(max_width_corresponding_height < max_height)
+		max_scaling_factor = max_width_corresponding_height / base_height;
 	float final_menu_scaling_factor = (menu_scaling_factor * this->base_height_factor_menu) / this->base_height_divisor_menu;
 	if(menu_scaling_factor > max_scaling_factor)
 		menu_scaling_factor = max_scaling_factor;

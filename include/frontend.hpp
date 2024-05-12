@@ -5,6 +5,7 @@
 
 #include <mutex>
 #include <queue>
+#include <vector>
 #include <chrono>
 #include "utils.hpp"
 #include "audio_data.hpp"
@@ -77,6 +78,8 @@ private:
 	CurrMenuType loaded_menu;
 	ConnectionMenu *connection_menu;
 	MainMenu *main_menu;
+	std::vector<const CropData*> possible_crops;
+	std::vector<const PARData*> possible_pars;
 
 	sf::Texture in_tex;
 
@@ -133,8 +136,8 @@ private:
 	void window_render_call();
 	int apply_offset_algo(int offset_contribute, OffsetAlgorithm chosen_algo);
 	void set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, bool do_work = true);
-	int prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotation, int width_limit, int height_limit, int other_rotation, ParCorrection own_par);
-	void calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf::Vector2f &other_screen_size, int &own_scaling, int &other_scaling, int own_rotation, int other_rotation, bool increase, bool mantain, bool set_to_zero, ParCorrection own_par, ParCorrection other_par);
+	int prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotation, int width_limit, int height_limit, int other_rotation, const PARData *own_par);
+	void calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf::Vector2f &other_screen_size, int &own_scaling, int &other_scaling, int own_rotation, int other_rotation, bool increase, bool mantain, bool set_to_zero, const PARData *own_par, const PARData *other_par);
 	void prepare_size_ratios(bool top_increase, bool bot_increase);
 	int get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height);
 	int get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height);
@@ -145,7 +148,7 @@ private:
 	void open();
 	void update_screen_settings();
 	void rotate();
-	sf::Vector2f getShownScreenSize(bool is_top, Crop &crop_kind);
+	sf::Vector2f getShownScreenSize(bool is_top, int &crop_kind);
 	void crop();
 	void setWinSize(bool is_main_thread);
 	void setup_main_menu();
@@ -160,11 +163,14 @@ struct FrontendData {
 	bool reload;
 };
 
+bool is_allowed_crop(const CropData* crop_data, ScreenType s_type);
+void insert_basic_crops(std::vector<const CropData*> &crop_vector);
+void insert_basic_pars(std::vector<const PARData*> &par_vector);
 void reset_screen_info(ScreenInfo &info);
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
 std::string save_screen_info(std::string base, const ScreenInfo &info);
-void get_par_size(float &width, float &height, float multiplier_factor, ParCorrection &correction_factor);
-void get_par_size(int &width, int &height, float multiplier_factor, ParCorrection &correction_factor);
+void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor);
+void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor);
 void default_sleep();
 void update_output(FrontendData* frontend_data, double frame_time = 0, VideoOutputData *out_buf = NULL);
 void screen_display_thread(WindowScreen *screen);

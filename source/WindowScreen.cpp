@@ -8,21 +8,9 @@
 #define TOP_ROUNDED_PADDING 0
 #define BOTTOM_ROUNDED_PADDING 5
 
-static int top_screen_crop_widths[] = {TOP_WIDTH_3DS, TOP_SPECIAL_DS_WIDTH_3DS, TOP_SCALED_DS_WIDTH_3DS, WIDTH_DS, WIDTH_SCALED_GBA, WIDTH_GBA, WIDTH_SCALED_GB, WIDTH_GB, WIDTH_SCALED_SNES, WIDTH_SNES, WIDTH_NES};
-static int top_screen_crop_heights[] = {HEIGHT_3DS, HEIGHT_3DS, HEIGHT_3DS, HEIGHT_DS, HEIGHT_SCALED_GBA, HEIGHT_GBA, HEIGHT_SCALED_GB, HEIGHT_GB, HEIGHT_SCALED_SNES, HEIGHT_SNES, HEIGHT_NES};
-static int bot_screen_crop_widths[] = {BOT_WIDTH_3DS, BOT_WIDTH_3DS, BOT_WIDTH_3DS, WIDTH_DS, 0, 0, 0, 0, 0, 0, 0};
-static int bot_screen_crop_heights[] = {HEIGHT_3DS, HEIGHT_3DS, HEIGHT_3DS, HEIGHT_DS, 0, 0, 0, 0, 0, 0, 0};
-static int top_screen_crop_x[] = {0, (TOP_WIDTH_3DS - TOP_SPECIAL_DS_WIDTH_3DS) / 2, (TOP_WIDTH_3DS - TOP_SCALED_DS_WIDTH_3DS) / 2, (TOP_WIDTH_3DS - WIDTH_DS) / 2,
-								(TOP_WIDTH_3DS - WIDTH_SCALED_GBA) / 2,	(TOP_WIDTH_3DS - WIDTH_GBA) / 2, (TOP_WIDTH_3DS - WIDTH_SCALED_GB) / 2, (TOP_WIDTH_3DS - WIDTH_GB) / 2,
-								(TOP_WIDTH_3DS - WIDTH_SCALED_SNES) / 2, (TOP_WIDTH_3DS - WIDTH_SNES) / 2, (TOP_WIDTH_3DS - WIDTH_NES) / 2};
-static int top_screen_crop_y[] = {0, 0, 0, 0, (HEIGHT_3DS - HEIGHT_SCALED_GBA) / 2, (HEIGHT_3DS - HEIGHT_GBA) / 2, (HEIGHT_3DS - HEIGHT_SCALED_GB) / 2, (HEIGHT_3DS - HEIGHT_GB) / 2, (HEIGHT_3DS - HEIGHT_SCALED_SNES) / 2, (HEIGHT_3DS - HEIGHT_SNES) / 2, (HEIGHT_3DS - HEIGHT_NES) / 2};
-static int bot_screen_crop_x[] = {0, 0, 0, (BOT_WIDTH_3DS - WIDTH_DS) / 2, 0, 0, 0, 0, 0, 0, 0};
-static int bot_screen_crop_y[] = {0, 0, 0, HEIGHT_3DS - HEIGHT_DS, 0, 0, 0, 0, 0, 0, 0};
-static std::string crop_names[] = {"3DS", "16:10", "Scaled DS", "Native DS", "Scaled GBA", "Native GBA", "Scaled VC GB", "VC GB", "Scaled SNES", "VC SNES", "VC NES"};
-
-static std::string par_width_names[] = {"1:1", "SNES Horizontal", "SNES Vertical"};
-
 WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, std::mutex* events_access) {
+	insert_basic_crops(this->possible_crops);
+	insert_basic_pars(this->possible_pars);
 	this->m_stype = stype;
 	this->events_access = events_access;
 	this->m_prepare_save = 0;
@@ -317,20 +305,17 @@ bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 
 bool WindowScreen::main_poll(SFEvent &event_data) {
 	bool consumed = true;
+	bool done = false;
 	switch(event_data.type) {
 		case sf::Event::TextEntered:
 			switch(event_data.unicode) {
 				case 'c':
-					if(this->m_stype == ScreenType::BOTTOM) {
-						if(this->m_info.crop_kind == Crop::DEFAULT_3DS)
-							this->m_info.crop_kind = Crop::NATIVE_DS;
-						else
-							this->m_info.crop_kind = Crop::DEFAULT_3DS;
+					while(!done) {
+						this->m_info.crop_kind = (this->m_info.crop_kind + 1) % this->possible_crops.size();
+						if(is_allowed_crop(this->possible_crops[this->m_info.crop_kind], this->m_stype))
+							done = true;
 					}
-					else {
-						this->m_info.crop_kind = static_cast<Crop>((this->m_info.crop_kind + 1) % Crop::CROP_END);
-					}
-					this->print_notification("Crop: " + crop_names[this->m_info.crop_kind]);
+					this->print_notification("Crop: " + this->possible_crops[this->m_info.crop_kind]->name);
 					this->prepare_size_ratios(false, false);
 					this->future_operations.call_crop = true;
 
@@ -435,20 +420,20 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 				case '2':
 					if(this->m_stype == ScreenType::BOTTOM)
 						break;
-					this->m_info.top_par = static_cast<ParCorrection>((this->m_info.top_par + 1) % (ParCorrection::PAR_END));
+					this->m_info.top_par = (this->m_info.top_par + 1) % this->possible_pars.size();
 					this->prepare_size_ratios(false, false);
 					this->future_operations.call_screen_settings_update = true;
-					this->print_notification("Top PAR: " + par_width_names[this->m_info.top_par]);
+					this->print_notification("Top PAR: " + this->possible_pars[this->m_info.top_par]->name);
 
 					break;
 
 				case '3':
 					if(this->m_stype == ScreenType::TOP)
 						break;
-					this->m_info.bot_par = static_cast<ParCorrection>((this->m_info.bot_par + 1) % (ParCorrection::PAR_END));
+					this->m_info.bot_par = (this->m_info.bot_par + 1) % this->possible_pars.size();
 					this->prepare_size_ratios(false, false);
 					this->future_operations.call_screen_settings_update = true;
-					this->print_notification("Bottom PAR: " + par_width_names[this->m_info.bot_par]);
+					this->print_notification("Bottom PAR: " + this->possible_pars[this->m_info.bot_par]->name);
 
 					break;
 
@@ -1105,7 +1090,7 @@ void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::
 		this->m_height = bot_end_y;
 }
 
-int WindowScreen::prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotation, int width_limit, int height_limit, int other_rotation, ParCorrection own_par) {
+int WindowScreen::prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotation, int width_limit, int height_limit, int other_rotation, const PARData* own_par) {
 	float own_width = screen_size.x;
 	float own_height = screen_size.y;
 	if((own_width < 1.0) || (own_height < 1.0))
@@ -1139,7 +1124,7 @@ int WindowScreen::prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotati
 	return height_ratio;
 }
 
-void WindowScreen::calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf::Vector2f &other_screen_size, int &own_scaling, int &other_scaling, int own_rotation, int other_rotation, bool increase, bool mantain, bool set_to_zero, ParCorrection own_par, ParCorrection other_par) {
+void WindowScreen::calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf::Vector2f &other_screen_size, int &own_scaling, int &other_scaling, int own_rotation, int other_rotation, bool increase, bool mantain, bool set_to_zero, const PARData* own_par, const PARData* other_par) {
 	int min_other_width = other_screen_size.x;
 	int min_other_height = other_screen_size.y;
 	get_par_size(min_other_width, min_other_height, 1, other_par);
@@ -1189,9 +1174,9 @@ void WindowScreen::prepare_size_ratios(bool top_increase, bool bot_increase) {
 	}
 	bool prioritize_top = (!bot_increase) && (top_increase || (this->m_info.bottom_pos == UNDER_TOP) || (this->m_info.bottom_pos == RIGHT_TOP));
 	if(prioritize_top)
-		calc_scaling_resize_screens(top_screen_size, bot_screen_size, this->m_info.top_scaling, this->m_info.bot_scaling, this->m_info.top_rotation, this->m_info.bot_rotation, top_increase, try_mantain_ratio, this->m_stype == ScreenType::BOTTOM, this->m_info.top_par, this->m_info.bot_par);
+		calc_scaling_resize_screens(top_screen_size, bot_screen_size, this->m_info.top_scaling, this->m_info.bot_scaling, this->m_info.top_rotation, this->m_info.bot_rotation, top_increase, try_mantain_ratio, this->m_stype == ScreenType::BOTTOM, this->possible_pars[this->m_info.top_par], this->possible_pars[this->m_info.bot_par]);
 	else
-		calc_scaling_resize_screens(bot_screen_size, top_screen_size, this->m_info.bot_scaling, this->m_info.top_scaling, this->m_info.bot_rotation, this->m_info.top_rotation, bot_increase, try_mantain_ratio, this->m_stype == ScreenType::TOP, this->m_info.bot_par, this->m_info.top_par);
+		calc_scaling_resize_screens(bot_screen_size, top_screen_size, this->m_info.bot_scaling, this->m_info.top_scaling, this->m_info.bot_rotation, this->m_info.top_rotation, bot_increase, try_mantain_ratio, this->m_stype == ScreenType::TOP, this->possible_pars[this->m_info.bot_par], this->possible_pars[this->m_info.top_par]);
 }
 
 int WindowScreen::get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height) {
@@ -1260,8 +1245,8 @@ void WindowScreen::resize_window_and_out_rects(bool do_work) {
 		top_scaling = this->loaded_info.top_scaling;
 		bot_scaling = this->loaded_info.bot_scaling;
 	}
-	get_par_size(top_width, top_height, top_scaling, this->loaded_info.top_par);
-	get_par_size(bot_width, bot_height, bot_scaling, this->loaded_info.bot_par);
+	get_par_size(top_width, top_height, top_scaling, this->possible_pars[this->loaded_info.top_par]);
+	get_par_size(bot_width, bot_height, bot_scaling, this->possible_pars[this->loaded_info.bot_par]);
 
 	if((!this->loaded_info.is_fullscreen) && this->loaded_info.rounded_corners_fix) {
 		offset_y = TOP_ROUNDED_PADDING;
@@ -1328,29 +1313,31 @@ void WindowScreen::rotate() {
 	this->loaded_operations.call_screen_settings_update = true;
 }
 
-sf::Vector2f WindowScreen::getShownScreenSize(bool is_top, Crop &crop_kind) {
-	if(crop_kind >= Crop::CROP_END)
-		crop_kind = Crop::DEFAULT_3DS;
-	const int* widths = top_screen_crop_widths;
-	const int* heights = top_screen_crop_heights;
+sf::Vector2f WindowScreen::getShownScreenSize(bool is_top, int &crop_kind) {
+	if(crop_kind >= this->possible_crops.size())
+		crop_kind = 0;
+	if(!is_allowed_crop(this->possible_crops[crop_kind], this->m_stype))
+		crop_kind = 0;
+	int width = this->possible_crops[crop_kind]->top_width;
+	int height = this->possible_crops[crop_kind]->top_height;
 	if(!is_top) {
-		widths = bot_screen_crop_widths;
-		heights = bot_screen_crop_heights;
+		width = this->possible_crops[crop_kind]->bot_width;
+		height = this->possible_crops[crop_kind]->bot_height;
 	}
-	int crop_arr_index = crop_kind - Crop::DEFAULT_3DS;
-	return sf::Vector2f(widths[crop_arr_index], heights[crop_arr_index]);
+	return sf::Vector2f(width, height);
 }
 
 void WindowScreen::crop() {
-	if(this->loaded_info.crop_kind >= Crop::CROP_END)
-		this->loaded_info.crop_kind = Crop::DEFAULT_3DS;
-	int crop_arr_index = this->loaded_info.crop_kind - Crop::DEFAULT_3DS;
+	if(this->loaded_info.crop_kind >= this->possible_crops.size())
+		this->loaded_info.crop_kind = 0;
+	if(!is_allowed_crop(this->possible_crops[this->loaded_info.crop_kind], this->m_stype))
+		this->loaded_info.crop_kind = 0;
 
 	sf::Vector2f top_screen_size = getShownScreenSize(true, this->loaded_info.crop_kind);
 	sf::Vector2f bot_screen_size = getShownScreenSize(false, this->loaded_info.crop_kind);
 
-	this->resize_in_rect(this->m_in_rect_top, top_screen_crop_x[crop_arr_index], top_screen_crop_y[crop_arr_index], top_screen_size.x, top_screen_size.y);
-	this->resize_in_rect(this->m_in_rect_bot, TOP_WIDTH_3DS + bot_screen_crop_x[crop_arr_index], bot_screen_crop_y[crop_arr_index], bot_screen_size.x, bot_screen_size.y);
+	this->resize_in_rect(this->m_in_rect_top, this->possible_crops[this->loaded_info.crop_kind]->top_x, this->possible_crops[this->loaded_info.crop_kind]->top_y, top_screen_size.x, top_screen_size.y);
+	this->resize_in_rect(this->m_in_rect_bot, TOP_WIDTH_3DS + this->possible_crops[this->loaded_info.crop_kind]->bot_x, this->possible_crops[this->loaded_info.crop_kind]->bot_y, bot_screen_size.x, bot_screen_size.y);
 	this->loaded_operations.call_screen_settings_update = true;
 }
 

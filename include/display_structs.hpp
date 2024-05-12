@@ -5,15 +5,13 @@
 #include "hw_defs.hpp"
 
 enum ScreenType { TOP, BOTTOM, JOINT };
-enum Crop { DEFAULT_3DS, SPECIAL_DS, SCALED_DS, NATIVE_DS, SCALED_GBA, NATIVE_GBA, SCALED_GB, NATIVE_GB, SCALED_SNES, NATIVE_SNES, NATIVE_NES, CROP_END };
-enum ParCorrection { PAR_NORMAL, PAR_SNES_HORIZONTAL, PAR_SNES_VERTICAL, PAR_END };
 enum BottomRelativePosition { UNDER_TOP, LEFT_TOP, ABOVE_TOP, RIGHT_TOP, BOT_REL_POS_END };
 enum OffsetAlgorithm { NO_DISTANCE, HALF_DISTANCE, MAX_DISTANCE, OFF_ALGO_END };
 enum CurrMenuType { DEFAULT_MENU_TYPE, CONNECT_MENU_TYPE, MAIN_MENU_TYPE };
 
 struct ScreenInfo {
 	bool is_blurred;
-	Crop crop_kind;
+	int crop_kind;
 	double scaling;
 	bool is_fullscreen;
 	BottomRelativePosition bottom_pos;
@@ -27,8 +25,8 @@ struct ScreenInfo {
 	double bfi_divider;
 	double menu_scaling_factor;
 	bool rounded_corners_fix;
-	ParCorrection top_par;
-	ParCorrection bot_par;
+	int top_par;
+	int bot_par;
 };
 
 struct DisplayData {
@@ -42,5 +40,27 @@ struct PACKED VideoOutputData {
 };
 
 #pragma pack(pop)
+
+struct CropData {
+	int top_width;
+	int top_height;
+	int top_x;
+	int top_y;
+	int bot_width;
+	int bot_height;
+	int bot_x;
+	int bot_y;
+	bool allowed_joint;
+	bool allowed_top;
+	bool allowed_bottom;
+	std::string name;
+};
+
+struct PARData {
+	float width_multiplier;
+	float width_divisor;
+	bool is_width_main;
+	std::string name;
+};
 
 #endif
