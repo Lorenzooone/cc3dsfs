@@ -8,13 +8,17 @@
 #include "sfml_gfx_structs.hpp"
 #include "display_structs.hpp"
 
-#define NUM_TOTAL_MAIN_MENU_OPTIONS 4
-
 enum MainMenuOutAction{
 	MAIN_MENU_NO_ACTION,
 	MAIN_MENU_OPEN,
 	MAIN_MENU_CLOSE_MENU,
 	MAIN_MENU_QUIT_APPLICATION,
+	MAIN_MENU_FULLSCREEN,
+	MAIN_MENU_SPLIT,
+	MAIN_MENU_VSYNC,
+	MAIN_MENU_ASYNC,
+	MAIN_MENU_BLUR,
+	MAIN_MENU_PADDING,
 };
 
 class MainMenu : public OptionSelectionMenu {
@@ -31,7 +35,7 @@ protected:
 	std::string get_string_option(int index);
 	void class_setup();
 private:
-	int options_indexes[NUM_TOTAL_MAIN_MENU_OPTIONS];
+	int *options_indexes;
 	int num_enabled_options;
 };
 #endif

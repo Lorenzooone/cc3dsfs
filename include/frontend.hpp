@@ -113,7 +113,13 @@ private:
 	int get_screen_corner_modifier_y(int rotation, int height);
 	void print_notification_on_off(std::string base_text, bool value);
 	void print_notification_float(std::string base_text, float value, int decimals);
+	void split_change();
+	void fullscreen_change();
+	void async_change();
+	void vsync_change();
+	void blur_change();
 	void poll_window();
+	void padding_change();
 	bool common_poll(SFEvent &event_data);
 	bool main_poll(SFEvent &event_data);
 	bool no_menu_poll(SFEvent &event_data);

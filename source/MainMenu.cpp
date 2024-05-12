@@ -1,19 +1,111 @@
 #include "MainMenu.hpp"
 
-static std::string main_menu_option_strings[NUM_TOTAL_MAIN_MENU_OPTIONS] = {"Disconnect", "Connect", "Close Menu", "Quit Application"};
-static bool usable_fullscreen[NUM_TOTAL_MAIN_MENU_OPTIONS] = {true, false, true, true};
-static bool usable_normal_screen[NUM_TOTAL_MAIN_MENU_OPTIONS] = {true, false, true, true};
-static bool usable_joint_screen[NUM_TOTAL_MAIN_MENU_OPTIONS] = {true, false, true, true};
-static bool usable_top_screen[NUM_TOTAL_MAIN_MENU_OPTIONS] = {true, false, true, true};
-static bool usable_bottom_screen[NUM_TOTAL_MAIN_MENU_OPTIONS] = {true, false, true, true};
-static MainMenuOutAction main_menu_out_actions[NUM_TOTAL_MAIN_MENU_OPTIONS] = {MAIN_MENU_OPEN, MAIN_MENU_NO_ACTION, MAIN_MENU_CLOSE_MENU, MAIN_MENU_QUIT_APPLICATION};
+#define NUM_TOTAL_MAIN_MENU_OPTIONS (sizeof(pollable_options)/sizeof(pollable_options[0]))
+
+#define OPTION_WINDOWED true
+#define OPTION_FULLSCREEN true
+#define OPTION_JOIN true
+#define OPTION_SPLIT true
+
+struct MainMenuOptionInfo {
+	const std::string base_name;
+	const std::string false_name;
+	const bool active_fullscreen;
+	const bool active_windowed_screen;
+	const bool active_joint_screen;
+	const bool active_top_screen;
+	const bool active_bottom_screen;
+	const MainMenuOutAction out_action;
+};
+
+static const MainMenuOptionInfo connect_option = {
+.base_name = "Disconnect", .false_name = "Connect",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.out_action = MAIN_MENU_OPEN};
+
+static const MainMenuOptionInfo windowed_option = {
+.base_name = "Windowed Mode", .false_name = "",
+.active_fullscreen = OPTION_WINDOWED, .active_windowed_screen = false,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.out_action = MAIN_MENU_FULLSCREEN};
+
+static const MainMenuOptionInfo fullscreen_option = {
+.base_name = "Fullscreen Mode", .false_name = "",
+.active_fullscreen = false, .active_windowed_screen = OPTION_FULLSCREEN,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.out_action = MAIN_MENU_FULLSCREEN};
+
+static const MainMenuOptionInfo join_screens_option = {
+.base_name = "Join Screens", .false_name = "",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = false, .active_top_screen = OPTION_JOIN, .active_bottom_screen = OPTION_JOIN,
+.out_action = MAIN_MENU_SPLIT};
+
+static const MainMenuOptionInfo split_screens_option = {
+.base_name = "Split Screens", .false_name = "",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = OPTION_SPLIT, .active_top_screen = false, .active_bottom_screen = false,
+.out_action = MAIN_MENU_SPLIT};
+
+static const MainMenuOptionInfo vsync_option = {
+.base_name = "Turn VSync Off", .false_name = "Turn VSync On",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.out_action = MAIN_MENU_VSYNC};
+
+static const MainMenuOptionInfo async_option = {
+.base_name = "Turn Async Off", .false_name = "Turn Async On",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.out_action = MAIN_MENU_ASYNC};
+
+static const MainMenuOptionInfo blur_option = {
+.base_name = "Turn Blur Off", .false_name = "Turn Blur On",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.out_action = MAIN_MENU_BLUR};
+
+static const MainMenuOptionInfo padding_option = {
+.base_name = "Turn Padding Off", .false_name = "Turn Padding On",
+.active_fullscreen = false, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.out_action = MAIN_MENU_PADDING};
+
+static const MainMenuOptionInfo close_option = {
+.base_name = "Close Menu", .false_name = "",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.out_action = MAIN_MENU_CLOSE_MENU};
+
+static const MainMenuOptionInfo quit_option = {
+.base_name = "Quit Application", .false_name = "",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.out_action = MAIN_MENU_QUIT_APPLICATION};
+
+static const MainMenuOptionInfo* pollable_options[] = {
+&connect_option,
+&windowed_option,
+&fullscreen_option,
+&join_screens_option,
+&split_screens_option,
+&vsync_option,
+&async_option,
+&blur_option,
+&padding_option,
+&close_option,
+&quit_option
+};
 
 MainMenu::MainMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
+	this->options_indexes = new int[NUM_TOTAL_MAIN_MENU_OPTIONS];
 	this->initialize(font_load_success, text_font);
 	this->num_enabled_options = 0;
 }
 
 MainMenu::~MainMenu() {
+	delete []this->options_indexes;
 }
 
 void MainMenu::class_setup() {
@@ -35,17 +127,20 @@ void MainMenu::class_setup() {
 }
 
 void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen) {
-	bool *fullscreen_enabled_ptr = usable_fullscreen;
-	if(!is_fullscreen)
-		fullscreen_enabled_ptr = usable_normal_screen;
-	bool *screen_type_enabled_ptr = usable_joint_screen;
-	if(s_type == ScreenType::TOP)
-		screen_type_enabled_ptr = usable_top_screen;
-	if(s_type == ScreenType::BOTTOM)
-		screen_type_enabled_ptr = usable_bottom_screen;
 	this->num_enabled_options = 0;
 	for(int i = 0; i < NUM_TOTAL_MAIN_MENU_OPTIONS; i++) {
-		if(fullscreen_enabled_ptr[i] && screen_type_enabled_ptr[i]) {
+		bool valid = true;
+		if(is_fullscreen)
+			valid = valid && pollable_options[i]->active_fullscreen;
+		else
+			valid = valid && pollable_options[i]->active_windowed_screen;
+		if(s_type == ScreenType::TOP)
+			valid = valid && pollable_options[i]->active_top_screen;
+		else if(s_type == ScreenType::BOTTOM)
+			valid = valid && pollable_options[i]->active_bottom_screen;
+		else
+			valid = valid && pollable_options[i]->active_joint_screen;
+		if(valid) {
 			this->options_indexes[this->num_enabled_options] = i;
 			this->num_enabled_options++;
 		}
@@ -58,7 +153,7 @@ void MainMenu::reset_output_option() {
 }
 
 void MainMenu::set_output_option(int index) {
-	this->selected_index = main_menu_out_actions[this->options_indexes[index]];
+	this->selected_index = pollable_options[this->options_indexes[index]]->out_action;
 }
 
 int MainMenu::get_num_options() {
@@ -66,13 +161,13 @@ int MainMenu::get_num_options() {
 }
 
 std::string MainMenu::get_string_option(int index) {
-	return main_menu_option_strings[this->options_indexes[index]];
+	return pollable_options[this->options_indexes[index]]->base_name;
 }
 
 static std::string setTextOptionBool(int option_index, bool value) {
 	if(value)
-		return main_menu_option_strings[option_index];
-	return main_menu_option_strings[option_index + 1];
+		return pollable_options[option_index]->base_name;
+	return pollable_options[option_index]->false_name;
 }
 
 void MainMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info, bool connected) {
@@ -84,9 +179,21 @@ void MainMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size
 		if(!this->future_enabled_labels[i])
 			continue;
 		int option_index = this->options_indexes[start + i];
-		switch(main_menu_out_actions[option_index]) {
+		switch(pollable_options[option_index]->out_action) {
 			case MAIN_MENU_OPEN:
 				this->labels[i]->setText(setTextOptionBool(option_index, connected));
+				break;
+			case MAIN_MENU_VSYNC:
+				this->labels[i]->setText(setTextOptionBool(option_index, info->v_sync_enabled));
+				break;
+			case MAIN_MENU_ASYNC:
+				this->labels[i]->setText(setTextOptionBool(option_index, info->async));
+				break;
+			case MAIN_MENU_BLUR:
+				this->labels[i]->setText(setTextOptionBool(option_index, info->is_blurred));
+				break;
+			case MAIN_MENU_PADDING:
+				this->labels[i]->setText(setTextOptionBool(option_index, info->rounded_corners_fix));
 				break;
 			default:
 				break;

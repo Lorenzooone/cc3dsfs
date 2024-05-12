@@ -94,6 +94,44 @@ void WindowScreen::reload() {
 	this->prepare_size_ratios(true, true);
 }
 
+void WindowScreen::split_change() {
+	if(this->curr_menu != CONNECT_MENU_TYPE)
+		this->curr_menu = DEFAULT_MENU_TYPE;
+	this->m_info.is_fullscreen = false;
+	this->display_data->split = !this->display_data->split;
+}
+
+void WindowScreen::fullscreen_change() {
+	if(this->curr_menu != CONNECT_MENU_TYPE)
+		this->curr_menu = DEFAULT_MENU_TYPE;
+	this->m_info.is_fullscreen = !this->m_info.is_fullscreen;
+	this->create_window(true);
+}
+
+void WindowScreen::async_change() {
+	this->m_info.async = !this->m_info.async;
+	this->print_notification_on_off("Async", this->m_info.async);
+}
+
+void WindowScreen::vsync_change() {
+	this->m_info.v_sync_enabled = !this->m_info.v_sync_enabled;
+	this->print_notification_on_off("VSync", this->m_info.v_sync_enabled);
+}
+
+void WindowScreen::blur_change() {
+	this->m_info.is_blurred = !this->m_info.is_blurred;
+	this->future_operations.call_blur = true;
+	this->print_notification_on_off("Blur", this->m_info.is_blurred);
+}
+
+void WindowScreen::padding_change() {
+	if(this->m_info.is_fullscreen)
+		return;
+	this->m_info.rounded_corners_fix = !this->m_info.rounded_corners_fix;
+	this->future_operations.call_screen_settings_update = true;
+	this->print_notification_on_off("Extra Padding", this->m_info.rounded_corners_fix);
+}
+
 bool WindowScreen::common_poll(SFEvent &event_data) {
 	double old_scaling = 0.0;
 	bool consumed = true;
@@ -105,27 +143,19 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 		case sf::Event::TextEntered:
 			switch(event_data.unicode) {
 				case 's':
-					if(this->curr_menu != CONNECT_MENU_TYPE)
-						this->curr_menu = DEFAULT_MENU_TYPE;
-					this->m_info.is_fullscreen = false;
-					this->display_data->split = !this->display_data->split;
+					this->split_change();
 					break;
 
 				case 'f':
-					if(this->curr_menu != CONNECT_MENU_TYPE)
-						this->curr_menu = DEFAULT_MENU_TYPE;
-					this->m_info.is_fullscreen = !this->m_info.is_fullscreen;
-					this->create_window(true);
+					this->fullscreen_change();
 					break;
 
 				case 'a':
-					this->m_info.async = !this->m_info.async;
-					this->print_notification_on_off("Async", this->m_info.async);
+					this->async_change();
 					break;
 
 				case 'v':
-					this->m_info.v_sync_enabled = !this->m_info.v_sync_enabled;
-					this->print_notification_on_off("VSync", this->m_info.v_sync_enabled);
+					this->vsync_change();
 					break;
 
 				case 'z':
@@ -307,9 +337,7 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 					break;
 
 				case 'b':
-					this->m_info.is_blurred = !this->m_info.is_blurred;
-					this->future_operations.call_blur = true;
-					this->print_notification_on_off("Blur", this->m_info.is_blurred);
+					this->blur_change();
 					break;
 
 				case 'i':
@@ -401,12 +429,7 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 					break;
 
 				case 'r':
-					if(this->m_info.is_fullscreen)
-						break;
-					this->m_info.rounded_corners_fix = !this->m_info.rounded_corners_fix;
-					this->future_operations.call_screen_settings_update = true;
-					this->print_notification_on_off("Extra Padding", this->m_info.rounded_corners_fix);
-
+					this->padding_change();
 					break;
 
 				case '2':
@@ -544,6 +567,26 @@ void WindowScreen::poll() {
 							this->m_prepare_quit = true;
 							this->curr_menu = DEFAULT_MENU_TYPE;
 							return;
+							break;
+						case MAIN_MENU_FULLSCREEN:
+							this->fullscreen_change();
+							return;
+							break;
+						case MAIN_MENU_SPLIT:
+							this->split_change();
+							return;
+							break;
+						case MAIN_MENU_VSYNC:
+							this->vsync_change();
+							break;
+						case MAIN_MENU_ASYNC:
+							this->async_change();
+							break;
+						case MAIN_MENU_BLUR:
+							this->blur_change();
+							break;
+						case MAIN_MENU_PADDING:
+							this->padding_change();
 							break;
 						default:
 							break;
