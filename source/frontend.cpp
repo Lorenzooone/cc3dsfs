@@ -134,9 +134,10 @@ bool is_allowed_crop(const CropData* crop_data, ScreenType s_type) {
 	return false;
 }
 
-void insert_basic_crops(std::vector<const CropData*> &crop_vector) {
+void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type) {
 	for(int i = 0; i < (sizeof(basic_possible_crops) / sizeof(basic_possible_crops[0])); i++) {
-		crop_vector.push_back(basic_possible_crops[i]);
+		if(is_allowed_crop(basic_possible_crops[i], s_type))
+			crop_vector.push_back(basic_possible_crops[i]);
 	}
 }
 

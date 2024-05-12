@@ -9,9 +9,9 @@
 #define BOTTOM_ROUNDED_PADDING 5
 
 WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, std::mutex* events_access) {
-	insert_basic_crops(this->possible_crops);
-	insert_basic_pars(this->possible_pars);
 	this->m_stype = stype;
+	insert_basic_crops(this->possible_crops, this->m_stype);
+	insert_basic_pars(this->possible_pars);
 	this->events_access = events_access;
 	this->m_prepare_save = 0;
 	this->m_prepare_load = 0;
@@ -310,11 +310,7 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 		case sf::Event::TextEntered:
 			switch(event_data.unicode) {
 				case 'c':
-					while(!done) {
-						this->m_info.crop_kind = (this->m_info.crop_kind + 1) % this->possible_crops.size();
-						if(is_allowed_crop(this->possible_crops[this->m_info.crop_kind], this->m_stype))
-							done = true;
-					}
+					this->m_info.crop_kind = (this->m_info.crop_kind + 1) % this->possible_crops.size();
 					this->print_notification("Crop: " + this->possible_crops[this->m_info.crop_kind]->name);
 					this->prepare_size_ratios(false, false);
 					this->future_operations.call_crop = true;
@@ -1316,8 +1312,6 @@ void WindowScreen::rotate() {
 sf::Vector2f WindowScreen::getShownScreenSize(bool is_top, int &crop_kind) {
 	if(crop_kind >= this->possible_crops.size())
 		crop_kind = 0;
-	if(!is_allowed_crop(this->possible_crops[crop_kind], this->m_stype))
-		crop_kind = 0;
 	int width = this->possible_crops[crop_kind]->top_width;
 	int height = this->possible_crops[crop_kind]->top_height;
 	if(!is_top) {
@@ -1329,8 +1323,6 @@ sf::Vector2f WindowScreen::getShownScreenSize(bool is_top, int &crop_kind) {
 
 void WindowScreen::crop() {
 	if(this->loaded_info.crop_kind >= this->possible_crops.size())
-		this->loaded_info.crop_kind = 0;
-	if(!is_allowed_crop(this->possible_crops[this->loaded_info.crop_kind], this->m_stype))
 		this->loaded_info.crop_kind = 0;
 
 	sf::Vector2f top_screen_size = getShownScreenSize(true, this->loaded_info.crop_kind);
