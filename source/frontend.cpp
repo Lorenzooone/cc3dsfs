@@ -29,7 +29,7 @@ const CropData native_ds_crop = {
 .top_width = WIDTH_DS, .top_height = HEIGHT_DS,
 .top_x = (TOP_WIDTH_3DS - WIDTH_DS) / 2, .top_y = 0,
 .bot_width = WIDTH_DS, .bot_height = HEIGHT_DS,
-.bot_x = (BOT_WIDTH_3DS - HEIGHT_DS) / 2, .bot_y = HEIGHT_3DS - HEIGHT_DS,
+.bot_x = (BOT_WIDTH_3DS - WIDTH_DS) / 2, .bot_y = HEIGHT_3DS - HEIGHT_DS,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
 .name = "Native DS"};
 
