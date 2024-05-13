@@ -8,20 +8,10 @@ TextRectangle::TextRectangle(bool font_load_success, sf::Font &text_font) {
 	if(this->font_load_success)
 		this->actual_text.setFont(text_font);
 	this->time_phase = 0;
-	this->base_bg_color = new sf::Color(40, 40, 80, 192);
-	this->selected_bg_color = new sf::Color(90, 150, 210, 192);
-	this->success_bg_color = new sf::Color(90, 210, 90, 192);
-	this->warning_bg_color = new sf::Color(200, 200, 90, 192);
-	this->error_bg_color = new sf::Color(210, 90, 90, 192);
 	this->reset_data(this->future_data);
 }
 
 TextRectangle::~TextRectangle() {
-	delete this->base_bg_color;
-	delete this->selected_bg_color;
-	delete this->success_bg_color;
-	delete this->warning_bg_color;
-	delete this->error_bg_color;
 }
 
 void TextRectangle::setSize(int width, int height) {
@@ -241,24 +231,32 @@ void TextRectangle::updateText(int x_limit) {
 		globalBounds = this->actual_text.getGlobalBounds();
 		this->actual_text.setPosition((int)((this->loaded_data.width - (globalBounds.width + (globalBounds.left * 2))) / 2), (int)((this->loaded_data.height - (globalBounds.height + (globalBounds.top * 2))) / 2));
 	}
-	sf::Color *used_color = this->base_bg_color;
 	switch(this->loaded_data.kind) {
+		case TEXT_KIND_NORMAL:
+			this->curr_color = sf::Color(40, 40, 80, 192);
+			break;
 		case TEXT_KIND_SELECTED:
-			used_color = this->selected_bg_color;
+			this->curr_color = sf::Color(90, 150, 210, 192);
 			break;
 		case TEXT_KIND_SUCCESS:
-			used_color = this->success_bg_color;
+			this->curr_color = sf::Color(90, 210, 90, 192);
 			break;
 		case TEXT_KIND_WARNING:
-			used_color = this->warning_bg_color;
+			this->curr_color = sf::Color(200, 200, 90, 192);
 			break;
 		case TEXT_KIND_ERROR:
-			used_color = this->error_bg_color;
+			this->curr_color = sf::Color(210, 90, 90, 192);
+			break;
+		case TEXT_KIND_OPAQUE_ERROR:
+			this->curr_color = sf::Color(160, 60, 60, 192);
+			break;
+		case TEXT_KIND_TITLE:
+			this->curr_color = sf::Color(30, 30, 60, 192);
 			break;
 		default:
 			break;
 	}
-	this->text_rect.out_tex.clear(*used_color);
+	this->text_rect.out_tex.clear(this->curr_color);
 	this->text_rect.out_tex.draw(this->actual_text);
 	this->text_rect.out_tex.display();
 	this->is_done_showing_text = false;

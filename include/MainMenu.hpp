@@ -41,6 +41,7 @@ enum MainMenuOutAction{
 	MAIN_MENU_EXTRA_SETTINGS,
 	MAIN_MENU_TOP_ROTATION,
 	MAIN_MENU_BOTTOM_ROTATION,
+	MAIN_MENU_SHUTDOWN,
 };
 
 class MainMenu : public OptionSelectionMenu {

@@ -8,7 +8,7 @@
 
 #define BASE_PIXEL_FONT_HEIGHT 24
 
-enum TextKind {TEXT_KIND_NORMAL, TEXT_KIND_SELECTED, TEXT_KIND_SUCCESS, TEXT_KIND_WARNING, TEXT_KIND_ERROR};
+enum TextKind {TEXT_KIND_NORMAL, TEXT_KIND_SELECTED, TEXT_KIND_SUCCESS, TEXT_KIND_WARNING, TEXT_KIND_ERROR, TEXT_KIND_OPAQUE_ERROR, TEXT_KIND_TITLE};
 
 class TextRectangle {
 public:
@@ -34,11 +34,7 @@ private:
 	bool is_done_showing_text;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_time_start;
 	int time_phase;
-	sf::Color *base_bg_color;
-	sf::Color *selected_bg_color;
-	sf::Color *success_bg_color;
-	sf::Color *warning_bg_color;
-	sf::Color *error_bg_color;
+	sf::Color curr_color;
 	const float base_time_slide_factor = 0.5;
 	const float base_pixel_slide_factor = 2.0;
 
