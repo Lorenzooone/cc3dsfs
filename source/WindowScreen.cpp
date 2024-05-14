@@ -23,6 +23,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->connection_menu = new ConnectionMenu(this->font_load_success, this->text_font);
 	this->main_menu = new MainMenu(this->font_load_success, this->text_font);
 	this->video_menu = new VideoMenu(this->font_load_success, this->text_font);
+	this->crop_menu = new CropMenu(this->font_load_success, this->text_font);
 	this->in_tex.create(IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT);
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
@@ -51,6 +52,7 @@ WindowScreen::~WindowScreen() {
 	delete this->connection_menu;
 	delete this->main_menu;
 	delete this->video_menu;
+	delete this->crop_menu;
 }
 
 void WindowScreen::build() {
@@ -120,6 +122,13 @@ void WindowScreen::padding_change() {
 	this->m_info.rounded_corners_fix = !this->m_info.rounded_corners_fix;
 	this->future_operations.call_screen_settings_update = true;
 	this->print_notification_on_off("Extra Padding", this->m_info.rounded_corners_fix);
+}
+
+void WindowScreen::crop_value_change(int new_crop_value) {
+	this->m_info.crop_kind = new_crop_value % this->possible_crops.size();
+	this->print_notification("Crop: " + this->possible_crops[this->m_info.crop_kind]->name);
+	this->prepare_size_ratios(false, false);
+	this->future_operations.call_crop = true;
 }
 
 bool WindowScreen::common_poll(SFEvent &event_data) {
@@ -262,6 +271,14 @@ void WindowScreen::setup_video_menu() {
 	}
 }
 
+void WindowScreen::setup_crop_menu() {
+	if(this->curr_menu != CROP_MENU_TYPE) {
+		this->curr_menu = CROP_MENU_TYPE;
+		this->crop_menu->reset_data();
+		this->crop_menu->insert_data(&this->possible_crops);
+	}
+}
+
 bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 	bool consumed = true;
 	switch(event_data.type) {
@@ -320,11 +337,7 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 		case sf::Event::TextEntered:
 			switch(event_data.unicode) {
 				case 'c':
-					this->m_info.crop_kind = (this->m_info.crop_kind + 1) % this->possible_crops.size();
-					this->print_notification("Crop: " + this->possible_crops[this->m_info.crop_kind]->name);
-					this->prepare_size_ratios(false, false);
-					this->future_operations.call_crop = true;
-
+					this->crop_value_change(this->m_info.crop_kind + 1);
 					break;
 
 				case 'b':
@@ -553,20 +566,16 @@ void WindowScreen::poll() {
 						case MAIN_MENU_CLOSE_MENU:
 							this->curr_menu = DEFAULT_MENU_TYPE;
 							return;
-							break;
 						case MAIN_MENU_QUIT_APPLICATION:
 							this->m_prepare_quit = true;
 							this->curr_menu = DEFAULT_MENU_TYPE;
 							return;
-							break;
 						case MAIN_MENU_FULLSCREEN:
 							this->fullscreen_change();
 							return;
-							break;
 						case MAIN_MENU_SPLIT:
 							this->split_change();
 							return;
-							break;
 						case MAIN_MENU_VIDEO_SETTINGS:
 							this->setup_video_menu();
 							return;
@@ -583,7 +592,6 @@ void WindowScreen::poll() {
 						case VIDEO_MENU_BACK:
 							this->setup_main_menu();
 							return;
-							break;
 						case VIDEO_MENU_VSYNC:
 							this->vsync_change();
 							break;
@@ -596,10 +604,28 @@ void WindowScreen::poll() {
 						case VIDEO_MENU_PADDING:
 							this->padding_change();
 							break;
+						case VIDEO_MENU_CROPPING:
+							this->setup_crop_menu();
+							return;
 						default:
 							break;
 					}
 					this->video_menu->selected_index = VIDEO_MENU_NO_ACTION;
+					continue;
+				}
+			case CROP_MENU_TYPE:
+				if(this->crop_menu->poll(event_data)) {
+					switch(this->crop_menu->selected_index) {
+						case CROP_MENU_BACK:
+							this->setup_video_menu();
+							return;
+						case CROP_MENU_NO_ACTION:
+							break;
+						default:
+							this->crop_value_change(this->crop_menu->selected_index);
+							break;
+					}
+					this->crop_menu->selected_index = CROP_MENU_NO_ACTION;
 					continue;
 				}
 				break;
@@ -697,6 +723,9 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 				break;
 			case VIDEO_MENU_TYPE:
 				this->video_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+				break;
+			case CROP_MENU_TYPE:
+				this->crop_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.crop_kind);
 				break;
 			default:
 				break;
@@ -998,6 +1027,9 @@ void WindowScreen::display_data_to_window(bool actually_draw) {
 			break;
 		case VIDEO_MENU_TYPE:
 			this->video_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case CROP_MENU_TYPE:
+			this->crop_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

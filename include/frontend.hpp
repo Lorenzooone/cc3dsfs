@@ -15,6 +15,7 @@
 #include "ConnectionMenu.hpp"
 #include "MainMenu.hpp"
 #include "VideoMenu.hpp"
+#include "CropMenu.hpp"
 #include "display_structs.hpp"
 
 class WindowScreen {
@@ -80,6 +81,7 @@ private:
 	ConnectionMenu *connection_menu;
 	MainMenu *main_menu;
 	VideoMenu *video_menu;
+	CropMenu *crop_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const PARData*> possible_pars;
 
@@ -125,6 +127,7 @@ private:
 	void blur_change();
 	void poll_window();
 	void padding_change();
+	void crop_value_change(int new_crop_value);
 	bool common_poll(SFEvent &event_data);
 	bool main_poll(SFEvent &event_data);
 	bool no_menu_poll(SFEvent &event_data);
@@ -155,6 +158,7 @@ private:
 	void setWinSize(bool is_main_thread);
 	void setup_main_menu();
 	void setup_video_menu();
+	void setup_crop_menu();
 	void update_connection();
 };
 
