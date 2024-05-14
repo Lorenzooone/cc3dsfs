@@ -22,6 +22,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->notification = new TextRectangle(this->font_load_success, this->text_font);
 	this->connection_menu = new ConnectionMenu(this->font_load_success, this->text_font);
 	this->main_menu = new MainMenu(this->font_load_success, this->text_font);
+	this->video_menu = new VideoMenu(this->font_load_success, this->text_font);
 	this->in_tex.create(IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT);
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
@@ -49,6 +50,7 @@ WindowScreen::~WindowScreen() {
 	delete this->notification;
 	delete this->connection_menu;
 	delete this->main_menu;
+	delete this->video_menu;
 }
 
 void WindowScreen::build() {
@@ -249,6 +251,14 @@ void WindowScreen::setup_main_menu() {
 		this->curr_menu = MAIN_MENU_TYPE;
 		this->main_menu->reset_data();
 		this->main_menu->insert_data(this->m_stype, this->m_info.is_fullscreen);
+	}
+}
+
+void WindowScreen::setup_video_menu() {
+	if(this->curr_menu != VIDEO_MENU_TYPE) {
+		this->curr_menu = VIDEO_MENU_TYPE;
+		this->video_menu->reset_data();
+		this->video_menu->insert_data(this->m_stype, this->m_info.is_fullscreen);
 	}
 }
 
@@ -557,22 +567,39 @@ void WindowScreen::poll() {
 							this->split_change();
 							return;
 							break;
-						case MAIN_MENU_VSYNC:
+						case MAIN_MENU_VIDEO_SETTINGS:
+							this->setup_video_menu();
+							return;
+						default:
+							break;
+					}
+					this->main_menu->selected_index = MAIN_MENU_NO_ACTION;
+					continue;
+				}
+				break;
+			case VIDEO_MENU_TYPE:
+				if(this->video_menu->poll(event_data)) {
+					switch(this->video_menu->selected_index) {
+						case VIDEO_MENU_BACK:
+							this->setup_main_menu();
+							return;
+							break;
+						case VIDEO_MENU_VSYNC:
 							this->vsync_change();
 							break;
-						case MAIN_MENU_ASYNC:
+						case VIDEO_MENU_ASYNC:
 							this->async_change();
 							break;
-						case MAIN_MENU_BLUR:
+						case VIDEO_MENU_BLUR:
 							this->blur_change();
 							break;
-						case MAIN_MENU_PADDING:
+						case VIDEO_MENU_PADDING:
 							this->padding_change();
 							break;
 						default:
 							break;
 					}
-					this->main_menu->selected_index = MAIN_MENU_NO_ACTION;
+					this->video_menu->selected_index = VIDEO_MENU_NO_ACTION;
 					continue;
 				}
 				break;
@@ -666,7 +693,10 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 				this->connection_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
 				break;
 			case MAIN_MENU_TYPE:
-				this->main_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info, this->capture_status->connected);
+				this->main_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->capture_status->connected);
+				break;
+			case VIDEO_MENU_TYPE:
+				this->video_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
 				break;
 			default:
 				break;
@@ -965,6 +995,9 @@ void WindowScreen::display_data_to_window(bool actually_draw) {
 			break;
 		case MAIN_MENU_TYPE:
 			this->main_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case VIDEO_MENU_TYPE:
+			this->video_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

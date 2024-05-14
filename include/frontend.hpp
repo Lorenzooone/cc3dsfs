@@ -14,6 +14,7 @@
 #include "sfml_gfx_structs.hpp"
 #include "ConnectionMenu.hpp"
 #include "MainMenu.hpp"
+#include "VideoMenu.hpp"
 #include "display_structs.hpp"
 
 class WindowScreen {
@@ -78,6 +79,7 @@ private:
 	CurrMenuType loaded_menu;
 	ConnectionMenu *connection_menu;
 	MainMenu *main_menu;
+	VideoMenu *video_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const PARData*> possible_pars;
 
@@ -152,6 +154,7 @@ private:
 	void crop();
 	void setWinSize(bool is_main_thread);
 	void setup_main_menu();
+	void setup_video_menu();
 	void update_connection();
 };
 
