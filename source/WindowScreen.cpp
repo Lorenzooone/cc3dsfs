@@ -162,6 +162,26 @@ void WindowScreen::par_value_change(int new_par_value, bool is_top) {
 	}
 }
 
+void WindowScreen::offset_change(float &value, float change) {
+	if(change >= 1.0)
+		return;
+	if(change <= -1.0)
+		return;
+	float absolute_change = std::abs(change);
+	if(absolute_change == 0.0)
+		return;
+	float close_slice = ((int)(value / absolute_change)) * absolute_change;
+	if((value - close_slice) > (absolute_change / 2.0))
+		close_slice += absolute_change;
+	close_slice += change;
+	if(close_slice > 1.0)
+		close_slice = 0.0;
+	else if(close_slice < 0.0)
+		close_slice = 1.0;
+	value = close_slice;
+	this->future_operations.call_screen_settings_update = true;
+}
+
 bool WindowScreen::common_poll(SFEvent &event_data) {
 	double old_scaling = 0.0;
 	bool consumed = true;
@@ -408,23 +428,19 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 					break;
 
 				case '6':
-					this->m_info.subscreen_offset_algorithm = static_cast<OffsetAlgorithm>((this->m_info.subscreen_offset_algorithm + 1) % (OffsetAlgorithm::OFF_ALGO_END));
-					this->future_operations.call_screen_settings_update = true;
+					this->offset_change(this->m_info.subscreen_offset, 0.5);
 					break;
 
 				case '7':
-					this->m_info.subscreen_attached_offset_algorithm = static_cast<OffsetAlgorithm>((this->m_info.subscreen_attached_offset_algorithm + 1) % (OffsetAlgorithm::OFF_ALGO_END));
-					this->future_operations.call_screen_settings_update = true;
+					this->offset_change(this->m_info.subscreen_attached_offset, 0.5);
 					break;
 
 				case '4':
-					this->m_info.total_offset_algorithm_x = static_cast<OffsetAlgorithm>((this->m_info.total_offset_algorithm_x + 1) % (OffsetAlgorithm::OFF_ALGO_END));
-					this->future_operations.call_screen_settings_update = true;
+					this->offset_change(this->m_info.total_offset_x, 0.5);
 					break;
 
 				case '5':
-					this->m_info.total_offset_algorithm_y = static_cast<OffsetAlgorithm>((this->m_info.total_offset_algorithm_y + 1) % (OffsetAlgorithm::OFF_ALGO_END));
-					this->future_operations.call_screen_settings_update = true;
+					this->offset_change(this->m_info.total_offset_y, 0.5);
 					break;
 
 				case 'y':
@@ -1147,19 +1163,6 @@ void WindowScreen::window_render_call() {
 	}
 }
 
-int WindowScreen::apply_offset_algo(int offset_contribute, OffsetAlgorithm chosen_algo) {
-	switch(chosen_algo) {
-		case NO_DISTANCE:
-			return 0;
-		case HALF_DISTANCE:
-			return offset_contribute / 2;
-		case MAX_DISTANCE:
-			return offset_contribute;
-		default:
-			return 0;
-	}
-}
-
 void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, bool do_work) {
 	int top_screen_x = 0, top_screen_y = 0;
 	int bot_screen_x = 0, bot_screen_y = 0;
@@ -1192,32 +1195,32 @@ void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::
 	if(this->m_stype == ScreenType::JOINT) {
 		switch(this->loaded_info.bottom_pos) {
 			case UNDER_TOP:
-				bot_screen_x = apply_offset_algo(greatest_width - bot_screen_width, this->loaded_info.subscreen_offset_algorithm);
-				top_screen_x = apply_offset_algo(greatest_width - top_screen_width, this->loaded_info.subscreen_offset_algorithm);
+				bot_screen_x = (greatest_width - bot_screen_width) * this->loaded_info.subscreen_offset;
+				top_screen_x = (greatest_width - top_screen_width) * this->loaded_info.subscreen_offset;
 				bot_screen_y = top_screen_height;
 				if(max_y > 0)
-					bot_screen_y += apply_offset_algo(max_y - bot_screen_height - top_screen_height - offset_y, this->loaded_info.subscreen_attached_offset_algorithm);
+					bot_screen_y += (max_y - bot_screen_height - top_screen_height - offset_y) * this->loaded_info.subscreen_attached_offset;
 				break;
 			case RIGHT_TOP:
-				bot_screen_y = apply_offset_algo(greatest_height - bot_screen_height, this->loaded_info.subscreen_offset_algorithm);
-				top_screen_y = apply_offset_algo(greatest_height - top_screen_height, this->loaded_info.subscreen_offset_algorithm);
+				bot_screen_y = (greatest_height - bot_screen_height) * this->loaded_info.subscreen_offset;
+				top_screen_y = (greatest_height - top_screen_height) * this->loaded_info.subscreen_offset;
 				bot_screen_x = top_screen_width;
 				if(max_x > 0)
-					bot_screen_x += apply_offset_algo(max_x - bot_screen_width - top_screen_width - offset_x, this->loaded_info.subscreen_attached_offset_algorithm);
+					bot_screen_x += (max_x - bot_screen_width - top_screen_width - offset_x) * this->loaded_info.subscreen_attached_offset;
 				break;
 			case ABOVE_TOP:
-				bot_screen_x = apply_offset_algo(greatest_width - bot_screen_width, this->loaded_info.subscreen_offset_algorithm);
-				top_screen_x = apply_offset_algo(greatest_width - top_screen_width, this->loaded_info.subscreen_offset_algorithm);
+				bot_screen_x = (greatest_width - bot_screen_width) * this->loaded_info.subscreen_offset;
+				top_screen_x = (greatest_width - top_screen_width) * this->loaded_info.subscreen_offset;
 				top_screen_y = bot_screen_height;
 				if(max_y > 0)
-					top_screen_y += apply_offset_algo(max_y - bot_screen_height - top_screen_height - offset_y, this->loaded_info.subscreen_attached_offset_algorithm);
+					top_screen_y += (max_y - bot_screen_height - top_screen_height - offset_y) * this->loaded_info.subscreen_attached_offset;
 				break;
 			case LEFT_TOP:
-				bot_screen_y = apply_offset_algo(greatest_height - bot_screen_height, this->loaded_info.subscreen_offset_algorithm);
-				top_screen_y = apply_offset_algo(greatest_height - top_screen_height, this->loaded_info.subscreen_offset_algorithm);
+				bot_screen_y = (greatest_height - bot_screen_height) * this->loaded_info.subscreen_offset;
+				top_screen_y = (greatest_height - top_screen_height) * this->loaded_info.subscreen_offset;
 				top_screen_x = bot_screen_width;
 				if(max_x > 0)
-					top_screen_x += apply_offset_algo(max_x - bot_screen_width - top_screen_width - offset_x, this->loaded_info.subscreen_attached_offset_algorithm);
+					top_screen_x += (max_x - bot_screen_width - top_screen_width - offset_x) * this->loaded_info.subscreen_attached_offset;
 				break;
 			default:
 				break;
@@ -1350,7 +1353,7 @@ int WindowScreen::get_fullscreen_offset_x(int top_width, int top_height, int bot
 		default:
 			return 0;
 	}
-	return apply_offset_algo(curr_desk_mode.width - offset_contribute, this->loaded_info.total_offset_algorithm_x);
+	return (curr_desk_mode.width - offset_contribute) * this->loaded_info.total_offset_x;
 }
 
 int WindowScreen::get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height) {
@@ -1374,7 +1377,7 @@ int WindowScreen::get_fullscreen_offset_y(int top_width, int top_height, int bot
 		default:
 			return 0;
 	}
-	return apply_offset_algo(curr_desk_mode.height - offset_contribute, this->loaded_info.total_offset_algorithm_y);
+	return (curr_desk_mode.height - offset_contribute) * this->loaded_info.total_offset_y;
 }
 
 void WindowScreen::resize_window_and_out_rects(bool do_work) {

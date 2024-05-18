@@ -6,7 +6,6 @@
 
 enum ScreenType { TOP, BOTTOM, JOINT };
 enum BottomRelativePosition { UNDER_TOP, LEFT_TOP, ABOVE_TOP, RIGHT_TOP, BOT_REL_POS_END };
-enum OffsetAlgorithm { NO_DISTANCE, HALF_DISTANCE, MAX_DISTANCE, OFF_ALGO_END };
 enum CurrMenuType { DEFAULT_MENU_TYPE, CONNECT_MENU_TYPE, MAIN_MENU_TYPE, VIDEO_MENU_TYPE, AUDIO_MENU_TYPE, CROP_MENU_TYPE, TOP_PAR_MENU_TYPE, BOTTOM_PAR_MENU_TYPE };
 
 struct ScreenInfo {
@@ -15,7 +14,7 @@ struct ScreenInfo {
 	double scaling;
 	bool is_fullscreen;
 	BottomRelativePosition bottom_pos;
-	OffsetAlgorithm subscreen_offset_algorithm, subscreen_attached_offset_algorithm, total_offset_algorithm_x, total_offset_algorithm_y;
+	float subscreen_offset, subscreen_attached_offset, total_offset_x, total_offset_y;
 	int top_rotation, bot_rotation;
 	bool show_mouse;
 	bool v_sync_enabled;

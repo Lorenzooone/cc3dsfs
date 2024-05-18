@@ -153,10 +153,10 @@ void reset_screen_info(ScreenInfo &info) {
 	info.scaling = 1.0;
 	info.is_fullscreen = false;
 	info.bottom_pos = UNDER_TOP;
-	info.subscreen_offset_algorithm = HALF_DISTANCE;
-	info.subscreen_attached_offset_algorithm = NO_DISTANCE;
-	info.total_offset_algorithm_x = HALF_DISTANCE;
-	info.total_offset_algorithm_y = HALF_DISTANCE;
+	info.subscreen_offset = 0.5;
+	info.subscreen_attached_offset = 0.0;
+	info.total_offset_x = 0.5;
+	info.total_offset_y = 0.5;
 	info.top_rotation = 0;
 	info.bot_rotation = 0;
 	info.show_mouse = true;
@@ -174,6 +174,14 @@ void reset_screen_info(ScreenInfo &info) {
 	info.rounded_corners_fix = false;
 	info.top_par = 0;
 	info.bot_par = 0;
+}
+
+static float offset_sanitization(float value) {
+	if(value <= 0.0)
+		return 0.0;
+	if(value >= 1.0)
+		return 1.0;
+	return value;
 }
 
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info) {
@@ -201,20 +209,20 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		info.bottom_pos = static_cast<BottomRelativePosition>(std::stoi(value) % BottomRelativePosition::BOT_REL_POS_END);
 		return true;
 	}
-	if(key == (base + "sub_off_algo")) {
-		info.subscreen_offset_algorithm = static_cast<OffsetAlgorithm>(std::stoi(value) % OffsetAlgorithm::OFF_ALGO_END);
+	if(key == (base + "sub_off")) {
+		info.subscreen_offset = offset_sanitization(std::stod(value));
 		return true;
 	}
-	if(key == (base + "sub_att_off_algo")) {
-		info.subscreen_attached_offset_algorithm = static_cast<OffsetAlgorithm>(std::stoi(value) % OffsetAlgorithm::OFF_ALGO_END);
+	if(key == (base + "sub_att_off")) {
+		info.subscreen_attached_offset = offset_sanitization(std::stod(value));
 		return true;
 	}
-	if(key == (base + "off_algo_x")) {
-		info.total_offset_algorithm_x = static_cast<OffsetAlgorithm>(std::stoi(value) % OffsetAlgorithm::OFF_ALGO_END);
+	if(key == (base + "off_x")) {
+		info.total_offset_x = offset_sanitization(std::stod(value));
 		return true;
 	}
-	if(key == (base + "off_algo_y")) {
-		info.total_offset_algorithm_y = static_cast<OffsetAlgorithm>(std::stoi(value) % OffsetAlgorithm::OFF_ALGO_END);
+	if(key == (base + "off_y")) {
+		info.total_offset_y = offset_sanitization(std::stod(value));
 		return true;
 	}
 	if(key == (base + "top_rot")) {
@@ -285,10 +293,10 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "scale=" + std::to_string(info.scaling) + "\n";
 	out += base + "fullscreen=" + std::to_string(info.is_fullscreen) + "\n";
 	out += base + "bot_pos=" + std::to_string(info.bottom_pos) + "\n";
-	out += base + "sub_off_algo=" + std::to_string(info.subscreen_offset_algorithm) + "\n";
-	out += base + "sub_att_off_algo=" + std::to_string(info.subscreen_attached_offset_algorithm) + "\n";
-	out += base + "off_algo_x=" + std::to_string(info.total_offset_algorithm_x) + "\n";
-	out += base + "off_algo_y=" + std::to_string(info.total_offset_algorithm_y) + "\n";
+	out += base + "sub_off=" + std::to_string(info.subscreen_offset) + "\n";
+	out += base + "sub_att_off=" + std::to_string(info.subscreen_attached_offset) + "\n";
+	out += base + "off_x=" + std::to_string(info.total_offset_x) + "\n";
+	out += base + "off_y=" + std::to_string(info.total_offset_y) + "\n";
 	out += base + "top_rot=" + std::to_string(info.top_rotation) + "\n";
 	out += base + "bot_rot=" + std::to_string(info.bot_rotation) + "\n";
 	out += base + "vsync=" + std::to_string(info.v_sync_enabled) + "\n";

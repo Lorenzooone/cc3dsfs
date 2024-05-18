@@ -131,6 +131,7 @@ private:
 	void padding_change();
 	void crop_value_change(int new_crop_value);
 	void par_value_change(int new_par_value, bool is_top);
+	void offset_change(float &value, float change);
 	bool common_poll(SFEvent &event_data);
 	bool main_poll(SFEvent &event_data);
 	bool no_menu_poll(SFEvent &event_data);
@@ -142,7 +143,6 @@ private:
 	void window_bg_processing();
 	void display_data_to_window(bool actually_draw);
 	void window_render_call();
-	int apply_offset_algo(int offset_contribute, OffsetAlgorithm chosen_algo);
 	void set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, bool do_work = true);
 	int prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotation, int width_limit, int height_limit, int other_rotation, const PARData *own_par);
 	void calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf::Vector2f &other_screen_size, int &own_scaling, int &other_scaling, int own_rotation, int other_rotation, bool increase, bool mantain, bool set_to_zero, const PARData *own_par, const PARData *other_par);

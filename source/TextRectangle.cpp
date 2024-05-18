@@ -251,7 +251,7 @@ void TextRectangle::updateText(int x_limit) {
 			this->curr_color = sf::Color(160, 60, 60, 192);
 			break;
 		case TEXT_KIND_TITLE:
-			this->curr_color = sf::Color(30, 30, 60, 192);
+			this->curr_color = sf::Color(30, 30, 60, 0);
 			break;
 		default:
 			break;
