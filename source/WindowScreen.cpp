@@ -174,10 +174,14 @@ void WindowScreen::offset_change(float &value, float change) {
 	if((value - close_slice) > (absolute_change / 2.0))
 		close_slice += absolute_change;
 	close_slice += change;
-	if(close_slice > 1.0)
+	if(close_slice > (1.0 + (absolute_change / 2.0)))
 		close_slice = 0.0;
-	else if(close_slice < 0.0)
+	else if(close_slice > 1.0)
 		close_slice = 1.0;
+	else if(close_slice < (0.0 - (absolute_change / 2.0)))
+		close_slice = 1.0;
+	else if (close_slice < 0.0)
+		close_slice = 0.0;
 	value = close_slice;
 	this->future_operations.call_screen_settings_update = true;
 }
