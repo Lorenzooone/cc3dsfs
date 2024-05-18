@@ -38,10 +38,8 @@ void OptionSelectionMenu::initialize(bool font_load_success, sf::Font &text_font
 	this->selectable_labels[this->info_page_id] = false;
 	this->selectable_labels[this->back_x_id] = this->show_back_x;
 	this->selectable_labels[this->title_id] = false;
-	this->selectable_labels[this->title_center_id] = false;
 	this->future_enabled_labels[this->back_x_id] = this->show_back_x;
 	this->future_enabled_labels[this->title_id] = this->show_title;
-	this->future_enabled_labels[this->title_center_id] = this->show_title && this->show_back_x;
 }
 
 void OptionSelectionMenu::class_setup() {
@@ -61,7 +59,7 @@ void OptionSelectionMenu::class_setup() {
 }
 
 void OptionSelectionMenu::after_class_setup_connected_values() {
-	this->num_title_back_x_elements = 3;
+	this->num_title_back_x_elements = 2;
 	this->num_page_elements = 3;
 	this->num_elements_displayed_per_screen = num_title_back_x_elements + num_elements_per_screen + 1 + num_page_elements;
 	this->num_vertical_slices = num_elements_per_screen + 1;
@@ -70,9 +68,8 @@ void OptionSelectionMenu::after_class_setup_connected_values() {
 	this->title_back_x_start_id = 0;
 	this->elements_start_id = num_title_back_x_elements + title_back_x_start_id;
 	this->page_elements_start_id = num_elements_per_screen + elements_start_id + 1;
-	this->back_x_id = title_back_x_start_id;
-	this->title_id = title_back_x_start_id + 1;
-	this->title_center_id = title_back_x_start_id + 2;
+	this->back_x_id = title_back_x_start_id + 1;
+	this->title_id = title_back_x_start_id;
 	this->prev_page_id = page_elements_start_id;
 	this->info_page_id = page_elements_start_id + 1;
 	this->next_page_id = page_elements_start_id + 2;
@@ -165,11 +162,6 @@ void OptionSelectionMenu::prepare_options() {
 		this->future_enabled_labels[this->title_id] = true;
 		this->labels[this->title_id]->setText(this->title);
 		this->labels[this->title_id]->setShowText(true);
-	}
-	if(this->show_back_x && this->show_title) {
-		this->future_enabled_labels[this->title_center_id] = true;
-		this->labels[this->title_center_id]->setText("");
-		this->labels[this->title_center_id]->setShowText(true);
 	}
 	for(int i = 0; i < total_elements; i++) {
 		this->future_enabled_labels[i + this->elements_start_id] = true;
@@ -401,7 +393,7 @@ void OptionSelectionMenu::prepare_text_slices(int x_multiplier, int x_divisor, i
 	else {
 		if((index == this->back_x_id) && this->show_x)
 			this->labels[index]->setRectangleKind(TEXT_KIND_OPAQUE_ERROR);
-		else if((index == this->title_id) || (index == this->title_center_id))
+		else if(index == this->title_id)
 			this->labels[index]->setRectangleKind(TEXT_KIND_TITLE);
 		else
 			this->labels[index]->setRectangleKind(TEXT_KIND_NORMAL);
@@ -451,21 +443,15 @@ void OptionSelectionMenu::base_prepare(float menu_scaling_factor, int view_size_
 	this->future_data.pos_y = (view_size_y - this->future_data.menu_height) / 2;
 	int slice_y_size = this->future_data.menu_height / num_elements;
 	int slice_x_size = this->future_data.menu_width / this->num_page_elements;
-	int top_divisor = 1;
-	int title_start_x = 0;
-	if(this->future_enabled_labels[this->title_center_id]) {
-		top_divisor = 6;
-		title_start_x = 1;
-	}
 	int num_rendered_y = 0;
 	if(this->future_enabled_labels[this->back_x_id]) {
+		int top_divisor = 1;
+		if(this->future_enabled_labels[this->title_id])
+			top_divisor = 6;
 		this->prepare_text_slices(0, top_divisor, num_rendered_y, num_elements, this->back_x_id, text_scaling_factor);
 	}
 	if(this->future_enabled_labels[this->title_id]) {
-		this->prepare_text_slices(title_start_x, top_divisor, num_rendered_y, num_elements, this->title_id, text_scaling_factor, true);
-	}
-	if(this->future_enabled_labels[this->title_center_id]) {
-		this->prepare_text_slices(top_divisor - title_start_x, top_divisor, num_rendered_y, num_elements, this->title_center_id, text_scaling_factor);
+		this->prepare_text_slices(0, 1, num_rendered_y, num_elements, this->title_id, text_scaling_factor);
 	}
 	if(has_top)
 		++num_rendered_y;

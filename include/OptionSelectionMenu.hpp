@@ -62,7 +62,6 @@ private:
 	int page_elements_start_id;
 	int back_x_id;
 	int title_id;
-	int title_center_id;
 	int prev_page_id;
 	int info_page_id;
 	int next_page_id;
