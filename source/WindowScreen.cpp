@@ -24,6 +24,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->main_menu = new MainMenu(this->font_load_success, this->text_font);
 	this->video_menu = new VideoMenu(this->font_load_success, this->text_font);
 	this->crop_menu = new CropMenu(this->font_load_success, this->text_font);
+	this->par_menu = new PARMenu(this->font_load_success, this->text_font);
 	this->in_tex.create(IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT);
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
@@ -125,10 +126,40 @@ void WindowScreen::padding_change() {
 }
 
 void WindowScreen::crop_value_change(int new_crop_value) {
-	this->m_info.crop_kind = new_crop_value % this->possible_crops.size();
-	this->print_notification("Crop: " + this->possible_crops[this->m_info.crop_kind]->name);
-	this->prepare_size_ratios(false, false);
-	this->future_operations.call_crop = true;
+	int new_value = new_crop_value % this->possible_crops.size();
+	if(this->m_info.crop_kind != new_value) {
+		this->m_info.crop_kind = new_value;
+		this->print_notification("Crop: " + this->possible_crops[this->m_info.crop_kind]->name);
+		this->prepare_size_ratios(false, false);
+		this->future_operations.call_crop = true;
+	}
+}
+
+void WindowScreen::par_value_change(int new_par_value, bool is_top) {
+	if(((!is_top) && (this->m_stype == ScreenType::TOP)) || ((is_top) && (this->m_stype == ScreenType::BOTTOM)))
+		return;
+	int par_index = new_par_value % this->possible_pars.size();
+	std::string setting_name = "PAR: ";
+	bool updated = false;
+	if(is_top) {
+		if(this->m_info.top_par != par_index)
+			updated = true;
+		this->m_info.top_par = par_index;
+		if(this->m_stype == ScreenType::JOINT)
+			setting_name = "Top " + setting_name;
+	}
+	else {
+		if(this->m_info.bot_par != par_index)
+			updated = true;
+		this->m_info.bot_par = par_index;
+		if(this->m_stype == ScreenType::JOINT)
+			setting_name = "Bottom " + setting_name;
+	}
+	if(updated) {
+		this->prepare_size_ratios(false, false);
+		this->future_operations.call_screen_settings_update = true;
+		this->print_notification(setting_name + this->possible_pars[par_index]->name);
+	}
 }
 
 bool WindowScreen::common_poll(SFEvent &event_data) {
@@ -276,6 +307,23 @@ void WindowScreen::setup_crop_menu() {
 		this->curr_menu = CROP_MENU_TYPE;
 		this->crop_menu->reset_data();
 		this->crop_menu->insert_data(&this->possible_crops);
+	}
+}
+
+void WindowScreen::setup_par_menu(bool is_top) {
+	CurrMenuType wanted_type = TOP_PAR_MENU_TYPE;
+	if(!is_top)
+		wanted_type = BOTTOM_PAR_MENU_TYPE;
+	if(this->curr_menu != wanted_type) {
+		this->curr_menu = wanted_type;
+		this->par_menu->reset_data();
+		std::string title_piece = "";
+		if((is_top) && (this->m_stype == ScreenType::JOINT))
+			title_piece = "Top";
+		else if((!is_top) && (this->m_stype == ScreenType::JOINT))
+			title_piece = "Bot.";
+		this->par_menu->setup_title(title_piece);
+		this->par_menu->insert_data(&this->possible_pars);
 	}
 }
 
@@ -437,23 +485,11 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 					break;
 
 				case '2':
-					if(this->m_stype == ScreenType::BOTTOM)
-						break;
-					this->m_info.top_par = (this->m_info.top_par + 1) % this->possible_pars.size();
-					this->prepare_size_ratios(false, false);
-					this->future_operations.call_screen_settings_update = true;
-					this->print_notification("Top PAR: " + this->possible_pars[this->m_info.top_par]->name);
-
+					this->par_value_change(this->m_info.top_par + 1, true);
 					break;
 
 				case '3':
-					if(this->m_stype == ScreenType::TOP)
-						break;
-					this->m_info.bot_par = (this->m_info.bot_par + 1) % this->possible_pars.size();
-					this->prepare_size_ratios(false, false);
-					this->future_operations.call_screen_settings_update = true;
-					this->print_notification("Bottom PAR: " + this->possible_pars[this->m_info.bot_par]->name);
-
+					this->par_value_change(this->m_info.bot_par + 1, false);
 					break;
 
 				case 'm':
@@ -607,6 +643,15 @@ void WindowScreen::poll() {
 						case VIDEO_MENU_CROPPING:
 							this->setup_crop_menu();
 							return;
+						case VIDEO_MENU_TOP_PAR:
+							this->setup_par_menu(true);
+							return;
+						case VIDEO_MENU_BOT_PAR:
+							this->setup_par_menu(false);
+							return;
+						case VIDEO_MENU_ONE_PAR:
+							this->setup_par_menu(this->m_stype == ScreenType::TOP);
+							return;
 						default:
 							break;
 					}
@@ -626,6 +671,38 @@ void WindowScreen::poll() {
 							break;
 					}
 					this->crop_menu->selected_index = CROP_MENU_NO_ACTION;
+					continue;
+				}
+				break;
+			case TOP_PAR_MENU_TYPE:
+				if(this->par_menu->poll(event_data)) {
+					switch(this->par_menu->selected_index) {
+						case PAR_MENU_BACK:
+							this->setup_video_menu();
+							return;
+						case PAR_MENU_NO_ACTION:
+							break;
+						default:
+							this->par_value_change(this->par_menu->selected_index, true);
+							break;
+					}
+					this->par_menu->selected_index = PAR_MENU_NO_ACTION;
+					continue;
+				}
+				break;
+			case BOTTOM_PAR_MENU_TYPE:
+				if(this->par_menu->poll(event_data)) {
+					switch(this->par_menu->selected_index) {
+						case PAR_MENU_BACK:
+							this->setup_video_menu();
+							return;
+						case PAR_MENU_NO_ACTION:
+							break;
+						default:
+							this->par_value_change(this->par_menu->selected_index, false);
+							break;
+					}
+					this->par_menu->selected_index = PAR_MENU_NO_ACTION;
 					continue;
 				}
 				break;
@@ -726,6 +803,12 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 				break;
 			case CROP_MENU_TYPE:
 				this->crop_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.crop_kind);
+				break;
+			case TOP_PAR_MENU_TYPE:
+				this->par_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.top_par);
+				break;
+			case BOTTOM_PAR_MENU_TYPE:
+				this->par_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.bot_par);
 				break;
 			default:
 				break;
@@ -1030,6 +1113,12 @@ void WindowScreen::display_data_to_window(bool actually_draw) {
 			break;
 		case CROP_MENU_TYPE:
 			this->crop_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case TOP_PAR_MENU_TYPE:
+			this->par_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case BOTTOM_PAR_MENU_TYPE:
+			this->par_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

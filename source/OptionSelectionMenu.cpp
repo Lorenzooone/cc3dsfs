@@ -454,7 +454,7 @@ void OptionSelectionMenu::base_prepare(float menu_scaling_factor, int view_size_
 	int top_divisor = 1;
 	int title_start_x = 0;
 	if(this->future_enabled_labels[this->title_center_id]) {
-		top_divisor = 5;
+		top_divisor = 6;
 		title_start_x = 1;
 	}
 	int num_rendered_y = 0;
