@@ -94,8 +94,9 @@ private:
 	void left_code();
 	void right_code();
 	void option_selection_handling();
-	bool is_curr_option_location_left();
-	bool is_curr_option_location_multichoice();
+	bool is_option_location_left(int option);
+	bool is_option_element(int option);
+	bool is_option_location_multichoice(int option);
 	void decrement_selected_option(bool is_simple);
 	void increment_selected_option(bool is_simple);
 };

@@ -202,7 +202,7 @@ static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data
 	OutTextData out_text_data;
 	out_text_data.consumed = true;
 
-	#if not(defined(_WIN32) || defined(_WIN64))
+	#if !(defined(_WIN32) || defined(_WIN64))
 	std::string cfg_dir = std::string(std::getenv("HOME")) + "/.config/" + std::string(NAME);
 	#else
 	std::string cfg_dir = ".config/" + std::string(NAME);

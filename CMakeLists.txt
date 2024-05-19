@@ -137,7 +137,7 @@ add_dependencies(${OUTPUT_NAME} FTD3XX_BUILD_PROJECT CMakeBin2C)
 target_link_libraries(${OUTPUT_NAME} PRIVATE sfml-graphics sfml-audio sfml-window sfml-system ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}/${FTD3XX_LIB})
 target_link_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER})
 target_include_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${TOOLS_DATA_DIR} ${CMAKE_SOURCE_DIR}/include)
-target_compile_features(${OUTPUT_NAME} PRIVATE cxx_std_17)
+target_compile_features(${OUTPUT_NAME} PRIVATE cxx_std_20)
 target_compile_options(${OUTPUT_NAME} PRIVATE ${EXTRA_LINUX_CXX_FLAGS})
 target_compile_features(CMakeBin2C PRIVATE cxx_std_17)
 

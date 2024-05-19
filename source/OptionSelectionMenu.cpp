@@ -70,8 +70,8 @@ void OptionSelectionMenu::after_class_setup_connected_values() {
 	this->title_back_x_start_id = 0;
 	this->elements_start_id = num_title_back_x_elements + title_back_x_start_id;
 	this->page_elements_start_id = elements_start_id + num_elements_per_screen;
-	this->back_x_id = title_back_x_start_id;
-	this->title_id = title_back_x_start_id + 1;
+	this->back_x_id = title_back_x_start_id + 1;
+	this->title_id = title_back_x_start_id;
 	this->prev_page_id = page_elements_start_id;
 	this->info_page_id = page_elements_start_id + 1;
 	this->next_page_id = page_elements_start_id + 2;
@@ -93,23 +93,27 @@ void OptionSelectionMenu::reset_data() {
 	this->future_data.page = 0;
 }
 
-bool OptionSelectionMenu::is_curr_option_location_left() {
+bool OptionSelectionMenu::is_option_location_left(int option) {
 	bool location_left = true;
 
-	if(this->future_data.option_selected == this->next_page_id)
+	if(option == this->next_page_id)
 		location_left = false;
-	else if((this->future_data.option_selected >= this->elements_start_id) && (this->future_data.option_selected <= (this->elements_start_id + this->num_elements_per_screen)) && (((this->future_data.option_selected - this->elements_start_id) % this->single_option_multiplier) == 2))
+	else if((option >= this->elements_start_id) && (option <= (this->elements_start_id + this->num_elements_per_screen)) && (((option - this->elements_start_id) % this->single_option_multiplier) == 2))
 		location_left = false;
 
 	return location_left;
 }
 
-bool OptionSelectionMenu::is_curr_option_location_multichoice() {
+bool OptionSelectionMenu::is_option_element(int option) {
+	return (option >= this->elements_start_id) && (option < (this->elements_start_id + this->num_elements_per_screen));
+}
+
+bool OptionSelectionMenu::is_option_location_multichoice(int option) {
 	bool location_left = true;
 
-	if((this->future_data.option_selected == this->next_page_id) || (this->future_data.option_selected == this->prev_page_id))
+	if((option == this->next_page_id) || (option == this->prev_page_id))
 		return true;
-	if((this->future_data.option_selected >= this->elements_start_id) && (this->future_data.option_selected <= (this->elements_start_id + this->num_elements_per_screen)) && (((this->future_data.option_selected - this->elements_start_id) % this->single_option_multiplier) != 0))
+	if(this->is_option_element(option) && (((option - this->elements_start_id) % this->single_option_multiplier) != 0))
 		return true;
 
 	return false;
@@ -120,8 +124,9 @@ void OptionSelectionMenu::decrement_selected_option(bool is_simple) {
 		this->future_data.option_selected = this->elements_start_id;
 		return;
 	}
-	bool location_left = this->is_curr_option_location_left();
-	bool multichoice = this->is_curr_option_location_multichoice();
+	bool location_left = this->is_option_location_left(this->future_data.option_selected);
+	bool multichoice = this->is_option_location_multichoice(this->future_data.option_selected);
+	bool was_element = this->is_option_element(this->future_data.option_selected);
 	if(!is_simple) {
 		if(this->future_data.option_selected == this->next_page_id)
 			this->future_data.option_selected = this->prev_page_id;
@@ -130,6 +135,8 @@ void OptionSelectionMenu::decrement_selected_option(bool is_simple) {
 				this->future_data.option_selected -= this->single_option_multiplier - 1;
 			else
 				this->future_data.option_selected -= 1;
+			if(was_element && !this->is_option_element(this->future_data.option_selected))
+				this->future_data.option_selected = this->elements_start_id;
 		}
 	}
 	do {
@@ -144,22 +151,12 @@ void OptionSelectionMenu::increment_selected_option(bool is_simple) {
 		this->future_data.option_selected = this->elements_start_id;
 		return;
 	}
-	bool location_left = this->is_curr_option_location_left();
-	if(is_simple || location_left) {
-		if((!is_simple) && (this->future_data.option_selected != this->prev_page_id))
-			this->future_data.option_selected += 1;
-		do {
-			this->future_data.option_selected += 1;
-			if(this->future_data.option_selected >= this->num_elements_displayed_per_screen)
-				this->future_data.option_selected = 0;
-		} while(!(this->selectable_labels[this->future_data.option_selected] && this->future_enabled_labels[this->future_data.option_selected]));
-	}
-	else {
-		bool success = false;
+	bool location_left = this->is_option_location_left(this->future_data.option_selected);
+	bool success = false;
+	if(!(is_simple || location_left)) {
 		do {
 			this->future_data.option_selected += this->single_option_multiplier;
 			if(this->future_data.option_selected >= this->num_elements_displayed_per_screen) {
-				this->future_data.option_selected = 0;
 				break;
 			}
 			for(int i = 0; i < this->single_option_multiplier; i++) {
@@ -170,6 +167,15 @@ void OptionSelectionMenu::increment_selected_option(bool is_simple) {
 				}
 			}
 		} while(!success);
+	}
+	if(!success) {
+		if((!is_simple) && this->is_option_element(this->future_data.option_selected))
+			this->future_data.option_selected += 1;
+		do {
+			this->future_data.option_selected += 1;
+			if(this->future_data.option_selected >= this->num_elements_displayed_per_screen)
+				this->future_data.option_selected = 0;
+		} while(!(this->selectable_labels[this->future_data.option_selected] && this->future_enabled_labels[this->future_data.option_selected]));
 	}
 }
 
@@ -308,8 +314,8 @@ void OptionSelectionMenu::down_code(bool is_simple) {
 void OptionSelectionMenu::left_code() {
 	if(!this->can_execute_action())
 		return;
-	bool location_left = this->is_curr_option_location_left();
-	bool multichoice = this->is_curr_option_location_multichoice();
+	bool location_left = this->is_option_location_left(this->future_data.option_selected);
+	bool multichoice = this->is_option_location_multichoice(this->future_data.option_selected);
 	if(multichoice && location_left)
 		this->option_selection_handling();
 	else if(multichoice && (this->future_data.option_selected != this->next_page_id)) {
@@ -325,8 +331,8 @@ void OptionSelectionMenu::left_code() {
 void OptionSelectionMenu::right_code() {
 	if(!this->can_execute_action())
 		return;
-	bool location_left = this->is_curr_option_location_left();
-	bool multichoice = this->is_curr_option_location_multichoice();
+	bool location_left = this->is_option_location_left(this->future_data.option_selected);
+	bool multichoice = this->is_option_location_multichoice(this->future_data.option_selected);
 	if(multichoice && (!location_left))
 		this->option_selection_handling();
 	else if(multichoice && (this->future_data.option_selected != this->prev_page_id)) {
