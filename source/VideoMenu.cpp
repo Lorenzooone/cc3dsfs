@@ -74,49 +74,35 @@ static const VideoMenuOptionInfo one_par_option = {
 .out_action = VIDEO_MENU_ONE_PAR};
 
 static const VideoMenuOptionInfo bottom_screen_pos_option = {
-.base_name = "Bottom Screen Pos.", .false_name = "",
+.base_name = "Screens Relative Positions", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_BOTTOM_SCREEN_POS};
 
 static const VideoMenuOptionInfo small_screen_offset_option = {
-.base_name = "Smaller Screen Offset", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = true,
+.base_name = "Screen Offset", .false_name = "",
+.active_fullscreen = false, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
-.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
-.out_action = VIDEO_MENU_SMALL_SCREEN_OFFSET};
+.is_inc = true, .dec_str = "-", .inc_str = "+", .inc_out_action = VIDEO_MENU_SMALL_SCREEN_OFFSET_INC,
+.out_action = VIDEO_MENU_SMALL_SCREEN_OFFSET_DEC};
 
-static const VideoMenuOptionInfo subscreen_distance_option = {
-.base_name = "Sub-Screen Distance", .false_name = "",
+static const VideoMenuOptionInfo offset_settings_option = {
+.base_name = "Offset Settings", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = false,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
-.out_action = VIDEO_MENU_SMALL_SCREEN_DISTANCE};
-
-static const VideoMenuOptionInfo canvas_x_pos_option = {
-.base_name = "Canvas X Position", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = false,
-.active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
-.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
-.out_action = VIDEO_MENU_SCREENS_X_POS};
-
-static const VideoMenuOptionInfo canvas_y_pos_option = {
-.base_name = "Canvas Y Position", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = false,
-.active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
-.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
-.out_action = VIDEO_MENU_SCREENS_Y_POS};
+.out_action = VIDEO_MENU_OFFSET_SETTINGS};
 
 static const VideoMenuOptionInfo window_scaling_option = {
 .base_name = "Scaling Factor", .false_name = "",
 .active_fullscreen = false, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.is_inc = true, .dec_str = "-0.5", .inc_str = "+0.5", .inc_out_action = VIDEO_MENU_WINDOW_SCALING_INC,
+.is_inc = true, .dec_str = "-", .inc_str = "+", .inc_out_action = VIDEO_MENU_WINDOW_SCALING_INC,
 .out_action = VIDEO_MENU_WINDOW_SCALING_DEC};
 
 static const VideoMenuOptionInfo fullscreen_scaling_option = {
-.base_name = "Screens Scaling", .false_name = "",
+.base_name = "Screens Ratio", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = false,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
 .is_inc = true, .dec_str = "+ Top", .inc_str = "+ Bot.", .inc_out_action = VIDEO_MENU_FULLSCREEN_SCALING_BOTTOM,
@@ -133,7 +119,7 @@ static const VideoMenuOptionInfo menu_scaling_option = {
 .base_name = "Menu Scaling", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.is_inc = true, .dec_str = "-0.1", .inc_str = "+0.1", .inc_out_action = VIDEO_MENU_MENU_SCALING_INC,
+.is_inc = true, .dec_str = "-", .inc_str = "+", .inc_out_action = VIDEO_MENU_MENU_SCALING_INC,
 .out_action = VIDEO_MENU_MENU_SCALING_DEC};
 
 static const VideoMenuOptionInfo resolution_settings_option = {
@@ -143,33 +129,26 @@ static const VideoMenuOptionInfo resolution_settings_option = {
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_RESOLUTION_SETTINGS};
 
-static const VideoMenuOptionInfo top_rotation_option = {
-.base_name = "Top Screen Rot.", .false_name = "",
+static const VideoMenuOptionInfo rotation_settings_option = {
+.base_name = "Rotation Settings", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
-.out_action = VIDEO_MENU_TOP_ROTATION};
-
-static const VideoMenuOptionInfo bottom_rotation_option = {
-.base_name = "Bottom Screen Rot.", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = true,
-.active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
-.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
-.out_action = VIDEO_MENU_BOTTOM_ROTATION};
+.out_action = VIDEO_MENU_ROTATION_SETTINGS};
 
 static const VideoMenuOptionInfo top_one_rotation_option = {
 .base_name = "Screen Rotation", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = false, .active_top_screen = true, .active_bottom_screen = false,
-.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
-.out_action = VIDEO_MENU_TOP_ROTATION};
+.is_inc = true, .dec_str = "Left", .inc_str = "Right", .inc_out_action = VIDEO_MENU_TOP_ROTATION_INC,
+.out_action = VIDEO_MENU_TOP_ROTATION_DEC};
 
 static const VideoMenuOptionInfo bottom_one_rotation_option = {
 .base_name = "Screen Rotation", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = false, .active_top_screen = false, .active_bottom_screen = true,
-.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
-.out_action = VIDEO_MENU_BOTTOM_ROTATION};
+.is_inc = true, .dec_str = "Left", .inc_str = "Right", .inc_out_action = VIDEO_MENU_BOTTOM_ROTATION_INC,
+.out_action = VIDEO_MENU_BOTTOM_ROTATION_DEC};
 
 static const VideoMenuOptionInfo* pollable_options[] = {
 &crop_option,
@@ -181,11 +160,8 @@ static const VideoMenuOptionInfo* pollable_options[] = {
 &async_option,
 &blur_option,
 &small_screen_offset_option,
-&subscreen_distance_option,
-&canvas_x_pos_option,
-&canvas_y_pos_option,
-&top_rotation_option,
-&bottom_rotation_option,
+&offset_settings_option,
+&rotation_settings_option,
 &top_one_rotation_option,
 &bottom_one_rotation_option,
 &top_par_option,
@@ -327,10 +303,13 @@ void VideoMenu::prepare(float menu_scaling_factor, int view_size_x, int view_siz
 			case VIDEO_MENU_FULLSCREEN_SCALING_TOP:
 				this->labels[index]->setText(setTextOptionDualPercentage(option_index, info->top_scaling, info->bot_scaling));
 				break;
-			case VIDEO_MENU_TOP_ROTATION:
+			case VIDEO_MENU_SMALL_SCREEN_OFFSET_DEC:
+				this->labels[index]->setText(setTextOptionFloat(option_index, info->subscreen_offset));
+				break;
+			case VIDEO_MENU_TOP_ROTATION_DEC:
 				this->labels[index]->setText(setTextOptionInt(option_index, info->top_rotation));
 				break;
-			case VIDEO_MENU_BOTTOM_ROTATION:
+			case VIDEO_MENU_BOTTOM_ROTATION_DEC:
 				this->labels[index]->setText(setTextOptionInt(option_index, info->bot_rotation));
 				break;
 			default:

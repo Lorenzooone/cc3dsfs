@@ -25,6 +25,8 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->video_menu = new VideoMenu(this->font_load_success, this->text_font);
 	this->crop_menu = new CropMenu(this->font_load_success, this->text_font);
 	this->par_menu = new PARMenu(this->font_load_success, this->text_font);
+	this->offset_menu = new OffsetMenu(this->font_load_success, this->text_font);
+	this->rotation_menu = new RotationMenu(this->font_load_success, this->text_font);
 	this->in_tex.create(IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT);
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
@@ -54,6 +56,9 @@ WindowScreen::~WindowScreen() {
 	delete this->main_menu;
 	delete this->video_menu;
 	delete this->crop_menu;
+	delete this->par_menu;
+	delete this->offset_menu;
+	delete this->rotation_menu;
 }
 
 void WindowScreen::build() {
@@ -78,6 +83,7 @@ void WindowScreen::build() {
 }
 
 void WindowScreen::reload() {
+	this->curr_menu = DEFAULT_MENU_TYPE;
 	this->future_operations.call_crop = true;
 	this->future_operations.call_rotate = true;
 	this->future_operations.call_blur = true;
@@ -219,6 +225,20 @@ void WindowScreen::window_scaling_change(bool positive) {
 	}
 }
 
+void WindowScreen::rotation_change(int &value, bool right) {
+	int add_value = 90;
+	if(!right)
+		add_value = 270;
+	value = (value + add_value) % 360;
+	this->prepare_size_ratios(false, false);
+	this->future_operations.call_rotate = true;
+}
+
+void WindowScreen::ratio_change(bool top_priority) {
+	this->prepare_size_ratios(top_priority, !top_priority);
+	this->future_operations.call_screen_settings_update = true;
+}
+
 bool WindowScreen::common_poll(SFEvent &event_data) {
 	bool consumed = true;
 	switch(event_data.type) {
@@ -353,6 +373,22 @@ void WindowScreen::setup_par_menu(bool is_top) {
 	}
 }
 
+void WindowScreen::setup_offset_menu() {
+	if(this->curr_menu != OFFSET_MENU_TYPE) {
+		this->curr_menu = OFFSET_MENU_TYPE;
+		this->offset_menu->reset_data();
+		this->offset_menu->insert_data();
+	}
+}
+
+void WindowScreen::setup_rotation_menu() {
+	if(this->curr_menu != ROTATION_MENU_TYPE) {
+		this->curr_menu = ROTATION_MENU_TYPE;
+		this->rotation_menu->reset_data();
+		this->rotation_menu->insert_data();
+	}
+}
+
 bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 	bool consumed = true;
 	switch(event_data.type) {
@@ -450,56 +486,37 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 					break;
 
 				case 'y':
-					this->prepare_size_ratios(true, false);
-					this->future_operations.call_screen_settings_update = true;
+					this->ratio_change(true);
 					break;
 
 				case 'u':
-					this->prepare_size_ratios(false, true);
-					this->future_operations.call_screen_settings_update = true;
+					this->ratio_change(false);
 					break;
 
 				case '8':
-					this->m_info.top_rotation = (this->m_info.top_rotation + 270) % 360;
-					this->m_info.bot_rotation = (this->m_info.bot_rotation + 270) % 360;
-					this->prepare_size_ratios(false, false);
-					this->future_operations.call_rotate = true;
-
+					this->rotation_change(this->m_info.top_rotation, false);
+					this->rotation_change(this->m_info.bot_rotation, false);
 					break;
 
 				case '9':
-					this->m_info.top_rotation = (this->m_info.top_rotation + 90) % 360;
-					this->m_info.bot_rotation = (this->m_info.bot_rotation + 90) % 360;
-					this->prepare_size_ratios(false, false);
-					this->future_operations.call_rotate = true;
+					this->rotation_change(this->m_info.top_rotation, true);
+					this->rotation_change(this->m_info.bot_rotation, true);
 					break;
 
 				case 'h':
-					this->m_info.top_rotation = (this->m_info.top_rotation + 270) % 360;
-					this->prepare_size_ratios(false, false);
-					this->future_operations.call_rotate = true;
-
+					this->rotation_change(this->m_info.top_rotation, false);
 					break;
 
 				case 'j':
-					this->m_info.top_rotation = (this->m_info.top_rotation + 90) % 360;
-					this->prepare_size_ratios(false, false);
-					this->future_operations.call_rotate = true;
-
+					this->rotation_change(this->m_info.top_rotation, true);
 					break;
 
 				case 'k':
-					this->m_info.bot_rotation = (this->m_info.bot_rotation + 270) % 360;
-					this->prepare_size_ratios(false, false);
-					this->future_operations.call_rotate = true;
-
+					this->rotation_change(this->m_info.bot_rotation, false);
 					break;
 
 				case 'l':
-					this->m_info.bot_rotation = (this->m_info.bot_rotation + 90) % 360;
-					this->prepare_size_ratios(false, false);
-					this->future_operations.call_rotate = true;
-
+					this->rotation_change(this->m_info.bot_rotation, true);
 					break;
 
 				case 'r':
@@ -686,6 +703,42 @@ void WindowScreen::poll() {
 						case VIDEO_MENU_WINDOW_SCALING_INC:
 							this->window_scaling_change(true);
 							break;
+						case VIDEO_MENU_TOP_ROTATION_DEC:
+							this->rotation_change(this->m_info.top_rotation, false);
+							break;
+						case VIDEO_MENU_TOP_ROTATION_INC:
+							this->rotation_change(this->m_info.top_rotation, true);
+							break;
+						case VIDEO_MENU_BOTTOM_ROTATION_DEC:
+							this->rotation_change(this->m_info.bot_rotation, false);
+							break;
+						case VIDEO_MENU_BOTTOM_ROTATION_INC:
+							this->rotation_change(this->m_info.bot_rotation, true);
+							break;
+						case VIDEO_MENU_SMALL_SCREEN_OFFSET_DEC:
+							this->offset_change(this->m_info.subscreen_offset, -0.1);
+							break;
+						case VIDEO_MENU_SMALL_SCREEN_OFFSET_INC:
+							this->offset_change(this->m_info.subscreen_offset, 0.1);
+							break;
+						case VIDEO_MENU_FULLSCREEN_SCALING_TOP:
+							this->ratio_change(true);
+							break;
+						case VIDEO_MENU_FULLSCREEN_SCALING_BOTTOM:
+							this->ratio_change(false);
+							break;
+						case VIDEO_MENU_ROTATION_SETTINGS:
+							this->setup_rotation_menu();
+							return;
+						case VIDEO_MENU_OFFSET_SETTINGS:
+							this->setup_offset_menu();
+							return;
+						case VIDEO_MENU_BFI_SETTINGS:
+							break;
+						case VIDEO_MENU_RESOLUTION_SETTINGS:
+							break;
+						case VIDEO_MENU_BOTTOM_SCREEN_POS:
+							break;
 						default:
 							break;
 					}
@@ -737,6 +790,72 @@ void WindowScreen::poll() {
 							break;
 					}
 					this->par_menu->selected_index = PAR_MENU_NO_ACTION;
+					continue;
+				}
+				break;
+			case ROTATION_MENU_TYPE:
+				if(this->rotation_menu->poll(event_data)) {
+					switch(this->rotation_menu->selected_index) {
+						case ROTATION_MENU_BACK:
+							this->setup_video_menu();
+							return;
+						case ROTATION_MENU_NO_ACTION:
+							break;
+						case ROTATION_MENU_TOP_ROTATION_DEC:
+							this->rotation_change(this->m_info.top_rotation, false);
+							break;
+						case ROTATION_MENU_TOP_ROTATION_INC:
+							this->rotation_change(this->m_info.top_rotation, true);
+							break;
+						case ROTATION_MENU_BOTTOM_ROTATION_DEC:
+							this->rotation_change(this->m_info.bot_rotation, false);
+							break;
+						case ROTATION_MENU_BOTTOM_ROTATION_INC:
+							this->rotation_change(this->m_info.bot_rotation, true);
+							break;
+						default:
+							break;
+					}
+					this->rotation_menu->selected_index = ROTATION_MENU_NO_ACTION;
+					continue;
+				}
+				break;
+			case OFFSET_MENU_TYPE:
+				if(this->offset_menu->poll(event_data)) {
+					switch(this->offset_menu->selected_index) {
+						case OFFSET_MENU_BACK:
+							this->setup_video_menu();
+							return;
+						case OFFSET_MENU_NO_ACTION:
+							break;
+						case OFFSET_MENU_SMALL_OFFSET_DEC:
+							this->offset_change(this->m_info.subscreen_offset, -0.1);
+							break;
+						case OFFSET_MENU_SMALL_OFFSET_INC:
+							this->offset_change(this->m_info.subscreen_offset, 0.1);
+							break;
+						case OFFSET_MENU_SMALL_SCREEN_DISTANCE_DEC:
+							this->offset_change(this->m_info.subscreen_attached_offset, -0.1);
+							break;
+						case OFFSET_MENU_SMALL_SCREEN_DISTANCE_INC:
+							this->offset_change(this->m_info.subscreen_attached_offset, 0.1);
+							break;
+						case OFFSET_MENU_SCREENS_X_POS_DEC:
+							this->offset_change(this->m_info.total_offset_x, -0.1);
+							break;
+						case OFFSET_MENU_SCREENS_X_POS_INC:
+							this->offset_change(this->m_info.total_offset_x, 0.1);
+							break;
+						case OFFSET_MENU_SCREENS_Y_POS_DEC:
+							this->offset_change(this->m_info.total_offset_y, -0.1);
+							break;
+						case OFFSET_MENU_SCREENS_Y_POS_INC:
+							this->offset_change(this->m_info.total_offset_y, 0.1);
+							break;
+						default:
+							break;
+					}
+					this->offset_menu->selected_index = OFFSET_MENU_NO_ACTION;
 					continue;
 				}
 				break;
@@ -843,6 +962,12 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 				break;
 			case BOTTOM_PAR_MENU_TYPE:
 				this->par_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.bot_par);
+				break;
+			case ROTATION_MENU_TYPE:
+				this->rotation_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+				break;
+			case OFFSET_MENU_TYPE:
+				this->offset_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
 				break;
 			default:
 				break;
@@ -1154,6 +1279,12 @@ void WindowScreen::display_data_to_window(bool actually_draw) {
 		case BOTTOM_PAR_MENU_TYPE:
 			this->par_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
+		case ROTATION_MENU_TYPE:
+			this->rotation_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case OFFSET_MENU_TYPE:
+			this->offset_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
 		default:
 			break;
 	}
@@ -1300,9 +1431,10 @@ void WindowScreen::calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf
 	int min_other_height = other_screen_size.y;
 	get_par_size(min_other_width, min_other_height, 1, other_par);
 	int chosen_ratio = prepare_screen_ratio(own_screen_size, own_rotation, min_other_width, min_other_height, other_rotation, own_par);
-	if(increase && (chosen_ratio > own_scaling) && (own_scaling > 0))
+	int old_scaling = own_scaling;
+	if(increase && (chosen_ratio > own_scaling) && (chosen_ratio > 0))
 		own_scaling += 1;
-	else if(mantain && (chosen_ratio >= own_scaling) && (own_scaling > 0))
+	else if(mantain && (chosen_ratio >= own_scaling) && (chosen_ratio > 0))
 		own_scaling = own_scaling;
 	else
 		own_scaling = chosen_ratio;
@@ -1311,8 +1443,11 @@ void WindowScreen::calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf
 	int own_height = own_screen_size.y;
 	int own_width = own_screen_size.x;
 	get_par_size(own_width, own_height, own_scaling, own_par);
-	other_scaling = prepare_screen_ratio(other_screen_size, other_rotation, own_width, own_height, own_rotation, other_par);
-	if(this->m_stype == ScreenType::JOINT) {
+	if((increase && ((old_scaling == own_scaling) || (other_scaling == 0)) || (mantain && (other_scaling == 0))) && (own_scaling > 0))
+		other_scaling = 0;
+	else
+		other_scaling = prepare_screen_ratio(other_screen_size, other_rotation, own_width, own_height, own_rotation, other_par);
+	if((this->m_stype == ScreenType::JOINT) && (own_scaling > 0)) {
 		// Due to size differences, it may be possible that
 		// the chosen screen might be able to increase its
 		// scaling even more without compromising the other one...

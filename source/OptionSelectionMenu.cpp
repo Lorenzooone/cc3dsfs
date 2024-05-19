@@ -119,9 +119,20 @@ bool OptionSelectionMenu::is_option_location_multichoice(int option) {
 	return false;
 }
 
+void OptionSelectionMenu::set_default_cursor_position() {
+	this->future_data.option_selected = this->elements_start_id;
+	while(!(this->selectable_labels[this->future_data.option_selected] && this->future_enabled_labels[this->future_data.option_selected])){
+		this->future_data.option_selected += 1;
+		if(this->future_data.option_selected >= this->num_elements_displayed_per_screen)
+			this->future_data.option_selected = 0;
+		if(this->future_data.option_selected == this->elements_start_id)
+			break;
+	}
+}
+
 void OptionSelectionMenu::decrement_selected_option(bool is_simple) {
 	if(this->future_data.option_selected < 0) {
-		this->future_data.option_selected = this->elements_start_id;
+		this->set_default_cursor_position();
 		return;
 	}
 	bool location_left = this->is_option_location_left(this->future_data.option_selected);
@@ -148,7 +159,7 @@ void OptionSelectionMenu::decrement_selected_option(bool is_simple) {
 
 void OptionSelectionMenu::increment_selected_option(bool is_simple) {
 	if(this->future_data.option_selected < 0){
-		this->future_data.option_selected = this->elements_start_id;
+		this->set_default_cursor_position();
 		return;
 	}
 	bool location_left = this->is_option_location_left(this->future_data.option_selected);

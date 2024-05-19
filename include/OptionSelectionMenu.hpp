@@ -97,6 +97,7 @@ private:
 	bool is_option_location_left(int option);
 	bool is_option_element(int option);
 	bool is_option_location_multichoice(int option);
+	void set_default_cursor_position();
 	void decrement_selected_option(bool is_simple);
 	void increment_selected_option(bool is_simple);
 };

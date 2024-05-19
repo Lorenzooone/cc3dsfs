@@ -17,6 +17,8 @@
 #include "VideoMenu.hpp"
 #include "CropMenu.hpp"
 #include "PARMenu.hpp"
+#include "RotationMenu.hpp"
+#include "OffsetMenu.hpp"
 #include "display_structs.hpp"
 
 class WindowScreen {
@@ -84,6 +86,8 @@ private:
 	VideoMenu *video_menu;
 	CropMenu *crop_menu;
 	PARMenu *par_menu;
+	RotationMenu *rotation_menu;
+	OffsetMenu *offset_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const PARData*> possible_pars;
 
@@ -127,13 +131,15 @@ private:
 	void async_change();
 	void vsync_change();
 	void blur_change();
-	void poll_window();
 	void padding_change();
 	void crop_value_change(int new_crop_value);
 	void par_value_change(int new_par_value, bool is_top);
 	void offset_change(float &value, float change);
 	void menu_scaling_change(bool positive);
 	void window_scaling_change(bool positive);
+	void rotation_change(int &value, bool right);
+	void ratio_change(bool top_priority);
+	void poll_window();
 	bool common_poll(SFEvent &event_data);
 	bool main_poll(SFEvent &event_data);
 	bool no_menu_poll(SFEvent &event_data);
@@ -165,6 +171,8 @@ private:
 	void setup_video_menu();
 	void setup_crop_menu();
 	void setup_par_menu(bool is_top);
+	void setup_offset_menu();
+	void setup_rotation_menu();
 	void update_connection();
 };
 
