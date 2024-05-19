@@ -8,8 +8,8 @@ CropMenu::~CropMenu() {
 }
 
 void CropMenu::class_setup() {
-	this->num_elements_per_screen = 5;
-	this->min_elements_text_scaling_factor = num_elements_per_screen + 2;
+	this->num_options_per_screen = 5;
+	this->min_elements_text_scaling_factor = num_options_per_screen + 2;
 	this->width_factor_menu = 16;
 	this->width_divisor_menu = 9;
 	this->base_height_factor_menu = 12;
@@ -32,8 +32,8 @@ void CropMenu::reset_output_option() {
 	this->selected_index = CROP_MENU_NO_ACTION;
 }
 
-void CropMenu::set_output_option(int index) {
-	if(index == -1)
+void CropMenu::set_output_option(int index, int action) {
+	if(index == BACK_X_OUTPUT_OPTION)
 		this->selected_index = CROP_MENU_BACK;
 	else
 		this->selected_index = index;
@@ -43,7 +43,7 @@ int CropMenu::get_num_options() {
 	return (*this->possible_crops).size();
 }
 
-std::string CropMenu::get_string_option(int index) {
+std::string CropMenu::get_string_option(int index, int action) {
 	return (*this->possible_crops)[index]->name;
 }
 
@@ -51,9 +51,9 @@ void CropMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size
 	int num_pages = this->get_num_pages();
 	if(this->future_data.page >= num_pages)
 		this->future_data.page = num_pages - 1;
-	int start = this->future_data.page * this->num_elements_per_screen;
-	for(int i = 0; i < this->num_elements_per_screen; i++) {
-		int index = i + this->elements_start_id;
+	int start = this->future_data.page * this->num_options_per_screen;
+	for(int i = 0; i < this->num_options_per_screen + 1; i++) {
+		int index = (i * this->single_option_multiplier) + this->elements_start_id;
 		if(!this->future_enabled_labels[index])
 			continue;
 		int crop_index = start + i;

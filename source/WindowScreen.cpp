@@ -186,8 +186,40 @@ void WindowScreen::offset_change(float &value, float change) {
 	this->future_operations.call_screen_settings_update = true;
 }
 
+void WindowScreen::menu_scaling_change(bool positive) {
+	double old_scaling = this->m_info.menu_scaling_factor;
+	if(positive)
+		this->m_info.menu_scaling_factor += 0.1;
+	else
+		this->m_info.menu_scaling_factor -= 0.1;
+	if(this->m_info.menu_scaling_factor < 0.35)
+		this->m_info.menu_scaling_factor = 0.3;
+	if(this->m_info.menu_scaling_factor > 9.95)
+		this->m_info.menu_scaling_factor = 10.0;
+	if(old_scaling != this->m_info.menu_scaling_factor) {
+		this->print_notification_float("Menu Scaling", this->m_info.menu_scaling_factor, 1);
+	}
+}
+
+void WindowScreen::window_scaling_change(bool positive) {
+	if(this->m_info.is_fullscreen)
+		return;
+	double old_scaling = this->m_info.scaling;
+	if(positive)
+		this->m_info.scaling += 0.5;
+	else
+		this->m_info.scaling -= 0.5;
+	if (this->m_info.scaling < 1.25)
+		this->m_info.scaling = 1.0;
+	if (this->m_info.scaling > 44.75)
+		this->m_info.scaling = 45.0;
+	if(old_scaling != this->m_info.scaling) {
+		this->print_notification_float("Scaling", this->m_info.scaling, 1);
+		this->future_operations.call_screen_settings_update = true;
+	}
+}
+
 bool WindowScreen::common_poll(SFEvent &event_data) {
-	double old_scaling = 0.0;
 	bool consumed = true;
 	switch(event_data.type) {
 		case sf::Event::Closed:
@@ -213,51 +245,21 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 					break;
 
 				case 'z':
-					old_scaling = this->m_info.menu_scaling_factor;
-					this->m_info.menu_scaling_factor -= 0.1;
-					if(this->m_info.menu_scaling_factor < 0.35)
-						this->m_info.menu_scaling_factor = 0.3;
-					if(old_scaling != this->m_info.menu_scaling_factor) {
-						this->print_notification_float("Menu Scaling", this->m_info.menu_scaling_factor, 1);
-					}
+					this->menu_scaling_change(false);
 					break;
 
-
 				case 'x':
-					old_scaling = this->m_info.menu_scaling_factor;
-					this->m_info.menu_scaling_factor += 0.1;
-					if(this->m_info.menu_scaling_factor > 9.95)
-						this->m_info.menu_scaling_factor = 10.0;
-					if(old_scaling != this->m_info.menu_scaling_factor) {
-						this->print_notification_float("Menu Scaling", this->m_info.menu_scaling_factor, 1);
-					}
+					this->menu_scaling_change(true);
 					break;
 
 				case '-':
-					if(this->m_info.is_fullscreen)
-						break;
-					old_scaling = this->m_info.scaling;
-					this->m_info.scaling -= 0.5;
-					if (this->m_info.scaling < 1.25)
-						this->m_info.scaling = 1.0;
-					if(old_scaling != this->m_info.scaling) {
-						this->print_notification_float("Scaling", this->m_info.scaling, 1);
-						this->future_operations.call_screen_settings_update = true;
-					}
+					this->window_scaling_change(false);
 					break;
 
 				case '0':
-					if(this->m_info.is_fullscreen)
-						break;
-					old_scaling = this->m_info.scaling;
-					this->m_info.scaling += 0.5;
-					if (this->m_info.scaling > 44.75)
-						this->m_info.scaling = 45.0;
-					if(old_scaling != this->m_info.scaling) {
-						this->print_notification_float("Scaling", this->m_info.scaling, 1);
-						this->future_operations.call_screen_settings_update = true;
-					}
+					this->window_scaling_change(true);
 					break;
+
 				default:
 					consumed = false;
 					break;
@@ -672,6 +674,18 @@ void WindowScreen::poll() {
 						case VIDEO_MENU_ONE_PAR:
 							this->setup_par_menu(this->m_stype == ScreenType::TOP);
 							return;
+						case VIDEO_MENU_MENU_SCALING_DEC:
+							this->menu_scaling_change(false);
+							break;
+						case VIDEO_MENU_MENU_SCALING_INC:
+							this->menu_scaling_change(true);
+							break;
+						case VIDEO_MENU_WINDOW_SCALING_DEC:
+							this->window_scaling_change(false);
+							break;
+						case VIDEO_MENU_WINDOW_SCALING_INC:
+							this->window_scaling_change(true);
+							break;
 						default:
 							break;
 					}

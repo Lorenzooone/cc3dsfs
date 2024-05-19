@@ -118,10 +118,22 @@ const PARData snes_vertical_par = {
 .is_width_main = false,
 .name = "SNES Vertical"};
 
+const PARData special_3ds_horizontal_par = {
+.width_multiplier = 1.0, .width_divisor = 2.0,
+.is_width_main = true,
+.name = "3DS 800x240 Horizontal"};
+
+const PARData special_3ds_vertical_par = {
+.width_multiplier = 1.0, .width_divisor = 2.0,
+.is_width_main = false,
+.name = "3DS 800x240 Vertical"};
+
 static const PARData* basic_possible_pars[] = {
 &base_par,
 &snes_horizontal_par,
 &snes_vertical_par,
+//&special_3ds_horizontal_par,
+//&special_3ds_vertical_par,
 };
 
 bool is_allowed_crop(const CropData* crop_data, ScreenType s_type) {

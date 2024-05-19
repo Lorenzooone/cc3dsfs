@@ -14,9 +14,9 @@ public:
 	int selected_index = -1;
 protected:
 	void reset_output_option();
-	void set_output_option(int index);
+	void set_output_option(int index, int action);
 	int get_num_options();
-	std::string get_string_option(int index);
+	std::string get_string_option(int index, int action);
 	void class_setup();
 private:
 	DevicesList *devices_list;

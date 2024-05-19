@@ -24,10 +24,13 @@ enum VideoMenuOutAction{
 	VIDEO_MENU_SMALL_SCREEN_DISTANCE,
 	VIDEO_MENU_SCREENS_X_POS,
 	VIDEO_MENU_SCREENS_Y_POS,
-	VIDEO_MENU_WINDOW_SCALING,
-	VIDEO_MENU_FULLSCREEN_SCALING,
+	VIDEO_MENU_WINDOW_SCALING_DEC,
+	VIDEO_MENU_WINDOW_SCALING_INC,
+	VIDEO_MENU_FULLSCREEN_SCALING_TOP,
+	VIDEO_MENU_FULLSCREEN_SCALING_BOTTOM,
 	VIDEO_MENU_BFI_SETTINGS,
-	VIDEO_MENU_MENU_SCALING,
+	VIDEO_MENU_MENU_SCALING_DEC,
+	VIDEO_MENU_MENU_SCALING_INC,
 	VIDEO_MENU_RESOLUTION_SETTINGS,
 	VIDEO_MENU_TOP_ROTATION,
 	VIDEO_MENU_BOTTOM_ROTATION,
@@ -41,10 +44,11 @@ public:
 	void insert_data(ScreenType s_type, bool is_fullscreen);
 	VideoMenuOutAction selected_index = VideoMenuOutAction::VIDEO_MENU_NO_ACTION;
 protected:
+	bool is_option_inc_dec(int index);
 	void reset_output_option();
-	void set_output_option(int index);
+	void set_output_option(int index, int action);
 	int get_num_options();
-	std::string get_string_option(int index);
+	std::string get_string_option(int index, int action);
 	void class_setup();
 private:
 	int *options_indexes;

@@ -7,6 +7,13 @@
 #include "TextRectangle.hpp"
 #include "sfml_gfx_structs.hpp"
 
+#define BACK_X_OUTPUT_OPTION -1
+
+#define BAD_ACTION -1
+#define DEFAULT_ACTION 0
+#define DEC_ACTION 1
+#define INC_ACTION 2
+
 class OptionSelectionMenu {
 public:
 	OptionSelectionMenu();
@@ -16,7 +23,7 @@ public:
 	void reset_data();
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_input_processed_time;
 protected:
-	int num_elements_per_screen;
+	int num_options_per_screen;
 	int elements_start_id;
 	int min_elements_text_scaling_factor;
 	int width_factor_menu;
@@ -31,11 +38,14 @@ protected:
 	bool show_x;
 	bool show_title;
 
+	virtual bool is_option_inc_dec(int index);
 	virtual void reset_output_option();
-	virtual void set_output_option(int index);
+	virtual void set_output_option(int index, int action);
 	virtual int get_num_options();
-	virtual std::string get_string_option(int index);
+	virtual std::string get_string_option(int index, int action);
 	virtual void class_setup();
+
+	int single_option_multiplier;
 
 	int get_num_pages();
 	void initialize(bool font_load_success, sf::Font &text_font);
@@ -54,6 +64,7 @@ protected:
 	TextRectangle **labels;
 	bool *future_enabled_labels;
 private:
+	int num_elements_per_screen;
 	int num_title_back_x_elements;
 	int num_page_elements;
 	int num_elements_displayed_per_screen;
@@ -78,12 +89,14 @@ private:
 	void after_class_setup_connected_values();
 	void prepare_text_slices(int x_multiplier, int x_divisor, int y_multiplier, int y_divisor, int index, float text_scaling_factor, bool center = false);
 	bool can_execute_action();
-	void up_code();
-	void down_code();
+	void up_code(bool is_simple);
+	void down_code(bool is_simple);
 	void left_code();
 	void right_code();
 	void option_selection_handling();
-	void decrement_selected_option();
-	void increment_selected_option();
+	bool is_curr_option_location_left();
+	bool is_curr_option_location_multichoice();
+	void decrement_selected_option(bool is_simple);
+	void increment_selected_option(bool is_simple);
 };
 #endif

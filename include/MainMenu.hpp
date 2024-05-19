@@ -34,9 +34,9 @@ public:
 	MainMenuOutAction selected_index = MainMenuOutAction::MAIN_MENU_NO_ACTION;
 protected:
 	void reset_output_option();
-	void set_output_option(int index);
+	void set_output_option(int index, int action);
 	int get_num_options();
-	std::string get_string_option(int index);
+	std::string get_string_option(int index, int action);
 	void class_setup();
 private:
 	int *options_indexes;

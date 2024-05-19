@@ -10,6 +10,10 @@ struct VideoMenuOptionInfo {
 	const bool active_joint_screen;
 	const bool active_top_screen;
 	const bool active_bottom_screen;
+	const bool is_inc;
+	const std::string dec_str;
+	const std::string inc_str;
+	const VideoMenuOutAction inc_out_action;
 	const VideoMenuOutAction out_action;
 };
 
@@ -17,132 +21,154 @@ static const VideoMenuOptionInfo vsync_option = {
 .base_name = "Turn VSync Off", .false_name = "Turn VSync On",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_VSYNC};
 
 static const VideoMenuOptionInfo async_option = {
 .base_name = "Turn Async Off", .false_name = "Turn Async On",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_ASYNC};
 
 static const VideoMenuOptionInfo blur_option = {
 .base_name = "Turn Blur Off", .false_name = "Turn Blur On",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_BLUR};
 
 static const VideoMenuOptionInfo padding_option = {
 .base_name = "Turn Padding Off", .false_name = "Turn Padding On",
 .active_fullscreen = false, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_PADDING};
 
 static const VideoMenuOptionInfo crop_option = {
 .base_name = "Crop Settings", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_CROPPING};
 
 static const VideoMenuOptionInfo top_par_option = {
 .base_name = "Top Screen PAR", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_TOP_PAR};
 
 static const VideoMenuOptionInfo bot_par_option = {
 .base_name = "Bottom Screen PAR", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_BOT_PAR};
 
 static const VideoMenuOptionInfo one_par_option = {
 .base_name = "Screen PAR", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = false, .active_top_screen = true, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_ONE_PAR};
 
 static const VideoMenuOptionInfo bottom_screen_pos_option = {
 .base_name = "Bottom Screen Pos.", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_BOTTOM_SCREEN_POS};
 
 static const VideoMenuOptionInfo small_screen_offset_option = {
 .base_name = "Smaller Screen Offset", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_SMALL_SCREEN_OFFSET};
 
 static const VideoMenuOptionInfo subscreen_distance_option = {
 .base_name = "Sub-Screen Distance", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = false,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_SMALL_SCREEN_DISTANCE};
 
 static const VideoMenuOptionInfo canvas_x_pos_option = {
 .base_name = "Canvas X Position", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = false,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_SCREENS_X_POS};
 
 static const VideoMenuOptionInfo canvas_y_pos_option = {
 .base_name = "Canvas Y Position", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = false,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_SCREENS_Y_POS};
 
 static const VideoMenuOptionInfo window_scaling_option = {
 .base_name = "Scaling Factor", .false_name = "",
 .active_fullscreen = false, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.out_action = VIDEO_MENU_WINDOW_SCALING};
+.is_inc = true, .dec_str = "-0.5", .inc_str = "+0.5", .inc_out_action = VIDEO_MENU_WINDOW_SCALING_INC,
+.out_action = VIDEO_MENU_WINDOW_SCALING_DEC};
 
 static const VideoMenuOptionInfo fullscreen_scaling_option = {
 .base_name = "Screens Scaling", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = false,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
-.out_action = VIDEO_MENU_FULLSCREEN_SCALING};
+.is_inc = true, .dec_str = "+ Top", .inc_str = "+ Bot.", .inc_out_action = VIDEO_MENU_FULLSCREEN_SCALING_BOTTOM,
+.out_action = VIDEO_MENU_FULLSCREEN_SCALING_TOP};
 
 static const VideoMenuOptionInfo bfi_settings_option = {
 .base_name = "BFI Settings", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_BFI_SETTINGS};
 
 static const VideoMenuOptionInfo menu_scaling_option = {
 .base_name = "Menu Scaling", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.out_action = VIDEO_MENU_MENU_SCALING};
+.is_inc = true, .dec_str = "-0.1", .inc_str = "+0.1", .inc_out_action = VIDEO_MENU_MENU_SCALING_INC,
+.out_action = VIDEO_MENU_MENU_SCALING_DEC};
 
 static const VideoMenuOptionInfo resolution_settings_option = {
 .base_name = "Resolution Settings", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_RESOLUTION_SETTINGS};
 
 static const VideoMenuOptionInfo top_rotation_option = {
 .base_name = "Top Screen Rot.", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_TOP_ROTATION};
 
 static const VideoMenuOptionInfo bottom_rotation_option = {
 .base_name = "Bottom Screen Rot.", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_BOTTOM_ROTATION};
 
 static const VideoMenuOptionInfo top_one_rotation_option = {
 .base_name = "Screen Rotation", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = false, .active_top_screen = true, .active_bottom_screen = false,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_TOP_ROTATION};
 
 static const VideoMenuOptionInfo bottom_one_rotation_option = {
 .base_name = "Screen Rotation", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = false, .active_top_screen = false, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_BOTTOM_ROTATION};
 
 static const VideoMenuOptionInfo* pollable_options[] = {
@@ -181,8 +207,8 @@ VideoMenu::~VideoMenu() {
 }
 
 void VideoMenu::class_setup() {
-	this->num_elements_per_screen = 5;
-	this->min_elements_text_scaling_factor = num_elements_per_screen + 2;
+	this->num_options_per_screen = 5;
+	this->min_elements_text_scaling_factor = num_options_per_screen + 2;
 	this->width_factor_menu = 16;
 	this->width_divisor_menu = 9;
 	this->base_height_factor_menu = 12;
@@ -222,9 +248,11 @@ void VideoMenu::reset_output_option() {
 	this->selected_index = VideoMenuOutAction::VIDEO_MENU_NO_ACTION;
 }
 
-void VideoMenu::set_output_option(int index) {
-	if(index == -1)
+void VideoMenu::set_output_option(int index, int action) {
+	if(index == BACK_X_OUTPUT_OPTION)
 		this->selected_index = VIDEO_MENU_BACK;
+	else if((action == INC_ACTION) && this->is_option_inc_dec(index))
+		this->selected_index = pollable_options[this->options_indexes[index]]->inc_out_action;
 	else
 		this->selected_index = pollable_options[this->options_indexes[index]]->out_action;
 }
@@ -233,8 +261,16 @@ int VideoMenu::get_num_options() {
 	return this->num_enabled_options;
 }
 
-std::string VideoMenu::get_string_option(int index) {
+std::string VideoMenu::get_string_option(int index, int action) {
+	if((action == INC_ACTION) && this->is_option_inc_dec(index))
+		return pollable_options[this->options_indexes[index]]->inc_str;
+	if((action == DEC_ACTION) && this->is_option_inc_dec(index))
+		return pollable_options[this->options_indexes[index]]->dec_str;
 	return pollable_options[this->options_indexes[index]]->base_name;
+}
+
+bool VideoMenu::is_option_inc_dec(int index) {
+	return pollable_options[this->options_indexes[index]]->is_inc;
 }
 
 static std::string setTextOptionBool(int option_index, bool value) {
@@ -263,9 +299,9 @@ void VideoMenu::prepare(float menu_scaling_factor, int view_size_x, int view_siz
 	int num_pages = this->get_num_pages();
 	if(this->future_data.page >= num_pages)
 		this->future_data.page = num_pages - 1;
-	int start = this->future_data.page * this->num_elements_per_screen;
-	for(int i = 0; i < this->num_elements_per_screen; i++) {
-		int index = i + this->elements_start_id;
+	int start = this->future_data.page * this->num_options_per_screen;
+	for(int i = 0; i < this->num_options_per_screen + 1; i++) {
+		int index = (i * this->single_option_multiplier) + this->elements_start_id;
 		if(!this->future_enabled_labels[index])
 			continue;
 		int option_index = this->options_indexes[start + i];
@@ -282,13 +318,13 @@ void VideoMenu::prepare(float menu_scaling_factor, int view_size_x, int view_siz
 			case VIDEO_MENU_PADDING:
 				this->labels[index]->setText(setTextOptionBool(option_index, info->rounded_corners_fix));
 				break;
-			case VIDEO_MENU_WINDOW_SCALING:
+			case VIDEO_MENU_WINDOW_SCALING_DEC:
 				this->labels[index]->setText(setTextOptionFloat(option_index, info->scaling));
 				break;
-			case VIDEO_MENU_MENU_SCALING:
+			case VIDEO_MENU_MENU_SCALING_DEC:
 				this->labels[index]->setText(setTextOptionFloat(option_index, info->menu_scaling_factor));
 				break;
-			case VIDEO_MENU_FULLSCREEN_SCALING:
+			case VIDEO_MENU_FULLSCREEN_SCALING_TOP:
 				this->labels[index]->setText(setTextOptionDualPercentage(option_index, info->top_scaling, info->bot_scaling));
 				break;
 			case VIDEO_MENU_TOP_ROTATION:

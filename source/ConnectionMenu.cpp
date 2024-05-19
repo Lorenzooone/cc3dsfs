@@ -8,8 +8,8 @@ ConnectionMenu::~ConnectionMenu() {
 }
 
 void ConnectionMenu::class_setup() {
-	this->num_elements_per_screen = 4;
-	this->min_elements_text_scaling_factor = num_elements_per_screen;
+	this->num_options_per_screen = 4;
+	this->min_elements_text_scaling_factor = num_options_per_screen;
 	this->width_factor_menu = 16;
 	this->width_divisor_menu = 9;
 	this->base_height_factor_menu = 10;
@@ -32,7 +32,7 @@ void ConnectionMenu::reset_output_option() {
 	this->selected_index = -1;
 }
 
-void ConnectionMenu::set_output_option(int index) {
+void ConnectionMenu::set_output_option(int index, int action) {
 	this->selected_index = index;
 }
 
@@ -40,7 +40,7 @@ int ConnectionMenu::get_num_options() {
 	return this->devices_list->numValidDevices;
 }
 
-std::string ConnectionMenu::get_string_option(int index) {
+std::string ConnectionMenu::get_string_option(int index, int action) {
 	return std::string(&this->devices_list->serialNumbers[SERIAL_NUMBER_SIZE * index]);
 }
 
