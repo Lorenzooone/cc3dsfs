@@ -13,12 +13,12 @@ struct RotationMenuOptionInfo {
 
 static const RotationMenuOptionInfo top_rotation_option = {
 .base_name = "Top Screen",
-.is_inc = true, .dec_str = "-", .inc_str = "+", .inc_out_action = ROTATION_MENU_TOP_ROTATION_INC,
+.is_inc = true, .dec_str = "Left", .inc_str = "Right", .inc_out_action = ROTATION_MENU_TOP_ROTATION_INC,
 .out_action = ROTATION_MENU_TOP_ROTATION_DEC};
 
 static const RotationMenuOptionInfo bottom_rotation_option = {
 .base_name = "Bottom Screen",
-.is_inc = true, .dec_str = "-", .inc_str = "+", .inc_out_action = ROTATION_MENU_BOTTOM_ROTATION_INC,
+.is_inc = true, .dec_str = "Left", .inc_str = "Right", .inc_out_action = ROTATION_MENU_BOTTOM_ROTATION_INC,
 .out_action = ROTATION_MENU_BOTTOM_ROTATION_DEC};
 
 static const RotationMenuOptionInfo* pollable_options[] = {
