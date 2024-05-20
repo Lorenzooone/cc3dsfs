@@ -1659,16 +1659,4 @@ void WindowScreen::setWinSize(bool is_main_thread) {
 		this->m_win.setSize(sf::Vector2u(width, height));
 		this->events_access->unlock();
 	}
-	win_width = this->m_win.getSize().x;
-	win_height = this->m_win.getSize().y;
-	int old_x_win_pos = this->m_win.getPosition().x;
-	int old_y_win_pos = this->m_win.getPosition().y;
-	int x_win_pos = old_x_win_pos;
-	int y_win_pos = old_y_win_pos;
-	if((x_win_pos + (win_width - 200)) < 0)
-		x_win_pos = -(win_width - 200);
-	if(y_win_pos < 0)
-		y_win_pos = 0;
-	if((x_win_pos != old_x_win_pos) || (y_win_pos != old_y_win_pos))
-		this->m_win.setPosition(sf::Vector2i(x_win_pos, y_win_pos));
 }
