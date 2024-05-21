@@ -673,6 +673,33 @@ void WindowScreen::poll() {
 					continue;
 				}
 				break;
+			case AUDIO_MENU_TYPE:
+				if(this->audio_menu->poll(event_data)) {
+					switch(this->audio_menu->selected_index) {
+						case AUDIO_MENU_BACK:
+							this->setup_main_menu();
+							return;
+						case AUDIO_MENU_NO_ACTION:
+							break;
+						case AUDIO_MENU_VOLUME_DEC:
+							this->audio_data->change_audio_volume(false);
+							break;
+						case AUDIO_MENU_VOLUME_INC:
+							this->audio_data->change_audio_volume(true);
+							break;
+						case AUDIO_MENU_MUTE:
+							this->audio_data->change_audio_mute();
+							break;
+						case AUDIO_MENU_RESTART:
+							this->audio_data->request_audio_restart();
+							break;
+						default:
+							break;
+					}
+					this->audio_menu->reset_output_option();
+					continue;
+				}
+				break;
 			case VIDEO_MENU_TYPE:
 				if(this->video_menu->poll(event_data)) {
 					switch(this->video_menu->selected_index) {
@@ -876,33 +903,6 @@ void WindowScreen::poll() {
 							break;
 					}
 					this->offset_menu->reset_output_option();
-					continue;
-				}
-				break;
-			case AUDIO_MENU_TYPE:
-				if(this->audio_menu->poll(event_data)) {
-					switch(this->audio_menu->selected_index) {
-						case AUDIO_MENU_BACK:
-							this->setup_main_menu();
-							return;
-						case AUDIO_MENU_NO_ACTION:
-							break;
-						case AUDIO_MENU_VOLUME_DEC:
-							this->audio_data->change_audio_volume(false);
-							break;
-						case AUDIO_MENU_VOLUME_INC:
-							this->audio_data->change_audio_volume(true);
-							break;
-						case AUDIO_MENU_MUTE:
-							this->audio_data->change_audio_mute();
-							break;
-						case AUDIO_MENU_RESTART:
-							this->audio_data->request_audio_restart();
-							break;
-						default:
-							break;
-					}
-					this->audio_menu->reset_output_option();
 					continue;
 				}
 				break;
