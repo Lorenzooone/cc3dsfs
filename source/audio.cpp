@@ -19,6 +19,7 @@ Audio::Audio(AudioData *audio_data) {
 	// Consume old events
 	this->audio_data->check_audio_restart_request();
 	sf::SoundStream::initialize(AUDIO_CHANNELS, SAMPLE_RATE);
+	this->setPitch(PITCH_RATE);
 	#if (SFML_VERSION_MAJOR > 2) || ((SFML_VERSION_MAJOR == 2) && (SFML_VERSION_MINOR >= 6))
 	// Since we receive data every 16.6 ms, this is useless,
 	// and only increases CPU load... (Default is 10 ms)
