@@ -14,6 +14,8 @@
 #define FIFO_CHANNEL 0
 #endif
 
+#define CONNECTION_NO_DEVICE_SELECTED (-1)
+
 static bool get_is_bad_ftd3xx() {
 	#if (defined(_WIN32) || defined(_WIN64))
 	return false;
@@ -73,7 +75,7 @@ static void list_devices(DevicesList &devices_list) {
 
 static bool poll_connection_window_screen(WindowScreen *screen, int &chosen_index) {
 	screen->poll();
-	if(screen->check_connection_menu_result() != -1) {
+	if(screen->check_connection_menu_result() != CONNECTION_MENU_NO_ACTION) {
 		chosen_index = screen->check_connection_menu_result();
 		return true;
 	}
@@ -86,7 +88,7 @@ static bool poll_connection_window_screen(WindowScreen *screen, int &chosen_inde
 static int choose_device(DevicesList *devices_list, FrontendData* frontend_data) {
 	if(devices_list->numValidDevices == 1)
 		return 0;
-	int chosen_index = -1;
+	int chosen_index = CONNECTION_NO_DEVICE_SELECTED;
 	frontend_data->top_screen->setup_connection_menu(devices_list);
 	frontend_data->bot_screen->setup_connection_menu(devices_list);
 	frontend_data->joint_screen->setup_connection_menu(devices_list);
@@ -144,7 +146,7 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	}
 
 	int chosen_device = choose_device(&devices_list, frontend_data);
-	if(chosen_device == -1) {
+	if(chosen_device == CONNECTION_NO_DEVICE_SELECTED) {
 		if(print_failed) {
 			capture_data->status.error_text = "No device was selected";
 			capture_data->status.new_error_text = true;

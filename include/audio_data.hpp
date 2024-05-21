@@ -13,6 +13,7 @@ public:
 	int get_final_volume();
 	bool has_text_to_print();
 	std::string text_to_print();
+	bool get_mute();
 	int get_real_volume();
 	bool load_audio_data(std::string key, std::string value);
 	std::string save_audio_data();
@@ -22,8 +23,10 @@ private:
 	bool mute;
 	bool restart_request = false;
 	bool text_updated;
+	std::string text;
 	void set_audio_volume(int new_volume);
 	void set_audio_mute(bool new_mute);
+	void update_text(std::string text);
 	const std::string volume_str = "volume";
 	const std::string mute_str = "mute";
 };

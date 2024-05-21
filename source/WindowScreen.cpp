@@ -27,6 +27,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->par_menu = new PARMenu(this->font_load_success, this->text_font);
 	this->offset_menu = new OffsetMenu(this->font_load_success, this->text_font);
 	this->rotation_menu = new RotationMenu(this->font_load_success, this->text_font);
+	this->audio_menu = new AudioMenu(this->font_load_success, this->text_font);
 	this->in_tex.create(IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT);
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
@@ -59,6 +60,7 @@ WindowScreen::~WindowScreen() {
 	delete this->par_menu;
 	delete this->offset_menu;
 	delete this->rotation_menu;
+	delete this->audio_menu;
 }
 
 void WindowScreen::build() {
@@ -389,6 +391,14 @@ void WindowScreen::setup_rotation_menu() {
 	}
 }
 
+void WindowScreen::setup_audio_menu() {
+	if(this->curr_menu != AUDIO_MENU_TYPE) {
+		this->curr_menu = AUDIO_MENU_TYPE;
+		this->audio_menu->reset_data();
+		this->audio_menu->insert_data();
+	}
+}
+
 bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 	bool consumed = true;
 	switch(event_data.type) {
@@ -545,7 +555,6 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 
 				case 'n':
 					audio_data->request_audio_restart();
-					this->print_notification("Restarting audio...");
 					break;
 
 				default:
@@ -627,7 +636,7 @@ void WindowScreen::poll() {
 				break;
 			case CONNECT_MENU_TYPE:
 				if(this->connection_menu->poll(event_data)) {
-					if(this->check_connection_menu_result() != -1)
+					if(this->check_connection_menu_result() != CONNECTION_MENU_NO_ACTION)
 						return;
 					continue;
 				}
@@ -654,10 +663,13 @@ void WindowScreen::poll() {
 						case MAIN_MENU_VIDEO_SETTINGS:
 							this->setup_video_menu();
 							return;
+						case MAIN_MENU_AUDIO_SETTINGS:
+							this->setup_audio_menu();
+							return;
 						default:
 							break;
 					}
-					this->main_menu->selected_index = MAIN_MENU_NO_ACTION;
+					this->main_menu->reset_output_option();
 					continue;
 				}
 				break;
@@ -742,7 +754,7 @@ void WindowScreen::poll() {
 						default:
 							break;
 					}
-					this->video_menu->selected_index = VIDEO_MENU_NO_ACTION;
+					this->video_menu->reset_output_option();
 					continue;
 				}
 			case CROP_MENU_TYPE:
@@ -757,7 +769,7 @@ void WindowScreen::poll() {
 							this->crop_value_change(this->crop_menu->selected_index);
 							break;
 					}
-					this->crop_menu->selected_index = CROP_MENU_NO_ACTION;
+					this->crop_menu->reset_output_option();
 					continue;
 				}
 				break;
@@ -773,7 +785,7 @@ void WindowScreen::poll() {
 							this->par_value_change(this->par_menu->selected_index, true);
 							break;
 					}
-					this->par_menu->selected_index = PAR_MENU_NO_ACTION;
+					this->par_menu->reset_output_option();
 					continue;
 				}
 				break;
@@ -789,7 +801,7 @@ void WindowScreen::poll() {
 							this->par_value_change(this->par_menu->selected_index, false);
 							break;
 					}
-					this->par_menu->selected_index = PAR_MENU_NO_ACTION;
+					this->par_menu->reset_output_option();
 					continue;
 				}
 				break;
@@ -824,7 +836,7 @@ void WindowScreen::poll() {
 						default:
 							break;
 					}
-					this->rotation_menu->selected_index = ROTATION_MENU_NO_ACTION;
+					this->rotation_menu->reset_output_option();
 					continue;
 				}
 				break;
@@ -863,7 +875,34 @@ void WindowScreen::poll() {
 						default:
 							break;
 					}
-					this->offset_menu->selected_index = OFFSET_MENU_NO_ACTION;
+					this->offset_menu->reset_output_option();
+					continue;
+				}
+				break;
+			case AUDIO_MENU_TYPE:
+				if(this->audio_menu->poll(event_data)) {
+					switch(this->audio_menu->selected_index) {
+						case AUDIO_MENU_BACK:
+							this->setup_main_menu();
+							return;
+						case AUDIO_MENU_NO_ACTION:
+							break;
+						case AUDIO_MENU_VOLUME_DEC:
+							this->audio_data->change_audio_volume(false);
+							break;
+						case AUDIO_MENU_VOLUME_INC:
+							this->audio_data->change_audio_volume(true);
+							break;
+						case AUDIO_MENU_MUTE:
+							this->audio_data->change_audio_mute();
+							break;
+						case AUDIO_MENU_RESTART:
+							this->audio_data->request_audio_restart();
+							break;
+						default:
+							break;
+					}
+					this->audio_menu->reset_output_option();
 					continue;
 				}
 				break;
@@ -976,6 +1015,9 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 				break;
 			case OFFSET_MENU_TYPE:
 				this->offset_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+				break;
+			case AUDIO_MENU_TYPE:
+				this->audio_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->audio_data);
 				break;
 			default:
 				break;
@@ -1303,6 +1345,9 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 			break;
 		case OFFSET_MENU_TYPE:
 			this->offset_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case AUDIO_MENU_TYPE:
+			this->audio_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

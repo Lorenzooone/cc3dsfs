@@ -16,16 +16,20 @@ void AudioData::change_audio_volume(bool is_change_positive) {
 	this->set_audio_volume(this->volume + volume_change);
 	this->set_audio_mute(false);
 	if((this->volume != initial_audio_volume) || (initial_audio_mute))
-		this->text_updated = true;
+		this->update_text("Volume: " + std::to_string(this->get_final_volume()) + "%");
 }
 
 void AudioData::change_audio_mute() {
 	this->set_audio_mute(!this->mute);
-	this->text_updated = true;
+	if(this->mute)
+		this->update_text("Audio muted");
+	else
+		this->update_text("Volume: " + std::to_string(this->get_final_volume()) + "%");
 }
 
 void AudioData::request_audio_restart() {
 	this->restart_request = true;
+	this->update_text("Restarting audio...");
 }
 
 bool AudioData::check_audio_restart_request() {
@@ -33,6 +37,11 @@ bool AudioData::check_audio_restart_request() {
 	if(retval)
 		this->restart_request = false;
 	return retval;
+}
+
+void AudioData::update_text(std::string text) {
+	this->text = text;
+	this->text_updated = true;
 }
 
 bool AudioData::has_text_to_print() {
@@ -43,9 +52,7 @@ bool AudioData::has_text_to_print() {
 }
 
 std::string AudioData::text_to_print() {
-	if(this->mute)
-		return "Audio muted";
-	return "Volume: " + std::to_string(this->get_final_volume()) + "%";
+	return this->text;
 }
 
 int AudioData::get_final_volume() {
@@ -57,6 +64,19 @@ int AudioData::get_final_volume() {
 	if(read_volume > 100)
 		read_volume = 100;
 	return read_volume;
+}
+
+int AudioData::get_real_volume() {
+	int read_volume = this->volume;
+	if(read_volume < 0)
+		read_volume = 0;
+	if(read_volume > 100)
+		read_volume = 100;
+	return read_volume;
+}
+
+bool AudioData::get_mute() {
+	return this->mute;
 }
 
 bool AudioData::load_audio_data(std::string key, std::string value) {

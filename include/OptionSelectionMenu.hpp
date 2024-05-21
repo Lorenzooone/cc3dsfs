@@ -22,6 +22,7 @@ public:
 	void draw(float scaling_factor, sf::RenderTarget &window);
 	void reset_data();
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_input_processed_time;
+	virtual void reset_output_option();
 protected:
 	int num_options_per_screen;
 	int elements_start_id;
@@ -39,7 +40,6 @@ protected:
 	bool show_title;
 
 	virtual bool is_option_inc_dec(int index);
-	virtual void reset_output_option();
 	virtual void set_output_option(int index, int action);
 	virtual int get_num_options();
 	virtual std::string get_string_option(int index, int action);

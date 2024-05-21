@@ -18,8 +18,8 @@ public:
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, int current_crop);
 	void insert_data(std::vector<const CropData*>* possible_crops);
 	int selected_index = CROP_MENU_NO_ACTION;
-protected:
 	void reset_output_option();
+protected:
 	void set_output_option(int index, int action);
 	int get_num_options();
 	std::string get_string_option(int index, int action);

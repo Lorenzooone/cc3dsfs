@@ -132,7 +132,7 @@ file(MAKE_DIRECTORY ${TOOLS_DATA_DIR})
 set(OUTPUT_NAME cc3dsfs)
 
 add_executable(CMakeBin2C tools/bin2c.cpp)
-add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/3dscapture.cpp source/conversions.cpp source/ConnectionMenu.cpp source/OptionSelectionMenu.cpp source/MainMenu.cpp source/VideoMenu.cpp source/CropMenu.cpp source/PARMenu.cpp source/RotationMenu.cpp source/OffsetMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp)
+add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/3dscapture.cpp source/conversions.cpp source/ConnectionMenu.cpp source/OptionSelectionMenu.cpp source/MainMenu.cpp source/VideoMenu.cpp source/CropMenu.cpp source/PARMenu.cpp source/RotationMenu.cpp source/OffsetMenu.cpp source/AudioMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp)
 add_dependencies(${OUTPUT_NAME} FTD3XX_BUILD_PROJECT CMakeBin2C)
 target_link_libraries(${OUTPUT_NAME} PRIVATE sfml-graphics sfml-audio sfml-window sfml-system ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}/${FTD3XX_LIB})
 target_link_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER})

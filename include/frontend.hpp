@@ -19,6 +19,7 @@
 #include "PARMenu.hpp"
 #include "RotationMenu.hpp"
 #include "OffsetMenu.hpp"
+#include "AudioMenu.hpp"
 #include "display_structs.hpp"
 
 class WindowScreen {
@@ -88,6 +89,7 @@ private:
 	PARMenu *par_menu;
 	RotationMenu *rotation_menu;
 	OffsetMenu *offset_menu;
+	AudioMenu *audio_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const PARData*> possible_pars;
 
@@ -173,6 +175,7 @@ private:
 	void setup_par_menu(bool is_top);
 	void setup_offset_menu();
 	void setup_rotation_menu();
+	void setup_audio_menu();
 	void update_connection();
 };
 

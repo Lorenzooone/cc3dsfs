@@ -19,8 +19,8 @@ public:
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, int current_crop);
 	void insert_data(std::vector<const PARData*>* possible_pars);
 	int selected_index = PAR_MENU_NO_ACTION;
-protected:
 	void reset_output_option();
+protected:
 	void set_output_option(int index, int action);
 	int get_num_options();
 	std::string get_string_option(int index, int action);

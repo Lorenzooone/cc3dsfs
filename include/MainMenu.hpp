@@ -32,8 +32,8 @@ public:
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, bool connected);
 	void insert_data(ScreenType s_type, bool is_fullscreen);
 	MainMenuOutAction selected_index = MainMenuOutAction::MAIN_MENU_NO_ACTION;
-protected:
 	void reset_output_option();
+protected:
 	void set_output_option(int index, int action);
 	int get_num_options();
 	std::string get_string_option(int index, int action);
