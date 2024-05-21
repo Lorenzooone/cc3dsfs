@@ -1,6 +1,6 @@
 #include "MainMenu.hpp"
 
-#define NUM_TOTAL_MAIN_MENU_OPTIONS (sizeof(pollable_options)/sizeof(pollable_options[0]))
+#define NUM_TOTAL_MENU_OPTIONS (sizeof(pollable_options)/sizeof(pollable_options[0]))
 
 #define OPTION_WINDOWED true
 #define OPTION_FULLSCREEN true
@@ -123,7 +123,7 @@ static const MainMenuOptionInfo* pollable_options[] = {
 };
 
 MainMenu::MainMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
-	this->options_indexes = new int[NUM_TOTAL_MAIN_MENU_OPTIONS];
+	this->options_indexes = new int[NUM_TOTAL_MENU_OPTIONS];
 	this->initialize(font_load_success, text_font);
 	this->num_enabled_options = 0;
 }
@@ -150,7 +150,7 @@ void MainMenu::class_setup() {
 
 void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen) {
 	this->num_enabled_options = 0;
-	for(int i = 0; i < NUM_TOTAL_MAIN_MENU_OPTIONS; i++) {
+	for(int i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
 		bool valid = true;
 		if(is_fullscreen)
 			valid = valid && pollable_options[i]->active_fullscreen;
@@ -186,13 +186,9 @@ int MainMenu::get_num_options() {
 }
 
 std::string MainMenu::get_string_option(int index, int action) {
+	if(action == FALSE_ACTION)
+		return pollable_options[this->options_indexes[index]]->false_name;
 	return pollable_options[this->options_indexes[index]]->base_name;
-}
-
-static std::string setTextOptionBool(int option_index, bool value) {
-	if(value)
-		return pollable_options[option_index]->base_name;
-	return pollable_options[option_index]->false_name;
 }
 
 void MainMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, bool connected) {
@@ -204,10 +200,11 @@ void MainMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size
 		int index = (i * this->single_option_multiplier) + this->elements_start_id;
 		if(!this->future_enabled_labels[index])
 			continue;
-		int option_index = this->options_indexes[start + i];
+		int real_index = start + i;
+		int option_index = this->options_indexes[real_index];
 		switch(pollable_options[option_index]->out_action) {
 			case MAIN_MENU_OPEN:
-				this->labels[index]->setText(setTextOptionBool(option_index, connected));
+				this->labels[index]->setText(this->setTextOptionBool(real_index, connected));
 				break;
 			default:
 				break;

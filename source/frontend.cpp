@@ -181,7 +181,8 @@ void reset_screen_info(ScreenInfo &info) {
 	info.top_scaling = -1;
 	info.bot_scaling = -1;
 	info.bfi = false;
-	info.bfi_divider = 2.0;
+	info.bfi_divider = 2;
+	info.bfi_amount = 1;
 	info.menu_scaling_factor = 1.0;
 	info.rounded_corners_fix = false;
 	info.top_par = 0;
@@ -270,9 +271,21 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		return true;
 	}
 	if(key == (base + "bfi_divider")) {
-		info.bfi_divider = std::stod(value);
-		if(info.bfi_divider < 1.0)
-			info.bfi_divider = 1.0;
+		info.bfi_divider = std::stoi(value);
+		if(info.bfi_divider < 2)
+			info.bfi_divider = 2;
+		if(info.bfi_divider > 10)
+			info.bfi_divider = 10;
+		if(info.bfi_amount > (info.bfi_divider - 1))
+			info.bfi_amount = info.bfi_divider - 1;
+		return true;
+	}
+	if(key == (base + "bfi_amount")) {
+		info.bfi_amount = std::stoi(value);
+		if(info.bfi_amount < 1)
+			info.bfi_amount = 1;
+		if(info.bfi_amount > (info.bfi_divider - 1))
+			info.bfi_amount = info.bfi_divider - 1;
 		return true;
 	}
 	if(key == (base + "menu_scaling_factor")) {
@@ -317,6 +330,7 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "bot_scaling=" + std::to_string(info.bot_scaling) + "\n";
 	out += base + "bfi=" + std::to_string(info.bfi) + "\n";
 	out += base + "bfi_divider=" + std::to_string(info.bfi_divider) + "\n";
+	out += base + "bfi_amount=" + std::to_string(info.bfi_amount) + "\n";
 	out += base + "menu_scaling_factor=" + std::to_string(info.menu_scaling_factor) + "\n";
 	out += base + "rounded_corners_fix=" + std::to_string(info.rounded_corners_fix) + "\n";
 	out += base + "top_par=" + std::to_string(info.top_par) + "\n";

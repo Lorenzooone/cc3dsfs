@@ -13,6 +13,7 @@
 #define DEFAULT_ACTION 0
 #define DEC_ACTION 1
 #define INC_ACTION 2
+#define FALSE_ACTION 3
 
 class OptionSelectionMenu {
 public:
@@ -39,6 +40,7 @@ protected:
 	bool show_x;
 	bool show_title;
 
+	virtual bool is_option_selectable(int index, int action);
 	virtual bool is_option_inc_dec(int index);
 	virtual void set_output_option(int index, int action);
 	virtual int get_num_options();
@@ -51,6 +53,9 @@ protected:
 	void initialize(bool font_load_success, sf::Font &text_font);
 	void prepare_options();
 	void base_prepare(float menu_scaling_factor, int view_size_x, int view_size_y);
+	std::string setTextOptionInt(int index, int value);
+	std::string setTextOptionBool(int index, bool value);
+	std::string setTextOptionFloat(int index, float value);
 
 	struct MenuData {
 		int page = 0;

@@ -90,21 +90,13 @@ std::string AudioMenu::get_string_option(int index, int action) {
 		return pollable_options[this->options_indexes[index]]->inc_str;
 	if((action == DEC_ACTION) && this->is_option_inc_dec(index))
 		return pollable_options[this->options_indexes[index]]->dec_str;
+	if(action == FALSE_ACTION)
+		return pollable_options[this->options_indexes[index]]->false_name;
 	return pollable_options[this->options_indexes[index]]->base_name;
 }
 
 bool AudioMenu::is_option_inc_dec(int index) {
 	return pollable_options[this->options_indexes[index]]->is_inc;
-}
-
-static std::string setTextOptionInt(int option_index, int value) {
-	return pollable_options[option_index]->base_name + ": " + std::to_string(value);
-}
-
-static std::string setTextOptionBool(int option_index, bool value) {
-	if(value)
-		return pollable_options[option_index]->base_name;
-	return pollable_options[option_index]->false_name;
 }
 
 void AudioMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, AudioData *audio_data) {
@@ -116,13 +108,14 @@ void AudioMenu::prepare(float menu_scaling_factor, int view_size_x, int view_siz
 		int index = (i * this->single_option_multiplier) + this->elements_start_id;
 		if(!this->future_enabled_labels[index])
 			continue;
-		int option_index = this->options_indexes[start + i];
+		int real_index = start + i;
+		int option_index = this->options_indexes[real_index];
 		switch(pollable_options[option_index]->out_action) {
 			case AUDIO_MENU_VOLUME_DEC:
-				this->labels[index]->setText(setTextOptionInt(option_index, audio_data->get_real_volume()));
+				this->labels[index]->setText(this->setTextOptionInt(real_index, audio_data->get_real_volume()));
 				break;
 			case AUDIO_MENU_MUTE:
-				this->labels[index]->setText(setTextOptionBool(option_index, audio_data->get_mute()));
+				this->labels[index]->setText(this->setTextOptionBool(real_index, audio_data->get_mute()));
 				break;
 			default:
 				break;

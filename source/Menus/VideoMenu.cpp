@@ -1,6 +1,6 @@
 #include "VideoMenu.hpp"
 
-#define NUM_TOTAL_VIDEO_MENU_OPTIONS (sizeof(pollable_options)/sizeof(pollable_options[0]))
+#define NUM_TOTAL_MENU_OPTIONS (sizeof(pollable_options)/sizeof(pollable_options[0]))
 
 struct VideoMenuOptionInfo {
 	const std::string base_name;
@@ -173,7 +173,7 @@ static const VideoMenuOptionInfo* pollable_options[] = {
 };
 
 VideoMenu::VideoMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
-	this->options_indexes = new int[NUM_TOTAL_VIDEO_MENU_OPTIONS];
+	this->options_indexes = new int[NUM_TOTAL_MENU_OPTIONS];
 	this->initialize(font_load_success, text_font);
 	this->num_enabled_options = 0;
 }
@@ -200,7 +200,7 @@ void VideoMenu::class_setup() {
 
 void VideoMenu::insert_data(ScreenType s_type, bool is_fullscreen) {
 	this->num_enabled_options = 0;
-	for(int i = 0; i < NUM_TOTAL_VIDEO_MENU_OPTIONS; i++) {
+	for(int i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
 		bool valid = true;
 		if(is_fullscreen)
 			valid = valid && pollable_options[i]->active_fullscreen;
@@ -242,6 +242,8 @@ std::string VideoMenu::get_string_option(int index, int action) {
 		return pollable_options[this->options_indexes[index]]->inc_str;
 	if((action == DEC_ACTION) && this->is_option_inc_dec(index))
 		return pollable_options[this->options_indexes[index]]->dec_str;
+	if(action == FALSE_ACTION)
+		return pollable_options[this->options_indexes[index]]->false_name;
 	return pollable_options[this->options_indexes[index]]->base_name;
 }
 
@@ -249,26 +251,12 @@ bool VideoMenu::is_option_inc_dec(int index) {
 	return pollable_options[this->options_indexes[index]]->is_inc;
 }
 
-static std::string setTextOptionBool(int option_index, bool value) {
-	if(value)
-		return pollable_options[option_index]->base_name;
-	return pollable_options[option_index]->false_name;
-}
-
-static std::string setTextOptionFloat(int option_index, float value) {
-	return pollable_options[option_index]->base_name + ": " + get_float_str_decimals(value, 1);
-}
-
-static std::string setTextOptionInt(int option_index, int value) {
-	return pollable_options[option_index]->base_name + ": " + std::to_string(value);
-}
-
-static std::string setTextOptionDualPercentage(int option_index, int value_1, int value_2) {
+std::string VideoMenu::setTextOptionDualPercentage(int index, int value_1, int value_2) {
 	int sum = value_1 + value_2;
 	value_1 = ((value_1 * 100) + (sum / 2)) / sum;
 	value_2 = ((value_2 * 100) + (sum / 2)) / sum;
 	value_1 += 100 - (value_1 + value_2);
-	return pollable_options[option_index]->base_name + ": " + std::to_string(value_1) + " - " + std::to_string(value_2);
+	return this->get_string_option(index, DEFAULT_ACTION) + ": " + std::to_string(value_1) + " - " + std::to_string(value_2);
 }
 
 void VideoMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info) {
@@ -280,37 +268,38 @@ void VideoMenu::prepare(float menu_scaling_factor, int view_size_x, int view_siz
 		int index = (i * this->single_option_multiplier) + this->elements_start_id;
 		if(!this->future_enabled_labels[index])
 			continue;
-		int option_index = this->options_indexes[start + i];
+		int real_index = start + i;
+		int option_index = this->options_indexes[real_index];
 		switch(pollable_options[option_index]->out_action) {
 			case VIDEO_MENU_VSYNC:
-				this->labels[index]->setText(setTextOptionBool(option_index, info->v_sync_enabled));
+				this->labels[index]->setText(this->setTextOptionBool(real_index, info->v_sync_enabled));
 				break;
 			case VIDEO_MENU_ASYNC:
-				this->labels[index]->setText(setTextOptionBool(option_index, info->async));
+				this->labels[index]->setText(this->setTextOptionBool(real_index, info->async));
 				break;
 			case VIDEO_MENU_BLUR:
-				this->labels[index]->setText(setTextOptionBool(option_index, info->is_blurred));
+				this->labels[index]->setText(this->setTextOptionBool(real_index, info->is_blurred));
 				break;
 			case VIDEO_MENU_PADDING:
-				this->labels[index]->setText(setTextOptionBool(option_index, info->rounded_corners_fix));
+				this->labels[index]->setText(this->setTextOptionBool(real_index, info->rounded_corners_fix));
 				break;
 			case VIDEO_MENU_WINDOW_SCALING_DEC:
-				this->labels[index]->setText(setTextOptionFloat(option_index, info->scaling));
+				this->labels[index]->setText(this->setTextOptionFloat(real_index, info->scaling));
 				break;
 			case VIDEO_MENU_MENU_SCALING_DEC:
-				this->labels[index]->setText(setTextOptionFloat(option_index, info->menu_scaling_factor));
+				this->labels[index]->setText(this->setTextOptionFloat(real_index, info->menu_scaling_factor));
 				break;
 			case VIDEO_MENU_FULLSCREEN_SCALING_TOP:
-				this->labels[index]->setText(setTextOptionDualPercentage(option_index, info->top_scaling, info->bot_scaling));
+				this->labels[index]->setText(this->setTextOptionDualPercentage(real_index, info->top_scaling, info->bot_scaling));
 				break;
 			case VIDEO_MENU_SMALL_SCREEN_OFFSET_DEC:
-				this->labels[index]->setText(setTextOptionFloat(option_index, info->subscreen_offset));
+				this->labels[index]->setText(this->setTextOptionFloat(real_index, info->subscreen_offset));
 				break;
 			case VIDEO_MENU_TOP_ROTATION_DEC:
-				this->labels[index]->setText(setTextOptionInt(option_index, info->top_rotation));
+				this->labels[index]->setText(this->setTextOptionInt(real_index, info->top_rotation));
 				break;
 			case VIDEO_MENU_BOTTOM_ROTATION_DEC:
-				this->labels[index]->setText(setTextOptionInt(option_index, info->bot_rotation));
+				this->labels[index]->setText(this->setTextOptionInt(real_index, info->bot_rotation));
 				break;
 			default:
 				break;

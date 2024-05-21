@@ -1,4 +1,5 @@
 #include "OptionSelectionMenu.hpp"
+#include "utils.hpp"
 
 OptionSelectionMenu::OptionSelectionMenu() {
 }
@@ -200,12 +201,30 @@ int OptionSelectionMenu::get_num_options() {
 	return this->num_options_per_screen;
 }
 
+bool OptionSelectionMenu::is_option_selectable(int index, int action) {
+	return true;
+}
+
 bool OptionSelectionMenu::is_option_inc_dec(int index) {
 	return false;
 }
 
 std::string OptionSelectionMenu::get_string_option(int index, int action) {
 	return "Sample Text";
+}
+
+std::string OptionSelectionMenu::setTextOptionInt(int index, int value) {
+	return this->get_string_option(index, DEFAULT_ACTION) + ": " + std::to_string(value);
+}
+
+std::string OptionSelectionMenu::setTextOptionBool(int index, bool value) {
+	if(value)
+		return this->get_string_option(index, DEFAULT_ACTION);
+	return this->get_string_option(index, FALSE_ACTION);
+}
+std::string OptionSelectionMenu::setTextOptionFloat(int index, float value) {
+	std::string out = this->get_string_option(index, DEFAULT_ACTION) + ": " + get_float_str_decimals(value, 1);
+	return out;
 }
 
 int OptionSelectionMenu::get_num_pages() {
@@ -248,16 +267,16 @@ void OptionSelectionMenu::prepare_options() {
 		this->labels[label_start_index]->setText(this->get_string_option(start + i, DEFAULT_ACTION));
 		this->labels[label_start_index]->setShowText(true);
 		if(!is_option_inc_dec(start + i))
-			this->selectable_labels[label_start_index] = true;
+			this->selectable_labels[label_start_index] = this->is_option_selectable(start + i, DEFAULT_ACTION);
 		else {
 			this->labels[label_start_index + 1]->setText(this->get_string_option(start + i, DEC_ACTION));
 			this->labels[label_start_index + 1]->setShowText(true);
 			this->future_enabled_labels[label_start_index + 1] = true;
-			this->selectable_labels[label_start_index + 1] = true;
+			this->selectable_labels[label_start_index + 1] = this->is_option_selectable(start + i, DEC_ACTION);
 			this->labels[label_start_index + 2]->setText(this->get_string_option(start + i, INC_ACTION));
 			this->labels[label_start_index + 2]->setShowText(true);
 			this->future_enabled_labels[label_start_index + 2] = true;
-			this->selectable_labels[label_start_index + 2] = true;
+			this->selectable_labels[label_start_index + 2] = this->is_option_selectable(start + i, INC_ACTION);
 		}
 	}
 	if(num_pages > 1) {

@@ -28,6 +28,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->offset_menu = new OffsetMenu(this->font_load_success, this->text_font);
 	this->rotation_menu = new RotationMenu(this->font_load_success, this->text_font);
 	this->audio_menu = new AudioMenu(this->font_load_success, this->text_font);
+	this->bfi_menu = new BFIMenu(this->font_load_success, this->text_font);
 	this->in_tex.create(IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT);
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
@@ -61,6 +62,7 @@ WindowScreen::~WindowScreen() {
 	delete this->offset_menu;
 	delete this->rotation_menu;
 	delete this->audio_menu;
+	delete this->bfi_menu;
 }
 
 void WindowScreen::build() {
@@ -241,6 +243,11 @@ void WindowScreen::ratio_change(bool top_priority) {
 	this->future_operations.call_screen_settings_update = true;
 }
 
+void WindowScreen::bfi_change() {
+	this->m_info.bfi = !this->m_info.bfi;
+	this->print_notification_on_off("BFI", this->m_info.bfi);
+}
+
 bool WindowScreen::common_poll(SFEvent &event_data) {
 	bool consumed = true;
 	switch(event_data.type) {
@@ -399,6 +406,35 @@ void WindowScreen::setup_audio_menu() {
 	}
 }
 
+void WindowScreen::setup_bfi_menu() {
+	if(this->curr_menu != BFI_MENU_TYPE) {
+		this->curr_menu = BFI_MENU_TYPE;
+		this->bfi_menu->reset_data();
+		this->bfi_menu->insert_data();
+	}
+}
+
+void WindowScreen::setup_load_menu() {
+}
+
+void WindowScreen::setup_save_menu() {
+}
+
+void WindowScreen::setup_resolution_menu() {
+}
+
+void WindowScreen::setup_extra_menu() {
+}
+
+void WindowScreen::setup_status_menu() {
+}
+
+void WindowScreen::setup_licenses_menu() {
+}
+
+void WindowScreen::setup_relative_pos_menu() {
+}
+
 bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 	bool consumed = true;
 	switch(event_data.type) {
@@ -464,10 +500,9 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 					this->blur_change();
 					break;
 
-				case 'i':
-					this->m_info.bfi = !this->m_info.bfi;
-					this->print_notification_on_off("BFI", this->m_info.bfi);
-					break;
+				//case 'i':
+				//	this->bfi_change();
+				//	break;
 
 				case 'o':
 					this->m_prepare_open = true;
@@ -666,6 +701,23 @@ void WindowScreen::poll() {
 						case MAIN_MENU_AUDIO_SETTINGS:
 							this->setup_audio_menu();
 							return;
+						case MAIN_MENU_LOAD_PROFILES:
+							this->setup_load_menu();
+							return;
+						case MAIN_MENU_SAVE_PROFILES:
+							this->setup_save_menu();
+							return;
+						case MAIN_MENU_STATUS:
+							this->setup_status_menu();
+							return;
+						case MAIN_MENU_LICENSES:
+							this->setup_licenses_menu();
+							return;
+						case MAIN_MENU_EXTRA_SETTINGS:
+							this->setup_extra_menu();
+							return;
+						case MAIN_MENU_SHUTDOWN:
+							return;
 						default:
 							break;
 					}
@@ -773,11 +825,14 @@ void WindowScreen::poll() {
 							this->setup_offset_menu();
 							return;
 						case VIDEO_MENU_BFI_SETTINGS:
-							break;
+							this->setup_bfi_menu();
+							return;
 						case VIDEO_MENU_RESOLUTION_SETTINGS:
-							break;
+							this->setup_resolution_menu();
+							return;
 						case VIDEO_MENU_BOTTOM_SCREEN_POS:
-							break;
+							this->setup_relative_pos_menu();
+							return;
 						default:
 							break;
 					}
@@ -906,6 +961,46 @@ void WindowScreen::poll() {
 					continue;
 				}
 				break;
+			case BFI_MENU_TYPE:
+				if(this->bfi_menu->poll(event_data)) {
+					switch(this->bfi_menu->selected_index) {
+						case BFI_MENU_BACK:
+							this->setup_video_menu();
+							return;
+						case BFI_MENU_NO_ACTION:
+							break;
+						case BFI_MENU_TOGGLE:
+							this->bfi_change();
+							break;
+						case BFI_MENU_DIVIDER_DEC:
+							this->m_info.bfi_divider -= 1;
+							if(this->m_info.bfi_divider < 2)
+								this->m_info.bfi_divider = 2;
+							if(this->m_info.bfi_amount > (this->m_info.bfi_divider - 1))
+								this->m_info.bfi_amount = this->m_info.bfi_divider - 1;
+							break;
+						case BFI_MENU_DIVIDER_INC:
+							this->m_info.bfi_divider += 1;
+							if(this->m_info.bfi_divider > 10)
+								this->m_info.bfi_divider = 10;
+							break;
+						case BFI_MENU_AMOUNT_DEC:
+							this->m_info.bfi_amount -= 1;
+							if(this->m_info.bfi_amount < 1)
+								this->m_info.bfi_amount = 1;
+							break;
+						case BFI_MENU_AMOUNT_INC:
+							this->m_info.bfi_amount += 1;
+							if(this->m_info.bfi_amount > (this->m_info.bfi_divider - 1))
+								this->m_info.bfi_amount = this->m_info.bfi_divider - 1;
+							break;
+						default:
+							break;
+					}
+					this->bfi_menu->reset_output_option();
+					continue;
+				}
+				break;
 			default:
 				break;
 		}
@@ -1018,6 +1113,9 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 				break;
 			case AUDIO_MENU_TYPE:
 				this->audio_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->audio_data);
+				break;
+			case BFI_MENU_TYPE:
+				this->bfi_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
 				break;
 			default:
 				break;
@@ -1349,6 +1447,9 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 		case AUDIO_MENU_TYPE:
 			this->audio_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
+		case BFI_MENU_TYPE:
+			this->bfi_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
 		default:
 			break;
 	}
@@ -1370,8 +1471,18 @@ void WindowScreen::window_render_call() {
 
 	if(this->loaded_info.bfi) {
 		if(this->frame_time > 0.0) {
-			sf::sleep(sf::seconds(frame_time / (this->loaded_info.bfi_divider * 1.1)));
-			this->display_data_to_window(false);
+			if(this->loaded_info.bfi_divider < 2)
+				this->loaded_info.bfi_divider = 2;
+			if(this->loaded_info.bfi_divider > 10)
+				this->loaded_info.bfi_divider = 10;
+			if(this->loaded_info.bfi_amount < 1)
+				this->loaded_info.bfi_amount = 1;
+			if(this->loaded_info.bfi_amount > (this->loaded_info.bfi_divider - 1))
+				this->loaded_info.bfi_amount = this->loaded_info.bfi_divider - 1;
+			for(int i = 0; i < this->loaded_info.bfi_amount; i++) {
+				sf::sleep(sf::seconds(frame_time / (this->loaded_info.bfi_divider * 1.1)));
+				this->display_data_to_window(false);
+			}
 		}
 	}
 }

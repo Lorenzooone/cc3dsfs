@@ -55,5 +55,6 @@ protected:
 private:
 	int *options_indexes;
 	int num_enabled_options;
+	std::string setTextOptionDualPercentage(int index, int value_1, int value_2);
 };
 #endif

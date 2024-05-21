@@ -58,9 +58,9 @@ void CropMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size
 			continue;
 		int crop_index = start + i;
 		if(crop_index == current_crop)
-			this->labels[index]->setText("<" + (*this->possible_crops)[crop_index]->name + ">");
+			this->labels[index]->setText("<" + this->get_string_option(crop_index, DEFAULT_ACTION) + ">");
 		else
-			this->labels[index]->setText((*this->possible_crops)[crop_index]->name);
+			this->labels[index]->setText(this->get_string_option(crop_index, DEFAULT_ACTION));
 	}
 	this->base_prepare(menu_scaling_factor, view_size_x, view_size_y);
 }

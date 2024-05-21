@@ -224,6 +224,10 @@ static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data
 
 	if(!skip_io) {
 		load(base_path, base_name, top_screen.m_info, bot_screen.m_info, joint_screen.m_info, frontend_data.display_data, audio_data, out_text_data);
+		// Due to the risk for seizures, at the start of the program, set BFI to false!
+		top_screen.m_info.bfi = false;
+		bot_screen.m_info.bfi = false;
+		joint_screen.m_info.bfi = false;
 	}
 
 	top_screen.build();

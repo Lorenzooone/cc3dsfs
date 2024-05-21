@@ -96,10 +96,6 @@ bool RotationMenu::is_option_inc_dec(int index) {
 	return pollable_options[this->options_indexes[index]]->is_inc;
 }
 
-static std::string setTextOptionInt(int option_index, int value) {
-	return pollable_options[option_index]->base_name + ": " + std::to_string(value);
-}
-
 void RotationMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info) {
 	int num_pages = this->get_num_pages();
 	if(this->future_data.page >= num_pages)
@@ -109,13 +105,14 @@ void RotationMenu::prepare(float menu_scaling_factor, int view_size_x, int view_
 		int index = (i * this->single_option_multiplier) + this->elements_start_id;
 		if(!this->future_enabled_labels[index])
 			continue;
-		int option_index = this->options_indexes[start + i];
+		int real_index = start + i;
+		int option_index = this->options_indexes[real_index];
 		switch(pollable_options[option_index]->out_action) {
 			case ROTATION_MENU_TOP_ROTATION_DEC:
-				this->labels[index]->setText(setTextOptionInt(option_index, info->top_rotation));
+				this->labels[index]->setText(this->setTextOptionInt(real_index, info->top_rotation));
 				break;
 			case ROTATION_MENU_BOTTOM_ROTATION_DEC:
-				this->labels[index]->setText(setTextOptionInt(option_index, info->bot_rotation));
+				this->labels[index]->setText(this->setTextOptionInt(real_index, info->bot_rotation));
 				break;
 			default:
 				break;

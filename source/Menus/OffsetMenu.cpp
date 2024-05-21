@@ -102,10 +102,6 @@ bool OffsetMenu::is_option_inc_dec(int index) {
 	return pollable_options[this->options_indexes[index]]->is_inc;
 }
 
-static std::string setTextOptionFloat(int option_index, float value) {
-	return pollable_options[option_index]->base_name + ": " + get_float_str_decimals(value, 1);
-}
-
 void OffsetMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info) {
 	int num_pages = this->get_num_pages();
 	if(this->future_data.page >= num_pages)
@@ -115,19 +111,20 @@ void OffsetMenu::prepare(float menu_scaling_factor, int view_size_x, int view_si
 		int index = (i * this->single_option_multiplier) + this->elements_start_id;
 		if(!this->future_enabled_labels[index])
 			continue;
-		int option_index = this->options_indexes[start + i];
+		int real_index = start + i;
+		int option_index = this->options_indexes[real_index];
 		switch(pollable_options[option_index]->out_action) {
 			case OFFSET_MENU_SMALL_OFFSET_DEC:
-				this->labels[index]->setText(setTextOptionFloat(option_index, info->subscreen_offset));
+				this->labels[index]->setText(this->setTextOptionFloat(real_index, info->subscreen_offset));
 				break;
 			case OFFSET_MENU_SMALL_SCREEN_DISTANCE_DEC:
-				this->labels[index]->setText(setTextOptionFloat(option_index, info->subscreen_attached_offset));
+				this->labels[index]->setText(this->setTextOptionFloat(real_index, info->subscreen_attached_offset));
 				break;
 			case OFFSET_MENU_SCREENS_X_POS_DEC:
-				this->labels[index]->setText(setTextOptionFloat(option_index, info->total_offset_x));
+				this->labels[index]->setText(this->setTextOptionFloat(real_index, info->total_offset_x));
 				break;
 			case OFFSET_MENU_SCREENS_Y_POS_DEC:
-				this->labels[index]->setText(setTextOptionFloat(option_index, info->total_offset_y));
+				this->labels[index]->setText(this->setTextOptionFloat(real_index, info->total_offset_y));
 				break;
 			default:
 				break;
