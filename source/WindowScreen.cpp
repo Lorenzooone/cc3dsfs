@@ -1230,16 +1230,24 @@ void WindowScreen::pre_texture_conversion_processing() {
 	this->in_tex.update((uint8_t*)this->saved_buf, IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT, 0, 0);
 }
 
-void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top) {
+void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug) {
 	if((is_top && this->m_stype == ScreenType::BOTTOM) || ((!is_top) && this->m_stype == ScreenType::TOP))
 		return;
 	if(this->loaded_menu == CONNECT_MENU_TYPE)
 		return;
 
-	rect_data.out_tex.clear();
-	if(actually_draw) {
-		rect_data.out_tex.draw(in_rect);
-		//Place postprocessing effects here
+	if(is_debug) {
+		if(is_top)
+			rect_data.out_tex.clear(sf::Color::Red);
+		else
+			rect_data.out_tex.clear(sf::Color::Blue);
+	}
+	else {
+		rect_data.out_tex.clear();
+		if(actually_draw) {
+			rect_data.out_tex.draw(in_rect);
+			//Place postprocessing effects here
+		}
 	}
 	rect_data.out_tex.display();
 }
@@ -1248,11 +1256,14 @@ void WindowScreen::window_bg_processing() {
 	//Place BG processing here
 }
 
-void WindowScreen::display_data_to_window(bool actually_draw) {
-	this->post_texture_conversion_processing(this->m_out_rect_top, this->m_in_rect_top, actually_draw, true);
-	this->post_texture_conversion_processing(this->m_out_rect_bot, this->m_in_rect_bot, actually_draw, false);
+void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
+	this->post_texture_conversion_processing(this->m_out_rect_top, this->m_in_rect_top, actually_draw, true, is_debug);
+	this->post_texture_conversion_processing(this->m_out_rect_bot, this->m_in_rect_bot, actually_draw, false, is_debug);
 
-	this->m_win.clear();
+	if(is_debug)
+		this->m_win.clear(sf::Color::Green);
+	else
+		this->m_win.clear();
 	this->window_bg_processing();
 	if(this->loaded_menu != CONNECT_MENU_TYPE) {
 		if(this->m_stype != ScreenType::BOTTOM)

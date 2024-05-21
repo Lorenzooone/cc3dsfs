@@ -147,9 +147,9 @@ private:
 	bool window_needs_work();
 	void window_factory(bool is_main_thread);
 	void pre_texture_conversion_processing();
-	void post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top);
+	void post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug);
 	void window_bg_processing();
-	void display_data_to_window(bool actually_draw);
+	void display_data_to_window(bool actually_draw, bool is_debug = false);
 	void window_render_call();
 	void set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, bool do_work = true);
 	int prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotation, int width_limit, int height_limit, int other_rotation, const PARData *own_par);
