@@ -21,9 +21,15 @@ static const RotationMenuOptionInfo bottom_rotation_option = {
 .is_inc = true, .dec_str = "Left", .inc_str = "Right", .inc_out_action = ROTATION_MENU_BOTTOM_ROTATION_INC,
 .out_action = ROTATION_MENU_BOTTOM_ROTATION_DEC};
 
+static const RotationMenuOptionInfo both_rotation_option = {
+.base_name = "Both Screens",
+.is_inc = true, .dec_str = "Left", .inc_str = "Right", .inc_out_action = ROTATION_MENU_BOTH_ROTATION_INC,
+.out_action = ROTATION_MENU_BOTH_ROTATION_DEC};
+
 static const RotationMenuOptionInfo* pollable_options[] = {
 &top_rotation_option,
 &bottom_rotation_option,
+&both_rotation_option,
 };
 
 RotationMenu::RotationMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){

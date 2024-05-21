@@ -813,6 +813,14 @@ void WindowScreen::poll() {
 						case ROTATION_MENU_BOTTOM_ROTATION_INC:
 							this->rotation_change(this->m_info.bot_rotation, true);
 							break;
+						case ROTATION_MENU_BOTH_ROTATION_DEC:
+							this->rotation_change(this->m_info.top_rotation, false);
+							this->rotation_change(this->m_info.bot_rotation, false);
+							break;
+						case ROTATION_MENU_BOTH_ROTATION_INC:
+							this->rotation_change(this->m_info.top_rotation, true);
+							this->rotation_change(this->m_info.bot_rotation, true);
+							break;
 						default:
 							break;
 					}
