@@ -38,9 +38,8 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->audio_data = audio_data;
 	this->last_window_creation_time = std::chrono::high_resolution_clock::now();
 	this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
-	this->start_touch_action_time = std::chrono::high_resolution_clock::now();
-	this->active_touch = false;
-	this->consumed_touch_long_press = false;
+	this->touch_right_click_action.started = false;
+	this->reset_held_times();
 	WindowScreen::reset_operations(future_operations);
 	this->done_display = true;
 	this->saved_buf = new VideoOutputData;
@@ -67,6 +66,7 @@ WindowScreen::~WindowScreen() {
 	delete this->audio_menu;
 	delete this->bfi_menu;
 	delete this->relpos_menu;
+	delete this->resolution_menu;
 }
 
 void WindowScreen::build() {
@@ -485,6 +485,9 @@ bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 				case sf::Keyboard::Enter:
 					this->setup_main_menu();
 					break;
+				case sf::Keyboard::PageDown:
+					this->setup_main_menu();
+					break;
 				default:
 					consumed = false;
 					break;
@@ -688,6 +691,13 @@ void WindowScreen::poll() {
 	while(!events_queue.empty()) {
 		if(done)
 			return;
+		if(this->query_reset_request()) {
+			this->reset_held_times();
+			reset_screen_info(this->m_info);
+			this->reload();
+			done = true;
+			continue;
+		}
 		SFEvent event_data = events_queue.front();
 		events_queue.pop();
 		if(this->common_poll(event_data)) {
@@ -1353,6 +1363,48 @@ void WindowScreen::print_notification_float(std::string base_text, float value, 
 	this->print_notification(base_text + ": " + get_float_str_decimals(value, decimals));
 }
 
+static void check_held_reset(bool value, HeldTime &action_time) {
+	if(value) {
+		if(!action_time.started) {
+			action_time.start_time = std::chrono::high_resolution_clock::now();
+			action_time.started = true;
+		}
+	}
+	else {
+		action_time.started = false;
+	}
+}
+
+static float check_held_diff(std::chrono::time_point<std::chrono::high_resolution_clock> &curr_time, HeldTime &action_time) {
+	if(!action_time.started)
+		return 0.0;
+	const std::chrono::duration<double> diff = curr_time - action_time.start_time;
+	return diff.count();
+}
+
+bool WindowScreen::query_reset_request() {
+	auto curr_time = std::chrono::high_resolution_clock::now();
+	if(check_held_diff(curr_time, this->right_click_action) > this->bad_resolution_timeout)
+		return true;
+	if(check_held_diff(curr_time, this->enter_action) > this->bad_resolution_timeout)
+		return true;
+	if(check_held_diff(curr_time, this->pgdown_action) > this->bad_resolution_timeout)
+		return true;
+	if(check_held_diff(curr_time, this->controller_button_action) > this->bad_resolution_timeout)
+		return true;
+	if(check_held_diff(curr_time, this->touch_action) > this->bad_resolution_timeout)
+		return true;
+	return false;
+}
+
+void WindowScreen::reset_held_times() {
+	check_held_reset(false, this->right_click_action);
+	check_held_reset(false, this->enter_action);
+	check_held_reset(false, this->pgdown_action);
+	check_held_reset(false, this->controller_button_action);
+	check_held_reset(false, this->touch_action);
+}
+
 void WindowScreen::poll_window() {
 	if(this->m_win.isOpen()) {
 		sf::Event event;
@@ -1372,28 +1424,45 @@ void WindowScreen::poll_window() {
 			events_queue.emplace(event.type, event.key.code, event.text.unicode, joystickId, event.joystickButton.button, event.joystickMove.axis, 0.0, event.mouseButton.button, mouse_x, mouse_y);
 		}
 		if(this->m_win.hasFocus()) {
-			if(sf::Touch::isDown(0)) {
+			check_held_reset(sf::Mouse::isButtonPressed(sf::Mouse::Right), this->right_click_action);
+			check_held_reset(sf::Keyboard::isKeyPressed(sf::Keyboard::Enter), this->enter_action);
+			check_held_reset(sf::Keyboard::isKeyPressed(sf::Keyboard::PageDown), this->pgdown_action);
+			bool found = false;
+			for(int i = 0; i < sf::Joystick::Count; i++) {
+				if(!sf::Joystick::isConnected(i))
+					continue;
+				if(sf::Joystick::getButtonCount(i) <= 0)
+					continue;
+				found = true;
+				check_held_reset(sf::Joystick::isButtonPressed(i, 0), this->controller_button_action);
+				break;
+			}
+			if(!found)
+				check_held_reset(false, this->controller_button_action);
+			bool touch_active = sf::Touch::isDown(0);
+			check_held_reset(touch_active, this->touch_action);
+			check_held_reset(touch_active, this->touch_right_click_action);
+			if(touch_active) {
 				sf::Vector2i touch_pos = sf::Touch::getPosition(0, this->m_win);
-				if(!this->active_touch) {
-					this->start_touch_action_time = std::chrono::high_resolution_clock::now();
-					this->active_touch = true;
-				}
-				else {
-					auto curr_time = std::chrono::high_resolution_clock::now();
-					const std::chrono::duration<double> diff = curr_time - this->start_touch_action_time;
-					if(diff.count() > this->touch_long_press_timer) {
-						events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Right, touch_pos.x, touch_pos.y);
-						this->start_touch_action_time = std::chrono::high_resolution_clock::now();
-					}
+				auto curr_time = std::chrono::high_resolution_clock::now();
+				const std::chrono::duration<double> diff = curr_time - this->touch_right_click_action.start_time;
+				if(diff.count() > this->touch_long_press_timer) {
+					events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Right, touch_pos.x, touch_pos.y);
+					this->touch_right_click_action.start_time = std::chrono::high_resolution_clock::now();
 				}
 				events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Left, touch_pos.x, touch_pos.y);
-				
 			}
-			else
-				this->active_touch = false;
 			joystick_axis_poll(this->events_queue);
 		}
+		else {
+			this->reset_held_times();
+			this->touch_right_click_action.started = false;
+		}
 		this->events_access->unlock();
+	}
+	else {
+		this->reset_held_times();
+		this->touch_right_click_action.started = false;
 	}
 }
 

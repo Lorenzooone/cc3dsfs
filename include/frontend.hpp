@@ -25,6 +25,11 @@
 #include "ResolutionMenu.hpp"
 #include "display_structs.hpp"
 
+struct HeldTime {
+	std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
+	bool started;
+};
+
 class WindowScreen {
 public:
 	ScreenInfo m_info;
@@ -77,12 +82,17 @@ private:
 	std::mutex* events_access;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_mouse_action_time;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_window_creation_time;
-	std::chrono::time_point<std::chrono::high_resolution_clock> start_touch_action_time;
-	bool active_touch;
+	HeldTime touch_right_click_action;
+	HeldTime touch_action;
+	HeldTime pgdown_action;
+	HeldTime enter_action;
+	HeldTime right_click_action;
+	HeldTime controller_button_action;
 	bool consumed_touch_long_press;
 	const float touch_long_press_timer = 1.5f;
 	const float mouse_timeout = 5.0f;
 	const float v_sync_timeout = 5.0f;
+	const float bad_resolution_timeout = 30.0f;
 	CurrMenuType curr_menu = DEFAULT_MENU_TYPE;
 	CurrMenuType loaded_menu;
 	ConnectionMenu *connection_menu;
@@ -150,6 +160,8 @@ private:
 	void ratio_change(bool top_priority);
 	void bfi_change();
 	void bottom_pos_change(int new_bottom_pos);
+	bool query_reset_request();
+	void reset_held_times();
 	void poll_window();
 	bool common_poll(SFEvent &event_data);
 	bool main_poll(SFEvent &event_data);
