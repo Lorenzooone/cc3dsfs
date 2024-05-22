@@ -29,6 +29,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->rotation_menu = new RotationMenu(this->font_load_success, this->text_font);
 	this->audio_menu = new AudioMenu(this->font_load_success, this->text_font);
 	this->bfi_menu = new BFIMenu(this->font_load_success, this->text_font);
+	this->relpos_menu = new RelativePositionMenu(this->font_load_success, this->text_font);
 	this->in_tex.create(IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT);
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
@@ -63,6 +64,7 @@ WindowScreen::~WindowScreen() {
 	delete this->rotation_menu;
 	delete this->audio_menu;
 	delete this->bfi_menu;
+	delete this->relpos_menu;
 }
 
 void WindowScreen::build() {
@@ -246,6 +248,15 @@ void WindowScreen::ratio_change(bool top_priority) {
 void WindowScreen::bfi_change() {
 	this->m_info.bfi = !this->m_info.bfi;
 	this->print_notification_on_off("BFI", this->m_info.bfi);
+}
+
+void WindowScreen::bottom_pos_change(int new_bottom_pos) {
+	BottomRelativePosition cast_new_bottom_pos = static_cast<BottomRelativePosition>(new_bottom_pos % BottomRelativePosition::BOT_REL_POS_END);
+	if(cast_new_bottom_pos != this->m_info.bottom_pos) {
+		this->m_info.bottom_pos = cast_new_bottom_pos;
+		this->prepare_size_ratios(false, false);
+		this->future_operations.call_screen_settings_update = true;
+	}
 }
 
 bool WindowScreen::common_poll(SFEvent &event_data) {
@@ -433,6 +444,11 @@ void WindowScreen::setup_licenses_menu() {
 }
 
 void WindowScreen::setup_relative_pos_menu() {
+	if(this->curr_menu != RELATIVE_POS_MENU_TYPE) {
+		this->curr_menu = RELATIVE_POS_MENU_TYPE;
+		this->relpos_menu->reset_data();
+		this->relpos_menu->insert_data();
+	}
 }
 
 bool WindowScreen::no_menu_poll(SFEvent &event_data) {
@@ -488,7 +504,6 @@ bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 
 bool WindowScreen::main_poll(SFEvent &event_data) {
 	bool consumed = true;
-	bool done = false;
 	switch(event_data.type) {
 		case sf::Event::TextEntered:
 			switch(event_data.unicode) {
@@ -509,9 +524,7 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 					break;
 
 				case 't':
-					this->m_info.bottom_pos = static_cast<BottomRelativePosition>((this->m_info.bottom_pos + 1) % (BottomRelativePosition::BOT_REL_POS_END));
-					this->prepare_size_ratios(false, false);
-					this->future_operations.call_screen_settings_update = true;
+					this->bottom_pos_change(this->m_info.bottom_pos + 1);
 					break;
 
 				case '6':
@@ -652,12 +665,15 @@ void WindowScreen::poll() {
 			this->m_info.show_mouse = false;
 	}
 	this->poll_window();
+	bool done = false;
 	while(!events_queue.empty()) {
+		if(done)
+			return;
 		SFEvent event_data = events_queue.front();
 		events_queue.pop();
 		if(this->common_poll(event_data)) {
 			if(this->close_capture())
-				return;
+				done = true;
 			continue;
 		}
 		if(this->loaded_menu != CONNECT_MENU_TYPE) {
@@ -672,7 +688,7 @@ void WindowScreen::poll() {
 			case CONNECT_MENU_TYPE:
 				if(this->connection_menu->poll(event_data)) {
 					if(this->check_connection_menu_result() != CONNECTION_MENU_NO_ACTION)
-						return;
+						done = true;
 					continue;
 				}
 				break;
@@ -684,40 +700,52 @@ void WindowScreen::poll() {
 							break;
 						case MAIN_MENU_CLOSE_MENU:
 							this->curr_menu = DEFAULT_MENU_TYPE;
-							return;
+							done = true;
+							break;
 						case MAIN_MENU_QUIT_APPLICATION:
 							this->m_prepare_quit = true;
 							this->curr_menu = DEFAULT_MENU_TYPE;
-							return;
+							done = true;
+							break;
 						case MAIN_MENU_FULLSCREEN:
 							this->fullscreen_change();
-							return;
+							done = true;
+							break;
 						case MAIN_MENU_SPLIT:
 							this->split_change();
-							return;
+							done = true;
+							break;
 						case MAIN_MENU_VIDEO_SETTINGS:
 							this->setup_video_menu();
-							return;
+							done = true;
+							break;
 						case MAIN_MENU_AUDIO_SETTINGS:
 							this->setup_audio_menu();
-							return;
+							done = true;
+							break;
 						case MAIN_MENU_LOAD_PROFILES:
 							this->setup_load_menu();
-							return;
+							done = true;
+							break;
 						case MAIN_MENU_SAVE_PROFILES:
 							this->setup_save_menu();
-							return;
+							done = true;
+							break;
 						case MAIN_MENU_STATUS:
 							this->setup_status_menu();
-							return;
+							done = true;
+							break;
 						case MAIN_MENU_LICENSES:
 							this->setup_licenses_menu();
-							return;
+							done = true;
+							break;
 						case MAIN_MENU_EXTRA_SETTINGS:
 							this->setup_extra_menu();
-							return;
+							done = true;
+							break;
 						case MAIN_MENU_SHUTDOWN:
-							return;
+							done = true;
+							break;
 						default:
 							break;
 					}
@@ -730,7 +758,8 @@ void WindowScreen::poll() {
 					switch(this->audio_menu->selected_index) {
 						case AUDIO_MENU_BACK:
 							this->setup_main_menu();
-							return;
+							done = true;
+							break;
 						case AUDIO_MENU_NO_ACTION:
 							break;
 						case AUDIO_MENU_VOLUME_DEC:
@@ -757,7 +786,8 @@ void WindowScreen::poll() {
 					switch(this->video_menu->selected_index) {
 						case VIDEO_MENU_BACK:
 							this->setup_main_menu();
-							return;
+							done = true;
+							break;
 						case VIDEO_MENU_VSYNC:
 							this->vsync_change();
 							break;
@@ -772,16 +802,20 @@ void WindowScreen::poll() {
 							break;
 						case VIDEO_MENU_CROPPING:
 							this->setup_crop_menu();
-							return;
+							done = true;
+							break;
 						case VIDEO_MENU_TOP_PAR:
 							this->setup_par_menu(true);
-							return;
+							done = true;
+							break;
 						case VIDEO_MENU_BOT_PAR:
 							this->setup_par_menu(false);
-							return;
+							done = true;
+							break;
 						case VIDEO_MENU_ONE_PAR:
 							this->setup_par_menu(this->m_stype == ScreenType::TOP);
-							return;
+							done = true;
+							break;
 						case VIDEO_MENU_MENU_SCALING_DEC:
 							this->menu_scaling_change(false);
 							break;
@@ -820,19 +854,24 @@ void WindowScreen::poll() {
 							break;
 						case VIDEO_MENU_ROTATION_SETTINGS:
 							this->setup_rotation_menu();
-							return;
+							done = true;
+							break;
 						case VIDEO_MENU_OFFSET_SETTINGS:
 							this->setup_offset_menu();
-							return;
+							done = true;
+							break;
 						case VIDEO_MENU_BFI_SETTINGS:
 							this->setup_bfi_menu();
-							return;
+							done = true;
+							break;
 						case VIDEO_MENU_RESOLUTION_SETTINGS:
 							this->setup_resolution_menu();
-							return;
+							done = true;
+							break;
 						case VIDEO_MENU_BOTTOM_SCREEN_POS:
 							this->setup_relative_pos_menu();
-							return;
+							done = true;
+							break;
 						default:
 							break;
 					}
@@ -844,7 +883,8 @@ void WindowScreen::poll() {
 					switch(this->crop_menu->selected_index) {
 						case CROP_MENU_BACK:
 							this->setup_video_menu();
-							return;
+							done = true;
+							break;
 						case CROP_MENU_NO_ACTION:
 							break;
 						default:
@@ -860,7 +900,8 @@ void WindowScreen::poll() {
 					switch(this->par_menu->selected_index) {
 						case PAR_MENU_BACK:
 							this->setup_video_menu();
-							return;
+							done = true;
+							break;
 						case PAR_MENU_NO_ACTION:
 							break;
 						default:
@@ -876,7 +917,8 @@ void WindowScreen::poll() {
 					switch(this->par_menu->selected_index) {
 						case PAR_MENU_BACK:
 							this->setup_video_menu();
-							return;
+							done = true;
+							break;
 						case PAR_MENU_NO_ACTION:
 							break;
 						default:
@@ -892,7 +934,8 @@ void WindowScreen::poll() {
 					switch(this->rotation_menu->selected_index) {
 						case ROTATION_MENU_BACK:
 							this->setup_video_menu();
-							return;
+							done = true;
+							break;
 						case ROTATION_MENU_NO_ACTION:
 							break;
 						case ROTATION_MENU_TOP_ROTATION_DEC:
@@ -927,7 +970,8 @@ void WindowScreen::poll() {
 					switch(this->offset_menu->selected_index) {
 						case OFFSET_MENU_BACK:
 							this->setup_video_menu();
-							return;
+							done = true;
+							break;
 						case OFFSET_MENU_NO_ACTION:
 							break;
 						case OFFSET_MENU_SMALL_OFFSET_DEC:
@@ -966,7 +1010,8 @@ void WindowScreen::poll() {
 					switch(this->bfi_menu->selected_index) {
 						case BFI_MENU_BACK:
 							this->setup_video_menu();
-							return;
+							done = true;
+							break;
 						case BFI_MENU_NO_ACTION:
 							break;
 						case BFI_MENU_TOGGLE:
@@ -998,6 +1043,25 @@ void WindowScreen::poll() {
 							break;
 					}
 					this->bfi_menu->reset_output_option();
+					continue;
+				}
+				break;
+			case RELATIVE_POS_MENU_TYPE:
+				if(this->relpos_menu->poll(event_data)) {
+					switch(this->relpos_menu->selected_index) {
+						case REL_POS_MENU_BACK:
+							this->setup_video_menu();
+							done = true;
+							break;
+						case REL_POS_MENU_NO_ACTION:
+							break;
+						case REL_POS_MENU_CONFIRM:
+							this->bottom_pos_change(this->relpos_menu->selected_confirm_value);
+							break;
+						default:
+							break;
+					}
+					this->relpos_menu->reset_output_option();
 					continue;
 				}
 				break;
@@ -1116,6 +1180,9 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 				break;
 			case BFI_MENU_TYPE:
 				this->bfi_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+				break;
+			case RELATIVE_POS_MENU_TYPE:
+				this->relpos_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.bottom_pos);
 				break;
 			default:
 				break;
@@ -1449,6 +1516,9 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 			break;
 		case BFI_MENU_TYPE:
 			this->bfi_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case RELATIVE_POS_MENU_TYPE:
+			this->relpos_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

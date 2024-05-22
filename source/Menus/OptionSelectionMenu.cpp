@@ -311,7 +311,7 @@ void OptionSelectionMenu::option_selection_handling() {
 		this->set_output_option(BACK_X_OUTPUT_OPTION, BAD_ACTION);
 		this->last_action_time = std::chrono::high_resolution_clock::now();
 	}
-	else if(this->future_data.option_selected < (this->elements_start_id + this->num_elements_per_screen)) {
+	else if(this->is_option_element(this->future_data.option_selected)) {
 		int elem_index = this->future_data.option_selected - this->elements_start_id;
 		int start = this->num_options_per_screen * this->future_data.page;
 		this->set_output_option((elem_index / this->single_option_multiplier) + start, elem_index % this->single_option_multiplier);

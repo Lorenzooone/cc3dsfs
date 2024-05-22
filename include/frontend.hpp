@@ -21,6 +21,7 @@
 #include "OffsetMenu.hpp"
 #include "AudioMenu.hpp"
 #include "BFIMenu.hpp"
+#include "RelativePositionMenu.hpp"
 #include "display_structs.hpp"
 
 class WindowScreen {
@@ -92,6 +93,7 @@ private:
 	OffsetMenu *offset_menu;
 	AudioMenu *audio_menu;
 	BFIMenu *bfi_menu;
+	RelativePositionMenu *relpos_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const PARData*> possible_pars;
 
@@ -144,6 +146,7 @@ private:
 	void rotation_change(int &value, bool right);
 	void ratio_change(bool top_priority);
 	void bfi_change();
+	void bottom_pos_change(int new_bottom_pos);
 	void poll_window();
 	bool common_poll(SFEvent &event_data);
 	bool main_poll(SFEvent &event_data);
