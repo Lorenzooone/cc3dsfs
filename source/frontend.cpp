@@ -159,6 +159,12 @@ void insert_basic_pars(std::vector<const PARData*> &par_vector) {
 	}
 }
 
+void reset_fullscreen_info(ScreenInfo &info) {
+	info.fullscreen_mode_width = 0;
+	info.fullscreen_mode_height = 0;
+	info.fullscreen_mode_bpp = 0;
+}
+
 void reset_screen_info(ScreenInfo &info) {
 	info.is_blurred = false;
 	info.crop_kind = 0;
@@ -187,6 +193,7 @@ void reset_screen_info(ScreenInfo &info) {
 	info.rounded_corners_fix = false;
 	info.top_par = 0;
 	info.bot_par = 0;
+	reset_fullscreen_info(info);
 }
 
 static float offset_sanitization(float value) {
@@ -308,6 +315,18 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		info.bot_par = std::stoi(value);
 		return true;
 	}
+	if(key == (base + "fullscreen_mode_width")) {
+		info.fullscreen_mode_width = std::stoi(value);
+		return true;
+	}
+	if(key == (base + "fullscreen_mode_height")) {
+		info.fullscreen_mode_height = std::stoi(value);
+		return true;
+	}
+	if(key == (base + "fullscreen_mode_bpp")) {
+		info.fullscreen_mode_bpp = std::stoi(value);
+		return true;
+	}
 	return false;
 }
 
@@ -335,6 +354,9 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "rounded_corners_fix=" + std::to_string(info.rounded_corners_fix) + "\n";
 	out += base + "top_par=" + std::to_string(info.top_par) + "\n";
 	out += base + "bot_par=" + std::to_string(info.bot_par) + "\n";
+	out += base + "fullscreen_mode_width=" + std::to_string(info.fullscreen_mode_width) + "\n";
+	out += base + "fullscreen_mode_height=" + std::to_string(info.fullscreen_mode_height) + "\n";
+	out += base + "fullscreen_mode_bpp=" + std::to_string(info.fullscreen_mode_bpp) + "\n";
 	return out;
 }
 

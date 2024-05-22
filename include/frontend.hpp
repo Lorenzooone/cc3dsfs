@@ -22,6 +22,7 @@
 #include "AudioMenu.hpp"
 #include "BFIMenu.hpp"
 #include "RelativePositionMenu.hpp"
+#include "ResolutionMenu.hpp"
 #include "display_structs.hpp"
 
 class WindowScreen {
@@ -94,8 +95,10 @@ private:
 	AudioMenu *audio_menu;
 	BFIMenu *bfi_menu;
 	RelativePositionMenu *relpos_menu;
+	ResolutionMenu *resolution_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const PARData*> possible_pars;
+	std::vector<sf::VideoMode> possible_resolutions;
 
 	sf::Texture in_tex;
 
@@ -204,6 +207,7 @@ struct FrontendData {
 bool is_allowed_crop(const CropData* crop_data, ScreenType s_type);
 void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type);
 void insert_basic_pars(std::vector<const PARData*> &par_vector);
+void reset_fullscreen_info(ScreenInfo &info);
 void reset_screen_info(ScreenInfo &info);
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
 std::string save_screen_info(std::string base, const ScreenInfo &info);

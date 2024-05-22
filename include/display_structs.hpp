@@ -27,6 +27,9 @@ struct ScreenInfo {
 	bool rounded_corners_fix;
 	int top_par;
 	int bot_par;
+	int fullscreen_mode_width;
+	int fullscreen_mode_height;
+	int fullscreen_mode_bpp;
 };
 
 struct DisplayData {

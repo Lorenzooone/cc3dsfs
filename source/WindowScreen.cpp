@@ -30,6 +30,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->audio_menu = new AudioMenu(this->font_load_success, this->text_font);
 	this->bfi_menu = new BFIMenu(this->font_load_success, this->text_font);
 	this->relpos_menu = new RelativePositionMenu(this->font_load_success, this->text_font);
+	this->resolution_menu = new ResolutionMenu(this->font_load_success, this->text_font);
 	this->in_tex.create(IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT);
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
@@ -53,6 +54,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 }
 
 WindowScreen::~WindowScreen() {
+	this->possible_resolutions.clear();
 	delete this->saved_buf;
 	delete this->notification;
 	delete this->connection_menu;
@@ -110,6 +112,7 @@ void WindowScreen::fullscreen_change() {
 	if(this->curr_menu != CONNECT_MENU_TYPE)
 		this->curr_menu = DEFAULT_MENU_TYPE;
 	this->m_info.is_fullscreen = !this->m_info.is_fullscreen;
+	reset_fullscreen_info(this->m_info);
 	this->create_window(true);
 }
 
@@ -432,6 +435,22 @@ void WindowScreen::setup_save_menu() {
 }
 
 void WindowScreen::setup_resolution_menu() {
+	if(this->curr_menu != RESOLUTION_MENU_TYPE) {
+		this->possible_resolutions.clear();
+		std::vector<sf::VideoMode> modes = sf::VideoMode::getFullscreenModes();
+		if(modes.size() > 0)
+			this->possible_resolutions.push_back(modes[0]);
+		for(int i = 1; i < modes.size(); ++i)
+			if(this->possible_resolutions[0].bitsPerPixel == modes[i].bitsPerPixel)
+				this->possible_resolutions.push_back(modes[i]);
+		if(this->possible_resolutions.size() > 0) {
+			this->curr_menu = RESOLUTION_MENU_TYPE;
+			this->resolution_menu->reset_data();
+			this->resolution_menu->insert_data(&this->possible_resolutions);
+		}
+		else
+			this->print_notification("No Resolution found", TEXT_KIND_WARNING);
+	}
 }
 
 void WindowScreen::setup_extra_menu() {
@@ -1065,6 +1084,26 @@ void WindowScreen::poll() {
 					continue;
 				}
 				break;
+			case RESOLUTION_MENU_TYPE:
+				if(this->resolution_menu->poll(event_data)) {
+					switch(this->resolution_menu->selected_index) {
+						case RESOLUTION_MENU_BACK:
+							this->setup_video_menu();
+							done = true;
+							break;
+						case RESOLUTION_MENU_NO_ACTION:
+							break;
+						default:
+							this->m_info.fullscreen_mode_width = possible_resolutions[this->resolution_menu->selected_index].width;
+							this->m_info.fullscreen_mode_height = possible_resolutions[this->resolution_menu->selected_index].height;
+							this->m_info.fullscreen_mode_bpp = possible_resolutions[this->resolution_menu->selected_index].bitsPerPixel;
+							this->create_window(true);
+							break;
+					}
+					this->resolution_menu->reset_output_option();
+					continue;
+				}
+				break;
 			default:
 				break;
 		}
@@ -1183,6 +1222,9 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 				break;
 			case RELATIVE_POS_MENU_TYPE:
 				this->relpos_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.bottom_pos);
+				break;
+			case RESOLUTION_MENU_TYPE:
+				this->resolution_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->curr_desk_mode);
 				break;
 			default:
 				break;
@@ -1520,6 +1562,9 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 		case RELATIVE_POS_MENU_TYPE:
 			this->relpos_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
+		case RESOLUTION_MENU_TYPE:
+			this->resolution_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
 		default:
 			break;
 	}
@@ -1676,6 +1721,11 @@ void WindowScreen::calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf
 	int min_other_height = other_screen_size.y;
 	get_par_size(min_other_width, min_other_height, 1, other_par);
 	int chosen_ratio = prepare_screen_ratio(own_screen_size, own_rotation, min_other_width, min_other_height, other_rotation, own_par);
+	if(chosen_ratio <= 0) {
+		chosen_ratio = prepare_screen_ratio(own_screen_size, own_rotation, 0, 0, other_rotation, own_par);
+		if(chosen_ratio <= 0)
+			chosen_ratio = 0;
+	}
 	int old_scaling = own_scaling;
 	if(increase && (chosen_ratio > own_scaling) && (chosen_ratio > 0))
 		own_scaling += 1;
@@ -1692,7 +1742,9 @@ void WindowScreen::calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf
 		other_scaling = 0;
 	else
 		other_scaling = prepare_screen_ratio(other_screen_size, other_rotation, own_width, own_height, own_rotation, other_par);
-	if((this->m_stype == ScreenType::JOINT) && (own_scaling > 0)) {
+	if(other_scaling < 0)
+		other_scaling = 0;
+	if((this->m_stype == ScreenType::JOINT) && ((own_scaling > 0) || ((other_scaling == 0) && (own_scaling == 0)))) {
 		// Due to size differences, it may be possible that
 		// the chosen screen might be able to increase its
 		// scaling even more without compromising the other one...
@@ -1700,6 +1752,8 @@ void WindowScreen::calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf
 		int other_width = other_screen_size.x;
 		get_par_size(other_width, other_height, other_scaling, other_par);
 		own_scaling = prepare_screen_ratio(own_screen_size, own_rotation, other_width, other_height, other_rotation, own_par);
+		if(own_scaling < 0)
+			own_scaling = 0;
 	}
 }
 
@@ -1830,7 +1884,21 @@ void WindowScreen::create_window(bool re_prepare_size) {
 		this->m_info.show_mouse = true;
 	}
 	else {
-		this->curr_desk_mode = sf::VideoMode::getDesktopMode();
+		bool success = false;
+		if((this->m_info.fullscreen_mode_width > 0) && (this->m_info.fullscreen_mode_height > 0) && (this->m_info.fullscreen_mode_bpp > 0)) {
+			sf::VideoMode mode_created = sf::VideoMode(this->m_info.fullscreen_mode_width, this->m_info.fullscreen_mode_height, this->m_info.fullscreen_mode_bpp);
+			if(mode_created.isValid()) {
+				this->curr_desk_mode = mode_created;
+				success = true;
+			}
+		}
+		if(!success) {
+			std::vector<sf::VideoMode> modes = sf::VideoMode::getFullscreenModes();
+			if(modes.size() > 0)
+				this->curr_desk_mode = modes[0];
+			else
+				this->curr_desk_mode = sf::VideoMode::getDesktopMode();
+		}
 		this->m_window_width = curr_desk_mode.width;
 		this->m_window_height = curr_desk_mode.height;
 		this->m_info.show_mouse = false;

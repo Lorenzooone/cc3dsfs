@@ -253,9 +253,15 @@ bool VideoMenu::is_option_inc_dec(int index) {
 
 std::string VideoMenu::setTextOptionDualPercentage(int index, int value_1, int value_2) {
 	int sum = value_1 + value_2;
-	value_1 = ((value_1 * 100) + (sum / 2)) / sum;
-	value_2 = ((value_2 * 100) + (sum / 2)) / sum;
-	value_1 += 100 - (value_1 + value_2);
+	if(sum > 0) {
+		value_1 = ((value_1 * 100) + (sum / 2)) / sum;
+		value_2 = ((value_2 * 100) + (sum / 2)) / sum;
+		value_1 += 100 - (value_1 + value_2);
+	}
+	else {
+		value_1 = 0;
+		value_2 = 0;
+	}
 	return this->get_string_option(index, DEFAULT_ACTION) + ": " + std::to_string(value_1) + " - " + std::to_string(value_2);
 }
 
