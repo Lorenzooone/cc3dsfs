@@ -31,6 +31,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->bfi_menu = new BFIMenu(this->font_load_success, this->text_font);
 	this->relpos_menu = new RelativePositionMenu(this->font_load_success, this->text_font);
 	this->resolution_menu = new ResolutionMenu(this->font_load_success, this->text_font);
+	this->fileconfig_menu = new FileConfigMenu(this->font_load_success, this->text_font);
 	this->in_tex.create(IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT);
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
@@ -53,6 +54,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 }
 
 WindowScreen::~WindowScreen() {
+	this->possible_files.clear();
 	this->possible_resolutions.clear();
 	delete this->saved_buf;
 	delete this->notification;
@@ -67,6 +69,7 @@ WindowScreen::~WindowScreen() {
 	delete this->bfi_menu;
 	delete this->relpos_menu;
 	delete this->resolution_menu;
+	delete this->fileconfig_menu;
 }
 
 void WindowScreen::build() {
@@ -355,37 +358,41 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 	return consumed;
 }
 
-void WindowScreen::setup_main_menu() {
+void WindowScreen::setup_main_menu(bool reset_data) {
 	if(this->curr_menu != MAIN_MENU_TYPE) {
 		this->curr_menu = MAIN_MENU_TYPE;
-		this->main_menu->reset_data();
+		if(reset_data)
+			this->main_menu->reset_data();
 		this->main_menu->insert_data(this->m_stype, this->m_info.is_fullscreen);
 	}
 }
 
-void WindowScreen::setup_video_menu() {
+void WindowScreen::setup_video_menu(bool reset_data) {
 	if(this->curr_menu != VIDEO_MENU_TYPE) {
 		this->curr_menu = VIDEO_MENU_TYPE;
-		this->video_menu->reset_data();
+		if(reset_data)
+			this->video_menu->reset_data();
 		this->video_menu->insert_data(this->m_stype, this->m_info.is_fullscreen);
 	}
 }
 
-void WindowScreen::setup_crop_menu() {
+void WindowScreen::setup_crop_menu(bool reset_data) {
 	if(this->curr_menu != CROP_MENU_TYPE) {
 		this->curr_menu = CROP_MENU_TYPE;
-		this->crop_menu->reset_data();
+		if(reset_data)
+			this->crop_menu->reset_data();
 		this->crop_menu->insert_data(&this->possible_crops);
 	}
 }
 
-void WindowScreen::setup_par_menu(bool is_top) {
+void WindowScreen::setup_par_menu(bool is_top, bool reset_data) {
 	CurrMenuType wanted_type = TOP_PAR_MENU_TYPE;
 	if(!is_top)
 		wanted_type = BOTTOM_PAR_MENU_TYPE;
 	if(this->curr_menu != wanted_type) {
 		this->curr_menu = wanted_type;
-		this->par_menu->reset_data();
+		if(reset_data)
+			this->par_menu->reset_data();
 		std::string title_piece = "";
 		if((is_top) && (this->m_stype == ScreenType::JOINT))
 			title_piece = "Top";
@@ -396,45 +403,89 @@ void WindowScreen::setup_par_menu(bool is_top) {
 	}
 }
 
-void WindowScreen::setup_offset_menu() {
+void WindowScreen::setup_offset_menu(bool reset_data) {
 	if(this->curr_menu != OFFSET_MENU_TYPE) {
 		this->curr_menu = OFFSET_MENU_TYPE;
-		this->offset_menu->reset_data();
+		if(reset_data)
+			this->offset_menu->reset_data();
 		this->offset_menu->insert_data();
 	}
 }
 
-void WindowScreen::setup_rotation_menu() {
+void WindowScreen::setup_rotation_menu(bool reset_data) {
 	if(this->curr_menu != ROTATION_MENU_TYPE) {
 		this->curr_menu = ROTATION_MENU_TYPE;
-		this->rotation_menu->reset_data();
+		if(reset_data)
+			this->rotation_menu->reset_data();
 		this->rotation_menu->insert_data();
 	}
 }
 
-void WindowScreen::setup_audio_menu() {
+void WindowScreen::setup_audio_menu(bool reset_data) {
 	if(this->curr_menu != AUDIO_MENU_TYPE) {
 		this->curr_menu = AUDIO_MENU_TYPE;
-		this->audio_menu->reset_data();
+		if(reset_data)
+			this->audio_menu->reset_data();
 		this->audio_menu->insert_data();
 	}
 }
 
-void WindowScreen::setup_bfi_menu() {
+void WindowScreen::setup_bfi_menu(bool reset_data) {
 	if(this->curr_menu != BFI_MENU_TYPE) {
 		this->curr_menu = BFI_MENU_TYPE;
-		this->bfi_menu->reset_data();
+		if(reset_data)
+			this->bfi_menu->reset_data();
 		this->bfi_menu->insert_data();
 	}
 }
 
-void WindowScreen::setup_load_menu() {
+void WindowScreen::setup_fileconfig_menu(bool is_save, bool reset_data) {
+	CurrMenuType wanted_type = LOAD_MENU_TYPE;
+	if(is_save)
+		wanted_type = SAVE_MENU_TYPE;
+	if(this->curr_menu != wanted_type) {
+		this->possible_files.clear();
+		FileData file_data;
+		bool success = false;
+		if(is_save) {
+			file_data.index = CREATE_NEW_FILE_INDEX;
+			file_data.name = "";
+			this->possible_files.push_back(file_data);
+		}
+		file_data.index = STARTUP_FILE_INDEX;
+		file_data.name = load_layout_name(file_data.index, success);
+		this->possible_files.push_back(file_data);
+		for(int i = 1; i <= 4; i++) {
+			file_data.index = i;
+			file_data.name = load_layout_name(file_data.index, success);
+			this->possible_files.push_back(file_data);
+		}
+		int first_free;
+		bool failed = false;
+		for(first_free = 5; first_free <= 100; first_free++) {
+			file_data.index = first_free;
+			file_data.name = load_layout_name(file_data.index, success);
+			if(!success) {
+				failed = true;
+				break;
+			}
+			this->possible_files.push_back(file_data);
+		}
+		if(is_save && (!failed)) {
+			this->possible_files.erase(this->possible_files.begin());
+		}
+		this->curr_menu = wanted_type;
+		if(reset_data)
+			this->fileconfig_menu->reset_data();
+		std::string title_piece = "Load";
+		if(is_save)
+			title_piece = "Save";
+		this->fileconfig_menu->setup_title(title_piece);
+		this->fileconfig_menu->insert_data(&this->possible_files);
+	}
 }
 
-void WindowScreen::setup_save_menu() {
-}
-
-void WindowScreen::setup_resolution_menu() {
+void WindowScreen::setup_resolution_menu(bool reset_data) {
 	if(this->curr_menu != RESOLUTION_MENU_TYPE) {
 		this->possible_resolutions.clear();
 		std::vector<sf::VideoMode> modes = sf::VideoMode::getFullscreenModes();
@@ -445,7 +496,8 @@ void WindowScreen::setup_resolution_menu() {
 				this->possible_resolutions.push_back(modes[i]);
 		if(this->possible_resolutions.size() > 0) {
 			this->curr_menu = RESOLUTION_MENU_TYPE;
-			this->resolution_menu->reset_data();
+			if(reset_data)
+				this->resolution_menu->reset_data();
 			this->resolution_menu->insert_data(&this->possible_resolutions);
 		}
 		else
@@ -453,20 +505,28 @@ void WindowScreen::setup_resolution_menu() {
 	}
 }
 
-void WindowScreen::setup_extra_menu() {
+void WindowScreen::setup_extra_menu(bool reset_data) {
 }
 
-void WindowScreen::setup_status_menu() {
+void WindowScreen::setup_status_menu(bool reset_data) {
 }
 
-void WindowScreen::setup_licenses_menu() {
+void WindowScreen::setup_licenses_menu(bool reset_data) {
 }
 
-void WindowScreen::setup_relative_pos_menu() {
+void WindowScreen::setup_relative_pos_menu(bool reset_data) {
 	if(this->curr_menu != RELATIVE_POS_MENU_TYPE) {
 		this->curr_menu = RELATIVE_POS_MENU_TYPE;
-		this->relpos_menu->reset_data();
+		if(reset_data)
+			this->relpos_menu->reset_data();
 		this->relpos_menu->insert_data();
+	}
+}
+
+void WindowScreen::update_save_menu() {
+	if(this->curr_menu == SAVE_MENU_TYPE) {
+		this->curr_menu = DEFAULT_MENU_TYPE;
+		this->setup_fileconfig_menu(true, false);
 	}
 }
 
@@ -752,11 +812,11 @@ void WindowScreen::poll() {
 							done = true;
 							break;
 						case MAIN_MENU_LOAD_PROFILES:
-							this->setup_load_menu();
+							this->setup_fileconfig_menu(false);
 							done = true;
 							break;
 						case MAIN_MENU_SAVE_PROFILES:
-							this->setup_save_menu();
+							this->setup_fileconfig_menu(true);
 							done = true;
 							break;
 						case MAIN_MENU_STATUS:
@@ -806,6 +866,46 @@ void WindowScreen::poll() {
 							break;
 					}
 					this->audio_menu->reset_output_option();
+					continue;
+				}
+				break;
+			case SAVE_MENU_TYPE:
+				if(this->fileconfig_menu->poll(event_data)) {
+					switch(this->fileconfig_menu->selected_index) {
+						case FILECONFIG_MENU_BACK:
+							this->setup_main_menu();
+							done = true;
+							break;
+						case FILECONFIG_MENU_NO_ACTION:
+							break;
+						case CREATE_NEW_FILE_INDEX:
+							this->m_prepare_save = this->possible_files[this->possible_files.size() - 1].index + 1;
+							done = true;
+							break;
+						default:
+							this->m_prepare_save = this->fileconfig_menu->selected_index;
+							done = true;
+							break;
+					}
+					this->fileconfig_menu->reset_output_option();
+					continue;
+				}
+				break;
+			case LOAD_MENU_TYPE:
+				if(this->fileconfig_menu->poll(event_data)) {
+					switch(this->fileconfig_menu->selected_index) {
+						case FILECONFIG_MENU_BACK:
+							this->setup_main_menu();
+							done = true;
+							break;
+						case FILECONFIG_MENU_NO_ACTION:
+							break;
+						default:
+							this->m_prepare_load = this->fileconfig_menu->selected_index;
+							done = true;
+							break;
+					}
+					this->fileconfig_menu->reset_output_option();
 					continue;
 				}
 				break;
@@ -1235,6 +1335,12 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 			case RESOLUTION_MENU_TYPE:
 				this->resolution_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->curr_desk_mode);
 				break;
+			case SAVE_MENU_TYPE:
+				this->fileconfig_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+				break;
+			case LOAD_MENU_TYPE:
+				this->fileconfig_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+				break;
 			default:
 				break;
 		}
@@ -1251,9 +1357,10 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 	}
 }
 
-void WindowScreen::setup_connection_menu(DevicesList *devices_list) {
+void WindowScreen::setup_connection_menu(DevicesList *devices_list, bool reset_data) {
 	this->curr_menu = CONNECT_MENU_TYPE;
-	this->connection_menu->reset_data();
+	if(reset_data)
+		this->connection_menu->reset_data();
 	this->connection_menu->insert_data(devices_list);
 }
 
@@ -1633,6 +1740,12 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 		case RESOLUTION_MENU_TYPE:
 			this->resolution_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
+		case SAVE_MENU_TYPE:
+			this->fileconfig_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case LOAD_MENU_TYPE:
+			this->fileconfig_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
 		default:
 			break;
 	}
@@ -1662,6 +1775,9 @@ void WindowScreen::window_render_call() {
 				this->loaded_info.bfi_amount = 1;
 			if(this->loaded_info.bfi_amount > (this->loaded_info.bfi_divider - 1))
 				this->loaded_info.bfi_amount = this->loaded_info.bfi_divider - 1;
+			for(int i = 0; i < (this->loaded_info.bfi_divider - this->loaded_info.bfi_amount - 1); i++) {
+				sf::sleep(sf::seconds(frame_time / (this->loaded_info.bfi_divider * 1.1)));
+			}
 			for(int i = 0; i < this->loaded_info.bfi_amount; i++) {
 				sf::sleep(sf::seconds(frame_time / (this->loaded_info.bfi_divider * 1.1)));
 				this->display_data_to_window(false);

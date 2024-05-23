@@ -22,6 +22,7 @@
 
 #define STARTUP_FILE_INDEX -1
 #define SIMPLE_RESET_DATA_INDEX -2
+#define CREATE_NEW_FILE_INDEX -3
 
 std::string LayoutNameGenerator(int index);
 std::string LayoutPathGenerator(int index);

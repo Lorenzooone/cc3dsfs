@@ -100,7 +100,7 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 	return true;
 }
 
-static void load_layout_file(int load_index, FrontendData *frontend_data, AudioData* audio_data, OutTextData &out_text_data, bool skip_io) {
+static void load_layout_file(int load_index, FrontendData *frontend_data, AudioData* audio_data, OutTextData &out_text_data, bool skip_io, bool do_print) {
 	if(skip_io)
 		return;
 
@@ -120,7 +120,7 @@ static void load_layout_file(int load_index, FrontendData *frontend_data, AudioD
 	std::string layout_name = LayoutNameGenerator(load_index);
 	std::string layout_path = LayoutPathGenerator(load_index);
 	bool op_success = load(layout_path, layout_name, frontend_data->top_screen->m_info, frontend_data->bot_screen->m_info, frontend_data->joint_screen->m_info, frontend_data->display_data, audio_data, out_text_data);
-	if((load_index != STARTUP_FILE_INDEX) && op_success) {
+	if(do_print && op_success) {
 		std::string load_name = load_layout_name(load_index, name_load_success);
 		UpdateOutText(out_text_data, "Layout loaded from: " + layout_path + layout_name, "Layout " + load_name + " loaded", TEXT_KIND_SUCCESS);
 	}
@@ -149,7 +149,7 @@ static bool save(const std::string path, const std::string name, const std::stri
 	return true;
 }
 
-static void save_layout_file(int save_index, FrontendData *frontend_data, AudioData* audio_data, OutTextData &out_text_data, bool skip_io) {
+static void save_layout_file(int save_index, FrontendData *frontend_data, AudioData* audio_data, OutTextData &out_text_data, bool skip_io, bool do_print) {
 	if(skip_io)
 		return;
 
@@ -161,7 +161,7 @@ static void save_layout_file(int save_index, FrontendData *frontend_data, AudioD
 	std::string layout_name = LayoutNameGenerator(save_index);
 	std::string layout_path = LayoutPathGenerator(save_index);
 	bool op_success = save(layout_path, layout_name, save_name, frontend_data->top_screen->m_info, frontend_data->bot_screen->m_info, frontend_data->joint_screen->m_info, frontend_data->display_data, audio_data, out_text_data);
-	if((save_index != STARTUP_FILE_INDEX) && op_success) {
+	if(do_print && op_success) {
 		UpdateOutText(out_text_data, "Layout saved to: " + layout_path + layout_name, "Layout " + save_name + " saved", TEXT_KIND_SUCCESS);
 	}
 }
@@ -250,7 +250,7 @@ static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data
 	frontend_data.bot_screen = &bot_screen;
 	frontend_data.joint_screen = &joint_screen;
 
-	load_layout_file(STARTUP_FILE_INDEX, &frontend_data, audio_data, out_text_data, skip_io);
+	load_layout_file(STARTUP_FILE_INDEX, &frontend_data, audio_data, out_text_data, skip_io, false);
 	// Due to the risk for seizures, at the start of the program, set BFI to false!
 	top_screen.m_info.bfi = false;
 	bot_screen.m_info.bfi = false;
@@ -341,10 +341,14 @@ static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data
 		}
 		
 		if((load_index = top_screen.load_data()) || (load_index = bot_screen.load_data()) || (load_index = joint_screen.load_data()))
-			load_layout_file(load_index, &frontend_data, audio_data, out_text_data, skip_io);
+			load_layout_file(load_index, &frontend_data, audio_data, out_text_data, skip_io, true);
 		
-		if((save_index = top_screen.save_data()) || (save_index = bot_screen.save_data()) || (save_index = joint_screen.save_data()))
-			save_layout_file(save_index, &frontend_data, audio_data, out_text_data, skip_io);
+		if((save_index = top_screen.save_data()) || (save_index = bot_screen.save_data()) || (save_index = joint_screen.save_data())) {
+			save_layout_file(save_index, &frontend_data, audio_data, out_text_data, skip_io, true);
+			top_screen.update_save_menu();
+			bot_screen.update_save_menu();
+			joint_screen.update_save_menu();
+		}
 
 		if(audio_data->has_text_to_print()) {
 			UpdateOutText(out_text_data, "", audio_data->text_to_print(), TEXT_KIND_NORMAL);
@@ -376,7 +380,7 @@ static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data
 	bot_screen.after_thread_join();
 	joint_screen.after_thread_join();
 
-	save_layout_file(STARTUP_FILE_INDEX, &frontend_data, audio_data, out_text_data, skip_io);
+	save_layout_file(STARTUP_FILE_INDEX, &frontend_data, audio_data, out_text_data, skip_io, false);
 
 	if(!out_text_data.consumed) {
 		ConsoleOutText(out_text_data.full_text);

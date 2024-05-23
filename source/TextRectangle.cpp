@@ -47,7 +47,7 @@ void TextRectangle::setPosition(int pos_x, int pos_y) {
 }
 
 bool TextRectangle::isCoordInRectangle(int coord_x, int coord_y) {
-	if(!(font_load_success && this->future_data.show_text && (!this->is_done_showing_text)))
+	if(!(font_load_success && this->future_data.show_text))
 		return false;
 	if(coord_x < this->future_data.pos_x)
 		return false;
@@ -73,7 +73,7 @@ void TextRectangle::setProportionalBox(bool proportional_box) {
 }
 
 void TextRectangle::prepareRenderText() {
-	if(this->loaded_data.proportional_box) {
+	if(this->future_data.proportional_box) {
 		this->future_data.width = this->loaded_data.width;
 		this->future_data.height = this->loaded_data.height;
 	}

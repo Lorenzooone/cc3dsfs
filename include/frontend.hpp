@@ -23,6 +23,7 @@
 #include "BFIMenu.hpp"
 #include "RelativePositionMenu.hpp"
 #include "ResolutionMenu.hpp"
+#include "FileConfigMenu.hpp"
 #include "display_structs.hpp"
 
 struct HeldTime {
@@ -46,9 +47,10 @@ public:
 	void end();
 	void after_thread_join();
 	void draw(double frame_time, VideoOutputData* out_buf);
-	void setup_connection_menu(DevicesList *devices_list);
+	void setup_connection_menu(DevicesList *devices_list, bool reset_data = true);
 	int check_connection_menu_result();
 	void end_connection_menu();
+	void update_save_menu();
 
 	void print_notification(std::string text, TextKind kind = TEXT_KIND_NORMAL);
 	int load_data();
@@ -106,9 +108,11 @@ private:
 	BFIMenu *bfi_menu;
 	RelativePositionMenu *relpos_menu;
 	ResolutionMenu *resolution_menu;
+	FileConfigMenu *fileconfig_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const PARData*> possible_pars;
 	std::vector<sf::VideoMode> possible_resolutions;
+	std::vector<FileData> possible_files;
 
 	sf::Texture in_tex;
 
@@ -190,21 +194,20 @@ private:
 	sf::Vector2f getShownScreenSize(bool is_top, int &crop_kind);
 	void crop();
 	void setWinSize(bool is_main_thread);
-	void setup_main_menu();
-	void setup_video_menu();
-	void setup_crop_menu();
-	void setup_par_menu(bool is_top);
-	void setup_offset_menu();
-	void setup_rotation_menu();
-	void setup_audio_menu();
-	void setup_bfi_menu();
-	void setup_load_menu();
-	void setup_save_menu();
-	void setup_resolution_menu();
-	void setup_extra_menu();
-	void setup_status_menu();
-	void setup_licenses_menu();
-	void setup_relative_pos_menu();
+	void setup_main_menu(bool reset_data = true);
+	void setup_video_menu(bool reset_data = true);
+	void setup_crop_menu(bool reset_data = true);
+	void setup_par_menu(bool is_top, bool reset_data = true);
+	void setup_offset_menu(bool reset_data = true);
+	void setup_rotation_menu(bool reset_data = true);
+	void setup_audio_menu(bool reset_data = true);
+	void setup_bfi_menu(bool reset_data = true);
+	void setup_fileconfig_menu(bool is_save, bool reset_data = true);
+	void setup_resolution_menu(bool reset_data = true);
+	void setup_extra_menu(bool reset_data = true);
+	void setup_status_menu(bool reset_data = true);
+	void setup_licenses_menu(bool reset_data = true);
+	void setup_relative_pos_menu(bool reset_data = true);
 	void update_connection();
 };
 
