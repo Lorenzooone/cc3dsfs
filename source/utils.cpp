@@ -1,5 +1,8 @@
 #include "utils.hpp"
 
+#include <iostream>
+#include <fstream>
+#include <sstream>
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
@@ -32,6 +35,60 @@ std::string get_float_str_decimals(float value, int decimals) {
 	}
 	
 	return return_text;
+}
+
+std::string LayoutNameGenerator(int index) {
+	if(index == STARTUP_FILE_INDEX)
+		return std::string(NAME) + ".cfg";
+	return "layout" + std::to_string(index) + ".cfg";
+}
+
+std::string LayoutPathGenerator(int index) {
+	#if !(defined(_WIN32) || defined(_WIN64))
+	std::string cfg_dir = std::string(std::getenv("HOME")) + "/.config/" + std::string(NAME);
+	#else
+	std::string cfg_dir = ".config/" + std::string(NAME);
+	#endif
+	if(index == STARTUP_FILE_INDEX)
+		return cfg_dir + "/";
+	return cfg_dir + "/presets/";
+}
+
+std::string load_layout_name(int index, bool &success) {
+	if(index == STARTUP_FILE_INDEX) {
+		success = true;
+		return "Initial";
+	}
+	std::string name = LayoutNameGenerator(index);
+	std::string path = LayoutPathGenerator(index);
+
+	std::ifstream file(path + name);
+	std::string line;
+	success = false;
+
+	if(!file.good()) {
+		return std::to_string(index);
+	}
+
+	success = true;
+	while(std::getline(file, line)) {
+		std::istringstream kvp(line);
+		std::string key;
+
+		if(std::getline(kvp, key, '=')) {
+			std::string value;
+			if(std::getline(kvp, value)) {
+
+				if(key == "name") {
+					file.close();
+					return value;
+				}
+			}
+		}
+	}
+
+	file.close();
+	return std::to_string(index);
 }
 //============================================================================
 

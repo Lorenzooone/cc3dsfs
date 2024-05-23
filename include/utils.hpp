@@ -20,6 +20,12 @@
 #define USB_NUM_CHECKS 3
 #define USB_CHECKS_PER_SECOND ((USB_FPS + (USB_FPS / 12)) * USB_NUM_CHECKS)
 
+#define STARTUP_FILE_INDEX -1
+#define SIMPLE_RESET_DATA_INDEX -2
+
+std::string LayoutNameGenerator(int index);
+std::string LayoutPathGenerator(int index);
+std::string load_layout_name(int index, bool &success);
 bool is_big_endian(void);
 std::string get_float_str_decimals(float value, int decimals);
 

@@ -693,8 +693,7 @@ void WindowScreen::poll() {
 			return;
 		if(this->query_reset_request()) {
 			this->reset_held_times();
-			reset_screen_info(this->m_info);
-			this->reload();
+			this->m_prepare_load = SIMPLE_RESET_DATA_INDEX;
 			done = true;
 			continue;
 		}
@@ -1987,6 +1986,7 @@ void WindowScreen::update_view_size() {
 }
 
 void WindowScreen::open() {
+	this->m_info.is_fullscreen = false;
 	this->create_window(true);
 }
 

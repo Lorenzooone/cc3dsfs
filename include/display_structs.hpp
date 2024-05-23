@@ -33,7 +33,7 @@ struct ScreenInfo {
 };
 
 struct DisplayData {
-	bool split = false;
+	bool split;
 };
 
 #pragma pack(push, 1)

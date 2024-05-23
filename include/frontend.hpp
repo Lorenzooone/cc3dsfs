@@ -219,6 +219,7 @@ struct FrontendData {
 bool is_allowed_crop(const CropData* crop_data, ScreenType s_type);
 void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type);
 void insert_basic_pars(std::vector<const PARData*> &par_vector);
+void reset_display_data(DisplayData *display_data);
 void reset_fullscreen_info(ScreenInfo &info);
 void reset_screen_info(ScreenInfo &info);
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
