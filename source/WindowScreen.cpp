@@ -32,6 +32,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->relpos_menu = new RelativePositionMenu(this->font_load_success, this->text_font);
 	this->resolution_menu = new ResolutionMenu(this->font_load_success, this->text_font);
 	this->fileconfig_menu = new FileConfigMenu(this->font_load_success, this->text_font);
+	this->extra_menu = new ExtraSettingsMenu(this->font_load_success, this->text_font);
 	this->in_tex.create(IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT);
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
@@ -70,6 +71,7 @@ WindowScreen::~WindowScreen() {
 	delete this->relpos_menu;
 	delete this->resolution_menu;
 	delete this->fileconfig_menu;
+	delete this->extra_menu;
 }
 
 void WindowScreen::build() {
@@ -506,6 +508,12 @@ void WindowScreen::setup_resolution_menu(bool reset_data) {
 }
 
 void WindowScreen::setup_extra_menu(bool reset_data) {
+	if(this->curr_menu != EXTRA_MENU_TYPE) {
+		this->curr_menu = EXTRA_MENU_TYPE;
+		if(reset_data)
+			this->extra_menu->reset_data();
+		this->extra_menu->insert_data(this->m_stype, this->m_info.is_fullscreen);
+	}
 }
 
 void WindowScreen::setup_status_menu(bool reset_data) {
@@ -1213,6 +1221,35 @@ void WindowScreen::poll() {
 					continue;
 				}
 				break;
+			case EXTRA_MENU_TYPE:
+				if(this->extra_menu->poll(event_data)) {
+					switch(this->extra_menu->selected_index) {
+						case EXTRA_SETTINGS_MENU_BACK:
+							this->setup_main_menu();
+							done = true;
+							break;
+						case EXTRA_SETTINGS_MENU_NO_ACTION:
+							break;
+						case EXTRA_SETTINGS_MENU_QUIT_APPLICATION:
+							this->m_prepare_quit = true;
+							this->curr_menu = DEFAULT_MENU_TYPE;
+							done = true;
+							break;
+						case EXTRA_SETTINGS_MENU_FULLSCREEN:
+							this->fullscreen_change();
+							done = true;
+							break;
+						case EXTRA_SETTINGS_MENU_SPLIT:
+							this->split_change();
+							done = true;
+							break;
+						default:
+							break;
+					}
+					this->extra_menu->reset_output_option();
+					continue;
+				}
+				break;
 			default:
 				break;
 		}
@@ -1340,6 +1377,9 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 				break;
 			case LOAD_MENU_TYPE:
 				this->fileconfig_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+				break;
+			case EXTRA_MENU_TYPE:
+				this->extra_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
 				break;
 			default:
 				break;
@@ -1745,6 +1785,9 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 			break;
 		case LOAD_MENU_TYPE:
 			this->fileconfig_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case EXTRA_MENU_TYPE:
+			this->extra_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

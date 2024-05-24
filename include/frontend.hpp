@@ -24,6 +24,7 @@
 #include "RelativePositionMenu.hpp"
 #include "ResolutionMenu.hpp"
 #include "FileConfigMenu.hpp"
+#include "ExtraSettingsMenu.hpp"
 #include "display_structs.hpp"
 
 struct HeldTime {
@@ -109,6 +110,7 @@ private:
 	RelativePositionMenu *relpos_menu;
 	ResolutionMenu *resolution_menu;
 	FileConfigMenu *fileconfig_menu;
+	ExtraSettingsMenu *extra_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const PARData*> possible_pars;
 	std::vector<sf::VideoMode> possible_resolutions;
