@@ -1316,6 +1316,8 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 		else
 			this->open();
 	}
+	if(!should_be_open)
+		this->m_info.is_fullscreen = false;
 	this->loaded_menu = this->curr_menu;
 	loaded_operations = future_operations;
 	if(this->m_win.isOpen() || this->loaded_operations.call_create) {
@@ -2141,7 +2143,6 @@ void WindowScreen::update_view_size() {
 }
 
 void WindowScreen::open() {
-	this->m_info.is_fullscreen = false;
 	this->create_window(true);
 }
 
