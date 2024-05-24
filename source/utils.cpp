@@ -9,6 +9,14 @@
 #include <queue>
 #include <cmath>
 
+#define xstr(a) str(a)
+#define str(a) #a
+
+#define APP_VERSION_MAJOR 0
+#define APP_VERSION_MINOR 0
+#define APP_VERSION_REVISION 0
+#define APP_VERSION_LETTER M
+
 bool is_big_endian(void) {
     union {
         uint32_t i;
@@ -16,6 +24,10 @@ bool is_big_endian(void) {
     } value = {0x01020304};
 
     return value.c[0] == 1;
+}
+
+std::string get_version_string() {
+	return std::to_string(APP_VERSION_MAJOR) + "." + std::to_string(APP_VERSION_MINOR) + "." + std::to_string(APP_VERSION_REVISION) + xstr(APP_VERSION_LETTER);
 }
 
 std::string get_float_str_decimals(float value, int decimals) {

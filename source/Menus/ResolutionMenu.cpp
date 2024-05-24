@@ -63,7 +63,7 @@ void ResolutionMenu::prepare(float menu_scaling_factor, int view_size_x, int vie
 			continue;
 		int mode_index = start + i;
 		sf::VideoMode mode = this->get_resolution(mode_index);
-		if((mode.width == curr_desk_mode->width) && (mode.height == curr_desk_mode->height) && (mode.bitsPerPixel == curr_desk_mode->bitsPerPixel))
+		if((mode.width == curr_desk_mode->width) && (mode.height == curr_desk_mode->height))
 			this->labels[index]->setText("<" + this->get_string_option(mode_index, DEFAULT_ACTION) + ">");
 		else
 			this->labels[index]->setText(this->get_string_option(mode_index, DEFAULT_ACTION));

@@ -2120,11 +2120,7 @@ void WindowScreen::create_window(bool re_prepare_size) {
 			}
 		}
 		if(!success) {
-			std::vector<sf::VideoMode> modes = sf::VideoMode::getFullscreenModes();
-			if(modes.size() > 0)
-				this->curr_desk_mode = modes[0];
-			else
-				this->curr_desk_mode = sf::VideoMode::getDesktopMode();
+			this->curr_desk_mode = sf::VideoMode::getDesktopMode();
 		}
 		this->m_window_width = curr_desk_mode.width;
 		this->m_window_height = curr_desk_mode.height;
