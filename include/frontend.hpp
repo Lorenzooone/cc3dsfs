@@ -25,11 +25,17 @@
 #include "ResolutionMenu.hpp"
 #include "FileConfigMenu.hpp"
 #include "ExtraSettingsMenu.hpp"
+#include "StatusMenu.hpp"
 #include "display_structs.hpp"
 
 struct HeldTime {
 	std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
 	bool started;
+};
+
+struct FPSArray {
+	double *data;
+	int index;
 };
 
 class WindowScreen {
@@ -111,10 +117,16 @@ private:
 	ResolutionMenu *resolution_menu;
 	FileConfigMenu *fileconfig_menu;
 	ExtraSettingsMenu *extra_menu;
+	StatusMenu *status_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const PARData*> possible_pars;
 	std::vector<sf::VideoMode> possible_resolutions;
 	std::vector<FileData> possible_files;
+	FPSArray in_fps;
+	FPSArray draw_fps;
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_draw_time;
+	FPSArray poll_fps;
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_poll_time;
 
 	sf::Texture in_tex;
 
@@ -232,6 +244,6 @@ std::string save_screen_info(std::string base, const ScreenInfo &info);
 void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor);
 void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor);
 void default_sleep();
-void update_output(FrontendData* frontend_data, double frame_time = 0, VideoOutputData *out_buf = NULL);
+void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL);
 void screen_display_thread(WindowScreen *screen);
 #endif

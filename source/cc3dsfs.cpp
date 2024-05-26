@@ -25,8 +25,6 @@
 #include "audio.hpp"
 #include "conversions.hpp"
 
-#define FPS_WINDOW_SIZE 64
-
 // Threshold to keep the audio latency limited in "amount of frames".
 #define AUDIO_LATENCY_LIMIT 4
 #define NUM_CONCURRENT_AUDIO_BUFFERS ((AUDIO_LATENCY_LIMIT * 2) + 1)
@@ -226,7 +224,7 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 
 static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data) {
 	VideoOutputData *out_buf;
-	double *curr_fps_array;
+	double last_frame_time = 0.0;
 	int num_elements_fps_array = 0;
 	int curr_out, prev_out = NUM_CONCURRENT_DATA_BUFFERS - 1;
 	FrontendData frontend_data;
@@ -234,13 +232,11 @@ static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data
 	frontend_data.reload = true;
 	bool skip_io = false;
 	int num_allowed_blanks = MAX_ALLOWED_BLANKS;
-	double last_frame_time = 0;
 	std::mutex events_access;
 	OutTextData out_text_data;
 	out_text_data.consumed = true;
 
 	out_buf = new VideoOutputData;
-	curr_fps_array = new double[FPS_WINDOW_SIZE];
 	memset(out_buf, 0, sizeof(VideoOutputData));
 
 	WindowScreen top_screen(ScreenType::TOP, &capture_data->status, &frontend_data.display_data, audio_data, &events_access);
@@ -269,12 +265,14 @@ static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data
 
 	while(capture_data->status.running) {
 
+		VideoOutputData *chosen_buf = out_buf;
+		bool blank_out = false;
 		if(capture_data->status.connected) {
 			bool timed_out = !capture_data->status.video_wait.timed_lock();
 			curr_out = (capture_data->status.curr_in - 1 + NUM_CONCURRENT_DATA_BUFFERS) % NUM_CONCURRENT_DATA_BUFFERS;
 
 			if((!capture_data->status.cooldown_curr_in) && (curr_out != prev_out)) {
-				double frame_time = capture_data->time_in_buf[curr_out];
+				last_frame_time = capture_data->time_in_buf[curr_out];
 				if(capture_data->read[curr_out] >= sizeof(VideoInputData)) {
 					convertVideoToOutput(&capture_data->capture_buf[curr_out].video_data, out_buf);
 					num_allowed_blanks = MAX_ALLOWED_BLANKS;
@@ -287,43 +285,22 @@ static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data
 						memset(out_buf, 0, sizeof(VideoOutputData));
 					}
 				}
-
-				update_output(&frontend_data, frame_time, out_buf);
-				last_frame_time = frame_time;
-
-				curr_fps_array[num_elements_fps_array % FPS_WINDOW_SIZE] = 1.0 / frame_time;
-				num_elements_fps_array++;
-				if(num_elements_fps_array >= (2 * FPS_WINDOW_SIZE))
-					num_elements_fps_array -= FPS_WINDOW_SIZE;
 			}
-			else {
-				VideoOutputData *chosen_buf = out_buf;
-				if(capture_data->status.cooldown_curr_in) {
-					last_frame_time = 0;
-					chosen_buf = NULL;
-				}
-				update_output(&frontend_data, last_frame_time, chosen_buf);
-			}
-
+			else if(capture_data->status.cooldown_curr_in)
+				blank_out = true;
 			prev_out = curr_out;
 		}
 		else {
-			curr_fps_array[num_elements_fps_array % FPS_WINDOW_SIZE] = 0;
-			num_elements_fps_array++;
-			if(num_elements_fps_array >= (2 * FPS_WINDOW_SIZE))
-				num_elements_fps_array -= FPS_WINDOW_SIZE;
 			default_sleep();
+			blank_out = true;
 		}
-		
-		int available_fps = FPS_WINDOW_SIZE;
-		if(num_elements_fps_array < available_fps)
-			available_fps = num_elements_fps_array;
-		double fps_sum = 0;
-		for(int i = 0; i < available_fps; i++)
-			fps_sum += curr_fps_array[i];
 
-		if(!capture_data->status.connected)
-			update_output(&frontend_data);
+		if(blank_out) {
+			last_frame_time = 0.0;
+			chosen_buf = NULL;
+		}
+
+		update_output(&frontend_data, last_frame_time, chosen_buf);
 
 		int load_index = 0;
 		int save_index = 0;
@@ -388,7 +365,6 @@ static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data
 	}
 
 	delete out_buf;
-	delete []curr_fps_array;
 }
 
 int main(int argc, char **argv) {

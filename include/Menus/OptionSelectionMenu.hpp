@@ -55,7 +55,7 @@ protected:
 	void base_prepare(float menu_scaling_factor, int view_size_x, int view_size_y);
 	std::string setTextOptionInt(int index, int value);
 	std::string setTextOptionBool(int index, bool value);
-	std::string setTextOptionFloat(int index, float value);
+	std::string setTextOptionFloat(int index, float value, int num_decimals = 1);
 
 	struct MenuData {
 		int page = 0;

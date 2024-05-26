@@ -3,10 +3,52 @@
 #include <cstring>
 #include "font_ttf.h"
 
+#define FPS_WINDOW_SIZE 64
+
 #define LEFT_ROUNDED_PADDING 5
 #define RIGHT_ROUNDED_PADDING 5
 #define TOP_ROUNDED_PADDING 0
 #define BOTTOM_ROUNDED_PADDING 5
+
+static void check_held_reset(bool value, HeldTime &action_time) {
+	if(value) {
+		if(!action_time.started) {
+			action_time.start_time = std::chrono::high_resolution_clock::now();
+			action_time.started = true;
+		}
+	}
+	else
+		action_time.started = false;
+}
+
+static float check_held_diff(std::chrono::time_point<std::chrono::high_resolution_clock> &curr_time, HeldTime &action_time) {
+	if(!action_time.started)
+		return 0.0;
+	const std::chrono::duration<double> diff = curr_time - action_time.start_time;
+	return diff.count();
+}
+
+static void FPSArrayInsertElement(FPSArray *array, double frame_time) {
+	if(array->index < 0)
+		array->index = 0;
+	double rate = 0.0;
+	if(frame_time != 0.0)
+		rate = 1.0 / frame_time;
+	array->data[array->index % FPS_WINDOW_SIZE] = rate;
+	array->index++;
+	if(array->index == (2 * FPS_WINDOW_SIZE))
+		array->index = FPS_WINDOW_SIZE;
+}
+
+static double FPSArrayGetAverage(FPSArray *array) {
+	int available_fps = FPS_WINDOW_SIZE;
+	if(array->index < available_fps)
+		available_fps = array->index;
+	double fps_sum = 0;
+	for(int i = 0; i < available_fps; i++)
+		fps_sum += array->data[i];
+	return fps_sum / available_fps;
+}
 
 WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, std::mutex* events_access) {
 	this->m_stype = stype;
@@ -33,6 +75,13 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->resolution_menu = new ResolutionMenu(this->font_load_success, this->text_font);
 	this->fileconfig_menu = new FileConfigMenu(this->font_load_success, this->text_font);
 	this->extra_menu = new ExtraSettingsMenu(this->font_load_success, this->text_font);
+	this->status_menu = new StatusMenu(this->font_load_success, this->text_font);
+	this->in_fps.data = new double[FPS_WINDOW_SIZE];
+	this->draw_fps.data = new double[FPS_WINDOW_SIZE];
+	this->poll_fps.data = new double[FPS_WINDOW_SIZE];
+	this->in_fps.index = 0;
+	this->draw_fps.index = 0;
+	this->poll_fps.index = 0;
 	this->in_tex.create(IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT);
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
@@ -40,6 +89,8 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->audio_data = audio_data;
 	this->last_window_creation_time = std::chrono::high_resolution_clock::now();
 	this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
+	this->last_draw_time = std::chrono::high_resolution_clock::now();
+	this->last_poll_time = std::chrono::high_resolution_clock::now();
 	this->touch_right_click_action.started = false;
 	this->reset_held_times();
 	WindowScreen::reset_operations(future_operations);
@@ -72,6 +123,10 @@ WindowScreen::~WindowScreen() {
 	delete this->resolution_menu;
 	delete this->fileconfig_menu;
 	delete this->extra_menu;
+	delete this->status_menu;
+	delete []this->in_fps.data;
+	delete []this->draw_fps.data;
+	delete []this->poll_fps.data;
 }
 
 void WindowScreen::build() {
@@ -517,6 +572,12 @@ void WindowScreen::setup_extra_menu(bool reset_data) {
 }
 
 void WindowScreen::setup_status_menu(bool reset_data) {
+	if(this->curr_menu != STATUS_MENU_TYPE) {
+		this->curr_menu = STATUS_MENU_TYPE;
+		if(reset_data)
+			this->status_menu->reset_data();
+		this->status_menu->insert_data();
+	}
 }
 
 void WindowScreen::setup_licenses_menu(bool reset_data) {
@@ -1250,6 +1311,22 @@ void WindowScreen::poll() {
 					continue;
 				}
 				break;
+			case STATUS_MENU_TYPE:
+				if(this->status_menu->poll(event_data)) {
+					switch(this->status_menu->selected_index) {
+						case STATUS_MENU_BACK:
+							this->setup_main_menu();
+							done = true;
+							break;
+						case STATUS_MENU_NO_ACTION:
+							break;
+						default:
+							break;
+					}
+					this->status_menu->reset_output_option();
+					continue;
+				}
+				break;
 			default:
 				break;
 		}
@@ -1304,6 +1381,7 @@ void WindowScreen::after_thread_join() {
 }
 
 void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
+	FPSArrayInsertElement(&in_fps, frame_time);
 	if(!this->done_display)
 		return;
 
@@ -1320,7 +1398,15 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 		this->m_info.is_fullscreen = false;
 	this->loaded_menu = this->curr_menu;
 	loaded_operations = future_operations;
+	if(this->loaded_operations.call_create) {
+		this->last_draw_time = std::chrono::high_resolution_clock::now();
+		this->last_poll_time = std::chrono::high_resolution_clock::now();
+	}
 	if(this->m_win.isOpen() || this->loaded_operations.call_create) {
+		auto curr_time = std::chrono::high_resolution_clock::now();
+		const std::chrono::duration<double> diff = curr_time - this->last_draw_time;
+		FPSArrayInsertElement(&draw_fps, diff.count());
+		this->last_draw_time = curr_time;
 		WindowScreen::reset_operations(future_operations);
 		if(out_buf != NULL)
 			memcpy(this->saved_buf, out_buf, sizeof(VideoOutputData));
@@ -1382,6 +1468,9 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 				break;
 			case EXTRA_MENU_TYPE:
 				this->extra_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+				break;
+			case STATUS_MENU_TYPE:
+				this->status_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, FPSArrayGetAverage(&in_fps), FPSArrayGetAverage(&poll_fps), FPSArrayGetAverage(&draw_fps));
 				break;
 			default:
 				break;
@@ -1511,25 +1600,6 @@ void WindowScreen::print_notification_float(std::string base_text, float value, 
 	this->print_notification(base_text + ": " + get_float_str_decimals(value, decimals));
 }
 
-static void check_held_reset(bool value, HeldTime &action_time) {
-	if(value) {
-		if(!action_time.started) {
-			action_time.start_time = std::chrono::high_resolution_clock::now();
-			action_time.started = true;
-		}
-	}
-	else {
-		action_time.started = false;
-	}
-}
-
-static float check_held_diff(std::chrono::time_point<std::chrono::high_resolution_clock> &curr_time, HeldTime &action_time) {
-	if(!action_time.started)
-		return 0.0;
-	const std::chrono::duration<double> diff = curr_time - action_time.start_time;
-	return diff.count();
-}
-
 bool WindowScreen::query_reset_request() {
 	auto curr_time = std::chrono::high_resolution_clock::now();
 	if(check_held_diff(curr_time, this->right_click_action) > this->bad_resolution_timeout)
@@ -1555,6 +1625,10 @@ void WindowScreen::reset_held_times() {
 
 void WindowScreen::poll_window() {
 	if(this->m_win.isOpen()) {
+		auto curr_time = std::chrono::high_resolution_clock::now();
+		const std::chrono::duration<double> diff = curr_time - this->last_poll_time;
+		FPSArrayInsertElement(&poll_fps, diff.count());
+		this->last_poll_time = curr_time;
 		sf::Event event;
 		this->events_access->lock();
 		while(this->m_win.pollEvent(event)) {
@@ -1790,6 +1864,9 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 			break;
 		case EXTRA_MENU_TYPE:
 			this->extra_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case STATUS_MENU_TYPE:
+			this->status_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

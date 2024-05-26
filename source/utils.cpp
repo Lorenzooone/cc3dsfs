@@ -42,8 +42,11 @@ std::string get_float_str_decimals(float value, int decimals) {
 			for(int i = 0; i < decimals; i++)
 				return_text += "0";
 		}
-		else
-			return_text += "." + std::to_string(dec_part);
+		else {
+			return_text += ".";
+			for(int i = 0; i < decimals; i++)
+				return_text += std::to_string((dec_part % ((int)pow(10, decimals - i))) / ((int)pow(10, decimals - i - 1)));
+		}
 	}
 	
 	return return_text;

@@ -17,7 +17,7 @@
 // Use these to properly sleep, with small wakes to check if data is ready
 #define USB_FPS 60
 #define BAD_USB_FPS 25
-#define USB_NUM_CHECKS 3
+#define USB_NUM_CHECKS 1
 #define USB_CHECKS_PER_SECOND ((USB_FPS + (USB_FPS / 12)) * USB_NUM_CHECKS)
 
 #define STARTUP_FILE_INDEX -1
