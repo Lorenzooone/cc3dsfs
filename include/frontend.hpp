@@ -26,6 +26,7 @@
 #include "FileConfigMenu.hpp"
 #include "ExtraSettingsMenu.hpp"
 #include "StatusMenu.hpp"
+#include "LicenseMenu.hpp"
 #include "display_structs.hpp"
 
 struct HeldTime {
@@ -118,6 +119,7 @@ private:
 	FileConfigMenu *fileconfig_menu;
 	ExtraSettingsMenu *extra_menu;
 	StatusMenu *status_menu;
+	LicenseMenu *license_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const PARData*> possible_pars;
 	std::vector<sf::VideoMode> possible_resolutions;

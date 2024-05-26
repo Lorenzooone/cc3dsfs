@@ -76,6 +76,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->fileconfig_menu = new FileConfigMenu(this->font_load_success, this->text_font);
 	this->extra_menu = new ExtraSettingsMenu(this->font_load_success, this->text_font);
 	this->status_menu = new StatusMenu(this->font_load_success, this->text_font);
+	this->license_menu = new LicenseMenu(this->font_load_success, this->text_font);
 	this->in_fps.data = new double[FPS_WINDOW_SIZE];
 	this->draw_fps.data = new double[FPS_WINDOW_SIZE];
 	this->poll_fps.data = new double[FPS_WINDOW_SIZE];
@@ -124,6 +125,7 @@ WindowScreen::~WindowScreen() {
 	delete this->fileconfig_menu;
 	delete this->extra_menu;
 	delete this->status_menu;
+	delete this->license_menu;
 	delete []this->in_fps.data;
 	delete []this->draw_fps.data;
 	delete []this->poll_fps.data;
@@ -581,6 +583,12 @@ void WindowScreen::setup_status_menu(bool reset_data) {
 }
 
 void WindowScreen::setup_licenses_menu(bool reset_data) {
+	if(this->curr_menu != LICENSES_MENU_TYPE) {
+		this->curr_menu = LICENSES_MENU_TYPE;
+		if(reset_data)
+			this->license_menu->reset_data();
+		this->license_menu->insert_data();
+	}
 }
 
 void WindowScreen::setup_relative_pos_menu(bool reset_data) {
@@ -1327,6 +1335,22 @@ void WindowScreen::poll() {
 					continue;
 				}
 				break;
+			case LICENSES_MENU_TYPE:
+				if(this->license_menu->poll(event_data)) {
+					switch(this->license_menu->selected_index) {
+						case LICENSE_MENU_BACK:
+							this->setup_main_menu();
+							done = true;
+							break;
+						case LICENSE_MENU_NO_ACTION:
+							break;
+						default:
+							break;
+					}
+					this->license_menu->reset_output_option();
+					continue;
+				}
+				break;
 			default:
 				break;
 		}
@@ -1471,6 +1495,9 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 				break;
 			case STATUS_MENU_TYPE:
 				this->status_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, FPSArrayGetAverage(&in_fps), FPSArrayGetAverage(&poll_fps), FPSArrayGetAverage(&draw_fps));
+				break;
+			case LICENSES_MENU_TYPE:
+				this->license_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
 				break;
 			default:
 				break;
@@ -1867,6 +1894,9 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 			break;
 		case STATUS_MENU_TYPE:
 			this->status_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case LICENSES_MENU_TYPE:
+			this->license_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;
