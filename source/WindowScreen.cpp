@@ -922,7 +922,7 @@ void WindowScreen::poll() {
 				if(this->audio_menu->poll(event_data)) {
 					switch(this->audio_menu->selected_index) {
 						case AUDIO_MENU_BACK:
-							this->setup_main_menu();
+							this->setup_main_menu(false);
 							done = true;
 							break;
 						case AUDIO_MENU_NO_ACTION:
@@ -950,7 +950,7 @@ void WindowScreen::poll() {
 				if(this->fileconfig_menu->poll(event_data)) {
 					switch(this->fileconfig_menu->selected_index) {
 						case FILECONFIG_MENU_BACK:
-							this->setup_main_menu();
+							this->setup_main_menu(false);
 							done = true;
 							break;
 						case FILECONFIG_MENU_NO_ACTION:
@@ -972,7 +972,7 @@ void WindowScreen::poll() {
 				if(this->fileconfig_menu->poll(event_data)) {
 					switch(this->fileconfig_menu->selected_index) {
 						case FILECONFIG_MENU_BACK:
-							this->setup_main_menu();
+							this->setup_main_menu(false);
 							done = true;
 							break;
 						case FILECONFIG_MENU_NO_ACTION:
@@ -990,7 +990,7 @@ void WindowScreen::poll() {
 				if(this->video_menu->poll(event_data)) {
 					switch(this->video_menu->selected_index) {
 						case VIDEO_MENU_BACK:
-							this->setup_main_menu();
+							this->setup_main_menu(false);
 							done = true;
 							break;
 						case VIDEO_MENU_VSYNC:
@@ -1087,7 +1087,7 @@ void WindowScreen::poll() {
 				if(this->crop_menu->poll(event_data)) {
 					switch(this->crop_menu->selected_index) {
 						case CROP_MENU_BACK:
-							this->setup_video_menu();
+							this->setup_video_menu(false);
 							done = true;
 							break;
 						case CROP_MENU_NO_ACTION:
@@ -1104,7 +1104,7 @@ void WindowScreen::poll() {
 				if(this->par_menu->poll(event_data)) {
 					switch(this->par_menu->selected_index) {
 						case PAR_MENU_BACK:
-							this->setup_video_menu();
+							this->setup_video_menu(false);
 							done = true;
 							break;
 						case PAR_MENU_NO_ACTION:
@@ -1121,7 +1121,7 @@ void WindowScreen::poll() {
 				if(this->par_menu->poll(event_data)) {
 					switch(this->par_menu->selected_index) {
 						case PAR_MENU_BACK:
-							this->setup_video_menu();
+							this->setup_video_menu(false);
 							done = true;
 							break;
 						case PAR_MENU_NO_ACTION:
@@ -1138,7 +1138,7 @@ void WindowScreen::poll() {
 				if(this->rotation_menu->poll(event_data)) {
 					switch(this->rotation_menu->selected_index) {
 						case ROTATION_MENU_BACK:
-							this->setup_video_menu();
+							this->setup_video_menu(false);
 							done = true;
 							break;
 						case ROTATION_MENU_NO_ACTION:
@@ -1174,7 +1174,7 @@ void WindowScreen::poll() {
 				if(this->offset_menu->poll(event_data)) {
 					switch(this->offset_menu->selected_index) {
 						case OFFSET_MENU_BACK:
-							this->setup_video_menu();
+							this->setup_video_menu(false);
 							done = true;
 							break;
 						case OFFSET_MENU_NO_ACTION:
@@ -1214,7 +1214,7 @@ void WindowScreen::poll() {
 				if(this->bfi_menu->poll(event_data)) {
 					switch(this->bfi_menu->selected_index) {
 						case BFI_MENU_BACK:
-							this->setup_video_menu();
+							this->setup_video_menu(false);
 							done = true;
 							break;
 						case BFI_MENU_NO_ACTION:
@@ -1255,7 +1255,7 @@ void WindowScreen::poll() {
 				if(this->relpos_menu->poll(event_data)) {
 					switch(this->relpos_menu->selected_index) {
 						case REL_POS_MENU_BACK:
-							this->setup_video_menu();
+							this->setup_video_menu(false);
 							done = true;
 							break;
 						case REL_POS_MENU_NO_ACTION:
@@ -1274,7 +1274,7 @@ void WindowScreen::poll() {
 				if(this->resolution_menu->poll(event_data)) {
 					switch(this->resolution_menu->selected_index) {
 						case RESOLUTION_MENU_BACK:
-							this->setup_video_menu();
+							this->setup_video_menu(false);
 							done = true;
 							break;
 						case RESOLUTION_MENU_NO_ACTION:
@@ -1294,7 +1294,7 @@ void WindowScreen::poll() {
 				if(this->extra_menu->poll(event_data)) {
 					switch(this->extra_menu->selected_index) {
 						case EXTRA_SETTINGS_MENU_BACK:
-							this->setup_main_menu();
+							this->setup_main_menu(false);
 							done = true;
 							break;
 						case EXTRA_SETTINGS_MENU_NO_ACTION:
@@ -1323,7 +1323,7 @@ void WindowScreen::poll() {
 				if(this->status_menu->poll(event_data)) {
 					switch(this->status_menu->selected_index) {
 						case STATUS_MENU_BACK:
-							this->setup_main_menu();
+							this->setup_main_menu(false);
 							done = true;
 							break;
 						case STATUS_MENU_NO_ACTION:
@@ -1339,7 +1339,7 @@ void WindowScreen::poll() {
 				if(this->license_menu->poll(event_data)) {
 					switch(this->license_menu->selected_index) {
 						case LICENSE_MENU_BACK:
-							this->setup_main_menu();
+							this->setup_main_menu(false);
 							done = true;
 							break;
 						case LICENSE_MENU_NO_ACTION:
