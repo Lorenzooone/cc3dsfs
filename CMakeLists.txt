@@ -175,8 +175,9 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 set(FW_APP ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME}.app)
 set(FW_DIRS ${sfml_SOURCE_DIR}/extlibs/libs-osx/Frameworks)
 set_target_properties(${OUTPUT_NAME} PROPERTIES
-                      MACOSX_BUNDLE TRUE)
-set(CMAKE_MACOSX_RPATH 1)
+                      MACOSX_BUNDLE TRUE
+                      BUILD_WITH_INSTALL_RPATH TRUE)
+set(CMAKE_MACOSX_RPATH TRUE)
 set(CMAKE_INSTALL_RPATH "@executable_path/../Frameworks" )
 
 add_custom_command(
