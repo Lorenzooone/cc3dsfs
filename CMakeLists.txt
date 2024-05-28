@@ -176,6 +176,9 @@ set(FW_APP ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME}.app)
 set(FW_DIRS ${sfml_SOURCE_DIR}/extlibs/libs-osx/Frameworks)
 set_target_properties(${OUTPUT_NAME} PROPERTIES
                       MACOSX_BUNDLE TRUE)
+set(CMAKE_MACOSX_RPATH 1)
+list(APPEND CMAKE_INSTALL_RPATH "@executable_path/../Frameworks" )
+
 add_custom_command(
     TARGET ${OUTPUT_NAME}
     COMMENT "Copy Frameworks"
