@@ -179,7 +179,7 @@ set_target_properties(${OUTPUT_NAME} PROPERTIES
 add_custom_command(
     TARGET ${OUTPUT_NAME}
     COMMENT "Copy Frameworks"
-    POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${FW_DIRS} ${FW_APP}/Contents/MacOS/Frameworks
+    POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${FW_DIRS} ${FW_APP}/Contents/MacOS/Frameworks
     VERBATIM
 )
 
