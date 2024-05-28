@@ -166,6 +166,7 @@ add_custom_command(
 
 install(TARGETS ${OUTPUT_NAME} DESTINATION .)
 install(FILES LICENSE README.md DESTINATION .)
+install(DIRECTORY "other licenses" DESTINATION .)
 if(WIN32)
 install(FILES openal32.dll DESTINATION .)
 endif()
