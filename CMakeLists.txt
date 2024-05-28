@@ -182,7 +182,7 @@ list(APPEND CMAKE_INSTALL_RPATH "@executable_path/../Frameworks" )
 add_custom_command(
     TARGET ${OUTPUT_NAME}
     COMMENT "Copy Frameworks"
-    POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${FW_DIRS} ${FW_APP}/Contents/MacOS/Frameworks
+    POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${FW_DIRS} ${FW_APP}/Contents/Frameworks
     VERBATIM
 )
 
