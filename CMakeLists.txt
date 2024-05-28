@@ -178,7 +178,7 @@ set_target_properties(${OUTPUT_NAME} PROPERTIES
                       MACOSX_BUNDLE TRUE)
 INSTALL(CODE "
    include(BundleUtilities)
-   fixup_bundle(\"${FW_APPS}\"   \"\"   \"${FW_DIRS}\")
+   copy_and_fixup_bundle(\"${FW_APPS}\"   \"\"   \"${FW_DIRS}\")
    " COMPONENT Runtime)
 
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
