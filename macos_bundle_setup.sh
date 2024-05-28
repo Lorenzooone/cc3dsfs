@@ -1,5 +1,4 @@
 framework_change_pos() {
-	echo "install_name_tool -change @rpath/../Frameworks/${2}.framework/Versions/A/${2} @executable_path/../Frameworks/${2}.framework/Versions/A/${2} ${1}"
     install_name_tool -change @rpath/../Frameworks/${2}.framework/Versions/A/${2} @executable_path/../Frameworks/${2}.framework/Versions/A/${2} ${1}
 }
 
