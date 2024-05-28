@@ -172,6 +172,8 @@ install(FILES openal32.dll DESTINATION .)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+set_target_properties(${OUTPUT_NAME} PROPERTIES
+                      MACOSX_BUNDLE TRUE)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 else()
 install(FILES 51-ftd3xx.rules DESTINATION .)
