@@ -188,7 +188,7 @@ add_custom_command(
 add_custom_command(
     TARGET ${OUTPUT_NAME}
     COMMENT "Set bundle path for Frameworks"
-    POST_BUILD COMMAND ${CMAKE_SOURCE_DIR}/macos_bundle_setup.sh
+    POST_BUILD COMMAND ${CMAKE_SOURCE_DIR}/macos_bundle_setup.sh ${FW_APP}/Contents/MacOS/${OUTPUT_NAME}
     VERBATIM
 )
 
