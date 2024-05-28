@@ -11,7 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-        - { name: macOS x64,           os: macos-13  }
+        - { name: macOS x64,           os: macos-10  }
         config:
         - { name: Static, flags: -DBUILD_SHARED_LIBS=FALSE }
 
