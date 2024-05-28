@@ -1,6 +1,11 @@
 name: CD
 
-on: ['push']
+on:
+  # Trigger the workflow on push,
+  # but only for the master branch
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -40,3 +45,24 @@ jobs:
       with:
         name: cc3dsfs_zip
         path: build/cc3dsfs*.zip
+
+  publish:
+    name: Publishing
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+    steps:
+    - name: Download a single artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: cc3dsfs_zip
+    - name: Auto-Release the zips
+      uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "nightly-latest"
+        prerelease: true
+        title: "Automatic Build"
+        files: |
+          cc3dsfs*.zip

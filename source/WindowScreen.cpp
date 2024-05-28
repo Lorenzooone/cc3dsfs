@@ -174,7 +174,6 @@ void WindowScreen::fullscreen_change() {
 	if(this->curr_menu != CONNECT_MENU_TYPE)
 		this->curr_menu = DEFAULT_MENU_TYPE;
 	this->m_info.is_fullscreen = !this->m_info.is_fullscreen;
-	reset_fullscreen_info(this->m_info);
 	this->create_window(true);
 }
 
