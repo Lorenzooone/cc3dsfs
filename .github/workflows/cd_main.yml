@@ -11,10 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-        - { name: Windows VS2022,      os: windows-2022  }
-        - { name: Linux GCC,           os: ubuntu-latest }
         - { name: macOS x64,           os: macos-13  }
-        - { name: macOS Apple Silicon, os: macos-14  }
         config:
         - { name: Static, flags: -DBUILD_SHARED_LIBS=FALSE }
 

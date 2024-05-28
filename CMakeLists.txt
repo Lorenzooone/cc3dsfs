@@ -172,14 +172,16 @@ install(FILES openal32.dll DESTINATION .)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-set(FW_APPS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME})
+set(FW_APP ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME})
 set(FW_DIRS ${sfml_SOURCE_DIR}/extlibs/libs-osx/Frameworks)
 set_target_properties(${OUTPUT_NAME} PROPERTIES
                       MACOSX_BUNDLE TRUE)
-INSTALL(CODE "
-   include(BundleUtilities)
-   copy_and_fixup_bundle(\"${FW_APPS}\"   \"\"   \"${FW_DIRS}\")
-   " COMPONENT Runtime)
+add_custom_command(
+    TARGET ${OUTPUT_NAME}
+    COMMENT "Copy Output"
+    POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${FW_DIRS} ${FW_APP}/Contents/MacOS/Frameworks
+    VERBATIM
+)
 
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 else()
