@@ -24,6 +24,29 @@ static void check_held_reset(bool value, HeldTime &action_time) {
 		action_time.started = false;
 }
 
+static void check_held_reset_key(bool value, HeldTime &action_time) {
+	if(value) {
+		if(!action_time.started) {
+			action_time.start_time = std::chrono::high_resolution_clock::now();
+			action_time.started = true;
+		}
+		action_time.acted = true;
+	}
+	else
+		action_time.schedule_reset = true;
+}
+
+static void held_reset_key_prepare(HeldTime &action_time) {
+	action_time.acted = false;
+	action_time.schedule_reset = false;
+}
+
+static void held_reset_key_post_check(HeldTime &action_time) {
+	if(action_time.schedule_reset && !action_time.acted) {
+		action_time.started = false;
+	}
+}
+
 static float check_held_diff(std::chrono::time_point<std::chrono::high_resolution_clock> &curr_time, HeldTime &action_time) {
 	if(!action_time.started)
 		return 0.0;
@@ -378,6 +401,29 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 			switch(event_data.code) {
 				case sf::Keyboard::Escape:
 					this->m_prepare_quit = true;
+					break;
+				case sf::Keyboard::Enter:
+					check_held_reset_key(true, this->enter_action);
+					consumed = false;
+					break;
+				case sf::Keyboard::PageDown:
+					check_held_reset_key(true, this->pgdown_action);
+					consumed = false;
+					break;
+				default:
+					consumed = false;
+					break;
+			}
+			
+		case sf::Event::KeyReleased:
+			switch(event_data.code) {
+				case sf::Keyboard::Enter:
+					check_held_reset_key(false, this->enter_action);
+					consumed = false;
+					break;
+				case sf::Keyboard::PageDown:
+					check_held_reset_key(false, this->pgdown_action);
+					consumed = false;
 					break;
 				default:
 					consumed = false;
@@ -825,11 +871,13 @@ void WindowScreen::poll() {
 		if(diff.count() > this->mouse_timeout)
 			this->m_info.show_mouse = false;
 	}
+	held_reset_key_prepare(this->enter_action);
+	held_reset_key_prepare(this->pgdown_action);
 	this->poll_window();
 	bool done = false;
 	while(!events_queue.empty()) {
 		if(done)
-			return;
+			break;
 		if(this->query_reset_request()) {
 			this->reset_held_times();
 			this->m_prepare_load = SIMPLE_RESET_DATA_INDEX;
@@ -1357,6 +1405,8 @@ void WindowScreen::poll() {
 				break;
 		}
 	}
+	held_reset_key_post_check(this->enter_action);
+	held_reset_key_post_check(this->pgdown_action);
 }
 
 void WindowScreen::close() {
@@ -1676,8 +1726,6 @@ void WindowScreen::poll_window() {
 		}
 		if(this->m_win.hasFocus()) {
 			check_held_reset(sf::Mouse::isButtonPressed(sf::Mouse::Right), this->right_click_action);
-			check_held_reset(sf::Keyboard::isKeyPressed(sf::Keyboard::Enter), this->enter_action);
-			check_held_reset(sf::Keyboard::isKeyPressed(sf::Keyboard::PageDown), this->pgdown_action);
 			bool found = false;
 			for(int i = 0; i < sf::Joystick::Count; i++) {
 				if(!sf::Joystick::isConnected(i))
