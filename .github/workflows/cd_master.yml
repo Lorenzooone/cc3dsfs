@@ -41,10 +41,11 @@ jobs:
     - name: Archive resulting artifact
       uses: actions/upload-artifact@v3
       with:
-        name: cc3dsfs_zip
+        name: cc3dsfs_${{runner.os}}
         path: build/cc3dsfs*.zip
 
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
         files: build/cc3dsfs*.zip
+        tag_name: nightly
