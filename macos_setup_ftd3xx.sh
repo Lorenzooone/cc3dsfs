@@ -1,5 +1,4 @@
 hdiutil attach ${1}
 cp ${2}/${4} ${3}
 cp ${2}/*.h ${3}
-ls -altr ${3}
-hdiutil detach ${3}
+hdiutil detach ${1}
