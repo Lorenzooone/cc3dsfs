@@ -63,16 +63,16 @@ The software has a GUI which exposes all of the available settings. There are al
 Most of the settings are explained in [Keyboard shortcuts](#Keyboard-shortcuts).
 
 ### Keyboard controls
-- __Enter key__: Used to open the GUI when it is not shown, as well as to confirm the selection of an option.
+- __Enter key__: Used to open the GUI when it is not shown, as well as to confirm the selection of an option. Holding it for 30 seconds will reset the application to its defaults.
 - __Arrow keys__: Used to change the selected option in the GUI.
 
 ### Mouse controls
-- __Right click__: Used to open the GUI when it is not shown.
+- __Right click__: Used to open the GUI when it is not shown. Holding it for 30 seconds will reset the application to its defaults.
 - __Left click__: Used to confirm the selection of an option.
 
 ### Joystick controls
 - __Option/Share buttons__: Used to open the GUI when it is not shown.
-- __A/B/X/Y buttons__: Used to confirm the selection of an option.
+- __A/B/X/Y buttons__: Used to confirm the selection of an option. Holding B (X on a PS5 controller) for 30 seconds will reset the application to its defaults.
 - __Dpad/Sitcks__: Used to change the selected option in the GUI.
 
 _Note: Currently only tested using a PS5 controller._
@@ -120,5 +120,6 @@ The name of profiles can be changed by altering the __name__ field in its file.
 - At startup, the audio may be unstable. It should fix itself, if you give it enough time.
 - If, at first, the connection to the 3DS fails, reconnect the 3DS and then try again. If that also doesn't work, try restarting the program. If that also doesn't work, try restarting the computer.
 - USB Hubs can be the cause of connection issues. If you're having problems, try checking whether the 3DS connects fine or not without any other devices connected.
+- Fullscreen mode on MacOS may mistake the screen for being bigger than what it really is. Changing the resolution to the proper one of the screen in the _Resolution Settings_ under Video Settings will fix the issue.
 - Current font in use: OFL Sorts Mill Goudy TT
 

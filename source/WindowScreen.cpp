@@ -3,6 +3,9 @@
 #include <cstring>
 #include "font_ttf.h"
 
+#define DEFAULT_FS_WIDTH 1920
+#define DEFAULT_FS_HEIGHT 1080
+
 #define FPS_WINDOW_SIZE 64
 
 #define LEFT_ROUNDED_PADDING 5
@@ -174,7 +177,6 @@ void WindowScreen::fullscreen_change() {
 	if(this->curr_menu != CONNECT_MENU_TYPE)
 		this->curr_menu = DEFAULT_MENU_TYPE;
 	this->m_info.is_fullscreen = !this->m_info.is_fullscreen;
-	reset_fullscreen_info(this->m_info);
 	this->create_window(true);
 }
 
@@ -2228,6 +2230,22 @@ void WindowScreen::create_window(bool re_prepare_size) {
 				success = true;
 			}
 		}
+		#ifdef __APPLE__
+		if(!success) {
+			sf::VideoMode mode_created = sf::VideoMode(DEFAULT_FS_WIDTH, DEFAULT_FS_HEIGHT, 32);
+			if(mode_created.isValid()) {
+				this->curr_desk_mode = mode_created;
+				success = true;
+			}
+			else {
+				mode_created = sf::VideoMode(DEFAULT_FS_WIDTH, DEFAULT_FS_HEIGHT, 24);
+				if(mode_created.isValid()) {
+					this->curr_desk_mode = mode_created;
+					success = true;
+				}
+			}
+		}
+		#endif
 		if(!success) {
 			this->curr_desk_mode = sf::VideoMode::getDesktopMode();
 		}
