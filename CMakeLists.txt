@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(CMakeSFMLProject LANGUAGES CXX)
+project(cc3dsfs VERSION 0.0.0 LANGUAGES CXX)
 include(ExternalProject)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -164,9 +164,20 @@ add_custom_command(
     VERBATIM
 )
 
-install(TARGETS ${OUTPUT_NAME})
+install(TARGETS ${OUTPUT_NAME} DESTINATION .)
+install(FILES LICENSE README.md DESTINATION .)
+if(WIN32)
+install(FILES openal32.dll DESTINATION .)
+endif()
 
-set(CPACK_PACKAGE_NAME CMakeSFMLProject)
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+else()
+install(FILES 51-ftd3xx.rules DESTINATION .)
+endif()
+
+
+set(CPACK_PACKAGE_NAME ${OUTPUT_NAME})
 set(CPACK_PACKAGE_VENDOR Lorenzooone)
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "3DS Capture Card Fullscreen software")
 

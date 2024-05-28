@@ -1,6 +1,6 @@
 name: CD
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   build:
@@ -11,9 +11,10 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-        - { name: Windows VS2022, os: windows-2022  }
-        - { name: Linux GCC,      os: ubuntu-latest }
-        - { name: macOS,          os: macos-latest  }
+        - { name: Windows VS2022,      os: windows-2022  }
+        - { name: Linux GCC,           os: ubuntu-latest }
+        - { name: macOS x64,           os: macos-13  }
+        - { name: macOS Apple Silicon, os: macos-14  }
         config:
         - { name: Static, flags: -DBUILD_SHARED_LIBS=FALSE }
 
@@ -35,10 +36,15 @@ jobs:
 
     - name: Pack
       shell: bash
-      run: cd build && cpack -G ZIP
+      run: cd build/bin && cpack -G ZIP
+
+    - name: Archive resulting artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: cc3dsfs_zip
+        path: build/cc3dsfs*.zip
 
     - name: Release
       uses: softprops/action-gh-release@v2
-      if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: build/CMakeSFMLProject*.zip
+        files: build/bin/cc3dsfs*.zip
