@@ -165,3 +165,12 @@ add_custom_command(
 )
 
 install(TARGETS ${OUTPUT_NAME})
+
+set(CPACK_PACKAGE_NAME CMakeSFMLProject)
+set(CPACK_PACKAGE_VENDOR Lorenzooone)
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "3DS Capture Card Fullscreen software")
+
+set(CPACK_PACKAGE_INSTALL_DIRECTORY ${CPACK_PACKAGE_NAME})
+set(CPACK_VERBATIM_VARIABLES TRUE)
+
+include(CPack)
