@@ -172,8 +172,15 @@ install(FILES openal32.dll DESTINATION .)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+set(FW_APPS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME})
+set(FW_DIRS ${sfml_SOURCE_DIR}/extlibs/libs-osx/Frameworks)
 set_target_properties(${OUTPUT_NAME} PROPERTIES
                       MACOSX_BUNDLE TRUE)
+INSTALL(CODE "
+   include(BundleUtilities)
+   fixup_bundle(\"${FW_APPS}\"   \"\"   \"${FW_DIRS}\")
+   " COMPONENT Runtime)
+
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 else()
 install(FILES 51-ftd3xx.rules DESTINATION .)
