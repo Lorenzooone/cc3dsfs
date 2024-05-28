@@ -36,7 +36,7 @@ jobs:
 
     - name: Pack
       shell: bash
-      run: cd build/bin && cpack -G ZIP
+      run: cd build && cpack -G ZIP
 
     - name: Archive resulting artifact
       uses: actions/upload-artifact@v3
@@ -47,4 +47,4 @@ jobs:
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
-        files: build/bin/cc3dsfs*.zip
+        files: build/cc3dsfs*.zip
