@@ -1,8 +1,5 @@
 #include "frontend.hpp"
 
-#include <cstring>
-#include "font_ttf.h"
-
 #define FPS_WINDOW_SIZE 64
 
 static void check_held_reset(bool value, HeldTime &action_time) {

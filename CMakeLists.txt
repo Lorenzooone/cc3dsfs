@@ -168,41 +168,53 @@ install(TARGETS ${OUTPUT_NAME} DESTINATION .)
 install(FILES LICENSE README.md DESTINATION .)
 install(DIRECTORY "other licenses" DESTINATION .)
 if(WIN32)
-install(FILES openal32.dll DESTINATION .)
+    install(FILES openal32.dll DESTINATION .)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-set(FW_APP ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME}.app)
-set(FW_DIRS ${sfml_SOURCE_DIR}/extlibs/libs-osx/Frameworks)
-set_target_properties(${OUTPUT_NAME} PROPERTIES
-                      MACOSX_BUNDLE TRUE)
-set(CMAKE_MACOSX_RPATH TRUE)
+    set(FW_APP ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME}.app)
+    set(FW_DIRS ${sfml_SOURCE_DIR}/extlibs/libs-osx/Frameworks)
+    set_target_properties(${OUTPUT_NAME} PROPERTIES
+                          MACOSX_BUNDLE TRUE)
+    set(CMAKE_MACOSX_RPATH TRUE)
 
-add_custom_command(
-    TARGET ${OUTPUT_NAME}
-    COMMENT "Copy Frameworks in bundle"
-    POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${FW_DIRS} ${FW_APP}/Contents/Frameworks
-    VERBATIM
-)
+    add_custom_command(
+        TARGET ${OUTPUT_NAME}
+        COMMENT "Copy Frameworks in bundle"
+        POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${FW_DIRS} ${FW_APP}/Contents/Frameworks
+        VERBATIM
+    )
 
-add_custom_command(
-    TARGET ${OUTPUT_NAME}
-    COMMENT "Set bundle path for Frameworks"
-    POST_BUILD COMMAND ${CMAKE_SOURCE_DIR}/macos_bundle_setup.sh ${FW_APP}/Contents/MacOS/${OUTPUT_NAME}
-    VERBATIM
-)
+    add_custom_command(
+        TARGET ${OUTPUT_NAME}
+        COMMENT "Set bundle path for Frameworks"
+        POST_BUILD COMMAND ${CMAKE_SOURCE_DIR}/macos_bundle_setup.sh ${FW_APP}/Contents/MacOS/${OUTPUT_NAME}
+        VERBATIM
+    )
 
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 else()
-install(FILES 51-ftd3xx.rules DESTINATION .)
+    install(FILES 51-ftd3xx.rules DESTINATION .)
 endif()
 
 
-set(CPACK_PACKAGE_NAME ${OUTPUT_NAME}_${CMAKE_SYSTEM_PROCESSOR})
+set(CPACK_PACKAGE_NAME ${OUTPUT_NAME})
 set(CPACK_PACKAGE_VENDOR Lorenzooone)
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "3DS Capture Card Fullscreen software")
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY ${CPACK_PACKAGE_NAME})
 set(CPACK_VERBATIM_VARIABLES TRUE)
+
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+    set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}_macos_${CMAKE_SYSTEM_PROCESSOR})
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+    if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "AMD64")
+        set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}_windows_x86_64)
+    else()
+        set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}_windows_${CMAKE_SYSTEM_PROCESSOR})
+    endif()
+else()
+    set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}_linux_${CMAKE_SYSTEM_PROCESSOR})
+endif()
 
 include(CPack)

@@ -61,11 +61,15 @@ jobs:
       with:
         name: cc3dsfs_zip
     - name: Auto-Release the zips
-      uses: "marvinpinto/action-automatic-releases@latest"
+      uses: IsaacShelton/update-existing-release@v1.3.2
       with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "nightly-latest"
+        token: ${{ secrets.GITHUB_TOKEN }}
+        release: "Automatic Build"
         prerelease: true
-        title: "Automatic Build"
-        files: |
-          cc3dsfs*.zip
+        tag: "nightly-latest"
+        replace: true
+        files: >
+          cc3dsfs_macos_x86_64.zip
+          cc3dsfs_windows_x86_64.zip
+          cc3dsfs_linux_x86_64.zip
+          cc3dsfs_macos_arm64.zip
