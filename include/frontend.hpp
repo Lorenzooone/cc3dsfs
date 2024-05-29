@@ -159,6 +159,11 @@ private:
 	ScreenOperations future_operations;
 	ScreenOperations loaded_operations;
 
+	void init_menus();
+	void destroy_menus();
+	void prepare_menu_draws(int view_size_x, int view_size_y);
+	void execute_menu_draws();
+
 	static void reset_operations(ScreenOperations &operations);
 	void free_ownership_of_window(bool is_main_thread);
 
@@ -237,6 +242,9 @@ struct FrontendData {
 	bool reload;
 };
 
+void FPSArrayInit(FPSArray *array);
+void FPSArrayDestroy(FPSArray *array);
+void FPSArrayInsertElement(FPSArray *array, double frame_time);
 bool is_allowed_crop(const CropData* crop_data, ScreenType s_type);
 void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type);
 void insert_basic_pars(std::vector<const PARData*> &par_vector);

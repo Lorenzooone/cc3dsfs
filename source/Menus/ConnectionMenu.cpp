@@ -17,10 +17,10 @@ void ConnectionMenu::class_setup() {
 	this->min_text_size = 0.3;
 	this->max_width_slack = 1.1;
 	this->menu_color = sf::Color(30, 30, 60, 192);
-	this->title = "Connection Menu";
+	this->title = "Device Selection";
 	this->show_back_x = false;
 	this->show_x = false;
-	this->show_title = false;
+	this->show_title = true;
 }
 
 void ConnectionMenu::insert_data(DevicesList *devices_list) {
