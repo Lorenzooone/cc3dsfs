@@ -800,20 +800,11 @@ void WindowScreen::poll() {
 		if(done)
 			break;
 		SFEvent event_data = events_queue.front();
-		if(this->triggered_poweroff) {
-			// Stop accepting inputs... Not needed, since we're technically powering down...
-			auto curr_time = std::chrono::high_resolution_clock::now();
-			const std::chrono::duration<double> diff = curr_time - this->last_poweroff_time;
-			if(diff.count() < this->poweroff_timeout)
-				break;
-			this->triggered_poweroff = false;
-		}
+		events_queue.pop();
 		if((event_data.type == sf::Event::KeyPressed) && event_data.poweroff_cmd) {
-			this->m_prepare_save = STARTUP_FILE_INDEX;
-			this->print_notification("Saving and shutting\ndown...Please wait");
-			this->triggered_poweroff = true;
-			this->last_poweroff_time =  std::chrono::high_resolution_clock::now();
-			break;
+			this->m_prepare_quit = true;
+			done = true;
+			continue;
 		}
 		if(this->query_reset_request()) {
 			this->reset_held_times();
@@ -821,7 +812,6 @@ void WindowScreen::poll() {
 			done = true;
 			continue;
 		}
-		events_queue.pop();
 		if(this->common_poll(event_data)) {
 			if(this->close_capture())
 				done = true;

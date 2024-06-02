@@ -27,7 +27,6 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	FPSArrayInit(&this->in_fps);
 	FPSArrayInit(&this->draw_fps);
 	FPSArrayInit(&this->poll_fps);
-	this->triggered_poweroff = false;
 	this->in_tex.create(IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT);
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
@@ -211,8 +210,6 @@ void WindowScreen::update_connection() {
 }
 
 void WindowScreen::print_notification(std::string text, TextKind kind) {
-	if(this->triggered_poweroff)
-		return;
 	this->notification->setText(text);
 	this->notification->setRectangleKind(kind);
 	this->notification->startTimer(true);

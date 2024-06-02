@@ -183,7 +183,7 @@ void reset_screen_info(ScreenInfo &info) {
 	info.bot_rotation = 0;
 	info.show_mouse = true;
 	info.v_sync_enabled = false;
-	info.async = false;
+	info.async = true;
 	info.top_scaling = -1;
 	info.bot_scaling = -1;
 	info.bfi = false;
