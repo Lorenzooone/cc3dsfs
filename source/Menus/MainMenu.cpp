@@ -106,6 +106,13 @@ static const MainMenuOptionInfo extra_settings_option = {
 .enabled_normal_mode = false, .enabled_mono_mode = true,
 .out_action = MAIN_MENU_EXTRA_SETTINGS};
 
+static const MainMenuOptionInfo shutdown_option = {
+.base_name = "Shutdown", .false_name = "",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = false, .enabled_mono_mode = true,
+.out_action = MAIN_MENU_SHUTDOWN};
+
 static const MainMenuOptionInfo* pollable_options[] = {
 &connect_option,
 &windowed_option,
@@ -120,6 +127,7 @@ static const MainMenuOptionInfo* pollable_options[] = {
 &licenses_option,
 &extra_settings_option,
 &quit_option,
+&shutdown_option,
 };
 
 MainMenu::MainMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){

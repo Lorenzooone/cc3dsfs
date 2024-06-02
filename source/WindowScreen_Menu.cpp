@@ -110,6 +110,11 @@ void WindowScreen::destroy_menus() {
 	delete this->license_menu;
 }
 
+void WindowScreen::set_close(int ret_val) {
+	this->m_prepare_quit = true;
+	this->ret_val = ret_val;
+}
+
 void WindowScreen::split_change() {
 	if(this->curr_menu != CONNECT_MENU_TYPE)
 		this->curr_menu = DEFAULT_MENU_TYPE;
@@ -274,7 +279,7 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 	bool consumed = true;
 	switch(event_data.type) {
 		case sf::Event::Closed:
-			this->m_prepare_quit = true;
+			this->set_close(0);
 			break;
 
 		case sf::Event::TextEntered:
@@ -321,7 +326,7 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 		case sf::Event::KeyPressed:
 			switch(event_data.code) {
 				case sf::Keyboard::Escape:
-					this->m_prepare_quit = true;
+					this->set_close(0);
 					break;
 				case sf::Keyboard::Enter:
 					check_held_reset_key(true, this->enter_action);
@@ -802,7 +807,7 @@ void WindowScreen::poll() {
 		SFEvent event_data = events_queue.front();
 		events_queue.pop();
 		if((event_data.type == sf::Event::KeyPressed) && event_data.poweroff_cmd) {
-			this->m_prepare_quit = true;
+			this->set_close(1);
 			done = true;
 			continue;
 		}
@@ -844,7 +849,7 @@ void WindowScreen::poll() {
 							done = true;
 							break;
 						case MAIN_MENU_QUIT_APPLICATION:
-							this->m_prepare_quit = true;
+							this->set_close(0);
 							this->curr_menu = DEFAULT_MENU_TYPE;
 							done = true;
 							break;
@@ -885,6 +890,8 @@ void WindowScreen::poll() {
 							done = true;
 							break;
 						case MAIN_MENU_SHUTDOWN:
+							this->set_close(1);
+							this->curr_menu = DEFAULT_MENU_TYPE;
 							done = true;
 							break;
 						default:
@@ -1277,7 +1284,7 @@ void WindowScreen::poll() {
 						case EXTRA_SETTINGS_MENU_NO_ACTION:
 							break;
 						case EXTRA_SETTINGS_MENU_QUIT_APPLICATION:
-							this->m_prepare_quit = true;
+							this->set_close(0);
 							this->curr_menu = DEFAULT_MENU_TYPE;
 							done = true;
 							break;
@@ -1371,6 +1378,12 @@ bool WindowScreen::open_capture() {
 
 bool WindowScreen::close_capture() {
 	return this->m_prepare_quit;
+}
+
+int WindowScreen::get_ret_val() {
+	if(!this->m_prepare_quit)
+		return -1;
+	return this->ret_val;
 }
 
 bool WindowScreen::query_reset_request() {

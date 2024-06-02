@@ -238,7 +238,14 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 	audio.stop();
 }
 
-static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data, bool mono_app) {
+static void check_close_application(WindowScreen &screen, CaptureData* capture_data, int &ret_val) {
+	if(screen.close_capture() && capture_data->status.running) {
+		capture_data->status.running = false;
+		ret_val = screen.get_ret_val();
+	}
+}
+
+static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data, bool mono_app) {
 	VideoOutputData *out_buf;
 	double last_frame_time = 0.0;
 	int num_elements_fps_array = 0;
@@ -252,6 +259,7 @@ static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data
 	std::mutex events_access;
 	OutTextData out_text_data;
 	out_text_data.consumed = true;
+	int ret_val = 0;
 
 	out_buf = new VideoOutputData;
 	memset(out_buf, 0, sizeof(VideoOutputData));
@@ -330,9 +338,9 @@ static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data
 			SuccessConnectionOutTextGenerator(out_text_data, capture_data);
 		}
 
-		if(top_screen.close_capture() || bot_screen.close_capture() || joint_screen.close_capture()) {
-			capture_data->status.running = false;
-		}
+		check_close_application(top_screen, capture_data, ret_val);
+		check_close_application(bot_screen, capture_data, ret_val);
+		check_close_application(joint_screen, capture_data, ret_val);
 		
 		if((load_index = top_screen.load_data()) || (load_index = bot_screen.load_data()) || (load_index = joint_screen.load_data()))
 			load_layout_file(load_index, &frontend_data, audio_data, out_text_data, skip_io, true);
@@ -382,6 +390,7 @@ static void mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data
 	}
 
 	delete out_buf;
+	return ret_val;
 }
 
 static bool parse_existence_arg(int &index, char **argv, bool &target, bool existence_value, std::string to_check) {
@@ -446,11 +455,11 @@ int main(int argc, char **argv) {
 	std::thread capture_thread(captureCall, capture_data);
 	std::thread audio_thread(soundCall, &audio_data, capture_data);
 
-	mainVideoOutputCall(&audio_data, capture_data, mono_app);
+	int ret_val = mainVideoOutputCall(&audio_data, capture_data, mono_app);
 	audio_thread.join();
 	capture_thread.join();
 	delete capture_data;
 	end_extra_buttons_poll();
 
-	return 0;
+	return ret_val;
 }

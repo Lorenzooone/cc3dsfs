@@ -67,6 +67,7 @@ public:
 	int save_data();
 	bool open_capture();
 	bool close_capture();
+	int get_ret_val();
 
 private:
 	struct ScreenOperations {
@@ -87,6 +88,7 @@ private:
 	bool last_connected_status;
 	bool m_prepare_open;
 	bool m_prepare_quit;
+	int ret_val;
 	bool font_load_success;
 	double frame_time;
 	DisplayData* display_data;
@@ -172,6 +174,7 @@ private:
 	int get_screen_corner_modifier_y(int rotation, int height);
 	void print_notification_on_off(std::string base_text, bool value);
 	void print_notification_float(std::string base_text, float value, int decimals);
+	void set_close(int ret_val);
 	void split_change();
 	void fullscreen_change();
 	void async_change();

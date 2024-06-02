@@ -20,6 +20,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->m_prepare_load = 0;
 	this->m_prepare_open = false;
 	this->m_prepare_quit = false;
+	this->ret_val = 0;
 	reset_screen_info(this->m_info);
 	this->font_load_success = this->text_font.loadFromMemory(font_ttf, font_ttf_len);
 	this->notification = new TextRectangle(this->font_load_success, this->text_font);
