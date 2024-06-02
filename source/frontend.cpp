@@ -183,11 +183,7 @@ void reset_screen_info(ScreenInfo &info) {
 	info.bot_rotation = 0;
 	info.show_mouse = true;
 	info.v_sync_enabled = false;
-	#if defined(_WIN32) || defined(_WIN64)
 	info.async = false;
-	#else
-	info.async = true;
-	#endif
 	info.top_scaling = -1;
 	info.bot_scaling = -1;
 	info.bfi = false;
@@ -371,7 +367,7 @@ void joystick_axis_poll(std::queue<SFEvent> &events_queue) {
 		for(int j = 0; j < sf::Joystick::AxisCount; j++) {
 			sf::Joystick::Axis axis = sf::Joystick::Axis(sf::Joystick::Axis::X + j);
 			if(sf::Joystick::hasAxis(i, axis))
-				events_queue.emplace(sf::Event::JoystickMoved, sf::Keyboard::Backspace, 0, i, 0, axis, sf::Joystick::getAxisPosition(i, axis), sf::Mouse::Left, 0, 0);
+				events_queue.emplace(sf::Event::JoystickMoved, sf::Keyboard::Backspace, 0, i, 0, axis, sf::Joystick::getAxisPosition(i, axis), sf::Mouse::Left, 0, 0, false);
 		}
 	}
 }

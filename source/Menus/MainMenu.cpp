@@ -2,14 +2,6 @@
 
 #define NUM_TOTAL_MENU_OPTIONS (sizeof(pollable_options)/sizeof(pollable_options[0]))
 
-#define OPTION_WINDOWED true
-#define OPTION_FULLSCREEN true
-#define OPTION_JOIN true
-#define OPTION_SPLIT true
-#define OPTION_EXTRA false
-#define OPTION_QUIT true
-#define OPTION_SHUTDOWN false
-
 struct MainMenuOptionInfo {
 	const std::string base_name;
 	const std::string false_name;
@@ -18,6 +10,8 @@ struct MainMenuOptionInfo {
 	const bool active_joint_screen;
 	const bool active_top_screen;
 	const bool active_bottom_screen;
+	const bool enabled_normal_mode;
+	const bool enabled_mono_mode;
 	const MainMenuOutAction out_action;
 };
 
@@ -25,84 +19,91 @@ static const MainMenuOptionInfo connect_option = {
 .base_name = "Disconnect", .false_name = "Connect",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true,
 .out_action = MAIN_MENU_OPEN};
 
 static const MainMenuOptionInfo windowed_option = {
 .base_name = "Windowed Mode", .false_name = "",
-.active_fullscreen = OPTION_WINDOWED, .active_windowed_screen = false,
+.active_fullscreen = true, .active_windowed_screen = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = false,
 .out_action = MAIN_MENU_FULLSCREEN};
 
 static const MainMenuOptionInfo fullscreen_option = {
 .base_name = "Fullscreen Mode", .false_name = "",
-.active_fullscreen = false, .active_windowed_screen = OPTION_FULLSCREEN,
+.active_fullscreen = false, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = false,
 .out_action = MAIN_MENU_FULLSCREEN};
 
 static const MainMenuOptionInfo join_screens_option = {
 .base_name = "Join Screens", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
-.active_joint_screen = false, .active_top_screen = OPTION_JOIN, .active_bottom_screen = OPTION_JOIN,
+.active_joint_screen = false, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = false,
 .out_action = MAIN_MENU_SPLIT};
 
 static const MainMenuOptionInfo split_screens_option = {
 .base_name = "Split Screens", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
-.active_joint_screen = OPTION_SPLIT, .active_top_screen = false, .active_bottom_screen = false,
+.active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
+.enabled_normal_mode = true, .enabled_mono_mode = false,
 .out_action = MAIN_MENU_SPLIT};
 
 static const MainMenuOptionInfo video_settings_option = {
 .base_name = "Video Settings", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true,
 .out_action = MAIN_MENU_VIDEO_SETTINGS};
 
 static const MainMenuOptionInfo quit_option = {
 .base_name = "Quit Application", .false_name = "",
-.active_fullscreen = OPTION_QUIT, .active_windowed_screen = OPTION_QUIT,
-.active_joint_screen = OPTION_QUIT, .active_top_screen = OPTION_QUIT, .active_bottom_screen = OPTION_QUIT,
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = false,
 .out_action = MAIN_MENU_QUIT_APPLICATION};
-
-static const MainMenuOptionInfo shutdown_option = {
-.base_name = "Shutdown", .false_name = "",
-.active_fullscreen = OPTION_SHUTDOWN, .active_windowed_screen = OPTION_SHUTDOWN,
-.active_joint_screen = OPTION_SHUTDOWN, .active_top_screen = OPTION_SHUTDOWN, .active_bottom_screen = OPTION_SHUTDOWN,
-.out_action = MAIN_MENU_SHUTDOWN};
 
 static const MainMenuOptionInfo audio_settings_option = {
 .base_name = "Audio Settings", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true,
 .out_action = MAIN_MENU_AUDIO_SETTINGS};
 
 static const MainMenuOptionInfo save_profiles_option = {
 .base_name = "Save Profile", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true,
 .out_action = MAIN_MENU_SAVE_PROFILES};
 
 static const MainMenuOptionInfo load_profiles_option = {
 .base_name = "Load Profile", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true,
 .out_action = MAIN_MENU_LOAD_PROFILES};
 
 static const MainMenuOptionInfo status_option = {
 .base_name = "Status", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true,
 .out_action = MAIN_MENU_STATUS};
 
 static const MainMenuOptionInfo licenses_option = {
 .base_name = "Licenses", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true,
 .out_action = MAIN_MENU_LICENSES};
 
 static const MainMenuOptionInfo extra_settings_option = {
 .base_name = "Extra Settings", .false_name = "",
-.active_fullscreen = OPTION_EXTRA, .active_windowed_screen = OPTION_EXTRA,
-.active_joint_screen = OPTION_EXTRA, .active_top_screen = OPTION_EXTRA, .active_bottom_screen = OPTION_EXTRA,
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = false, .enabled_mono_mode = true,
 .out_action = MAIN_MENU_EXTRA_SETTINGS};
 
 static const MainMenuOptionInfo* pollable_options[] = {
@@ -115,11 +116,10 @@ static const MainMenuOptionInfo* pollable_options[] = {
 &audio_settings_option,
 &save_profiles_option,
 &load_profiles_option,
-&extra_settings_option,
 &status_option,
 &licenses_option,
+&extra_settings_option,
 &quit_option,
-&shutdown_option
 };
 
 MainMenu::MainMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
@@ -148,7 +148,7 @@ void MainMenu::class_setup() {
 	this->show_title = true;
 }
 
-void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen) {
+void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_mode) {
 	this->num_enabled_options = 0;
 	for(int i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
 		bool valid = true;
@@ -162,6 +162,10 @@ void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen) {
 			valid = valid && pollable_options[i]->active_bottom_screen;
 		else
 			valid = valid && pollable_options[i]->active_joint_screen;
+		if(mono_app_mode)
+			valid = valid && pollable_options[i]->enabled_mono_mode;
+		else
+			valid = valid && pollable_options[i]->enabled_normal_mode;
 		if(valid) {
 			this->options_indexes[this->num_enabled_options] = i;
 			this->num_enabled_options++;

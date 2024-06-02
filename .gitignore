@@ -5,6 +5,7 @@ cc3dsfs
 cc3dsfs.exe
 *.conf
 *.a
+*.zip
 ftd3xx/
 presets/
 build/

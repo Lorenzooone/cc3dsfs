@@ -4,6 +4,7 @@
 
 struct ExtraSettingsMenuOptionInfo {
 	const std::string base_name;
+	const bool is_selectable;
 	const bool active_fullscreen;
 	const bool active_windowed_screen;
 	const bool active_joint_screen;
@@ -12,37 +13,44 @@ struct ExtraSettingsMenuOptionInfo {
 	const ExtraSettingsMenuOutAction out_action;
 };
 
+static const ExtraSettingsMenuOptionInfo warning_option = {
+.base_name = "Advanced users only!", .is_selectable = false,
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.out_action = EXTRA_SETTINGS_MENU_NO_ACTION};
+
 static const ExtraSettingsMenuOptionInfo windowed_option = {
-.base_name = "Windowed Mode",
+.base_name = "Windowed Mode", .is_selectable = true,
 .active_fullscreen = true, .active_windowed_screen = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .out_action = EXTRA_SETTINGS_MENU_FULLSCREEN};
 
 static const ExtraSettingsMenuOptionInfo fullscreen_option = {
-.base_name = "Fullscreen Mode",
+.base_name = "Fullscreen Mode", .is_selectable = true,
 .active_fullscreen = false, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .out_action = EXTRA_SETTINGS_MENU_FULLSCREEN};
 
 static const ExtraSettingsMenuOptionInfo join_screens_option = {
-.base_name = "Join Screens",
+.base_name = "Join Screens", .is_selectable = true,
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = false, .active_top_screen = true, .active_bottom_screen = true,
 .out_action = EXTRA_SETTINGS_MENU_SPLIT};
 
 static const ExtraSettingsMenuOptionInfo split_screens_option = {
-.base_name = "Split Screens",
+.base_name = "Split Screens", .is_selectable = true,
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
 .out_action = EXTRA_SETTINGS_MENU_SPLIT};
 
 static const ExtraSettingsMenuOptionInfo quit_option = {
-.base_name = "Quit Application",
+.base_name = "Quit Application", .is_selectable = true,
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .out_action = EXTRA_SETTINGS_MENU_QUIT_APPLICATION};
 
 static const ExtraSettingsMenuOptionInfo* pollable_options[] = {
+&warning_option,
 &windowed_option,
 &fullscreen_option,
 &join_screens_option,
@@ -72,7 +80,7 @@ void ExtraSettingsMenu::class_setup() {
 	this->menu_color = sf::Color(30, 30, 60, 192);
 	this->title = "Extra Settings";
 	this->show_back_x = true;
-	this->show_x = true;
+	this->show_x = false;
 	this->show_title = true;
 }
 
@@ -107,6 +115,10 @@ void ExtraSettingsMenu::set_output_option(int index, int action) {
 		this->selected_index = EXTRA_SETTINGS_MENU_BACK;
 	else
 		this->selected_index = pollable_options[this->options_indexes[index]]->out_action;
+}
+
+bool ExtraSettingsMenu::is_option_selectable(int index, int action) {
+	return pollable_options[this->options_indexes[index]]->is_selectable;
 }
 
 int ExtraSettingsMenu::get_num_options() {

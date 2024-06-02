@@ -131,6 +131,9 @@ private:
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_draw_time;
 	FPSArray poll_fps;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_poll_time;
+	bool triggered_poweroff;
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_poweroff_time;
+	const float poweroff_timeout = 30.0;
 
 	sf::Texture in_tex;
 

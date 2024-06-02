@@ -12,10 +12,14 @@
 #define xstr(a) str(a)
 #define str(a) #a
 
-#define APP_VERSION_MAJOR 0
+#define APP_VERSION_MAJOR 1
 #define APP_VERSION_MINOR 0
 #define APP_VERSION_REVISION 0
+#ifdef RASPI
+#define APP_VERSION_LETTER R
+#else
 #define APP_VERSION_LETTER M
+#endif
 
 bool is_big_endian(void) {
     union {
@@ -59,11 +63,16 @@ std::string LayoutNameGenerator(int index) {
 }
 
 std::string LayoutPathGenerator(int index) {
+	bool success = false;
+	std::string cfg_dir;
 	#if !(defined(_WIN32) || defined(_WIN64))
-	std::string cfg_dir = std::string(std::getenv("HOME")) + "/.config/" + std::string(NAME);
-	#else
-	std::string cfg_dir = ".config/" + std::string(NAME);
+	if(const char* env_p = std::getenv("HOME")) {
+		cfg_dir = std::string(env_p) + "/.config/" + std::string(NAME);
+		success = true;
+	}
 	#endif
+	if(!success)
+		cfg_dir = ".config/" + std::string(NAME);
 	if(index == STARTUP_FILE_INDEX)
 		return cfg_dir + "/";
 	return cfg_dir + "/presets/";
@@ -86,20 +95,25 @@ std::string load_layout_name(int index, bool &success) {
 	}
 
 	success = true;
-	while(std::getline(file, line)) {
-		std::istringstream kvp(line);
-		std::string key;
+	try {
+		while(std::getline(file, line)) {
+			std::istringstream kvp(line);
+			std::string key;
 
-		if(std::getline(kvp, key, '=')) {
-			std::string value;
-			if(std::getline(kvp, value)) {
+			if(std::getline(kvp, key, '=')) {
+				std::string value;
+				if(std::getline(kvp, value)) {
 
-				if(key == "name") {
-					file.close();
-					return value;
+					if(key == "name") {
+						file.close();
+						return value;
+					}
 				}
 			}
 		}
+	}
+	catch(...) {
+		success = false;
 	}
 
 	file.close();

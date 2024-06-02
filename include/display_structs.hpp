@@ -34,6 +34,7 @@ struct ScreenInfo {
 
 struct DisplayData {
 	bool split;
+	bool mono_app_mode;
 };
 
 #pragma pack(push, 1)

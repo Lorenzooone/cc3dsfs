@@ -391,7 +391,7 @@ void WindowScreen::setup_main_menu(bool reset_data) {
 		this->curr_menu = MAIN_MENU_TYPE;
 		if(reset_data)
 			this->main_menu->reset_data();
-		this->main_menu->insert_data(this->m_stype, this->m_info.is_fullscreen);
+		this->main_menu->insert_data(this->m_stype, this->m_info.is_fullscreen, this->display_data->mono_app_mode);
 	}
 }
 
@@ -799,13 +799,28 @@ void WindowScreen::poll() {
 	while(!events_queue.empty()) {
 		if(done)
 			break;
+		SFEvent event_data = events_queue.front();
+		if(this->triggered_poweroff) {
+			// Stop accepting inputs... Not needed, since we're technically powering down...
+			auto curr_time = std::chrono::high_resolution_clock::now();
+			const std::chrono::duration<double> diff = curr_time - this->last_poweroff_time;
+			if(diff.count() < this->poweroff_timeout)
+				break;
+			this->triggered_poweroff = false;
+		}
+		if((event_data.type == sf::Event::KeyPressed) && event_data.poweroff_cmd) {
+			this->m_prepare_save = STARTUP_FILE_INDEX;
+			this->print_notification("Saving and shutting\ndown...Please wait");
+			this->triggered_poweroff = true;
+			this->last_poweroff_time =  std::chrono::high_resolution_clock::now();
+			break;
+		}
 		if(this->query_reset_request()) {
 			this->reset_held_times();
 			this->m_prepare_load = SIMPLE_RESET_DATA_INDEX;
 			done = true;
 			continue;
 		}
-		SFEvent event_data = events_queue.front();
 		events_queue.pop();
 		if(this->common_poll(event_data)) {
 			if(this->close_capture())
@@ -1054,6 +1069,7 @@ void WindowScreen::poll() {
 					this->video_menu->reset_output_option();
 					continue;
 				}
+				break;
 			case CROP_MENU_TYPE:
 				if(this->crop_menu->poll(event_data)) {
 					switch(this->crop_menu->selected_index) {
@@ -1410,7 +1426,7 @@ void WindowScreen::poll_window() {
 				mouse_x = event.mouseMove.x;
 				mouse_y = event.mouseMove.y;
 			}
-			events_queue.emplace(event.type, event.key.code, event.text.unicode, joystickId, event.joystickButton.button, event.joystickMove.axis, 0.0, event.mouseButton.button, mouse_x, mouse_y);
+			events_queue.emplace(event.type, event.key.code, event.text.unicode, joystickId, event.joystickButton.button, event.joystickMove.axis, 0.0, event.mouseButton.button, mouse_x, mouse_y, false);
 		}
 		if(this->m_win.hasFocus()) {
 			check_held_reset(sf::Mouse::isButtonPressed(sf::Mouse::Right), this->right_click_action);
@@ -1434,12 +1450,13 @@ void WindowScreen::poll_window() {
 				auto curr_time = std::chrono::high_resolution_clock::now();
 				const std::chrono::duration<double> diff = curr_time - this->touch_right_click_action.start_time;
 				if(diff.count() > this->touch_long_press_timer) {
-					events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Right, touch_pos.x, touch_pos.y);
+					events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Right, touch_pos.x, touch_pos.y, false);
 					this->touch_right_click_action.start_time = std::chrono::high_resolution_clock::now();
 				}
-				events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Left, touch_pos.x, touch_pos.y);
+				events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Left, touch_pos.x, touch_pos.y, false);
 			}
 			joystick_axis_poll(this->events_queue);
+			extra_buttons_poll(this->events_queue);
 		}
 		else {
 			this->reset_held_times();
