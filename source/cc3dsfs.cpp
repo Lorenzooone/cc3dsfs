@@ -423,6 +423,7 @@ int main(int argc, char **argv) {
 	int page_down_id = -1;
 	int enter_id = -1;
 	int power_id = -1;
+	bool use_pud_up = true;
 	for (int i = 1; i < argc; i++) {
 		if(parse_existence_arg(i, argv, mono_app, true, "--mono_app"))
 			continue;
@@ -435,19 +436,22 @@ int main(int argc, char **argv) {
 			continue;
 		if(parse_int_arg(i, argc, argv, power_id, "--pi_power"))
 			continue;
+		if(parse_existence_arg(i, argv, use_pud_up, false, "--pi_pud_down"))
+			continue;
 		#endif
 		std::cout << "Help:" << std::endl;
-		std::cout << "  --mono_app        Enables special mode for when only this application" << std::endl;
-		std::cout << "                    should run on the system. Disabled by default." << std::endl;
+		std::cout << "  --mono_app      Enables special mode for when only this application" << std::endl;
+		std::cout << "                  should run on the system. Disabled by default." << std::endl;
 		#ifdef RASPI
 		std::cout << "  --pi_select ID  Specifies ID for the select GPIO button." << std::endl;
 		std::cout << "  --pi_menu ID    Specifies ID for the menu GPIO button." << std::endl;
 		std::cout << "  --pi_enter ID   Specifies ID for the enter GPIO button." << std::endl;
 		std::cout << "  --pi_power ID   Specifies ID for the poweroff GPIO button." << std::endl;
+		std::cout << "  --pi_pud_down   Sets the pull-up GPIO mode to down. Default is up." << std::endl;
 		#endif
 		return 0;
 	}
-	init_extra_buttons_poll(page_up_id, page_down_id, enter_id, power_id);
+	init_extra_buttons_poll(page_up_id, page_down_id, enter_id, power_id, use_pud_up);
 	AudioData audio_data;
 	audio_data.reset();
 	CaptureData* capture_data = new CaptureData;

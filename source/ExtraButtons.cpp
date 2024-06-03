@@ -5,7 +5,7 @@
 
 static ExtraButton pi_page_up, pi_page_down, pi_enter, pi_power;
 
-void ExtraButton::initialize(int pi_value, int id, sf::Keyboard::Key corresponding_key, bool is_power, float first_re_press_time, float later_re_press_time) {
+void ExtraButton::initialize(int pi_value, int id, sf::Keyboard::Key corresponding_key, bool is_power, float first_re_press_time, float later_re_press_time, bool use_pud_up) {
 	this->pi_value = pi_value;
 	this->id = id;
 	this->is_power = is_power;
@@ -18,7 +18,10 @@ void ExtraButton::initialize(int pi_value, int id, sf::Keyboard::Key correspondi
 	this->later_re_press_time = later_re_press_time;
 	#ifdef RASPI
 	set_mode(this->pi_value, this->id, PI_INPUT);
-	set_pull_up_down(this->pi_value, this->id, PI_PUD_UP);
+	if(use_pud_up)
+		set_pull_up_down(this->pi_value, this->id, PI_PUD_UP);
+	else
+		set_pull_up_down(this->pi_value, this->id, PI_PUD_DOWN);
 	#endif
 }
 
@@ -67,18 +70,18 @@ void ExtraButton::poll(std::queue<SFEvent> &events_queue) {
 	}
 	else
 		this->started = false;
-	events_queue.emplace(event_kind, this->corresponding_key, 0, 0, 0, sf::Joystick::Axis::X, 0, sf::Mouse::Left, 0, 0, this->is_power);
+	events_queue.emplace(event_kind, this->corresponding_key, 0, 0, 0, sf::Joystick::Axis::X, 0, sf::Mouse::Left, 0, 0, this->is_power, true);
 }
 
-void init_extra_buttons_poll(int page_up_id, int page_down_id, int enter_id, int power_id) {
+void init_extra_buttons_poll(int page_up_id, int page_down_id, int enter_id, int power_id, bool use_pud_up) {
 	int pi_value = -1;
 	#ifdef RASPI
 	pi_value = pigpio_start(NULL, NULL);
 	#endif
-	pi_page_up.initialize(pi_value, page_up_id, sf::Keyboard::PageUp, false, 0.5, 0.03);
-	pi_page_down.initialize(pi_value, page_down_id, sf::Keyboard::PageDown, false, 0.5, 0.03);
-	pi_enter.initialize(pi_value, enter_id, sf::Keyboard::Enter, false, 0.5, 0.075);
-	pi_power.initialize(pi_value, power_id, sf::Keyboard::Escape, true, 30.0, 30.0);
+	pi_page_up.initialize(pi_value, page_up_id, sf::Keyboard::PageUp, false, 0.5, 0.03, use_pud_up);
+	pi_page_down.initialize(pi_value, page_down_id, sf::Keyboard::PageDown, false, 0.5, 0.03, use_pud_up);
+	pi_enter.initialize(pi_value, enter_id, sf::Keyboard::Enter, false, 0.5, 0.075, use_pud_up);
+	pi_power.initialize(pi_value, power_id, sf::Keyboard::Escape, true, 30.0, 30.0, use_pud_up);
 }
 
 void end_extra_buttons_poll() {

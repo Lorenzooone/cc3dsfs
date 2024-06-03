@@ -99,7 +99,9 @@ private:
 	HeldTime touch_right_click_action;
 	HeldTime touch_action;
 	HeldTime pgdown_action;
+	HeldTime extra_pgdown_action;
 	HeldTime enter_action;
+	HeldTime extra_enter_action;
 	HeldTime right_click_action;
 	HeldTime controller_button_action;
 	bool consumed_touch_long_press;

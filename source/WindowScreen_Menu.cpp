@@ -329,11 +329,17 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 					this->set_close(0);
 					break;
 				case sf::Keyboard::Enter:
-					check_held_reset_key(true, this->enter_action);
+					if(event_data.is_extra)
+						check_held_reset(true, this->extra_enter_action);
+					else
+						check_held_reset_key(true, this->enter_action);
 					consumed = false;
 					break;
 				case sf::Keyboard::PageDown:
-					check_held_reset_key(true, this->pgdown_action);
+					if(event_data.is_extra)
+						check_held_reset(true, this->extra_pgdown_action);
+					else
+						check_held_reset_key(true, this->pgdown_action);
 					consumed = false;
 					break;
 				default:
@@ -344,11 +350,17 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 		case sf::Event::KeyReleased:
 			switch(event_data.code) {
 				case sf::Keyboard::Enter:
-					check_held_reset_key(false, this->enter_action);
+					if(event_data.is_extra)
+						check_held_reset(false, this->extra_enter_action);
+					else
+						check_held_reset_key(false, this->enter_action);
 					consumed = false;
 					break;
 				case sf::Keyboard::PageDown:
-					check_held_reset_key(false, this->pgdown_action);
+					if(event_data.is_extra)
+						check_held_reset(false, this->extra_pgdown_action);
+					else
+						check_held_reset_key(false, this->pgdown_action);
 					consumed = false;
 					break;
 				default:
@@ -1394,6 +1406,10 @@ bool WindowScreen::query_reset_request() {
 		return true;
 	if(check_held_diff(curr_time, this->pgdown_action) > this->bad_resolution_timeout)
 		return true;
+	if(check_held_diff(curr_time, this->extra_enter_action) > this->bad_resolution_timeout)
+		return true;
+	if(check_held_diff(curr_time, this->extra_pgdown_action) > this->bad_resolution_timeout)
+		return true;
 	if(check_held_diff(curr_time, this->controller_button_action) > this->bad_resolution_timeout)
 		return true;
 	if(check_held_diff(curr_time, this->touch_action) > this->bad_resolution_timeout)
@@ -1405,6 +1421,8 @@ void WindowScreen::reset_held_times() {
 	check_held_reset(false, this->right_click_action);
 	check_held_reset(false, this->enter_action);
 	check_held_reset(false, this->pgdown_action);
+	check_held_reset(false, this->extra_enter_action);
+	check_held_reset(false, this->extra_pgdown_action);
 	check_held_reset(false, this->controller_button_action);
 	check_held_reset(false, this->touch_action);
 }
@@ -1429,7 +1447,7 @@ void WindowScreen::poll_window() {
 				mouse_x = event.mouseMove.x;
 				mouse_y = event.mouseMove.y;
 			}
-			events_queue.emplace(event.type, event.key.code, event.text.unicode, joystickId, event.joystickButton.button, event.joystickMove.axis, 0.0, event.mouseButton.button, mouse_x, mouse_y, false);
+			events_queue.emplace(event.type, event.key.code, event.text.unicode, joystickId, event.joystickButton.button, event.joystickMove.axis, 0.0, event.mouseButton.button, mouse_x, mouse_y, false, false);
 		}
 		if(this->m_win.hasFocus()) {
 			check_held_reset(sf::Mouse::isButtonPressed(sf::Mouse::Right), this->right_click_action);
@@ -1453,10 +1471,10 @@ void WindowScreen::poll_window() {
 				auto curr_time = std::chrono::high_resolution_clock::now();
 				const std::chrono::duration<double> diff = curr_time - this->touch_right_click_action.start_time;
 				if(diff.count() > this->touch_long_press_timer) {
-					events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Right, touch_pos.x, touch_pos.y, false);
+					events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Right, touch_pos.x, touch_pos.y, false, false);
 					this->touch_right_click_action.start_time = std::chrono::high_resolution_clock::now();
 				}
-				events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Left, touch_pos.x, touch_pos.y, false);
+				events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Left, touch_pos.x, touch_pos.y, false, false);
 			}
 			joystick_axis_poll(this->events_queue);
 			extra_buttons_poll(this->events_queue);

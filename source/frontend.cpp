@@ -367,7 +367,7 @@ void joystick_axis_poll(std::queue<SFEvent> &events_queue) {
 		for(int j = 0; j < sf::Joystick::AxisCount; j++) {
 			sf::Joystick::Axis axis = sf::Joystick::Axis(sf::Joystick::Axis::X + j);
 			if(sf::Joystick::hasAxis(i, axis))
-				events_queue.emplace(sf::Event::JoystickMoved, sf::Keyboard::Backspace, 0, i, 0, axis, sf::Joystick::getAxisPosition(i, axis), sf::Mouse::Left, 0, 0, false);
+				events_queue.emplace(sf::Event::JoystickMoved, sf::Keyboard::Backspace, 0, i, 0, axis, sf::Joystick::getAxisPosition(i, axis), sf::Mouse::Left, 0, 0, false, false);
 		}
 	}
 }

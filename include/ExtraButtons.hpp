@@ -6,7 +6,7 @@
 
 class ExtraButton {
 public:
-	void initialize(int pi_value, int id, sf::Keyboard::Key corresponding_key, bool is_power, float first_re_press_time, float later_re_press_time);
+	void initialize(int pi_value, int id, sf::Keyboard::Key corresponding_key, bool is_power, float first_re_press_time, float later_re_press_time, bool use_pud_up);
 	int get_pi_value();
 	void poll(std::queue<SFEvent> &events_queue);
 private:
