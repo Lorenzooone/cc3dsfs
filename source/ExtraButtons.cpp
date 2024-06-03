@@ -1,12 +1,8 @@
 #include "ExtraButtons.hpp"
-#ifdef RASPI
-#include <pigpiod_if2.h>
-#endif
 
 static ExtraButton pi_page_up, pi_page_down, pi_enter, pi_power;
 
-void ExtraButton::initialize(int pi_value, int id, sf::Keyboard::Key corresponding_key, bool is_power, float first_re_press_time, float later_re_press_time, bool use_pud_up) {
-	this->pi_value = pi_value;
+void ExtraButton::initialize(int id, sf::Keyboard::Key corresponding_key, bool is_power, float first_re_press_time, float later_re_press_time, bool use_pud_up) {
 	this->id = id;
 	this->is_power = is_power;
 	this->corresponding_key = corresponding_key;
@@ -17,30 +13,47 @@ void ExtraButton::initialize(int pi_value, int id, sf::Keyboard::Key correspondi
 	this->first_re_press_time = first_re_press_time;
 	this->later_re_press_time = later_re_press_time;
 	#ifdef RASPI
-	set_mode(this->pi_value, this->id, PI_INPUT);
-	if(use_pud_up)
-		set_pull_up_down(this->pi_value, this->id, PI_PUD_UP);
+	if(this->id >= 0) {
+		std::string gpio_str = "GPIO" + std::to_string(this->id);
+		this->gpioline_ptr = gpiod_line_find(gpio_str.c_str());
+	}
 	else
-		set_pull_up_down(this->pi_value, this->id, PI_PUD_DOWN);
+		this->gpioline_ptr = NULL;
+	if(this->gpioline_ptr) {
+		if(use_pud_up)
+			gpiod_line_request_input_flags(this->gpioline_ptr, "cc3dsfs", GPIOD_LINE_REQUEST_FLAG_BIAS_PULL_UP);
+		else
+			gpiod_line_request_input_flags(this->gpioline_ptr, "cc3dsfs", GPIOD_LINE_REQUEST_FLAG_BIAS_PULL_DOWN);
+	}
 	#endif
 }
 
-int ExtraButton::get_pi_value() {
-	if(!this->initialized)
-		return -1;
-	return this->pi_value;
+void ExtraButton::end() {
+	if(!initialized)
+		return;
+	#ifdef RASPI
+	if(!this->gpioline_ptr)
+		return;
+	gpiod_line_close_chip(this->gpioline_ptr);
+	gpiod_line_release(this->gpioline_ptr);
+	this->gpioline_ptr = NULL;
+	#endif
 }
 
 bool ExtraButton::is_pressed() {
 	#ifdef RASPI
-	return gpio_read(this->pi_value, this->id) == 0;
-	#else
-	return false;
+	if(this->gpioline_ptr)
+		return gpiod_line_get_value(this->gpioline_ptr) == 0;
 	#endif
+	return false;
 }
 
 bool ExtraButton::is_valid() {
-	return this->initialized && (this->id >= 0) && (this->pi_value >= 0);
+	#ifdef RASPI
+	return this->initialized && (this->id >= 0) && this->gpioline_ptr;
+	#else
+	return false;
+	#endif
 }
 
 void ExtraButton::poll(std::queue<SFEvent> &events_queue) {
@@ -74,22 +87,17 @@ void ExtraButton::poll(std::queue<SFEvent> &events_queue) {
 }
 
 void init_extra_buttons_poll(int page_up_id, int page_down_id, int enter_id, int power_id, bool use_pud_up) {
-	int pi_value = -1;
-	#ifdef RASPI
-	pi_value = pigpio_start(NULL, NULL);
-	#endif
-	pi_page_up.initialize(pi_value, page_up_id, sf::Keyboard::PageUp, false, 0.5, 0.03, use_pud_up);
-	pi_page_down.initialize(pi_value, page_down_id, sf::Keyboard::PageDown, false, 0.5, 0.03, use_pud_up);
-	pi_enter.initialize(pi_value, enter_id, sf::Keyboard::Enter, false, 0.5, 0.075, use_pud_up);
-	pi_power.initialize(pi_value, power_id, sf::Keyboard::Escape, true, 30.0, 30.0, use_pud_up);
+	pi_page_up.initialize(page_up_id, sf::Keyboard::PageUp, false, 0.5, 0.03, use_pud_up);
+	pi_page_down.initialize(page_down_id, sf::Keyboard::PageDown, false, 0.5, 0.03, use_pud_up);
+	pi_enter.initialize(enter_id, sf::Keyboard::Enter, false, 0.5, 0.075, use_pud_up);
+	pi_power.initialize(power_id, sf::Keyboard::Escape, true, 30.0, 30.0, use_pud_up);
 }
 
 void end_extra_buttons_poll() {
-	#ifdef RASPI
-	int pi_value = pi_page_up.get_pi_value();
-	if(pi_value >= 0)
-		pigpio_stop(pi_value);
-	#endif
+	pi_page_up.end();
+	pi_page_down.end();
+	pi_enter.end();
+	pi_power.end();
 }
 
 void extra_buttons_poll(std::queue<SFEvent> &events_queue) {

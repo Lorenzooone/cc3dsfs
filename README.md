@@ -46,6 +46,8 @@ sudo apt install \
     libfreetype-dev
 ```
 
+Additionally, when compiling for a Raspberry Pi, install gpiod and libgpiod-dev.
+
 ## Compilation
 
 To compile the program, assuming CMake, git and g++ are installed on the system, this is the command which should be launched:
