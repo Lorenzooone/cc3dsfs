@@ -32,8 +32,6 @@
 struct HeldTime {
 	std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
 	bool started;
-	bool schedule_reset;
-	bool acted;
 };
 
 struct FPSArray {

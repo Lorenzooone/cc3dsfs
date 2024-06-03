@@ -13,29 +13,6 @@ static void check_held_reset(bool value, HeldTime &action_time) {
 		action_time.started = false;
 }
 
-static void check_held_reset_key(bool value, HeldTime &action_time) {
-	if(value) {
-		if(!action_time.started) {
-			action_time.start_time = std::chrono::high_resolution_clock::now();
-			action_time.started = true;
-		}
-		action_time.acted = true;
-	}
-	else
-		action_time.schedule_reset = true;
-}
-
-static void held_reset_key_prepare(HeldTime &action_time) {
-	action_time.acted = false;
-	action_time.schedule_reset = false;
-}
-
-static void held_reset_key_post_check(HeldTime &action_time) {
-	if(action_time.schedule_reset && !action_time.acted) {
-		action_time.started = false;
-	}
-}
-
 static float check_held_diff(std::chrono::time_point<std::chrono::high_resolution_clock> &curr_time, HeldTime &action_time) {
 	if(!action_time.started)
 		return 0.0;
@@ -332,35 +309,36 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 					if(event_data.is_extra)
 						check_held_reset(true, this->extra_enter_action);
 					else
-						check_held_reset_key(true, this->enter_action);
+						check_held_reset(true, this->enter_action);
 					consumed = false;
 					break;
 				case sf::Keyboard::PageDown:
 					if(event_data.is_extra)
 						check_held_reset(true, this->extra_pgdown_action);
 					else
-						check_held_reset_key(true, this->pgdown_action);
+						check_held_reset(true, this->pgdown_action);
 					consumed = false;
 					break;
 				default:
 					consumed = false;
 					break;
 			}
-			
+
+			break;
 		case sf::Event::KeyReleased:
 			switch(event_data.code) {
 				case sf::Keyboard::Enter:
 					if(event_data.is_extra)
 						check_held_reset(false, this->extra_enter_action);
 					else
-						check_held_reset_key(false, this->enter_action);
+						check_held_reset(false, this->enter_action);
 					consumed = false;
 					break;
 				case sf::Keyboard::PageDown:
 					if(event_data.is_extra)
 						check_held_reset(false, this->extra_pgdown_action);
 					else
-						check_held_reset_key(false, this->pgdown_action);
+						check_held_reset(false, this->pgdown_action);
 					consumed = false;
 					break;
 				default:
@@ -809,8 +787,6 @@ void WindowScreen::poll() {
 		if(diff.count() > this->mouse_timeout)
 			this->m_info.show_mouse = false;
 	}
-	held_reset_key_prepare(this->enter_action);
-	held_reset_key_prepare(this->pgdown_action);
 	this->poll_window();
 	bool done = false;
 	while(!events_queue.empty()) {
@@ -1351,8 +1327,6 @@ void WindowScreen::poll() {
 				break;
 		}
 	}
-	held_reset_key_post_check(this->enter_action);
-	held_reset_key_post_check(this->pgdown_action);
 }
 
 void WindowScreen::setup_connection_menu(DevicesList *devices_list, bool reset_data) {
