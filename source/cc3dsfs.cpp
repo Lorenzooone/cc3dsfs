@@ -91,6 +91,11 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 						continue;
 					}
 
+					if(key == "fast_poll") {
+						display_data.fast_poll = std::stoi(value);
+						continue;
+					}
+
 					if(audio_data->load_audio_data(key, value))
 						continue;
 				}
@@ -157,6 +162,7 @@ static bool save(const std::string path, const std::string name, const std::stri
 	file << save_screen_info("joint_", joint_info);
 	file << save_screen_info("top_", top_info);
 	file << "split=" << display_data.split << std::endl;
+	file << "fast_poll=" << display_data.fast_poll << std::endl;
 	file << audio_data->save_audio_data();
 
 	file.close();
@@ -238,6 +244,15 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 	audio.stop();
 }
 
+static void poll_all_windows(FrontendData *frontend_data, bool &polled) {
+	if(!polled) {
+		frontend_data->top_screen->poll();
+		frontend_data->bot_screen->poll();
+		frontend_data->joint_screen->poll();
+		polled = true;
+	}
+}
+
 static void check_close_application(WindowScreen &screen, CaptureData* capture_data, int &ret_val) {
 	if(screen.close_capture() && capture_data->status.running) {
 		capture_data->status.running = false;
@@ -289,6 +304,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 
 	while(capture_data->status.running) {
 
+		bool polled = false;
 		VideoOutputData *chosen_buf = out_buf;
 		bool blank_out = false;
 		if(capture_data->status.connected) {
@@ -324,11 +340,13 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 			chosen_buf = NULL;
 		}
 
-		top_screen.poll();
-		bot_screen.poll();
-		joint_screen.poll();
+		if(frontend_data.display_data.fast_poll)
+			poll_all_windows(&frontend_data, polled);
 
 		update_output(&frontend_data, last_frame_time, chosen_buf);
+
+		if(!frontend_data.display_data.fast_poll)
+			poll_all_windows(&frontend_data, polled);
 
 		int load_index = 0;
 		int save_index = 0;

@@ -161,6 +161,7 @@ void insert_basic_pars(std::vector<const PARData*> &par_vector) {
 
 void reset_display_data(DisplayData *display_data) {
 	display_data->split = false;
+	display_data->fast_poll = false;
 }
 
 void reset_fullscreen_info(ScreenInfo &info) {

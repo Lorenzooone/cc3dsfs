@@ -179,6 +179,7 @@ private:
 	void async_change();
 	void vsync_change();
 	void blur_change();
+	void fast_poll_change();
 	void padding_change();
 	void crop_value_change(int new_crop_value);
 	void par_value_change(int new_par_value, bool is_top);

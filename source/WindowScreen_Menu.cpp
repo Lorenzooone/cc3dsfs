@@ -124,6 +124,11 @@ void WindowScreen::blur_change() {
 	this->print_notification_on_off("Blur", this->m_info.is_blurred);
 }
 
+void WindowScreen::fast_poll_change() {
+	this->display_data->fast_poll = !this->display_data->fast_poll;
+	this->print_notification_on_off("Fast Poll", this->display_data->fast_poll);
+}
+
 void WindowScreen::padding_change() {
 	if(this->m_info.is_fullscreen)
 		return;
@@ -350,24 +355,18 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 
 			break;
 		case sf::Event::MouseMoved:
-			if(this->m_info.is_fullscreen) {
-				this->m_info.show_mouse = true;
-				this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
-			}
+			this->m_info.show_mouse = true;
+			this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
 			consumed = false;
 			break;
 		case sf::Event::MouseButtonPressed:
-			if(this->m_info.is_fullscreen) {
-				this->m_info.show_mouse = true;
-				this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
-			}
+			this->m_info.show_mouse = true;
+			this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
 			consumed = false;
 			break;
 		case sf::Event::MouseButtonReleased:
-			if(this->m_info.is_fullscreen) {
-				this->m_info.show_mouse = true;
-				this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
-			}
+			this->m_info.show_mouse = true;
+			this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
 			consumed = false;
 			break;
 		case sf::Event::JoystickButtonPressed:
@@ -783,7 +782,7 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 void WindowScreen::poll() {
 	if(this->close_capture())
 		return;
-	if(this->m_info.is_fullscreen && this->m_info.show_mouse) {
+	if((this->m_info.is_fullscreen || this->display_data->mono_app_mode) && this->m_info.show_mouse) {
 		auto curr_time = std::chrono::high_resolution_clock::now();
 		const std::chrono::duration<double> diff = curr_time - this->last_mouse_action_time;
 		if(diff.count() > this->mouse_timeout)
@@ -974,6 +973,9 @@ void WindowScreen::poll() {
 							break;
 						case VIDEO_MENU_BLUR:
 							this->blur_change();
+							break;
+						case VIDEO_MENU_FAST_POLL:
+							this->fast_poll_change();
 							break;
 						case VIDEO_MENU_PADDING:
 							this->padding_change();
@@ -1474,7 +1476,7 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			this->main_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->capture_status->connected);
 			break;
 		case VIDEO_MENU_TYPE:
-			this->video_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+			this->video_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info, this->display_data->fast_poll);
 			break;
 		case CROP_MENU_TYPE:
 			this->crop_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.crop_kind);

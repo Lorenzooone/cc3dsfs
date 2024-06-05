@@ -36,13 +36,14 @@ enum VideoMenuOutAction{
 	VIDEO_MENU_TOP_ROTATION_INC,
 	VIDEO_MENU_BOTTOM_ROTATION_DEC,
 	VIDEO_MENU_BOTTOM_ROTATION_INC,
+	VIDEO_MENU_FAST_POLL,
 };
 
 class VideoMenu : public OptionSelectionMenu {
 public:
 	VideoMenu(bool font_load_success, sf::Font &text_font);
 	~VideoMenu();
-	void prepare(float scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info);
+	void prepare(float scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info, bool fast_poll);
 	void insert_data(ScreenType s_type, bool is_fullscreen);
 	VideoMenuOutAction selected_index = VideoMenuOutAction::VIDEO_MENU_NO_ACTION;
 	void reset_output_option();

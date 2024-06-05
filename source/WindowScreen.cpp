@@ -718,9 +718,8 @@ void WindowScreen::resize_window_and_out_rects(bool do_work) {
 }
 
 void WindowScreen::create_window(bool re_prepare_size) {
-	if(!this->m_info.is_fullscreen) {
-		this->m_info.show_mouse = true;
-	}
+	if(!this->m_info.is_fullscreen)
+		this->m_info.show_mouse = !this->display_data->mono_app_mode;
 	else {
 		bool success = false;
 		if((this->m_info.fullscreen_mode_width > 0) && (this->m_info.fullscreen_mode_height > 0) && (this->m_info.fullscreen_mode_bpp > 0)) {

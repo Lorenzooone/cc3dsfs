@@ -150,6 +150,13 @@ static const VideoMenuOptionInfo bottom_one_rotation_option = {
 .is_inc = true, .dec_str = "Left", .inc_str = "Right", .inc_out_action = VIDEO_MENU_BOTTOM_ROTATION_INC,
 .out_action = VIDEO_MENU_BOTTOM_ROTATION_DEC};
 
+static const VideoMenuOptionInfo fast_poll_option = {
+.base_name = "Disable Fast Poll", .false_name = "Enable Fast Poll",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
+.out_action = VIDEO_MENU_FAST_POLL};
+
 static const VideoMenuOptionInfo* pollable_options[] = {
 &crop_option,
 &window_scaling_option,
@@ -159,6 +166,7 @@ static const VideoMenuOptionInfo* pollable_options[] = {
 &vsync_option,
 &async_option,
 &blur_option,
+&fast_poll_option,
 &small_screen_offset_option,
 &offset_settings_option,
 &rotation_settings_option,
@@ -265,7 +273,7 @@ std::string VideoMenu::setTextOptionDualPercentage(int index, int value_1, int v
 	return this->get_string_option(index, DEFAULT_ACTION) + ": " + std::to_string(value_1) + " - " + std::to_string(value_2);
 }
 
-void VideoMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info) {
+void VideoMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info, bool fast_poll) {
 	int num_pages = this->get_num_pages();
 	if(this->future_data.page >= num_pages)
 		this->future_data.page = num_pages - 1;
@@ -307,6 +315,8 @@ void VideoMenu::prepare(float menu_scaling_factor, int view_size_x, int view_siz
 			case VIDEO_MENU_BOTTOM_ROTATION_DEC:
 				this->labels[index]->setText(this->setTextOptionInt(real_index, info->bot_rotation));
 				break;
+			case VIDEO_MENU_FAST_POLL:
+				this->labels[index]->setText(this->setTextOptionBool(real_index, fast_poll));
 			default:
 				break;
 		}
