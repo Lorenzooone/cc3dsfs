@@ -256,7 +256,6 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	frontend_data.reload = true;
 	bool skip_io = false;
 	int num_allowed_blanks = MAX_ALLOWED_BLANKS;
-	std::mutex events_access;
 	OutTextData out_text_data;
 	out_text_data.consumed = true;
 	int ret_val = 0;
@@ -264,9 +263,9 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	out_buf = new VideoOutputData;
 	memset(out_buf, 0, sizeof(VideoOutputData));
 
-	WindowScreen top_screen(ScreenType::TOP, &capture_data->status, &frontend_data.display_data, audio_data, &events_access);
-	WindowScreen bot_screen(ScreenType::BOTTOM, &capture_data->status, &frontend_data.display_data, audio_data, &events_access);
-	WindowScreen joint_screen(ScreenType::JOINT, &capture_data->status, &frontend_data.display_data, audio_data, &events_access);
+	WindowScreen top_screen(ScreenType::TOP, &capture_data->status, &frontend_data.display_data, audio_data);
+	WindowScreen bot_screen(ScreenType::BOTTOM, &capture_data->status, &frontend_data.display_data, audio_data);
+	WindowScreen joint_screen(ScreenType::JOINT, &capture_data->status, &frontend_data.display_data, audio_data);
 	frontend_data.top_screen = &top_screen;
 	frontend_data.bot_screen = &bot_screen;
 	frontend_data.joint_screen = &joint_screen;
@@ -325,13 +324,14 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 			chosen_buf = NULL;
 		}
 
+		top_screen.poll();
+		bot_screen.poll();
+		joint_screen.poll();
+
 		update_output(&frontend_data, last_frame_time, chosen_buf);
 
 		int load_index = 0;
 		int save_index = 0;
-		top_screen.poll();
-		bot_screen.poll();
-		joint_screen.poll();
 
 		if(top_screen.open_capture() || bot_screen.open_capture() || joint_screen.open_capture()) {
 			capture_data->status.connected = connect(true, capture_data, &frontend_data);

@@ -45,6 +45,8 @@ static double FPSArrayGetAverage(FPSArray *array) {
 	int available_fps = FPS_WINDOW_SIZE;
 	if(array->index < available_fps)
 		available_fps = array->index;
+	if(available_fps == 0)
+		return 0.0;
 	double fps_sum = 0;
 	for(int i = 0; i < available_fps; i++)
 		fps_sum += array->data[i];
@@ -1408,7 +1410,6 @@ void WindowScreen::poll_window() {
 		FPSArrayInsertElement(&poll_fps, diff.count());
 		this->last_poll_time = curr_time;
 		sf::Event event;
-		this->events_access->lock();
 		while(this->m_win.pollEvent(event)) {
 			int joystickId = event.joystickConnect.joystickId;
 			if(event.type == sf::Event::JoystickButtonPressed)
@@ -1457,7 +1458,6 @@ void WindowScreen::poll_window() {
 			this->reset_held_times();
 			this->touch_right_click_action.started = false;
 		}
-		this->events_access->unlock();
 	}
 	else {
 		this->reset_held_times();

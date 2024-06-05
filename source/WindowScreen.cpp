@@ -11,11 +11,10 @@
 #define TOP_ROUNDED_PADDING 0
 #define BOTTOM_ROUNDED_PADDING 5
 
-WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, std::mutex* events_access) {
+WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data) {
 	this->m_stype = stype;
 	insert_basic_crops(this->possible_crops, this->m_stype);
 	insert_basic_pars(this->possible_pars);
-	this->events_access = events_access;
 	this->m_prepare_save = 0;
 	this->m_prepare_load = 0;
 	this->m_prepare_open = false;
@@ -315,19 +314,16 @@ bool WindowScreen::window_needs_work() {
 
 void WindowScreen::window_factory(bool is_main_thread) {
 	if(this->loaded_operations.call_close) {
-		this->events_access->lock();
 		this->m_win.setActive(true);
 		this->main_thread_owns_window = is_main_thread;
 		this->m_win.close();
 		while(!events_queue.empty())
 			events_queue.pop();
-		this->events_access->unlock();
 		this->loaded_operations.call_close = false;
 		this->loaded_operations.call_create = false;
 	}
 	if(this->loaded_operations.call_create) {
 		this->notification->setShowText(false);
-		this->events_access->lock();
 		this->m_win.setActive(true);
 		this->main_thread_owns_window = is_main_thread;
 		if(!this->loaded_info.is_fullscreen) {
@@ -339,7 +335,6 @@ void WindowScreen::window_factory(bool is_main_thread) {
 			this->m_win.create(this->curr_desk_mode, this->title_factory(), sf::Style::Fullscreen);
 		this->last_window_creation_time = std::chrono::high_resolution_clock::now();
 		this->update_screen_settings();
-		this->events_access->unlock();
 		this->loaded_operations.call_create = false;
 	}
 	if(this->m_win.isOpen()) {
@@ -821,10 +816,8 @@ void WindowScreen::setWinSize(bool is_main_thread) {
 	int win_width = this->m_win.getSize().x;
 	int win_height = this->m_win.getSize().y;
 	if((win_width != width) || (win_height != height)) {
-		this->events_access->lock();
 		this->m_win.setActive(true);
 		this->main_thread_owns_window = is_main_thread;
 		this->m_win.setSize(sf::Vector2u(width, height));
-		this->events_access->unlock();
 	}
 }

@@ -43,7 +43,7 @@ class WindowScreen {
 public:
 	ScreenInfo m_info;
 
-	WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, std::mutex* events_access);
+	WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data);
 	~WindowScreen();
 
 	void build();
@@ -91,7 +91,6 @@ private:
 	double frame_time;
 	DisplayData* display_data;
 	AudioData* audio_data;
-	std::mutex* events_access;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_mouse_action_time;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_window_creation_time;
 	HeldTime touch_right_click_action;
