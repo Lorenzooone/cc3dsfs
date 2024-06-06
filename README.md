@@ -124,6 +124,7 @@ The name of profiles can be changed by altering the __name__ field in its file.
 - USB Hubs can be the cause of connection issues. If you're having problems, try checking whether the 3DS connects fine or not without any other devices connected.
 - Fullscreen mode on MacOS may mistake the screen for being bigger than what it really is. Changing the resolution to the proper one of the screen in the _Resolution Settings_ under Video Settings will fix the issue.
 - Current font in use: OFL Sorts Mill Goudy TT
+- Enabling/Disabling Fast Poll may slightly boost the FPS of the software, at the cost of an extremely slight decrease in frame latency. Disabled by default (as when the FPS are greater than the CC's, it doesn't do anything).
 - When compiling on a Raspberry Pi, to enable usage of GPIO, use: 
 ```
 cmake -B build -DRASPBERRY_PI_COMPILATION=TRUE ; cmake --build build --config Release
