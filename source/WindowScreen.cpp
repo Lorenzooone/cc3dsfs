@@ -28,8 +28,6 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	FPSArrayInit(&this->draw_fps);
 	FPSArrayInit(&this->poll_fps);
 	this->in_tex.create(IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT);
-	this->m_in_rect_top.setTexture(&this->in_tex);
-	this->m_in_rect_bot.setTexture(&this->in_tex);
 	this->display_data = display_data;
 	this->audio_data = audio_data;
 	this->last_window_creation_time = std::chrono::high_resolution_clock::now();
@@ -73,13 +71,11 @@ void WindowScreen::build() {
 
 	this->reload();
 
-	this->m_out_rect_top.out_tex.create(top_screen_size.x, top_screen_size.y);
-	this->m_out_rect_top.out_rect.setSize(top_screen_size);
-	this->m_out_rect_top.out_rect.setTexture(&this->m_out_rect_top.out_tex.getTexture());
+	this->m_out_rect_top.setSize(top_screen_size);
+	this->m_out_rect_top.setTexture(&this->in_tex);
 
-	this->m_out_rect_bot.out_tex.create(bot_screen_size.x, bot_screen_size.y);
-	this->m_out_rect_bot.out_rect.setSize(bot_screen_size);
-	this->m_out_rect_bot.out_rect.setTexture(&this->m_out_rect_bot.out_tex.getTexture());
+	this->m_out_rect_bot.setSize(bot_screen_size);
+	this->m_out_rect_bot.setTexture(&this->in_tex);
 
 	this->m_view.setRotation(0);
 }
@@ -234,14 +230,8 @@ void WindowScreen::free_ownership_of_window(bool is_main_thread) {
 	}
 }
 
-void WindowScreen::resize_in_rect(sf::RectangleShape &in_rect, int start_x, int start_y, int width, int height) {
-	in_rect.setTextureRect(sf::IntRect(start_y, start_x, height, width));
-
-	in_rect.setSize(sf::Vector2f(height, width));
-	in_rect.setOrigin(height / 2, width / 2);
-
-	in_rect.setRotation(-90);
-	in_rect.setPosition(width / 2, height / 2);
+void WindowScreen::resize_in_tex_rect(sf::RectangleShape &rect, int start_x, int start_y, int width, int height) {
+	rect.setTextureRect(sf::IntRect(start_y, start_x, height, width));
 }
 
 int WindowScreen::get_screen_corner_modifier_x(int rotation, int width) {
@@ -277,8 +267,7 @@ void WindowScreen::print_notification_float(std::string base_text, float value, 
 
 void WindowScreen::prepare_screen_rendering() {
 	if(loaded_operations.call_blur) {
-		this->m_out_rect_top.out_tex.setSmooth(this->loaded_info.is_blurred);
-		this->m_out_rect_bot.out_tex.setSmooth(this->loaded_info.is_blurred);
+		this->in_tex.setSmooth(this->loaded_info.is_blurred);
 	}
 	if(loaded_operations.call_crop) {
 		this->crop();
@@ -361,46 +350,18 @@ void WindowScreen::pre_texture_conversion_processing() {
 	this->in_tex.update((uint8_t*)this->saved_buf, IN_VIDEO_WIDTH, IN_VIDEO_HEIGHT, 0, 0);
 }
 
-void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug) {
-	if((is_top && this->m_stype == ScreenType::BOTTOM) || ((!is_top) && this->m_stype == ScreenType::TOP))
-		return;
-	if(this->loaded_menu == CONNECT_MENU_TYPE)
-		return;
-
-	if(is_debug) {
-		if(is_top)
-			rect_data.out_tex.clear(sf::Color::Red);
-		else
-			rect_data.out_tex.clear(sf::Color::Blue);
-	}
-	else {
-		rect_data.out_tex.clear();
-		if(actually_draw) {
-			rect_data.out_tex.draw(in_rect);
-			//Place postprocessing effects here
-		}
-	}
-	rect_data.out_tex.display();
-}
-
 void WindowScreen::window_bg_processing() {
 	//Place BG processing here
 }
 
-void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
-	this->post_texture_conversion_processing(this->m_out_rect_top, this->m_in_rect_top, actually_draw, true, is_debug);
-	this->post_texture_conversion_processing(this->m_out_rect_bot, this->m_in_rect_bot, actually_draw, false, is_debug);
-
-	if(is_debug)
-		this->m_win.clear(sf::Color::Green);
-	else
-		this->m_win.clear();
+void WindowScreen::display_data_to_window(bool actually_draw) {
+	this->m_win.clear();
 	this->window_bg_processing();
 	if(this->loaded_menu != CONNECT_MENU_TYPE) {
 		if(this->m_stype != ScreenType::BOTTOM)
-			this->m_win.draw(this->m_out_rect_top.out_rect);
+			this->m_win.draw(this->m_out_rect_top);
 		if(this->m_stype != ScreenType::TOP)
-			this->m_win.draw(this->m_out_rect_bot.out_rect);
+			this->m_win.draw(this->m_out_rect_bot);
 	}
 	this->execute_menu_draws();
 	this->notification->draw(this->m_win);
@@ -504,8 +465,8 @@ void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::
 		}
 	}
 	if(do_work) {
-		this->m_out_rect_top.out_rect.setPosition(top_screen_x + offset_x + get_screen_corner_modifier_x(this->loaded_info.top_rotation, top_screen_width), top_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.top_rotation, top_screen_height));
-		this->m_out_rect_bot.out_rect.setPosition(bot_screen_x + offset_x + get_screen_corner_modifier_x(this->loaded_info.bot_rotation, bot_screen_width), bot_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.bot_rotation, bot_screen_height));
+		this->m_out_rect_top.setPosition(top_screen_x + offset_x + get_screen_corner_modifier_x(this->loaded_info.top_rotation, top_screen_width), top_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.top_rotation, top_screen_height));
+		this->m_out_rect_bot.setPosition(bot_screen_x + offset_x + get_screen_corner_modifier_x(this->loaded_info.bot_rotation, bot_screen_width), bot_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.bot_rotation, bot_screen_height));
 	}
 
 	int top_end_x = top_screen_x + offset_x + top_screen_width;
@@ -599,8 +560,8 @@ void WindowScreen::prepare_size_ratios(bool top_increase, bool bot_increase) {
 	if(!this->m_info.is_fullscreen)
 		return;
 
-	sf::Vector2f top_screen_size = getShownScreenSize(true, this->m_info.crop_kind);
-	sf::Vector2f bot_screen_size = getShownScreenSize(false, this->m_info.crop_kind);
+	sf::Vector2f top_screen_size = getShownScreenSize(true, this->m_info.crop_kind, true);
+	sf::Vector2f bot_screen_size = getShownScreenSize(false, this->m_info.crop_kind, true);
 
 	if(this->m_stype == ScreenType::TOP) {
 		bot_increase = true;
@@ -671,8 +632,8 @@ int WindowScreen::get_fullscreen_offset_y(int top_width, int top_height, int bot
 }
 
 void WindowScreen::resize_window_and_out_rects(bool do_work) {
-	sf::Vector2f top_screen_size = getShownScreenSize(true, this->loaded_info.crop_kind);
-	sf::Vector2f bot_screen_size = getShownScreenSize(false, this->loaded_info.crop_kind);
+	sf::Vector2f top_screen_size = getShownScreenSize(true, this->loaded_info.crop_kind, true);
+	sf::Vector2f bot_screen_size = getShownScreenSize(false, this->loaded_info.crop_kind, true);
 	int top_width = top_screen_size.x;
 	int top_height = top_screen_size.y;
 	float top_scaling = this->loaded_info.scaling;
@@ -705,10 +666,8 @@ void WindowScreen::resize_window_and_out_rects(bool do_work) {
 	sf::Vector2f new_top_screen_size = sf::Vector2f(top_width, top_height);
 	sf::Vector2f new_bot_screen_size = sf::Vector2f(bot_width, bot_height);
 	if(do_work) {
-		this->m_out_rect_top.out_rect.setSize(new_top_screen_size);
-		this->m_out_rect_top.out_rect.setTextureRect(sf::IntRect(0, 0, top_screen_size.x, top_screen_size.y));
-		this->m_out_rect_bot.out_rect.setSize(new_bot_screen_size);
-		this->m_out_rect_bot.out_rect.setTextureRect(sf::IntRect(0, 0, bot_screen_size.x, bot_screen_size.y));
+		this->m_out_rect_top.setSize(new_top_screen_size);
+		this->m_out_rect_bot.setSize(new_bot_screen_size);
 	}
 	this->set_position_screens(new_top_screen_size, new_bot_screen_size, offset_x, offset_y, max_x, max_y, do_work);
 	if((!this->loaded_info.is_fullscreen) && this->loaded_info.rounded_corners_fix) {
@@ -776,12 +735,12 @@ void WindowScreen::update_screen_settings() {
 }
 
 void WindowScreen::rotate() {
-	this->m_out_rect_top.out_rect.setRotation(this->loaded_info.top_rotation);
-	this->m_out_rect_bot.out_rect.setRotation(this->loaded_info.bot_rotation);
+	this->m_out_rect_top.setRotation(this->loaded_info.top_rotation);
+	this->m_out_rect_bot.setRotation(this->loaded_info.bot_rotation);
 	this->loaded_operations.call_screen_settings_update = true;
 }
 
-sf::Vector2f WindowScreen::getShownScreenSize(bool is_top, int &crop_kind) {
+sf::Vector2f WindowScreen::getShownScreenSize(bool is_top, int &crop_kind, bool swap) {
 	if(crop_kind >= this->possible_crops.size())
 		crop_kind = 0;
 	int width = this->possible_crops[crop_kind]->top_width;
@@ -790,6 +749,8 @@ sf::Vector2f WindowScreen::getShownScreenSize(bool is_top, int &crop_kind) {
 		width = this->possible_crops[crop_kind]->bot_width;
 		height = this->possible_crops[crop_kind]->bot_height;
 	}
+	if(swap)
+		return sf::Vector2f(height, width);
 	return sf::Vector2f(width, height);
 }
 
@@ -800,8 +761,8 @@ void WindowScreen::crop() {
 	sf::Vector2f top_screen_size = getShownScreenSize(true, this->loaded_info.crop_kind);
 	sf::Vector2f bot_screen_size = getShownScreenSize(false, this->loaded_info.crop_kind);
 
-	this->resize_in_rect(this->m_in_rect_top, this->possible_crops[this->loaded_info.crop_kind]->top_x, this->possible_crops[this->loaded_info.crop_kind]->top_y, top_screen_size.x, top_screen_size.y);
-	this->resize_in_rect(this->m_in_rect_bot, TOP_WIDTH_3DS + this->possible_crops[this->loaded_info.crop_kind]->bot_x, this->possible_crops[this->loaded_info.crop_kind]->bot_y, bot_screen_size.x, bot_screen_size.y);
+	this->resize_in_tex_rect(this->m_out_rect_top, this->possible_crops[this->loaded_info.crop_kind]->top_x, this->possible_crops[this->loaded_info.crop_kind]->top_y, top_screen_size.x, top_screen_size.y);
+	this->resize_in_tex_rect(this->m_out_rect_bot, TOP_WIDTH_3DS + this->possible_crops[this->loaded_info.crop_kind]->bot_x, this->possible_crops[this->loaded_info.crop_kind]->bot_y, bot_screen_size.x, bot_screen_size.y);
 	this->loaded_operations.call_screen_settings_update = true;
 }
 

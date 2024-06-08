@@ -109,10 +109,10 @@ void RotationMenu::prepare(float menu_scaling_factor, int view_size_x, int view_
 		int option_index = this->options_indexes[real_index];
 		switch(pollable_options[option_index]->out_action) {
 			case ROTATION_MENU_TOP_ROTATION_DEC:
-				this->labels[index]->setText(this->setTextOptionInt(real_index, info->top_rotation));
+				this->labels[index]->setText(this->setTextOptionInt(real_index, (info->top_rotation + 90) % 360));
 				break;
 			case ROTATION_MENU_BOTTOM_ROTATION_DEC:
-				this->labels[index]->setText(this->setTextOptionInt(real_index, info->bot_rotation));
+				this->labels[index]->setText(this->setTextOptionInt(real_index, (info->bot_rotation + 90) % 360));
 				break;
 			default:
 				break;
