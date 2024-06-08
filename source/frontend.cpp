@@ -248,14 +248,12 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 	}
 	if(key == (base + "top_rot")) {
 		info.top_rotation = std::stoi(value);
-		info.top_rotation += 270;
 		info.top_rotation %= 360;
 		info.top_rotation += (info.top_rotation < 0) ? 360 : 0;
 		return true;
 	}
 	if(key == (base + "bot_rot")) {
 		info.bot_rotation = std::stoi(value);
-		info.bot_rotation += 270;
 		info.bot_rotation %= 360;
 		info.bot_rotation += (info.bot_rotation < 0) ? 360 : 0;
 		return true;
@@ -344,8 +342,8 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "sub_att_off=" + std::to_string(info.subscreen_attached_offset) + "\n";
 	out += base + "off_x=" + std::to_string(info.total_offset_x) + "\n";
 	out += base + "off_y=" + std::to_string(info.total_offset_y) + "\n";
-	out += base + "top_rot=" + std::to_string((info.top_rotation + 90) % 360) + "\n";
-	out += base + "bot_rot=" + std::to_string((info.bot_rotation + 90) % 360) + "\n";
+	out += base + "top_rot=" + std::to_string(info.top_rotation) + "\n";
+	out += base + "bot_rot=" + std::to_string(info.bot_rotation) + "\n";
 	out += base + "vsync=" + std::to_string(info.v_sync_enabled) + "\n";
 	out += base + "async=" + std::to_string(info.async) + "\n";
 	out += base + "top_scaling=" + std::to_string(info.top_scaling) + "\n";
@@ -375,38 +373,23 @@ void joystick_axis_poll(std::queue<SFEvent> &events_queue) {
 	}
 }
 
-void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor, bool swapped) {
+void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor) {
 	width *= multiplier_factor;
 	height *= multiplier_factor;
-	if(!swapped) {
-		if(correction_factor->is_width_main)
-			width = (width * correction_factor->width_multiplier) / correction_factor->width_divisor;
-		else
-			height = (height * correction_factor->width_divisor) / correction_factor->width_multiplier;
-	}
-	else {
-		if(correction_factor->is_width_main)
-			height = (height * correction_factor->width_multiplier) / correction_factor->width_divisor;
-		else
-			width = (width * correction_factor->width_divisor) / correction_factor->width_multiplier;
-	}
+	if(correction_factor->is_width_main)
+		width = (width * correction_factor->width_multiplier) / correction_factor->width_divisor;
+	else
+		height = (height * correction_factor->width_divisor) / correction_factor->width_multiplier;
 }
 
-void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor, bool swapped) {
+void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor) {
 	width *= multiplier_factor;
 	height *= multiplier_factor;
-	if(!swapped) {
-		if(correction_factor->is_width_main)
-			width = (width * correction_factor->width_multiplier) / correction_factor->width_divisor;
-		else
-			height = (height * correction_factor->width_divisor) / correction_factor->width_multiplier;
+	if(correction_factor->is_width_main) {
+		width = (width * correction_factor->width_multiplier) / correction_factor->width_divisor;
 	}
-	else {
-		if(correction_factor->is_width_main)
-			height = (height * correction_factor->width_multiplier) / correction_factor->width_divisor;
-		else
-			width = (width * correction_factor->width_divisor) / correction_factor->width_multiplier;
-	}
+	else
+		height = (height * correction_factor->width_divisor) / correction_factor->width_multiplier;
 }
 
 JoystickDirection get_joystick_direction(uint32_t joystickId, sf::Joystick::Axis axis, float position) {

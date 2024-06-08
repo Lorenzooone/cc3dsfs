@@ -142,7 +142,8 @@ private:
 	volatile bool scheduled_work_on_window;
 	volatile bool is_thread_done;
 
-	sf::RectangleShape m_out_rect_top, m_out_rect_bot;
+	sf::RectangleShape m_in_rect_top, m_in_rect_bot;
+	out_rect_data m_out_rect_top, m_out_rect_bot;
 	ScreenType m_stype;
 
 	std::queue<SFEvent> events_queue;
@@ -167,7 +168,7 @@ private:
 	static void reset_operations(ScreenOperations &operations);
 	void free_ownership_of_window(bool is_main_thread);
 
-	void resize_in_tex_rect(sf::RectangleShape &rect, int start_x, int start_y, int width, int height);
+	void resize_in_rect(sf::RectangleShape &in_rect, int start_x, int start_y, int width, int height);
 	int get_screen_corner_modifier_x(int rotation, int width);
 	int get_screen_corner_modifier_y(int rotation, int height);
 	void print_notification_on_off(std::string base_text, bool value);
@@ -199,8 +200,9 @@ private:
 	bool window_needs_work();
 	void window_factory(bool is_main_thread);
 	void pre_texture_conversion_processing();
+	void post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug);
 	void window_bg_processing();
-	void display_data_to_window(bool actually_draw);
+	void display_data_to_window(bool actually_draw, bool is_debug = false);
 	void window_render_call();
 	void set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, bool do_work = true);
 	int prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotation, int width_limit, int height_limit, int other_rotation, const PARData *own_par);
@@ -215,7 +217,7 @@ private:
 	void open();
 	void update_screen_settings();
 	void rotate();
-	sf::Vector2f getShownScreenSize(bool is_top, int &crop_kind, bool swap = false);
+	sf::Vector2f getShownScreenSize(bool is_top, int &crop_kind);
 	void crop();
 	void setWinSize(bool is_main_thread);
 	void setup_main_menu(bool reset_data = true);
@@ -254,8 +256,8 @@ void reset_fullscreen_info(ScreenInfo &info);
 void reset_screen_info(ScreenInfo &info);
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
 std::string save_screen_info(std::string base, const ScreenInfo &info);
-void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor, bool swapped = true);
-void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor, bool swapped = true);
+void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor);
+void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor);
 void default_sleep();
 void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL);
 void screen_display_thread(WindowScreen *screen);
