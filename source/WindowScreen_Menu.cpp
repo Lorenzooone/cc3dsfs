@@ -240,8 +240,8 @@ void WindowScreen::rotation_change(int &value, bool right) {
 	this->future_operations.call_rotate = true;
 }
 
-void WindowScreen::ratio_change(bool top_priority) {
-	this->prepare_size_ratios(top_priority, !top_priority);
+void WindowScreen::ratio_change(bool top_priority, bool cycle) {
+	this->prepare_size_ratios(top_priority, !top_priority, cycle);
 	this->future_operations.call_screen_settings_update = true;
 }
 
@@ -585,10 +585,22 @@ bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 		case sf::Event::KeyPressed:
 			switch(event_data.code) {
 				case sf::Keyboard::Enter:
-					this->setup_main_menu();
+					if(event_data.is_extra)
+						this->ratio_change(true, true);
+					else
+						this->setup_main_menu();
 					break;
 				case sf::Keyboard::PageDown:
-					this->setup_main_menu();
+					if(event_data.is_extra)
+						this->setup_main_menu();
+					else
+						consumed = false;
+					break;
+				case sf::Keyboard::PageUp:
+					if(event_data.is_extra)
+						this->crop_value_change(this->m_info.crop_kind + 1);
+					else
+						consumed = false;
 					break;
 				default:
 					consumed = false;

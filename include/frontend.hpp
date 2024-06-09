@@ -76,6 +76,12 @@ private:
 		bool call_blur;
 		bool call_screen_settings_update;
 	};
+	struct ResizingScreenData {
+		sf::Vector2f size;
+		int *scaling;
+		int rotation;
+		const PARData *par;
+	};
 	CaptureStatus* capture_status;
 	std::string win_title;
 	sf::RenderWindow m_win;
@@ -187,7 +193,7 @@ private:
 	void menu_scaling_change(bool positive);
 	void window_scaling_change(bool positive);
 	void rotation_change(int &value, bool right);
-	void ratio_change(bool top_priority);
+	void ratio_change(bool top_priority, bool cycle = false);
 	void bfi_change();
 	void bottom_pos_change(int new_bottom_pos);
 	bool query_reset_request();
@@ -206,8 +212,8 @@ private:
 	void window_render_call();
 	void set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, bool do_work = true);
 	int prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotation, int width_limit, int height_limit, int other_rotation, const PARData *own_par);
-	void calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf::Vector2f &other_screen_size, int &own_scaling, int &other_scaling, int own_rotation, int other_rotation, bool increase, bool mantain, bool set_to_zero, const PARData *own_par, const PARData *other_par);
-	void prepare_size_ratios(bool top_increase, bool bot_increase);
+	void calc_scaling_resize_screens(ResizingScreenData *own_screen, ResizingScreenData* other_screen, bool increase, bool mantain, bool set_to_zero, bool cycle);
+	void prepare_size_ratios(bool top_increase, bool bot_increase, bool cycle = false);
 	int get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height);
 	int get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height);
 	void resize_window_and_out_rects(bool do_work = true);

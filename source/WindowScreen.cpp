@@ -554,48 +554,50 @@ int WindowScreen::prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotati
 	return height_ratio;
 }
 
-void WindowScreen::calc_scaling_resize_screens(sf::Vector2f &own_screen_size, sf::Vector2f &other_screen_size, int &own_scaling, int &other_scaling, int own_rotation, int other_rotation, bool increase, bool mantain, bool set_to_zero, const PARData* own_par, const PARData* other_par) {
-	int min_other_width = other_screen_size.x;
-	int min_other_height = other_screen_size.y;
-	get_par_size(min_other_width, min_other_height, 1, other_par);
-	int chosen_ratio = prepare_screen_ratio(own_screen_size, own_rotation, min_other_width, min_other_height, other_rotation, own_par);
+void WindowScreen::calc_scaling_resize_screens(ResizingScreenData *own_screen, ResizingScreenData* other_screen, bool increase, bool mantain, bool set_to_zero, bool cycle) {
+	int other_width = other_screen->size.x;
+	int other_height = other_screen->size.y;
+	get_par_size(other_width, other_height, 1, other_screen->par);
+	int chosen_ratio = prepare_screen_ratio(own_screen->size, own_screen->rotation, other_width, other_height, other_screen->rotation, own_screen->par);
 	if(chosen_ratio <= 0) {
-		chosen_ratio = prepare_screen_ratio(own_screen_size, own_rotation, 0, 0, other_rotation, own_par);
+		chosen_ratio = prepare_screen_ratio(own_screen->size, own_screen->rotation, 0, 0, other_screen->rotation, own_screen->par);
 		if(chosen_ratio <= 0)
 			chosen_ratio = 0;
 	}
-	int old_scaling = own_scaling;
-	if(increase && (chosen_ratio > own_scaling) && (chosen_ratio > 0))
-		own_scaling += 1;
-	else if(mantain && (chosen_ratio >= own_scaling) && (chosen_ratio > 0) && (own_scaling >= 0))
-		own_scaling = own_scaling;
+	int old_scaling = (*own_screen->scaling);
+	if(increase && (chosen_ratio > (*own_screen->scaling)) && (chosen_ratio > 0))
+		(*own_screen->scaling) += 1;
+	else if(mantain && (chosen_ratio >= (*own_screen->scaling)) && (chosen_ratio > 0) && ((*own_screen->scaling) >= 0))
+		(*own_screen->scaling) = (*own_screen->scaling);
+	else if(cycle && (chosen_ratio <= (*own_screen->scaling)) && ((*other_screen->scaling) == 0))
+		(*own_screen->scaling) = 0;
 	else
-		own_scaling = chosen_ratio;
+		(*own_screen->scaling) = chosen_ratio;
 	if(set_to_zero)
-		own_scaling = 0;
-	int own_height = own_screen_size.y;
-	int own_width = own_screen_size.x;
-	get_par_size(own_width, own_height, own_scaling, own_par);
-	if((increase && ((old_scaling == own_scaling) || (other_scaling == 0)) || (mantain && (other_scaling == 0))) && (own_scaling > 0))
-		other_scaling = 0;
+		(*own_screen->scaling) = 0;
+	int own_height = own_screen->size.y;
+	int own_width = own_screen->size.x;
+	get_par_size(own_width, own_height, (*own_screen->scaling), own_screen->par);
+	if((increase && ((old_scaling == (*own_screen->scaling)) || ((*other_screen->scaling) == 0)) || (mantain && ((*other_screen->scaling) == 0))) && ((*own_screen->scaling) > 0))
+		(*other_screen->scaling) = 0;
 	else
-		other_scaling = prepare_screen_ratio(other_screen_size, other_rotation, own_width, own_height, own_rotation, other_par);
-	if(other_scaling < 0)
-		other_scaling = 0;
-	if((this->m_stype == ScreenType::JOINT) && ((own_scaling > 0) || ((other_scaling == 0) && (own_scaling == 0)))) {
+		(*other_screen->scaling) = prepare_screen_ratio(other_screen->size, other_screen->rotation, own_width, own_height, own_screen->rotation, other_screen->par);
+	if((*other_screen->scaling) < 0)
+		(*other_screen->scaling) = 0;
+	if((this->m_stype == ScreenType::JOINT) && (((*own_screen->scaling) > 0) || (((*other_screen->scaling) == 0) && ((*own_screen->scaling) == 0)))) {
 		// Due to size differences, it may be possible that
 		// the chosen screen might be able to increase its
 		// scaling even more without compromising the other one...
-		int other_height = other_screen_size.y;
-		int other_width = other_screen_size.x;
-		get_par_size(other_width, other_height, other_scaling, other_par);
-		own_scaling = prepare_screen_ratio(own_screen_size, own_rotation, other_width, other_height, other_rotation, own_par);
-		if(own_scaling < 0)
-			own_scaling = 0;
+		other_width = other_screen->size.x;
+		other_height = other_screen->size.y;
+		get_par_size(other_width, other_height, *other_screen->scaling, other_screen->par);
+		(*own_screen->scaling) = prepare_screen_ratio(own_screen->size, own_screen->rotation, other_width, other_height, other_screen->rotation, own_screen->par);
+		if((*own_screen->scaling) < 0)
+			(*own_screen->scaling) = 0;
 	}
 }
 
-void WindowScreen::prepare_size_ratios(bool top_increase, bool bot_increase) {
+void WindowScreen::prepare_size_ratios(bool top_increase, bool bot_increase, bool cycle) {
 	if(!this->m_info.is_fullscreen)
 		return;
 
@@ -616,10 +618,12 @@ void WindowScreen::prepare_size_ratios(bool top_increase, bool bot_increase) {
 		bot_increase = false;
 	}
 	bool prioritize_top = (!bot_increase) && (top_increase || (this->m_info.bottom_pos == UNDER_TOP) || (this->m_info.bottom_pos == RIGHT_TOP));
+	ResizingScreenData top_screen_resize_data = {.size = top_screen_size, .scaling = &this->m_info.top_scaling, .rotation = this->m_info.top_rotation, .par = this->possible_pars[this->m_info.top_par]};
+	ResizingScreenData bot_screen_resize_data = {.size = bot_screen_size, .scaling = &this->m_info.bot_scaling, .rotation = this->m_info.bot_rotation, .par = this->possible_pars[this->m_info.bot_par]};
 	if(prioritize_top)
-		calc_scaling_resize_screens(top_screen_size, bot_screen_size, this->m_info.top_scaling, this->m_info.bot_scaling, this->m_info.top_rotation, this->m_info.bot_rotation, top_increase, try_mantain_ratio, this->m_stype == ScreenType::BOTTOM, this->possible_pars[this->m_info.top_par], this->possible_pars[this->m_info.bot_par]);
+		calc_scaling_resize_screens(&top_screen_resize_data, &bot_screen_resize_data, top_increase, try_mantain_ratio, this->m_stype == ScreenType::BOTTOM, cycle);
 	else
-		calc_scaling_resize_screens(bot_screen_size, top_screen_size, this->m_info.bot_scaling, this->m_info.top_scaling, this->m_info.bot_rotation, this->m_info.top_rotation, bot_increase, try_mantain_ratio, this->m_stype == ScreenType::TOP, this->possible_pars[this->m_info.bot_par], this->possible_pars[this->m_info.top_par]);
+		calc_scaling_resize_screens(&bot_screen_resize_data, &top_screen_resize_data, bot_increase, try_mantain_ratio, this->m_stype == ScreenType::TOP, cycle);
 }
 
 int WindowScreen::get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height) {
