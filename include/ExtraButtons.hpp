@@ -9,7 +9,9 @@
 
 class ExtraButton {
 public:
-	void initialize(int id, sf::Keyboard::Key corresponding_key, bool is_power, float first_re_press_time, float later_re_press_time, bool use_pud_up);
+	void initialize(int id, sf::Keyboard::Key corresponding_key, bool is_power, float first_re_press_time, float later_re_press_time, bool use_pud_up, std::string name);
+	std::string get_name();
+	bool is_button_x(sf::Keyboard::Key corresponding_key);
 	void poll(std::queue<SFEvent> &events_queue);
 	void end();
 private:
@@ -23,6 +25,7 @@ private:
 	float later_re_press_time;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_press_time;
 	bool is_time_valid;
+	std::string name;
 	#ifdef RASPI
 	gpiod_line *gpioline_ptr;
 	#endif

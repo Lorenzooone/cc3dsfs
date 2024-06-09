@@ -11,7 +11,7 @@
 #define TOP_ROUNDED_PADDING 0
 #define BOTTOM_ROUNDED_PADDING 5
 
-WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data) {
+WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts) {
 	this->m_stype = stype;
 	insert_basic_crops(this->possible_crops, this->m_stype);
 	insert_basic_pars(this->possible_pars);
@@ -32,6 +32,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->m_in_rect_bot.setTexture(&this->in_tex);
 	this->display_data = display_data;
 	this->audio_data = audio_data;
+	this->extra_button_shortcuts = extra_button_shortcuts;
 	this->last_window_creation_time = std::chrono::high_resolution_clock::now();
 	this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
 	this->last_draw_time = std::chrono::high_resolution_clock::now();

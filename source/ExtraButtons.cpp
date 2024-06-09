@@ -1,8 +1,9 @@
 #include "ExtraButtons.hpp"
 
 static ExtraButton pi_page_up, pi_page_down, pi_enter, pi_power;
+static ExtraButton* pi_buttons[] = {&pi_page_up, &pi_page_down, &pi_enter, &pi_power};
 
-void ExtraButton::initialize(int id, sf::Keyboard::Key corresponding_key, bool is_power, float first_re_press_time, float later_re_press_time, bool use_pud_up) {
+void ExtraButton::initialize(int id, sf::Keyboard::Key corresponding_key, bool is_power, float first_re_press_time, float later_re_press_time, bool use_pud_up, std::string name) {
 	this->id = id;
 	this->is_power = is_power;
 	this->corresponding_key = corresponding_key;
@@ -12,6 +13,7 @@ void ExtraButton::initialize(int id, sf::Keyboard::Key corresponding_key, bool i
 	this->last_press_time = std::chrono::high_resolution_clock::now();
 	this->first_re_press_time = first_re_press_time;
 	this->later_re_press_time = later_re_press_time;
+	this->name = name;
 	#ifdef RASPI
 	if(this->id >= 0) {
 		std::string gpio_str = "GPIO" + std::to_string(this->id);
@@ -46,6 +48,16 @@ bool ExtraButton::is_pressed() {
 		return gpiod_line_get_value(this->gpioline_ptr) == 0;
 	#endif
 	return false;
+}
+
+std::string ExtraButton::get_name() {
+	if(this->is_valid())
+		return this->name;
+	return "";
+}
+
+bool ExtraButton::is_button_x(sf::Keyboard::Key corresponding_key) {
+	return this->is_valid() && this->corresponding_key == corresponding_key;
 }
 
 bool ExtraButton::is_valid() {
@@ -86,23 +98,26 @@ void ExtraButton::poll(std::queue<SFEvent> &events_queue) {
 	events_queue.emplace(event_kind, this->corresponding_key, 0, 0, 0, sf::Joystick::Axis::X, 0, sf::Mouse::Left, 0, 0, this->is_power, true);
 }
 
+std::string get_extra_button_name(sf::Keyboard::Key corresponding_key) {
+	for(int i = 0; i < sizeof(pi_buttons) / sizeof(pi_buttons[0]); i++)
+		if(pi_buttons[i]->is_button_x(corresponding_key))
+			return pi_buttons[i]->get_name();
+	return "";
+}
+
 void init_extra_buttons_poll(int page_up_id, int page_down_id, int enter_id, int power_id, bool use_pud_up) {
-	pi_page_up.initialize(page_up_id, sf::Keyboard::PageUp, false, 0.5, 0.03, use_pud_up);
-	pi_page_down.initialize(page_down_id, sf::Keyboard::PageDown, false, 0.5, 0.03, use_pud_up);
-	pi_enter.initialize(enter_id, sf::Keyboard::Enter, false, 0.5, 0.075, use_pud_up);
-	pi_power.initialize(power_id, sf::Keyboard::Escape, true, 30.0, 30.0, use_pud_up);
+	pi_page_up.initialize(page_up_id, sf::Keyboard::PageUp, false, 0.5, 0.03, use_pud_up, "Select");
+	pi_page_down.initialize(page_down_id, sf::Keyboard::PageDown, false, 0.5, 0.03, use_pud_up, "Menu");
+	pi_enter.initialize(enter_id, sf::Keyboard::Enter, false, 0.5, 0.075, use_pud_up, "Enter");
+	pi_power.initialize(power_id, sf::Keyboard::Escape, true, 30.0, 30.0, use_pud_up, "Power");
 }
 
 void end_extra_buttons_poll() {
-	pi_page_up.end();
-	pi_page_down.end();
-	pi_enter.end();
-	pi_power.end();
+	for(int i = 0; i < sizeof(pi_buttons) / sizeof(pi_buttons[0]); i++)
+		pi_buttons[i]->end();
 }
 
 void extra_buttons_poll(std::queue<SFEvent> &events_queue) {
-	pi_page_down.poll(events_queue);
-	pi_page_up.poll(events_queue);
-	pi_enter.poll(events_queue);
-	pi_power.poll(events_queue);
+	for(int i = 0; i < sizeof(pi_buttons) / sizeof(pi_buttons[0]); i++)
+		pi_buttons[i]->poll(events_queue);
 }

@@ -106,6 +106,13 @@ static const MainMenuOptionInfo extra_settings_option = {
 .enabled_normal_mode = false, .enabled_mono_mode = true,
 .out_action = MAIN_MENU_EXTRA_SETTINGS};
 
+static const MainMenuOptionInfo shortcut_option = {
+.base_name = "Shortcuts", .false_name = "",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true,
+.out_action = MAIN_MENU_SHORTCUT_SETTINGS};
+
 static const MainMenuOptionInfo shutdown_option = {
 .base_name = "Shutdown", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
@@ -123,6 +130,7 @@ static const MainMenuOptionInfo* pollable_options[] = {
 &audio_settings_option,
 &save_profiles_option,
 &load_profiles_option,
+&shortcut_option,
 &status_option,
 &licenses_option,
 &extra_settings_option,
@@ -156,7 +164,7 @@ void MainMenu::class_setup() {
 	this->show_title = true;
 }
 
-void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_mode) {
+void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_mode, bool enable_shortcut) {
 	this->num_enabled_options = 0;
 	for(int i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
 		bool valid = true;
@@ -174,6 +182,8 @@ void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_
 			valid = valid && pollable_options[i]->enabled_mono_mode;
 		else
 			valid = valid && pollable_options[i]->enabled_normal_mode;
+		if((pollable_options[i]->out_action == MAIN_MENU_SHORTCUT_SETTINGS) && (!enable_shortcut))
+			valid = false;
 		if(valid) {
 			this->options_indexes[this->num_enabled_options] = i;
 			this->num_enabled_options++;

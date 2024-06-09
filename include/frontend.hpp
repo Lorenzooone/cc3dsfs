@@ -27,7 +27,10 @@
 #include "ExtraSettingsMenu.hpp"
 #include "StatusMenu.hpp"
 #include "LicenseMenu.hpp"
+#include "ShortcutMenu.hpp"
+#include "ActionSelectionMenu.hpp"
 #include "display_structs.hpp"
+#include "WindowCommands.hpp"
 
 struct HeldTime {
 	std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
@@ -39,11 +42,16 @@ struct FPSArray {
 	int index;
 };
 
+struct ExtraButtonShortcuts {
+	const WindowCommand *enter_shortcut;
+	const WindowCommand *page_up_shortcut;
+};
+
 class WindowScreen {
 public:
 	ScreenInfo m_info;
 
-	WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data);
+	WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts);
 	~WindowScreen();
 
 	void build();
@@ -97,6 +105,7 @@ private:
 	double frame_time;
 	DisplayData* display_data;
 	AudioData* audio_data;
+	ExtraButtonShortcuts* extra_button_shortcuts;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_mouse_action_time;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_window_creation_time;
 	HeldTime touch_right_click_action;
@@ -129,10 +138,17 @@ private:
 	ExtraSettingsMenu *extra_menu;
 	StatusMenu *status_menu;
 	LicenseMenu *license_menu;
+	ShortcutMenu *shortcut_menu;
+	ActionSelectionMenu *action_selection_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const PARData*> possible_pars;
 	std::vector<sf::VideoMode> possible_resolutions;
 	std::vector<FileData> possible_files;
+	std::vector<std::string> possible_buttons_names;
+	std::vector<const WindowCommand **> possible_buttons_ptrs;
+	std::vector<bool> possible_buttons_extras;
+	int chosen_button;
+	std::vector<const WindowCommand*> possible_actions;
 	FPSArray in_fps;
 	FPSArray draw_fps;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_draw_time;
@@ -180,6 +196,8 @@ private:
 	void print_notification_on_off(std::string base_text, bool value);
 	void print_notification_float(std::string base_text, float value, int decimals);
 	void set_close(int ret_val);
+	bool can_execute_cmd(const WindowCommand* window_cmd, bool is_extra, bool is_always);
+	bool execute_cmd(PossibleWindowCommands id);
 	void split_change();
 	void fullscreen_change();
 	void async_change();
@@ -237,6 +255,8 @@ private:
 	void setup_fileconfig_menu(bool is_save, bool reset_data = true);
 	void setup_resolution_menu(bool reset_data = true);
 	void setup_extra_menu(bool reset_data = true);
+	void setup_shortcuts_menu(bool reset_data = true);
+	void setup_action_selection_menu(bool reset_data = true);
 	void setup_status_menu(bool reset_data = true);
 	void setup_licenses_menu(bool reset_data = true);
 	void setup_relative_pos_menu(bool reset_data = true);

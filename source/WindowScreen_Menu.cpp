@@ -20,6 +20,10 @@ static float check_held_diff(std::chrono::time_point<std::chrono::high_resolutio
 	return diff.count();
 }
 
+static bool is_shortcut_valid() {
+	return (get_extra_button_name(sf::Keyboard::Enter) != "") || (get_extra_button_name(sf::Keyboard::PageUp) != "");
+}
+
 void FPSArrayInit(FPSArray *array) {
 	array->data = new double[FPS_WINDOW_SIZE];
 	array->index = 0;
@@ -69,6 +73,8 @@ void WindowScreen::init_menus() {
 	this->extra_menu = new ExtraSettingsMenu(this->font_load_success, this->text_font);
 	this->status_menu = new StatusMenu(this->font_load_success, this->text_font);
 	this->license_menu = new LicenseMenu(this->font_load_success, this->text_font);
+	this->shortcut_menu = new ShortcutMenu(this->font_load_success, this->text_font);
+	this->action_selection_menu = new ActionSelectionMenu(this->font_load_success, this->text_font);
 }
 
 void WindowScreen::destroy_menus() {
@@ -87,6 +93,8 @@ void WindowScreen::destroy_menus() {
 	delete this->extra_menu;
 	delete this->status_menu;
 	delete this->license_menu;
+	delete this->shortcut_menu;
+	delete this->action_selection_menu;
 }
 
 void WindowScreen::set_close(int ret_val) {
@@ -259,6 +267,140 @@ void WindowScreen::bottom_pos_change(int new_bottom_pos) {
 	}
 }
 
+bool WindowScreen::can_execute_cmd(const WindowCommand* window_cmd, bool is_extra, bool is_always) {
+	if((!window_cmd->usable_always) && is_always)
+		return false;
+	if((!window_cmd->available_mono_extra) && is_extra && this->display_data->mono_app_mode)
+		return false;
+	return true;
+}
+
+bool WindowScreen::execute_cmd(PossibleWindowCommands id) {
+	bool consumed = true;
+	switch(id) {
+		case WINDOW_COMMAND_CONNECT:
+			this->m_prepare_open = true;
+			break;
+		case WINDOW_COMMAND_SPLIT:
+			this->split_change();
+			break;
+		case WINDOW_COMMAND_FULLSCREEN:
+			this->fullscreen_change();
+			break;
+		case WINDOW_COMMAND_CROP:
+			this->crop_value_change(this->m_info.crop_kind + 1);
+			break;
+		case WINDOW_COMMAND_ASYNC:
+			this->async_change();
+			break;
+		case WINDOW_COMMAND_VSYNC:
+			this->vsync_change();
+			break;
+		case WINDOW_COMMAND_MENU_SCALING_INC:
+			this->menu_scaling_change(true);
+			break;
+		case WINDOW_COMMAND_MENU_SCALING_DEC:
+			this->menu_scaling_change(false);
+			break;
+		case WINDOW_COMMAND_WINDOW_SCALING_INC:
+			this->window_scaling_change(true);
+			break;
+		case WINDOW_COMMAND_WINDOW_SCALING_DEC:
+			this->window_scaling_change(false);
+			break;
+		case WINDOW_COMMAND_RATIO_CYCLE:
+			this->ratio_change(true, true);
+			break;
+		case WINDOW_COMMAND_RATIO_TOP:
+			this->ratio_change(true);
+			break;
+		case WINDOW_COMMAND_RATIO_BOT:
+			this->ratio_change(false);
+			break;
+		case WINDOW_COMMAND_BLUR:
+			this->blur_change();
+			break;
+		case WINDOW_COMMAND_TRANSPOSE:
+			this->bottom_pos_change(this->m_info.bottom_pos + 1);
+			break;
+		case WINDOW_COMMAND_SCREEN_OFFSET:
+			this->offset_change(this->m_info.subscreen_offset, 0.5);
+			break;
+		case WINDOW_COMMAND_SUB_SCREEN_DISTANCE:
+			this->offset_change(this->m_info.subscreen_attached_offset, 0.5);
+			break;
+		case WINDOW_COMMAND_CANVAS_X:
+			this->offset_change(this->m_info.total_offset_x, 0.5);
+			break;
+		case WINDOW_COMMAND_CANVAS_Y:
+			this->offset_change(this->m_info.total_offset_y, 0.5);
+			break;
+		case WINDOW_COMMAND_ROT_INC:
+			this->rotation_change(this->m_info.top_rotation, true);
+			this->rotation_change(this->m_info.bot_rotation, true);
+			break;
+		case WINDOW_COMMAND_ROT_DEC:
+			this->rotation_change(this->m_info.top_rotation, false);
+			this->rotation_change(this->m_info.bot_rotation, false);
+			break;
+		case WINDOW_COMMAND_ROT_TOP_INC:
+			this->rotation_change(this->m_info.top_rotation, true);
+			break;
+		case WINDOW_COMMAND_ROT_TOP_DEC:
+			this->rotation_change(this->m_info.top_rotation, false);
+			break;
+		case WINDOW_COMMAND_ROT_BOT_INC:
+			this->rotation_change(this->m_info.bot_rotation, true);
+			break;
+		case WINDOW_COMMAND_ROT_BOT_DEC:
+			this->rotation_change(this->m_info.bot_rotation, false);
+			break;
+		case WINDOW_COMMAND_PADDING:
+			this->padding_change();
+			break;
+		case WINDOW_COMMAND_TOP_PAR:
+			this->par_value_change(this->m_info.top_par + 1, true);
+			break;
+		case WINDOW_COMMAND_BOT_PAR:
+			this->par_value_change(this->m_info.bot_par + 1, false);
+			break;
+		case WINDOW_COMMAND_AUDIO_MUTE:
+			audio_data->change_audio_mute();
+			break;
+		case WINDOW_COMMAND_VOLUME_DEC:
+			audio_data->change_audio_volume(false);
+			break;
+		case WINDOW_COMMAND_VOLUME_INC:
+			audio_data->change_audio_volume(true);
+			break;
+		case WINDOW_COMMAND_AUDIO_RESTART:
+			audio_data->request_audio_restart();
+			break;
+		case WINDOW_COMMAND_LOAD_PROFILE_STARTUP:
+			this->m_prepare_load = STARTUP_FILE_INDEX;
+			break;
+		case WINDOW_COMMAND_LOAD_PROFILE_1:
+		case WINDOW_COMMAND_LOAD_PROFILE_2:
+		case WINDOW_COMMAND_LOAD_PROFILE_3:
+		case WINDOW_COMMAND_LOAD_PROFILE_4:
+			this->m_prepare_load = id - WINDOW_COMMAND_LOAD_PROFILE_1 + 1;
+			break;
+		case WINDOW_COMMAND_SAVE_PROFILE_STARTUP:
+			this->m_prepare_save = STARTUP_FILE_INDEX;
+			break;
+		case WINDOW_COMMAND_SAVE_PROFILE_1:
+		case WINDOW_COMMAND_SAVE_PROFILE_2:
+		case WINDOW_COMMAND_SAVE_PROFILE_3:
+		case WINDOW_COMMAND_SAVE_PROFILE_4:
+			this->m_prepare_save = id - WINDOW_COMMAND_SAVE_PROFILE_1 + 1;
+			break;
+		default:
+			consumed = false;
+			break;
+	}
+	return consumed;
+}
+
 bool WindowScreen::common_poll(SFEvent &event_data) {
 	bool consumed = true;
 	switch(event_data.type) {
@@ -269,35 +411,35 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 		case sf::Event::TextEntered:
 			switch(event_data.unicode) {
 				case 's':
-					this->split_change();
+					this->execute_cmd(WINDOW_COMMAND_SPLIT);
 					break;
 
 				case 'f':
-					this->fullscreen_change();
+					this->execute_cmd(WINDOW_COMMAND_FULLSCREEN);
 					break;
 
 				case 'a':
-					this->async_change();
+					this->execute_cmd(WINDOW_COMMAND_ASYNC);
 					break;
 
 				case 'v':
-					this->vsync_change();
+					this->execute_cmd(WINDOW_COMMAND_VSYNC);
 					break;
 
 				case 'z':
-					this->menu_scaling_change(false);
+					this->execute_cmd(WINDOW_COMMAND_MENU_SCALING_DEC);
 					break;
 
 				case 'x':
-					this->menu_scaling_change(true);
+					this->execute_cmd(WINDOW_COMMAND_MENU_SCALING_INC);
 					break;
 
 				case '-':
-					this->window_scaling_change(false);
+					this->execute_cmd(WINDOW_COMMAND_WINDOW_SCALING_DEC);
 					break;
 
 				case '0':
-					this->window_scaling_change(true);
+					this->execute_cmd(WINDOW_COMMAND_WINDOW_SCALING_INC);
 					break;
 
 				default:
@@ -387,7 +529,7 @@ void WindowScreen::setup_main_menu(bool reset_data) {
 		this->curr_menu = MAIN_MENU_TYPE;
 		if(reset_data)
 			this->main_menu->reset_data();
-		this->main_menu->insert_data(this->m_stype, this->m_info.is_fullscreen, this->display_data->mono_app_mode);
+		this->main_menu->insert_data(this->m_stype, this->m_info.is_fullscreen, this->display_data->mono_app_mode, is_shortcut_valid());
 	}
 }
 
@@ -538,6 +680,41 @@ void WindowScreen::setup_extra_menu(bool reset_data) {
 	}
 }
 
+void WindowScreen::setup_action_selection_menu(bool reset_data) {
+	if(this->curr_menu != ACTION_SELECTION_MENU_TYPE) {
+		this->curr_menu = ACTION_SELECTION_MENU_TYPE;
+		if(reset_data)
+			this->action_selection_menu->reset_data();
+		this->possible_actions.clear();
+		create_window_commands_list(this->possible_actions, this->possible_buttons_extras[this->chosen_button] && this->display_data->mono_app_mode);
+		this->action_selection_menu->insert_data(this->possible_actions);
+	}
+}
+
+void WindowScreen::setup_shortcuts_menu(bool reset_data) {
+	if(!is_shortcut_valid())
+		return;
+	if(this->curr_menu != SHORTCUTS_MENU_TYPE) {
+		this->curr_menu = SHORTCUTS_MENU_TYPE;
+		if(reset_data)
+			this->shortcut_menu->reset_data();
+		this->possible_buttons_names.clear();
+		this->possible_buttons_ptrs.clear();
+		this->possible_buttons_extras.clear();
+		if(get_extra_button_name(sf::Keyboard::Enter) != "") {
+			this->possible_buttons_ptrs.push_back(&extra_button_shortcuts->enter_shortcut);
+			this->possible_buttons_names.push_back(get_extra_button_name(sf::Keyboard::Enter) + " Button: " + extra_button_shortcuts->enter_shortcut->name);
+			this->possible_buttons_extras.push_back(true);
+		}
+		if(get_extra_button_name(sf::Keyboard::PageUp) != "") {
+			this->possible_buttons_ptrs.push_back(&extra_button_shortcuts->page_up_shortcut);
+			this->possible_buttons_names.push_back(get_extra_button_name(sf::Keyboard::PageUp) + " Button: " + extra_button_shortcuts->page_up_shortcut->name);
+			this->possible_buttons_extras.push_back(true);
+		}
+		this->shortcut_menu->insert_data(this->possible_buttons_names);
+	}
+}
+
 void WindowScreen::setup_status_menu(bool reset_data) {
 	if(this->curr_menu != STATUS_MENU_TYPE) {
 		this->curr_menu = STATUS_MENU_TYPE;
@@ -585,8 +762,11 @@ bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 		case sf::Event::KeyPressed:
 			switch(event_data.code) {
 				case sf::Keyboard::Enter:
-					if(event_data.is_extra)
-						this->ratio_change(true, true);
+					if(event_data.is_extra) {
+						consumed = this->can_execute_cmd(extra_button_shortcuts->enter_shortcut, true, false);
+						if(consumed)
+							this->execute_cmd(extra_button_shortcuts->enter_shortcut->cmd);
+					}
 					else
 						this->setup_main_menu();
 					break;
@@ -597,8 +777,11 @@ bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 						consumed = false;
 					break;
 				case sf::Keyboard::PageUp:
-					if(event_data.is_extra)
-						this->crop_value_change(this->m_info.crop_kind + 1);
+					if(event_data.is_extra){
+						consumed = this->can_execute_cmd(extra_button_shortcuts->page_up_shortcut, true, false);
+						if(consumed)
+							this->execute_cmd(extra_button_shortcuts->page_up_shortcut->cmd);
+					}
 					else
 						consumed = false;
 					break;
@@ -644,11 +827,11 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 		case sf::Event::TextEntered:
 			switch(event_data.unicode) {
 				case 'c':
-					this->crop_value_change(this->m_info.crop_kind + 1);
+					this->execute_cmd(WINDOW_COMMAND_CROP);
 					break;
 
 				case 'b':
-					this->blur_change();
+					this->execute_cmd(WINDOW_COMMAND_BLUR);
 					break;
 
 				//case 'i':
@@ -656,89 +839,87 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 				//	break;
 
 				case 'o':
-					this->m_prepare_open = true;
+					this->execute_cmd(WINDOW_COMMAND_CONNECT);
 					break;
 
 				case 't':
-					this->bottom_pos_change(this->m_info.bottom_pos + 1);
+					this->execute_cmd(WINDOW_COMMAND_TRANSPOSE);
 					break;
 
 				case '6':
-					this->offset_change(this->m_info.subscreen_offset, 0.5);
+					this->execute_cmd(WINDOW_COMMAND_SCREEN_OFFSET);
 					break;
 
 				case '7':
-					this->offset_change(this->m_info.subscreen_attached_offset, 0.5);
+					this->execute_cmd(WINDOW_COMMAND_SUB_SCREEN_DISTANCE);
 					break;
 
 				case '4':
-					this->offset_change(this->m_info.total_offset_x, 0.5);
+					this->execute_cmd(WINDOW_COMMAND_CANVAS_X);
 					break;
 
 				case '5':
-					this->offset_change(this->m_info.total_offset_y, 0.5);
+					this->execute_cmd(WINDOW_COMMAND_CANVAS_Y);
 					break;
 
 				case 'y':
-					this->ratio_change(true);
+					this->execute_cmd(WINDOW_COMMAND_RATIO_TOP);
 					break;
 
 				case 'u':
-					this->ratio_change(false);
+					this->execute_cmd(WINDOW_COMMAND_RATIO_BOT);
 					break;
 
 				case '8':
-					this->rotation_change(this->m_info.top_rotation, false);
-					this->rotation_change(this->m_info.bot_rotation, false);
+					this->execute_cmd(WINDOW_COMMAND_ROT_DEC);
 					break;
 
 				case '9':
-					this->rotation_change(this->m_info.top_rotation, true);
-					this->rotation_change(this->m_info.bot_rotation, true);
+					this->execute_cmd(WINDOW_COMMAND_ROT_INC);
 					break;
 
 				case 'h':
-					this->rotation_change(this->m_info.top_rotation, false);
+					this->execute_cmd(WINDOW_COMMAND_ROT_TOP_DEC);
 					break;
 
 				case 'j':
-					this->rotation_change(this->m_info.top_rotation, true);
+					this->execute_cmd(WINDOW_COMMAND_ROT_TOP_INC);
 					break;
 
 				case 'k':
-					this->rotation_change(this->m_info.bot_rotation, false);
+					this->execute_cmd(WINDOW_COMMAND_ROT_BOT_DEC);
 					break;
 
 				case 'l':
-					this->rotation_change(this->m_info.bot_rotation, true);
+					this->execute_cmd(WINDOW_COMMAND_ROT_BOT_INC);
 					break;
 
 				case 'r':
-					this->padding_change();
+					this->execute_cmd(WINDOW_COMMAND_PADDING);
 					break;
 
 				case '2':
-					this->par_value_change(this->m_info.top_par + 1, true);
+					this->execute_cmd(WINDOW_COMMAND_TOP_PAR);
 					break;
 
 				case '3':
-					this->par_value_change(this->m_info.bot_par + 1, false);
+					this->execute_cmd(WINDOW_COMMAND_BOT_PAR);
 					break;
 
 				case 'm':
-					audio_data->change_audio_mute();
+					this->execute_cmd(WINDOW_COMMAND_AUDIO_MUTE);
 					break;
 
 				case ',':
-					audio_data->change_audio_volume(false);
+					this->execute_cmd(WINDOW_COMMAND_VOLUME_DEC);
 					break;
 
 				case '.':
-					audio_data->change_audio_volume(true);
+					this->execute_cmd(WINDOW_COMMAND_VOLUME_INC);
 					break;
 
 				case 'n':
-					audio_data->request_audio_restart();
+					this->execute_cmd(WINDOW_COMMAND_AUDIO_RESTART);
 					break;
 
 				default:
@@ -754,14 +935,14 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 				case sf::Keyboard::F2:
 				case sf::Keyboard::F3:
 				case sf::Keyboard::F4:
-					this->m_prepare_load = event_data.code - sf::Keyboard::F1 + 1;
+					this->execute_cmd(static_cast<PossibleWindowCommands>(WINDOW_COMMAND_LOAD_PROFILE_1 + (event_data.code - sf::Keyboard::F1)));
 					break;
 
 				case sf::Keyboard::F5:
 				case sf::Keyboard::F6:
 				case sf::Keyboard::F7:
 				case sf::Keyboard::F8:
-					this->m_prepare_save = event_data.code - sf::Keyboard::F5 + 1;
+					this->execute_cmd(static_cast<PossibleWindowCommands>(WINDOW_COMMAND_SAVE_PROFILE_1 + (event_data.code - sf::Keyboard::F5)));
 					break;
 				default:
 					consumed = false;
@@ -888,6 +1069,10 @@ void WindowScreen::poll() {
 							break;
 						case MAIN_MENU_EXTRA_SETTINGS:
 							this->setup_extra_menu();
+							done = true;
+							break;
+						case MAIN_MENU_SHORTCUT_SETTINGS:
+							this->setup_shortcuts_menu();
 							done = true;
 							break;
 						case MAIN_MENU_SHUTDOWN:
@@ -1307,6 +1492,42 @@ void WindowScreen::poll() {
 					continue;
 				}
 				break;
+			case SHORTCUTS_MENU_TYPE:
+				if(this->shortcut_menu->poll(event_data)) {
+					switch(this->shortcut_menu->selected_index) {
+						case SHORTCUT_MENU_BACK:
+							this->setup_main_menu(false);
+							done = true;
+							break;
+						case SHORTCUT_MENU_NO_ACTION:
+							break;
+						default:
+							this->chosen_button = this->shortcut_menu->selected_index;
+							this->setup_action_selection_menu();
+							done = true;
+							break;
+					}
+					this->shortcut_menu->reset_output_option();
+					continue;
+				}
+				break;
+			case ACTION_SELECTION_MENU_TYPE:
+				if(this->action_selection_menu->poll(event_data)) {
+					switch(this->action_selection_menu->selected_index) {
+						case ACTION_SELECTION_MENU_BACK:
+							this->setup_shortcuts_menu(false);
+							done = true;
+							break;
+						case ACTION_SELECTION_MENU_NO_ACTION:
+							break;
+						default:
+							(*this->possible_buttons_ptrs[this->chosen_button]) = this->possible_actions[this->action_selection_menu->selected_index];
+							break;
+					}
+					this->action_selection_menu->reset_output_option();
+					continue;
+				}
+				break;
 			case STATUS_MENU_TYPE:
 				if(this->status_menu->poll(event_data)) {
 					switch(this->status_menu->selected_index) {
@@ -1389,7 +1610,7 @@ int WindowScreen::get_ret_val() {
 }
 
 bool WindowScreen::query_reset_request() {
-	auto curr_time = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> curr_time = std::chrono::high_resolution_clock::now();
 	if(check_held_diff(curr_time, this->right_click_action) > this->bad_resolution_timeout)
 		return true;
 	if(check_held_diff(curr_time, this->enter_action) > this->bad_resolution_timeout)
@@ -1470,12 +1691,12 @@ void WindowScreen::poll_window() {
 		}
 		else {
 			this->reset_held_times();
-			this->touch_right_click_action.started = false;
+			check_held_reset(false, this->touch_right_click_action);
 		}
 	}
 	else {
 		this->reset_held_times();
-		this->touch_right_click_action.started = false;
+		check_held_reset(false, this->touch_right_click_action);
 	}
 }
 
@@ -1525,6 +1746,12 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			break;
 		case EXTRA_MENU_TYPE:
 			this->extra_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+			break;
+		case SHORTCUTS_MENU_TYPE:
+			this->shortcut_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+			break;
+		case ACTION_SELECTION_MENU_TYPE:
+			this->action_selection_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, (*this->possible_buttons_ptrs[this->chosen_button])->cmd);
 			break;
 		case STATUS_MENU_TYPE:
 			this->status_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, FPSArrayGetAverage(&in_fps), FPSArrayGetAverage(&poll_fps), FPSArrayGetAverage(&draw_fps));
@@ -1583,6 +1810,12 @@ void WindowScreen::execute_menu_draws() {
 			break;
 		case EXTRA_MENU_TYPE:
 			this->extra_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case SHORTCUTS_MENU_TYPE:
+			this->shortcut_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case ACTION_SELECTION_MENU_TYPE:
+			this->action_selection_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		case STATUS_MENU_TYPE:
 			this->status_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
