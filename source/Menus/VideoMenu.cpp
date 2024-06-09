@@ -151,7 +151,7 @@ static const VideoMenuOptionInfo bottom_one_rotation_option = {
 .out_action = VIDEO_MENU_BOTTOM_ROTATION_DEC};
 
 static const VideoMenuOptionInfo fast_poll_option = {
-.base_name = "Disable Fast Poll", .false_name = "Enable Fast Poll",
+.base_name = "Disable Slow Poll", .false_name = "Enable Slow Poll",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,

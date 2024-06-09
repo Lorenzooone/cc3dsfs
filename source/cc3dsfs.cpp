@@ -258,11 +258,11 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 	audio.stop();
 }
 
-static void poll_all_windows(FrontendData *frontend_data, bool &polled) {
+static void poll_all_windows(FrontendData *frontend_data, bool do_everything, bool &polled) {
 	if(!polled) {
-		frontend_data->top_screen->poll();
-		frontend_data->bot_screen->poll();
-		frontend_data->joint_screen->poll();
+		frontend_data->top_screen->poll(do_everything);
+		frontend_data->bot_screen->poll(do_everything);
+		frontend_data->joint_screen->poll(do_everything);
 		polled = true;
 	}
 }
@@ -289,6 +289,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	ExtraButtonShortcuts extra_button_shortcuts;
 	out_text_data.consumed = true;
 	int ret_val = 0;
+	int poll_timeout = 0;
 
 	out_buf = new VideoOutputData;
 	memset(out_buf, 0, sizeof(VideoOutputData));
@@ -320,6 +321,13 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	while(capture_data->status.running) {
 
 		bool polled = false;
+		bool poll_everything = true;
+		if(poll_timeout > 0) {
+			poll_everything = false;
+			poll_timeout--;
+		}
+		else if(frontend_data.display_data.fast_poll)
+			poll_timeout = 6;
 		VideoOutputData *chosen_buf = out_buf;
 		bool blank_out = false;
 		if(capture_data->status.connected) {
@@ -356,12 +364,12 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		}
 
 		if(frontend_data.display_data.fast_poll)
-			poll_all_windows(&frontend_data, polled);
+			poll_all_windows(&frontend_data, poll_everything, polled);
 
 		update_output(&frontend_data, last_frame_time, chosen_buf);
 
 		if(!frontend_data.display_data.fast_poll)
-			poll_all_windows(&frontend_data, polled);
+			poll_all_windows(&frontend_data, poll_everything, polled);
 
 		int load_index = 0;
 		int save_index = 0;

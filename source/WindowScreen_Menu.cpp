@@ -134,7 +134,7 @@ void WindowScreen::blur_change() {
 
 void WindowScreen::fast_poll_change() {
 	this->display_data->fast_poll = !this->display_data->fast_poll;
-	this->print_notification_on_off("Fast Poll", this->display_data->fast_poll);
+	this->print_notification_on_off("Slow Poll", this->display_data->fast_poll);
 }
 
 void WindowScreen::padding_change() {
@@ -972,7 +972,7 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 	return consumed;
 }
 
-void WindowScreen::poll() {
+void WindowScreen::poll(bool do_everything) {
 	if(this->close_capture())
 		return;
 	if((this->m_info.is_fullscreen || this->display_data->mono_app_mode) && this->m_info.show_mouse) {
@@ -981,7 +981,7 @@ void WindowScreen::poll() {
 		if(diff.count() > this->mouse_timeout)
 			this->m_info.show_mouse = false;
 	}
-	this->poll_window();
+	this->poll_window(do_everything);
 	bool done = false;
 	while(!events_queue.empty()) {
 		if(done)
@@ -1638,55 +1638,59 @@ void WindowScreen::reset_held_times() {
 	check_held_reset(false, this->touch_action);
 }
 
-void WindowScreen::poll_window() {
+void WindowScreen::poll_window(bool do_everything) {
 	if(this->m_win.isOpen()) {
-		auto curr_time = std::chrono::high_resolution_clock::now();
-		const std::chrono::duration<double> diff = curr_time - this->last_poll_time;
-		FPSArrayInsertElement(&poll_fps, diff.count());
-		this->last_poll_time = curr_time;
-		sf::Event event;
-		while(this->m_win.pollEvent(event)) {
-			int joystickId = event.joystickConnect.joystickId;
-			if(event.type == sf::Event::JoystickButtonPressed)
-				joystickId = event.joystickButton.joystickId;
-			else if(event.type == sf::Event::JoystickMoved)
-				joystickId = event.joystickMove.joystickId;
-			int mouse_x = event.mouseButton.x;
-			int mouse_y = event.mouseButton.y;
-			if(event.type == sf::Event::MouseMoved) {
-				mouse_x = event.mouseMove.x;
-				mouse_y = event.mouseMove.y;
+		if(do_everything) {
+			auto curr_time = std::chrono::high_resolution_clock::now();
+			const std::chrono::duration<double> diff = curr_time - this->last_poll_time;
+			FPSArrayInsertElement(&poll_fps, diff.count());
+			this->last_poll_time = curr_time;
+			sf::Event event;
+			while(this->m_win.pollEvent(event)) {
+				int joystickId = event.joystickConnect.joystickId;
+				if(event.type == sf::Event::JoystickButtonPressed)
+					joystickId = event.joystickButton.joystickId;
+				else if(event.type == sf::Event::JoystickMoved)
+					joystickId = event.joystickMove.joystickId;
+				int mouse_x = event.mouseButton.x;
+				int mouse_y = event.mouseButton.y;
+				if(event.type == sf::Event::MouseMoved) {
+					mouse_x = event.mouseMove.x;
+					mouse_y = event.mouseMove.y;
+				}
+				events_queue.emplace(event.type, event.key.code, event.text.unicode, joystickId, event.joystickButton.button, event.joystickMove.axis, 0.0, event.mouseButton.button, mouse_x, mouse_y, false, false);
 			}
-			events_queue.emplace(event.type, event.key.code, event.text.unicode, joystickId, event.joystickButton.button, event.joystickMove.axis, 0.0, event.mouseButton.button, mouse_x, mouse_y, false, false);
 		}
 		if(this->m_win.hasFocus()) {
-			check_held_reset(sf::Mouse::isButtonPressed(sf::Mouse::Right), this->right_click_action);
-			bool found = false;
-			for(int i = 0; i < sf::Joystick::Count; i++) {
-				if(!sf::Joystick::isConnected(i))
-					continue;
-				if(sf::Joystick::getButtonCount(i) <= 0)
-					continue;
-				found = true;
-				check_held_reset(sf::Joystick::isButtonPressed(i, 0), this->controller_button_action);
-				break;
-			}
-			if(!found)
-				check_held_reset(false, this->controller_button_action);
-			bool touch_active = sf::Touch::isDown(0);
-			check_held_reset(touch_active, this->touch_action);
-			check_held_reset(touch_active, this->touch_right_click_action);
-			if(touch_active) {
-				sf::Vector2i touch_pos = sf::Touch::getPosition(0, this->m_win);
-				auto curr_time = std::chrono::high_resolution_clock::now();
-				const std::chrono::duration<double> diff = curr_time - this->touch_right_click_action.start_time;
-				if(diff.count() > this->touch_long_press_timer) {
-					events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Right, touch_pos.x, touch_pos.y, false, false);
-					this->touch_right_click_action.start_time = std::chrono::high_resolution_clock::now();
+			if(do_everything) {
+				check_held_reset(sf::Mouse::isButtonPressed(sf::Mouse::Right), this->right_click_action);
+				bool found = false;
+				for(int i = 0; i < sf::Joystick::Count; i++) {
+					if(!sf::Joystick::isConnected(i))
+						continue;
+					if(sf::Joystick::getButtonCount(i) <= 0)
+						continue;
+					found = true;
+					check_held_reset(sf::Joystick::isButtonPressed(i, 0), this->controller_button_action);
+					break;
 				}
-				events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Left, touch_pos.x, touch_pos.y, false, false);
+				if(!found)
+					check_held_reset(false, this->controller_button_action);
+				bool touch_active = sf::Touch::isDown(0);
+				check_held_reset(touch_active, this->touch_action);
+				check_held_reset(touch_active, this->touch_right_click_action);
+				if(touch_active) {
+					sf::Vector2i touch_pos = sf::Touch::getPosition(0, this->m_win);
+					auto curr_time = std::chrono::high_resolution_clock::now();
+					const std::chrono::duration<double> diff = curr_time - this->touch_right_click_action.start_time;
+					if(diff.count() > this->touch_long_press_timer) {
+						events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Right, touch_pos.x, touch_pos.y, false, false);
+						this->touch_right_click_action.start_time = std::chrono::high_resolution_clock::now();
+					}
+					events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Left, touch_pos.x, touch_pos.y, false, false);
+				}
+				joystick_axis_poll(this->events_queue);
 			}
-			joystick_axis_poll(this->events_queue);
 			extra_buttons_poll(this->events_queue);
 		}
 		else {

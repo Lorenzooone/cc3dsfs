@@ -56,7 +56,7 @@ public:
 
 	void build();
 	void reload();
-	void poll();
+	void poll(bool do_everything = true);
 	void close();
 	void display_call(bool is_main_thread);
 	void display_thread();
@@ -216,7 +216,7 @@ private:
 	void bottom_pos_change(int new_bottom_pos);
 	bool query_reset_request();
 	void reset_held_times();
-	void poll_window();
+	void poll_window(bool do_everything);
 	bool common_poll(SFEvent &event_data);
 	bool main_poll(SFEvent &event_data);
 	bool no_menu_poll(SFEvent &event_data);
