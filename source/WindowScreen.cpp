@@ -523,37 +523,45 @@ void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::
 }
 
 int WindowScreen::prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotation, int width_limit, int height_limit, int other_rotation, const PARData* own_par) {
-	float own_width = screen_size.x;
-	float own_height = screen_size.y;
-	if((own_width < 1.0) || (own_height < 1.0))
+	if((screen_size.x < 1.0) || (screen_size.y < 1.0))
 		return 0;
 
-	get_par_size(own_width, own_height, 1, own_par);
-
-	if((own_rotation / 10) % 2)
-		std::swap(own_width, own_height);
 	if((other_rotation / 10) % 2)
 		std::swap(width_limit, height_limit);
-
 	int desk_height = curr_desk_mode.height;
 	int desk_width = curr_desk_mode.width;
-	int height_ratio = desk_height / own_height;
-	int width_ratio = desk_width / own_width;
+	int height_max = desk_height;
+	int width_max = desk_width;
 	switch(this->m_info.bottom_pos) {
 		case UNDER_TOP:
 		case ABOVE_TOP:
-			height_ratio = (desk_height - height_limit) / own_height;
+			height_max = desk_height - height_limit;
 			break;
 		case LEFT_TOP:
 		case RIGHT_TOP:
-			width_ratio = (desk_width - width_limit) / own_width;
+			width_max = desk_width - width_limit;
 			break;
 		default:
 			break;
 	}
-	if(width_ratio < height_ratio)
-		return width_ratio;
-	return height_ratio;
+
+	int explored_multiplier = 1;
+	bool done = false;
+	while(!done) {
+		int own_width = screen_size.x;
+		int own_height = screen_size.y;
+		get_par_size(own_width, own_height, explored_multiplier, own_par);
+
+		if((own_rotation / 10) % 2)
+			std::swap(own_width, own_height);
+
+		if((own_width > width_max) || (own_height > height_max))
+			done = true;
+		else
+			explored_multiplier += 1;
+	}
+
+	return explored_multiplier - 1;
 }
 
 void WindowScreen::calc_scaling_resize_screens(ResizingScreenData *own_screen, ResizingScreenData* other_screen, bool increase, bool mantain, bool set_to_zero, bool cycle) {
@@ -579,7 +587,7 @@ void WindowScreen::calc_scaling_resize_screens(ResizingScreenData *own_screen, R
 		(*own_screen->scaling) = 0;
 	int own_height = own_screen->size.y;
 	int own_width = own_screen->size.x;
-	get_par_size(own_width, own_height, (*own_screen->scaling), own_screen->par);
+	get_par_size(own_width, own_height, *own_screen->scaling, own_screen->par);
 	if((increase && ((old_scaling == (*own_screen->scaling)) || ((*other_screen->scaling) == 0)) || (mantain && ((*other_screen->scaling) == 0))) && ((*own_screen->scaling) > 0))
 		(*other_screen->scaling) = 0;
 	else
