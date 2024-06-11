@@ -356,15 +356,15 @@ bool RelativePositionMenu::poll(SFEvent &event_data) {
 		break;
 	case sf::Event::JoystickButtonPressed:
 		switch(get_joystick_action(event_data.joystickId, event_data.joy_button)) {
-		case JOY_ACTION_CONFIRM:
-			this->option_selection_handling();
-			break;
-		case JOY_ACTION_NEGATE:
-			this->option_selection_handling();
-			break;
-		default:
-			consumed = false;
-			break;
+			case JOY_ACTION_CONFIRM:
+				this->option_selection_handling();
+				break;
+			case JOY_ACTION_NEGATE:
+				this->option_selection_handling();
+				break;
+			default:
+				consumed = false;
+				break;
 		}
 		break;
 	case sf::Event::JoystickMoved:

@@ -121,6 +121,7 @@ private:
 	const float mouse_timeout = 5.0f;
 	const float v_sync_timeout = 5.0f;
 	const float bad_resolution_timeout = 30.0f;
+	const float menu_change_timeout = 0.3f;
 	CurrMenuType curr_menu = DEFAULT_MENU_TYPE;
 	CurrMenuType loaded_menu;
 	ConnectionMenu *connection_menu;
@@ -154,6 +155,7 @@ private:
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_draw_time;
 	FPSArray poll_fps;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_poll_time;
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_menu_change_time;
 
 	sf::Texture in_tex;
 
@@ -244,6 +246,8 @@ private:
 	sf::Vector2f getShownScreenSize(bool is_top, int &crop_kind);
 	void crop();
 	void setWinSize(bool is_main_thread);
+	bool can_setup_menu();
+	void setup_no_menu();
 	void setup_main_menu(bool reset_data = true);
 	void setup_video_menu(bool reset_data = true);
 	void setup_crop_menu(bool reset_data = true);
@@ -252,7 +256,7 @@ private:
 	void setup_rotation_menu(bool reset_data = true);
 	void setup_audio_menu(bool reset_data = true);
 	void setup_bfi_menu(bool reset_data = true);
-	void setup_fileconfig_menu(bool is_save, bool reset_data = true);
+	void setup_fileconfig_menu(bool is_save, bool reset_data = true, bool skip_setup_check = false);
 	void setup_resolution_menu(bool reset_data = true);
 	void setup_extra_menu(bool reset_data = true);
 	void setup_shortcuts_menu(bool reset_data = true);

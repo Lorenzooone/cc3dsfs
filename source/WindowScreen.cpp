@@ -87,7 +87,7 @@ void WindowScreen::build() {
 
 void WindowScreen::reload() {
 	if(this->curr_menu != CONNECT_MENU_TYPE)
-		this->curr_menu = DEFAULT_MENU_TYPE;
+		this->setup_no_menu();
 	this->future_operations.call_crop = true;
 	this->future_operations.call_rotate = true;
 	this->future_operations.call_blur = true;
