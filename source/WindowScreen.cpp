@@ -505,8 +505,9 @@ void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::
 		}
 	}
 	if(do_work) {
-		this->m_out_rect_top.out_rect.setPosition(top_screen_x + offset_x + get_screen_corner_modifier_x(this->loaded_info.top_rotation, top_screen_width), top_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.top_rotation, top_screen_height));
-		this->m_out_rect_bot.out_rect.setPosition(bot_screen_x + offset_x + get_screen_corner_modifier_x(this->loaded_info.bot_rotation, bot_screen_width), bot_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.bot_rotation, bot_screen_height));
+		float scale_issue_fix_offset = -0.005;
+		this->m_out_rect_top.out_rect.setPosition(top_screen_x + scale_issue_fix_offset + offset_x + get_screen_corner_modifier_x(this->loaded_info.top_rotation, top_screen_width), top_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.top_rotation, top_screen_height) + scale_issue_fix_offset);
+		this->m_out_rect_bot.out_rect.setPosition(bot_screen_x + scale_issue_fix_offset + offset_x + get_screen_corner_modifier_x(this->loaded_info.bot_rotation, bot_screen_width), bot_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.bot_rotation, bot_screen_height) + scale_issue_fix_offset);
 	}
 
 	int top_end_x = top_screen_x + offset_x + top_screen_width;
