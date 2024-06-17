@@ -376,18 +376,21 @@ void joystick_axis_poll(std::queue<SFEvent> &events_queue) {
 void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor) {
 	width *= multiplier_factor;
 	height *= multiplier_factor;
+	float correction_factor_divisor = correction_factor->width_multiplier;
 	if(correction_factor->is_width_main)
-		width = (width * correction_factor->width_multiplier) / correction_factor->width_divisor;
+		correction_factor_divisor = correction_factor->width_divisor;
+	float correction_factor_approx_contribute = correction_factor_divisor / 2;
+	if(correction_factor->is_width_main)
+		width = ((width * correction_factor->width_multiplier) + correction_factor_approx_contribute) / correction_factor_divisor;
 	else
-		height = (height * correction_factor->width_divisor) / correction_factor->width_multiplier;
+		height = ((height * correction_factor->width_divisor) + correction_factor_approx_contribute) / correction_factor_divisor;
 }
 
 void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor) {
 	width *= multiplier_factor;
 	height *= multiplier_factor;
-	if(correction_factor->is_width_main) {
+	if(correction_factor->is_width_main)
 		width = (width * correction_factor->width_multiplier) / correction_factor->width_divisor;
-	}
 	else
 		height = (height * correction_factor->width_divisor) / correction_factor->width_multiplier;
 }
