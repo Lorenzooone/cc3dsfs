@@ -102,6 +102,10 @@ if(IS_DIRECTORY "${sfml_SOURCE_DIR}")
     set_property(DIRECTORY ${sfml_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL YES)
 endif()
 
+if(IS_DIRECTORY "${libusb1_SOURCE_DIR}")
+    set_property(DIRECTORY ${libusb1_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL YES)
+endif()
+
 file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/win)
 file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/macos)
 file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/linux)
@@ -210,7 +214,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     "
         include(BundleUtilities)
         fixup_bundle(\"${FW_APP}\"  \"\" \"\")
-        verify_bundle(\"${FW_APP}\")
+        verify_app(\"${FW_APP}\")
     "
     DESTINATION .
     COMPONENT Runtime)
