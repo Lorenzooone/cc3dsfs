@@ -210,6 +210,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     "
         include(BundleUtilities)
         fixup_bundle(\"${FW_APP}\"  \"\" \"\")
+        verify_bundle(\"${FW_APP}\")
     "
     DESTINATION .
     COMPONENT Runtime)
