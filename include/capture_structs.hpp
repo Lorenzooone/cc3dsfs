@@ -29,8 +29,15 @@ struct PACKED USB3DSVideoInputData {
 	uint8_t screen_data[IN_VIDEO_SIZE_3DS][3];
 };
 
+struct PACKED USBOldDSPixelData {
+	uint16_t b : 5;
+	uint16_t special : 1;
+	uint16_t g : 5;
+	uint16_t r : 5;
+};
+
 struct PACKED USBOldDSVideoInputData {
-	uint16_t screen_data[IN_VIDEO_SIZE_DS];
+	USBOldDSPixelData screen_data[IN_VIDEO_SIZE_DS];
 };
 
 struct PACKED FTDI3DSCaptureReceived {

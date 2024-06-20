@@ -14,7 +14,7 @@
 
 #define FIRST_3D_VERSION 6
 #define CAPTURE_SKIP_TIMEOUT_SECONDS 1.0
-//#define EMULATE_6TH_BIT_OLDDS
+#define USE_SHARED_SPECIAL_BIT_OLDDS
 
 enum usb_capture_status {
 	USB_CAPTURE_SUCCESS = 0,
@@ -242,22 +242,19 @@ static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, c
     return USB_CAPTURE_SUCCESS;
 }
 
-static inline void usb_oldDSconvertVideoToOutputRGBA(uint16_t data, uint8_t* target) {
-	uint8_t r, g, b;
+static inline void usb_oldDSconvertVideoToOutputRGBA(USBOldDSPixelData data, uint8_t* target) {
 	int num_bits = 5;
-	b = (data >> 1) & 0x1f;
-	g = (data >> 6) & 0x1f;
-	r = (data >> 11) & 0x1f;
-	#ifdef EMULATE_6TH_BIT_OLDDS
-	// Uses the most significant bit of blue as the sixth bit for all of them.
+	uint8_t b = data.b;
+	uint8_t g = data.g;
+	uint8_t r = data.r;
+	#ifdef USE_SHARED_SPECIAL_BIT_OLDDS
+	// Uses the 5th bit of data as the sixth bit for all of them.
 	// Weird, but... It probably works...? Will check how it looks without it
-	// first. It's super weird because it means there is no way to get a full
-	// blue screen...?!
-	uint8_t special_bit = b >> 4;
+	// first...
 	num_bits = 6;
-	b = (b << 1) | special_bit;
-	g = (g << 1) | special_bit;
-	r = (r << 1) | special_bit;
+	b = (b << 1) | data.special;
+	g = (g << 1) | data.special;
+	r = (r << 1) | data.special;
 	#endif
 	// Standard conversion stuff for x bits to 8 bits
 	int left_shift = 8 - num_bits;
@@ -271,7 +268,7 @@ static inline void usb_oldDSconvertVideoToOutputRGBA(uint16_t data, uint8_t* tar
 static inline void usb_oldDSconvertVideoToOutputHalfLine(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, int halfline) {
     //de-interleave pixels
     for(int i = 0; i < WIDTH_DS / 2 ; i++) {
-    	uint8_t halfline_pixel = (halfline * (WIDTH_DS / 2)) + i;
+    	uint32_t halfline_pixel = (halfline * (WIDTH_DS / 2)) + i;
     	usb_oldDSconvertVideoToOutputRGBA(p_in->video_in.screen_data[halfline_pixel * 2], p_out->screen_data[halfline_pixel + (WIDTH_DS * HEIGHT_DS)]);
     	usb_oldDSconvertVideoToOutputRGBA(p_in->video_in.screen_data[(halfline_pixel * 2) + 1], p_out->screen_data[halfline_pixel]);
     }
