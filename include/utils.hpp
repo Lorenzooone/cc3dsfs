@@ -42,7 +42,7 @@ public:
 private:
 	std::mutex access_mutex;
 	std::condition_variable_any condition;
-	const std::chrono::duration<double>max_timed_wait = std::chrono::duration<double>(1.0 / 45);
+	const std::chrono::duration<double>max_timed_wait = std::chrono::duration<double>(1.0 / 30);
 	int count = 0;
 };
 
