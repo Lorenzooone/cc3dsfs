@@ -135,10 +135,13 @@ static bool insert_device(std::vector<CaptureDevice> &devices_list, const usb_de
 	uint8_t data[SERIAL_NUMBER_SIZE];
 	if((usb_descriptor->idVendor != usb_device_desc->vid) || (usb_descriptor->idProduct != usb_device_desc->pid))
 		return false;
+	printf("FOUND DEVICE!\n");
 	int result = libusb_open(usb_device, &handle);
 	if(result || (handle == NULL))
 		return true;
+	printf("AFTER OPEN!\n");
 	if(libusb_get_string_descriptor_ascii(handle, usb_descriptor->iSerialNumber, data, REAL_SERIAL_NUMBER_SIZE-1) >= 0) {
+		printf("INSIDE!\n");
 		data[REAL_SERIAL_NUMBER_SIZE] = '\0';
 		if(usb_device_desc->is_3ds)
 			devices_list.emplace_back(std::string((const char*)data), "3DS", false, true, capture_get_has_3d(handle, usb_device_desc), false, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, 0, usb_device_desc->bpp, 90, 0, 0, TOP_WIDTH_3DS, 0);
@@ -152,6 +155,7 @@ static bool insert_device(std::vector<CaptureDevice> &devices_list, const usb_de
 			devices_list.emplace_back(std::string((const char*)data), "DS", false, false, false, has_audio, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, max_samples_in, usb_device_desc->bpp, 0, 0, 0, 0, HEIGHT_DS);
 		}
 	}
+	printf("CLOSE!\n");
 	libusb_close(handle);
 	return true;
 }
