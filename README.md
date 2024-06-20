@@ -118,7 +118,6 @@ The current configuration can be saved to various extra profiles, creating the g
 The name of profiles can be changed by altering the __name__ field in its file.
 
 ## Notes
-
 - On Linux, you may need to include the udev USB access rules. You can use the .rules files available in the repository, or define your own.
 - At startup, the audio may be unstable. It should fix itself, if you give it enough time.
 - If, at first, the connection to the 3DS/DS fails, reconnect the 3DS/DS and then try again. If that also doesn't work, try restarting the program. If that also doesn't work, try restarting the computer.
@@ -126,8 +125,12 @@ The name of profiles can be changed by altering the __name__ field in its file.
 - Fullscreen mode on MacOS may mistake the screen for being bigger than what it really is. Changing the resolution to the proper one of the screen in the _Resolution Settings_ under Video Settings will fix the issue.
 - Current font in use: OFL Sorts Mill Goudy TT
 - Enabling Slow Poll may slightly boost the FPS of the software, at the cost of an extremely slight decrease in frame latency, and slower reaction times of the software to key presses. Disabled by default (as when the FPS are greater than the CC's, it's not reccomended).
-- When compiling on a Raspberry Pi, to enable usage of GPIO, use: 
+- When compiling on a Raspberry Pi, to enable usage of GPIO, use:
 ```
 cmake -B build -DRASPBERRY_PI_COMPILATION=TRUE ; cmake --build build --config Release
+```
+- On MacOS, you may get a notice about the app being damaged. It's Apple quaranteening the app. To make it work, open a terminal and run the following:
+```
+xattr -c ./cc3dsfs.app
 ```
 
