@@ -1,6 +1,6 @@
 # cc3dsfs
 
-cc3dsfs is a multi-platform capture and display program for [3dscapture's](https://3dscapture.com/) N3DSXL capture board written in C++.
+cc3dsfs is a multi-platform capture and display program for [3dscapture's](https://3dscapture.com/) N3DSXL, 3DS and DS (old) capture boards written in C++.
 The main goal is to offer the ability to use the Capture Card with a TV, via fullscreen mode.
 
 ## Features
@@ -21,8 +21,8 @@ cc3dsfs has three build dependencies: CMake, g++ and git.
 Make sure all are installed.
 On MacOS, [Homebrew](https://brew.sh/) can be used to install both CMake and git. An automatic popup should appear to install g++ at Compile time.
 
-cc3dsfs has two library dependencies: [FTDI's D3XX driver](https://ftdichip.com/drivers/d3xx-drivers/) and [SFML](https://www.sfml-dev.org/).
-Both should get downloaded automatically via CMake during the building process.
+cc3dsfs has three library dependencies: [FTDI's D3XX driver](https://ftdichip.com/drivers/d3xx-drivers/), [libusb](https://libusb.info/) and [SFML](https://www.sfml-dev.org/).
+All of them should get downloaded automatically via CMake during the building process.
 
 Linux users will also need to install the SFML dependencies. Different distributions will require slightly different processes.
 Below, the command for Debian-based distributions, which also lists the required libraries.
@@ -56,7 +56,7 @@ To compile the program, assuming CMake, git and g++ are installed on the system,
 cmake -B build ; cmake --build build --config Release
 ```
 
-This will download both FTD3XX and SFML, which may take a while during the first execution of the command. Later runs should be much faster.
+This will download FTD3XX, libusb and SFML, which may take a while during the first execution of the command. Later runs should be much faster.
 On MacOS, you may also be prompted to install the Apple Command Line Developer Tools first.
 
 ## Controls
@@ -80,10 +80,10 @@ Most of the settings are explained in [Keyboard shortcuts](#Keyboard-shortcuts).
 _Note: Currently only tested using a PS5 controller._
 
 ### Keyboard shortcuts
-- __O key__: Open/Close connection to the 3DS.
+- __O key__: Open/Close connection to the 3DS/DS.
 - __F key__: Toggles Fullscreen mode on/off. Only guaranteed to work on the primary monitor. When using certain setups, it also works for multiple monitors.
 - __S key__: Swaps between Split mode and Joint mode. In Split mode, each screen has its own window. In Joint mode, they are combined into a single one.
-- __C key__: Cycles to the next Crop mode for the focused window. The currently supported cropping modes are: 3DS, 16:10 DS, scaled DS, native DS, scaled GBA, native GBA, scaled GB, native GB, scaled SNES, native SNES and native NES.
+- __C key__: Cycles to the next Crop mode for the focused window. For 3DS, the currently supported cropping modes are: 3DS, 16:10 DS, scaled DS, native DS, scaled GBA, native GBA, scaled GB, native GB, scaled SNES, native SNES and native NES. For DS, the currently supported cropping modes are: DS, Top GBA and Bottom GBA.
 - __-/0 key__: Decrements/Increments the scaling by 0.5x for the non-Fullscreen focused window. 1.0x is the minimum. 45.0x is the maximum.
 - __Y/U key__: In Joint Fullscreen mode, increases the size of the top/bottom screen. Corresponds to the _Screens ratio_ Video Setting.
 - __Z/X key__: Decreases/Increases the Menu Scaling multiplier by 0.1. 0.3 is the minimum. 10.0 is the maximum.
@@ -119,9 +119,10 @@ The name of profiles can be changed by altering the __name__ field in its file.
 
 ## Notes
 
+- On Linux, you may need to include the udev USB access rules. You can use the .rules files available in the repository, or define your own.
 - At startup, the audio may be unstable. It should fix itself, if you give it enough time.
-- If, at first, the connection to the 3DS fails, reconnect the 3DS and then try again. If that also doesn't work, try restarting the program. If that also doesn't work, try restarting the computer.
-- USB Hubs can be the cause of connection issues. If you're having problems, try checking whether the 3DS connects fine or not without any other devices connected.
+- If, at first, the connection to the 3DS/DS fails, reconnect the 3DS/DS and then try again. If that also doesn't work, try restarting the program. If that also doesn't work, try restarting the computer.
+- USB Hubs can be the cause of connection issues. If you're having problems, try checking whether the 3DS/DS connects fine or not without any other devices connected.
 - Fullscreen mode on MacOS may mistake the screen for being bigger than what it really is. Changing the resolution to the proper one of the screen in the _Resolution Settings_ under Video Settings will fix the issue.
 - Current font in use: OFL Sorts Mill Goudy TT
 - Enabling Slow Poll may slightly boost the FPS of the software, at the cost of an extremely slight decrease in frame latency, and slower reaction times of the software to key presses. Disabled by default (as when the FPS are greater than the CC's, it's not reccomended).

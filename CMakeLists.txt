@@ -209,6 +209,8 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 else()
     install(FILES 51-ftd3xx.rules DESTINATION .)
+    install(FILES 95-usb3dscapture.rules DESTINATION .)
+    install(FILES 95-usbdscapture.rules DESTINATION .)
 endif()
 
 
