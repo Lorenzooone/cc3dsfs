@@ -3,8 +3,8 @@
 
 #include <SFML/Audio.hpp>
 #include "capture_structs.hpp"
-#include "frontend.hpp"
+#include "display_structs.hpp"
 
-void convertVideoToOutput(VideoInputData *p_in, VideoOutputData *p_out);
-void convertAudioToOutput(CaptureReceived *p_in, sf::Int16 *p_out, const int n_samples, const bool is_big_endian);
+void convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureData* capture_data);
+void convertAudioToOutput(CaptureReceived *p_in, sf::Int16 *p_out, uint64_t n_samples, const bool is_big_endian, CaptureData* capture_data);
 #endif

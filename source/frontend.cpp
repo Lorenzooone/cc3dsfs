@@ -7,6 +7,7 @@ const CropData default_3ds_crop = {
 .bot_width = BOT_WIDTH_3DS, .bot_height = HEIGHT_3DS,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
+.allowed_3ds = true, .allowed_ds = false,
 .name = "3DS"};
 
 const CropData special_ds_crop = {
@@ -15,6 +16,7 @@ const CropData special_ds_crop = {
 .bot_width = BOT_WIDTH_3DS, .bot_height = HEIGHT_3DS,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.allowed_3ds = true, .allowed_ds = false,
 .name = "16:10"};
 
 const CropData scaled_ds_crop = {
@@ -23,6 +25,7 @@ const CropData scaled_ds_crop = {
 .bot_width = BOT_WIDTH_3DS, .bot_height = HEIGHT_3DS,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.allowed_3ds = true, .allowed_ds = false,
 .name = "Scaled DS"};
 
 const CropData native_ds_crop = {
@@ -31,6 +34,7 @@ const CropData native_ds_crop = {
 .bot_width = WIDTH_DS, .bot_height = HEIGHT_DS,
 .bot_x = (BOT_WIDTH_3DS - WIDTH_DS) / 2, .bot_y = HEIGHT_3DS - HEIGHT_DS,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
+.allowed_3ds = true, .allowed_ds = false,
 .name = "Native DS"};
 
 const CropData scaled_gba_crop = {
@@ -39,6 +43,7 @@ const CropData scaled_gba_crop = {
 .bot_width = 0, .bot_height = 0,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.allowed_3ds = true, .allowed_ds = false,
 .name = "Scaled GBA"};
 
 const CropData native_gba_crop = {
@@ -47,6 +52,7 @@ const CropData native_gba_crop = {
 .bot_width = 0, .bot_height = 0,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.allowed_3ds = true, .allowed_ds = false,
 .name = "Native GBA"};
 
 const CropData scaled_vc_gb_crop = {
@@ -55,6 +61,7 @@ const CropData scaled_vc_gb_crop = {
 .bot_width = 0, .bot_height = 0,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.allowed_3ds = true, .allowed_ds = false,
 .name = "Scaled VC GB"};
 
 const CropData vc_gb_crop = {
@@ -63,6 +70,7 @@ const CropData vc_gb_crop = {
 .bot_width = 0, .bot_height = 0,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.allowed_3ds = true, .allowed_ds = false,
 .name = "VC GB"};
 
 const CropData scaled_snes_crop = {
@@ -71,6 +79,7 @@ const CropData scaled_snes_crop = {
 .bot_width = 0, .bot_height = 0,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.allowed_3ds = true, .allowed_ds = false,
 .name = "Scaled SNES"};
 
 const CropData vc_snes_crop = {
@@ -79,6 +88,7 @@ const CropData vc_snes_crop = {
 .bot_width = 0, .bot_height = 0,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.allowed_3ds = true, .allowed_ds = false,
 .name = "VC SNES"};
 
 const CropData vc_nes_crop = {
@@ -87,7 +97,35 @@ const CropData vc_nes_crop = {
 .bot_width = 0, .bot_height = 0,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.allowed_3ds = true, .allowed_ds = false,
 .name = "VC NES"};
+
+const CropData default_ds_crop = {
+.top_width = WIDTH_DS, .top_height = HEIGHT_DS,
+.top_x = 0, .top_y = 0,
+.bot_width = WIDTH_DS, .bot_height = HEIGHT_DS,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
+.allowed_3ds = false, .allowed_ds = true,
+.name = "DS"};
+
+const CropData top_gba_ds_crop = {
+.top_width = WIDTH_GBA, .top_height = HEIGHT_GBA,
+.top_x = (WIDTH_DS - WIDTH_GBA) / 2, .top_y = (HEIGHT_DS - HEIGHT_GBA) / 2,
+.bot_width = 0, .bot_height = 0,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.allowed_3ds = false, .allowed_ds = true,
+.name = "Top GBA"};
+
+const CropData bottom_gba_ds_crop = {
+.top_width = 0, .top_height = 0,
+.top_x = 0, .top_y = 0,
+.bot_width = WIDTH_GBA, .bot_height = HEIGHT_GBA,
+.bot_x = (WIDTH_DS - WIDTH_GBA) / 2, .bot_y = (HEIGHT_DS - HEIGHT_GBA) / 2,
+.allowed_joint = true, .allowed_top = false, .allowed_bottom = true,
+.allowed_3ds = false, .allowed_ds = true,
+.name = "Bottom GBA"};
 
 static const CropData* basic_possible_crops[] = {
 &default_3ds_crop,
@@ -101,6 +139,9 @@ static const CropData* basic_possible_crops[] = {
 &scaled_snes_crop,
 &vc_snes_crop,
 &vc_nes_crop,
+&default_ds_crop,
+&top_gba_ds_crop,
+&bottom_gba_ds_crop,
 };
 
 const PARData base_par = {
@@ -136,19 +177,23 @@ static const PARData* basic_possible_pars[] = {
 //&special_3ds_vertical_par,
 };
 
-bool is_allowed_crop(const CropData* crop_data, ScreenType s_type) {
-	if(s_type == ScreenType::JOINT && crop_data->allowed_joint)
-		return true;
-	if(s_type == ScreenType::TOP && crop_data->allowed_top)
-		return true;
-	if(s_type == ScreenType::BOTTOM && crop_data->allowed_bottom)
-		return true;
-	return false;
+static bool is_allowed_crop(const CropData* crop_data, ScreenType s_type, bool is_ds) {
+	if(is_ds && (!crop_data->allowed_ds))
+		return false;
+	if((!is_ds) && (!crop_data->allowed_3ds))
+		return false;
+	if((s_type == ScreenType::JOINT) && (!crop_data->allowed_joint))
+		return false;
+	if((s_type == ScreenType::TOP) && (!crop_data->allowed_top))
+		return false;
+	if((s_type == ScreenType::BOTTOM) && (!crop_data->allowed_bottom))
+		return false;
+	return true;
 }
 
-void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type) {
+void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type, bool is_ds) {
 	for(int i = 0; i < (sizeof(basic_possible_crops) / sizeof(basic_possible_crops[0])); i++) {
-		if(is_allowed_crop(basic_possible_crops[i], s_type))
+		if(is_allowed_crop(basic_possible_crops[i], s_type, is_ds))
 			crop_vector.push_back(basic_possible_crops[i]);
 	}
 }
@@ -162,6 +207,7 @@ void insert_basic_pars(std::vector<const PARData*> &par_vector) {
 void reset_display_data(DisplayData *display_data) {
 	display_data->split = false;
 	display_data->fast_poll = false;
+	display_data->last_connected_ds = false;
 }
 
 void reset_fullscreen_info(ScreenInfo &info) {
@@ -173,6 +219,7 @@ void reset_fullscreen_info(ScreenInfo &info) {
 void reset_screen_info(ScreenInfo &info) {
 	info.is_blurred = false;
 	info.crop_kind = 0;
+	info.crop_kind_ds = 0;
 	info.scaling = 1.0;
 	info.is_fullscreen = false;
 	info.bottom_pos = UNDER_TOP;
@@ -212,6 +259,10 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 	}
 	if(key == (base + "crop")) {
 		info.crop_kind = std::stoi(value);
+		return true;
+	}
+	if(key == (base + "crop_ds")) {
+		info.crop_kind_ds = std::stoi(value);
 		return true;
 	}
 	if(key == (base + "scale")) {
@@ -335,6 +386,7 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	std::string out = "";
 	out += base + "blur=" + std::to_string(info.is_blurred) + "\n";
 	out += base + "crop=" + std::to_string(info.crop_kind) + "\n";
+	out += base + "crop_ds=" + std::to_string(info.crop_kind_ds) + "\n";
 	out += base + "scale=" + std::to_string(info.scaling) + "\n";
 	out += base + "fullscreen=" + std::to_string(info.is_fullscreen) + "\n";
 	out += base + "bot_pos=" + std::to_string(info.bottom_pos) + "\n";
@@ -428,8 +480,11 @@ JoystickAction get_joystick_action(uint32_t joystickId, uint32_t joy_button) {
 	return JOY_ACTION_NONE;
 }
 
-void default_sleep() {
-	sf::sleep(sf::milliseconds(1000/USB_CHECKS_PER_SECOND));
+void default_sleep(int wanted_ms) {
+	if(wanted_ms < 0)
+		sf::sleep(sf::milliseconds(1000/USB_CHECKS_PER_SECOND));
+	else
+		sf::sleep(sf::milliseconds(wanted_ms));
 }
 
 void update_output(FrontendData* frontend_data, double frame_time, VideoOutputData *out_buf) {
@@ -446,6 +501,37 @@ void update_output(FrontendData* frontend_data, double frame_time, VideoOutputDa
 	frontend_data->bot_screen->draw(frame_time, out_buf);
 	if(!frontend_data->display_data.split)
 		frontend_data->joint_screen->draw(frame_time, out_buf);
+}
+
+static bool are_cc_device_screens_same(const CaptureDevice &old_cc_device, const CaptureDevice &new_cc_device) {
+	if(old_cc_device.width != new_cc_device.width)
+		return false;
+	if(old_cc_device.height != new_cc_device.height)
+		return false;
+	if(old_cc_device.base_rotation != new_cc_device.base_rotation)
+		return false;
+	if(old_cc_device.top_screen_x != new_cc_device.top_screen_x)
+		return false;
+	if(old_cc_device.top_screen_y != new_cc_device.top_screen_y)
+		return false;
+	if(old_cc_device.bot_screen_x != new_cc_device.bot_screen_x)
+		return false;
+	if(old_cc_device.bot_screen_y != new_cc_device.bot_screen_y)
+		return false;
+	return true;
+}
+
+void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &old_cc_device, const CaptureDevice &new_cc_device) {
+	bool old_connected = frontend_data->display_data.last_connected_ds;
+	frontend_data->display_data.last_connected_ds = !new_cc_device.is_3ds;
+	bool changed_type = old_connected != frontend_data->display_data.last_connected_ds;
+	bool display_data_updated = !are_cc_device_screens_same(old_cc_device, new_cc_device);
+	if(display_data_updated || changed_type) {
+		frontend_data->top_screen->update_ds_3ds_connection(changed_type);
+		frontend_data->bot_screen->update_ds_3ds_connection(changed_type);
+		frontend_data->joint_screen->update_ds_3ds_connection(changed_type);
+	}
+
 }
 
 void screen_display_thread(WindowScreen *screen) {

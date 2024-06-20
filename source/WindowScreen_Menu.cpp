@@ -147,10 +147,16 @@ void WindowScreen::padding_change() {
 }
 
 void WindowScreen::crop_value_change(int new_crop_value) {
-	int new_value = new_crop_value % this->possible_crops.size();
-	if(this->m_info.crop_kind != new_value) {
-		this->m_info.crop_kind = new_value;
-		this->print_notification("Crop: " + this->possible_crops[this->m_info.crop_kind]->name);
+	std::vector<const CropData*> *crops = &this->possible_crops;
+	int *crop_value = &this->m_info.crop_kind;
+	if(this->display_data->last_connected_ds) {
+		crops = &this->possible_crops_ds;
+		crop_value = &this->m_info.crop_kind_ds;
+	}
+	int new_value = new_crop_value % crops->size();
+	if((*crop_value) != new_value) {
+		*crop_value = new_value;
+		this->print_notification("Crop: " + (*crops)[*crop_value]->name);
 		this->prepare_size_ratios(false, false);
 		this->future_operations.call_crop = true;
 	}
@@ -289,7 +295,10 @@ bool WindowScreen::execute_cmd(PossibleWindowCommands id) {
 			this->fullscreen_change();
 			break;
 		case WINDOW_COMMAND_CROP:
-			this->crop_value_change(this->m_info.crop_kind + 1);
+			if(this->display_data->last_connected_ds)
+				this->crop_value_change(this->m_info.crop_kind_ds + 1);
+			else
+				this->crop_value_change(this->m_info.crop_kind + 1);
 			break;
 		case WINDOW_COMMAND_ASYNC:
 			this->async_change();
@@ -567,7 +576,10 @@ void WindowScreen::setup_crop_menu(bool reset_data) {
 		this->curr_menu = CROP_MENU_TYPE;
 		if(reset_data)
 			this->crop_menu->reset_data();
-		this->crop_menu->insert_data(&this->possible_crops);
+		if(this->display_data->last_connected_ds)
+			this->crop_menu->insert_data(&this->possible_crops_ds);
+		else
+			this->crop_menu->insert_data(&this->possible_crops);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
 }
@@ -1628,7 +1640,7 @@ void WindowScreen::poll(bool do_everything) {
 	}
 }
 
-void WindowScreen::setup_connection_menu(DevicesList *devices_list, bool reset_data) {
+void WindowScreen::setup_connection_menu(std::vector<CaptureDevice> *devices_list, bool reset_data) {
 	// Skip the check here. It's special.
 	this->curr_menu = CONNECT_MENU_TYPE;
 	if(reset_data)
@@ -1642,6 +1654,13 @@ int WindowScreen::check_connection_menu_result() {
 
 void WindowScreen::end_connection_menu() {
 	this->setup_no_menu();
+}
+
+void WindowScreen::update_ds_3ds_connection(bool changed_type) {
+	if(changed_type && (this->curr_menu == CROP_MENU_TYPE))
+		this->setup_no_menu();
+	this->prepare_size_ratios(false, false);
+	this->future_operations.call_crop = true;
 }
 
 int WindowScreen::load_data() {

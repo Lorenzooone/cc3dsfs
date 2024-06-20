@@ -19,7 +19,7 @@
 #include <queue>
 
 #include "utils.hpp"
-#include "3dscapture.hpp"
+#include "devicecapture.hpp"
 #include "hw_defs.hpp"
 #include "frontend.hpp"
 #include "audio.hpp"
@@ -52,7 +52,7 @@ static void UpdateOutText(OutTextData &out_text_data, std::string full_text, std
 
 static void SuccessConnectionOutTextGenerator(OutTextData &out_text_data, CaptureData* capture_data) {
 	if(capture_data->status.connected)
-		UpdateOutText(out_text_data, "Connected to " + capture_data->status.serial_number, "Connected", TEXT_KIND_SUCCESS);
+		UpdateOutText(out_text_data, "Connected to " + capture_data->status.device.name + " - " + capture_data->status.device.serial_number, "Connected", TEXT_KIND_SUCCESS);
 	else if(!capture_data->status.new_error_text) {
 		UpdateOutText(out_text_data, "Disconnected", "Disconnected", TEXT_KIND_WARNING);
 	}
@@ -93,6 +93,11 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 
 					if(key == "fast_poll") {
 						display_data.fast_poll = std::stoi(value);
+						continue;
+					}
+
+					if(key == "last_connected_ds") {
+						display_data.last_connected_ds = std::stoi(value);
 						continue;
 					}
 
@@ -175,6 +180,7 @@ static bool save(const std::string path, const std::string name, const std::stri
 	file << save_screen_info("top_", top_info);
 	file << "split=" << display_data.split << std::endl;
 	file << "fast_poll=" << display_data.fast_poll << std::endl;
+	file << "last_connected_ds=" << display_data.last_connected_ds << std::endl;
 	file << "extra_button_enter_short=" << extra_button_shortcuts->enter_shortcut->cmd << std::endl;
 	file << "extra_button_page_up_short=" << extra_button_shortcuts->page_up_shortcut->cmd << std::endl;
 	file << audio_data->save_audio_data();
@@ -208,19 +214,16 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 	volatile int loaded_samples;
 
 	while(capture_data->status.running) {
-		if(capture_data->status.connected) {
+		if(capture_data->status.connected && capture_data->status.device.has_audio) {
 			bool timed_out = !capture_data->status.audio_wait.timed_lock();
 			curr_out = (capture_data->status.curr_in - 1 + NUM_CONCURRENT_DATA_BUFFERS) % NUM_CONCURRENT_DATA_BUFFERS;
 
 			if((!capture_data->status.cooldown_curr_in) && (curr_out != prev_out)) {
 				loaded_samples = audio.samples.size();
-				if((capture_data->read[curr_out] > sizeof(VideoInputData)) && (loaded_samples < AUDIO_LATENCY_LIMIT)) {
-					int n_samples = (capture_data->read[curr_out] - sizeof(VideoInputData)) / 2;
-					if(n_samples > MAX_SAMPLES_IN) {
-						n_samples = MAX_SAMPLES_IN;
-					}
+				if((capture_data->read[curr_out] > get_video_in_size(capture_data)) && (loaded_samples < AUDIO_LATENCY_LIMIT)) {
+					int n_samples = get_audio_n_samples(capture_data, capture_data->read[curr_out]);
 					double out_time = capture_data->time_in_buf[curr_out];
-					convertAudioToOutput(&capture_data->capture_buf[curr_out], out_buf[audio_buf_counter], n_samples, endianness);
+					convertAudioToOutput(&capture_data->capture_buf[curr_out], out_buf[audio_buf_counter], n_samples, endianness, capture_data);
 					audio.samples.emplace(out_buf[audio_buf_counter], n_samples, out_time);
 					if(++audio_buf_counter == NUM_CONCURRENT_AUDIO_BUFFERS) {
 						audio_buf_counter = 0;
@@ -336,8 +339,8 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 
 			if((!capture_data->status.cooldown_curr_in) && (curr_out != prev_out)) {
 				last_frame_time = capture_data->time_in_buf[curr_out];
-				if(capture_data->read[curr_out] >= sizeof(VideoInputData)) {
-					convertVideoToOutput(&capture_data->capture_buf[curr_out].video_data, out_buf);
+				if(capture_data->read[curr_out] >= get_video_in_size(capture_data)) {
+					convertVideoToOutput(&capture_data->capture_buf[curr_out], out_buf, capture_data);
 					num_allowed_blanks = MAX_ALLOWED_BLANKS;
 				}
 				else {
@@ -383,8 +386,12 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		check_close_application(bot_screen, capture_data, ret_val);
 		check_close_application(joint_screen, capture_data, ret_val);
 		
-		if((load_index = top_screen.load_data()) || (load_index = bot_screen.load_data()) || (load_index = joint_screen.load_data()))
+		if((load_index = top_screen.load_data()) || (load_index = bot_screen.load_data()) || (load_index = joint_screen.load_data())) {
+			// This value should only be loaded when starting the program...
+			bool previous_last_connected_ds = frontend_data.display_data.last_connected_ds;
 			load_layout_file(load_index, &frontend_data, audio_data, out_text_data, &extra_button_shortcuts, skip_io, true);
+			frontend_data.display_data.last_connected_ds = previous_last_connected_ds;
+		}
 		
 		if((save_index = top_screen.save_data()) || (save_index = bot_screen.save_data()) || (save_index = joint_screen.save_data())) {
 			save_layout_file(save_index, &frontend_data, audio_data, out_text_data, &extra_button_shortcuts, skip_io, true);
@@ -496,6 +503,7 @@ int main(int argc, char **argv) {
 	AudioData audio_data;
 	audio_data.reset();
 	CaptureData* capture_data = new CaptureData;
+	capture_init();
 
 	std::thread capture_thread(captureCall, capture_data);
 	std::thread audio_thread(soundCall, &audio_data, capture_data);
@@ -505,6 +513,7 @@ int main(int argc, char **argv) {
 	capture_thread.join();
 	delete capture_data;
 	end_extra_buttons_poll();
+	capture_close();
 
 	return ret_val;
 }

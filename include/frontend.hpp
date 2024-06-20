@@ -63,9 +63,10 @@ public:
 	void end();
 	void after_thread_join();
 	void draw(double frame_time, VideoOutputData* out_buf);
-	void setup_connection_menu(DevicesList *devices_list, bool reset_data = true);
+	void setup_connection_menu(std::vector<CaptureDevice> *devices_list, bool reset_data = true);
 	int check_connection_menu_result();
 	void end_connection_menu();
+	void update_ds_3ds_connection(bool changed_type);
 	void update_save_menu();
 
 	void print_notification(std::string text, TextKind kind = TEXT_KIND_NORMAL);
@@ -142,6 +143,7 @@ private:
 	ShortcutMenu *shortcut_menu;
 	ActionSelectionMenu *action_selection_menu;
 	std::vector<const CropData*> possible_crops;
+	std::vector<const CropData*> possible_crops_ds;
 	std::vector<const PARData*> possible_pars;
 	std::vector<sf::VideoMode> possible_resolutions;
 	std::vector<FileData> possible_files;
@@ -278,8 +280,7 @@ struct FrontendData {
 void FPSArrayInit(FPSArray *array);
 void FPSArrayDestroy(FPSArray *array);
 void FPSArrayInsertElement(FPSArray *array, double frame_time);
-bool is_allowed_crop(const CropData* crop_data, ScreenType s_type);
-void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type);
+void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type, bool is_ds);
 void insert_basic_pars(std::vector<const PARData*> &par_vector);
 void reset_display_data(DisplayData *display_data);
 void reset_fullscreen_info(ScreenInfo &info);
@@ -288,7 +289,8 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 std::string save_screen_info(std::string base, const ScreenInfo &info);
 void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor);
 void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor);
-void default_sleep();
+void default_sleep(int wanted_ms = -1);
 void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL);
+void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &old_cc_device, const CaptureDevice &new_cc_device);
 void screen_display_thread(WindowScreen *screen);
 #endif

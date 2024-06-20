@@ -1,30 +1,38 @@
-#include <SFML/Audio.hpp>
 #include "conversions.hpp"
+#include "devicecapture.hpp"
+#include "3dscapture_ftdi.hpp"
+#include "usb_ds_3ds_capture.hpp"
 
 #include <cstring>
 
-static inline void convertVideoToOutputChunk(VideoInputData *p_in, VideoOutputData *p_out, int iters, int start_in, int start_out) {
-	for(int i = 0; i < iters; i++)  {
-		for(int u = 0; u < 3; u++)
-			p_out->screen_data[start_out + i][u] = p_in->screen_data[start_in + i][u];
-		p_out->screen_data[start_out + i][3] = 0xff;
-	}
+void convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureData* capture_data) {
+	#ifdef USE_FTDI
+	if(capture_data->status.device.is_ftdi)
+		ftdi_convertVideoToOutput(p_in, p_out, capture_data->status.enabled_3d);
+	#endif
+	#ifdef USE_UBS
+	if(!capture_data->status.device.is_ftdi)
+		usb_convertVideoToOutput(p_in, p_out, &capture_data->status.device, capture_data->status.enabled_3d);
+	#endif
 }
 
-void convertVideoToOutput(VideoInputData *p_in, VideoOutputData *p_out) {
-	convertVideoToOutputChunk(p_in, p_out, IN_VIDEO_NO_BOTTOM_SIZE, 0, 0);
-
-	for(int i = 0; i < ((IN_VIDEO_SIZE - IN_VIDEO_NO_BOTTOM_SIZE) / (IN_VIDEO_WIDTH * 2)); i++) {
-		convertVideoToOutputChunk(p_in, p_out, IN_VIDEO_WIDTH, ((i * 2) * IN_VIDEO_WIDTH) + IN_VIDEO_NO_BOTTOM_SIZE, TOP_SIZE_3DS + (i * IN_VIDEO_WIDTH));
-		convertVideoToOutputChunk(p_in, p_out, IN_VIDEO_WIDTH, (((i * 2) + 1) * IN_VIDEO_WIDTH) + IN_VIDEO_NO_BOTTOM_SIZE, IN_VIDEO_NO_BOTTOM_SIZE + (i * IN_VIDEO_WIDTH));
+void convertAudioToOutput(CaptureReceived *p_in, sf::Int16 *p_out, uint64_t n_samples, const bool is_big_endian, CaptureData* capture_data) {
+	if(!capture_data->status.device.has_audio)
+		return;
+	uint8_t* base_ptr = NULL;
+	#ifdef USE_FTDI
+	if(capture_data->status.device.is_ftdi) {
+		if(!capture_data->status.enabled_3d)
+			base_ptr = (uint8_t*)p_in->ftdi_received.audio_data;
+		else
+			base_ptr = (uint8_t*)p_in->ftdi_received_3d.audio_data;
 	}
-}
-
-void convertAudioToOutput(CaptureReceived *p_in, sf::Int16 *p_out, const int n_samples, const bool is_big_endian) {
+	#endif
+	if(base_ptr == NULL)
+		return;
 	if(!is_big_endian)
-		memcpy(p_out, p_in->audio_data, n_samples * 2);
+		memcpy(p_out, base_ptr, n_samples * 2);
 	else
-		for(int i = 0; i < n_samples; i++)
-			p_out[i] = ((p_in->audio_data[i] & 0xFF) << 8) | (p_in->audio_data[i] >> 8);
+		for(int i = 0; i < n_samples; i += 2)
+			p_out[i] = (base_ptr[i + 1] << 8) | base_ptr[i];
 }
-

@@ -23,7 +23,7 @@ void ConnectionMenu::class_setup() {
 	this->show_title = true;
 }
 
-void ConnectionMenu::insert_data(DevicesList *devices_list) {
+void ConnectionMenu::insert_data(std::vector<CaptureDevice> *devices_list) {
 	this->devices_list = devices_list;
 	this->prepare_options();
 }
@@ -37,11 +37,11 @@ void ConnectionMenu::set_output_option(int index, int action) {
 }
 
 int ConnectionMenu::get_num_options() {
-	return this->devices_list->numValidDevices;
+	return this->devices_list->size();
 }
 
 std::string ConnectionMenu::get_string_option(int index, int action) {
-	return std::string(&this->devices_list->serialNumbers[SERIAL_NUMBER_SIZE * index]);
+	return (*this->devices_list)[index].name + " - " + (*this->devices_list)[index].serial_number;
 }
 
 void ConnectionMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y) {
