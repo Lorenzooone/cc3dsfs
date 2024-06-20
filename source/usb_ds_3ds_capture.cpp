@@ -404,9 +404,9 @@ void usb_capture_main_loop(CaptureData* capture_data) {
 				capture_data->read[inner_curr_in] = _usb_get_video_in_size(usb_device_desc);
 
 				inner_curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
-				capture_data->status.curr_in = inner_curr_in;
 				if(capture_data->status.cooldown_curr_in)
 					capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
+				capture_data->status.curr_in = inner_curr_in;
 				capture_data->status.video_wait.unlock();
 				capture_data->status.audio_wait.unlock();
 				break;

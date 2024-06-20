@@ -193,9 +193,9 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 		capture_data->read[inner_curr_in] = read_buffers[inner_curr_in];
 		clock_start = curr_time;
 
-		capture_data->status.curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
 		if(capture_data->status.cooldown_curr_in)
 			capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
+		capture_data->status.curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
 		// Signal that there is data available
 		capture_data->status.video_wait.unlock();
 		capture_data->status.audio_wait.unlock();
@@ -222,9 +222,9 @@ static bool safe_capture_call(CaptureData* capture_data) {
 		capture_data->read[inner_curr_in] = read_buffers[inner_curr_in];
 
 		inner_curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
-		capture_data->status.curr_in = inner_curr_in;
 		if(capture_data->status.cooldown_curr_in)
 			capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
+		capture_data->status.curr_in = inner_curr_in;
 		capture_data->status.video_wait.unlock();
 		capture_data->status.audio_wait.unlock();
 	}

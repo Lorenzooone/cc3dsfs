@@ -10,7 +10,7 @@ void convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, Capture
 	if(capture_data->status.device.is_ftdi)
 		ftdi_convertVideoToOutput(p_in, p_out, capture_data->status.enabled_3d);
 	#endif
-	#ifdef USE_UBS
+	#ifdef USE_USB
 	if(!capture_data->status.device.is_ftdi)
 		usb_convertVideoToOutput(p_in, p_out, &capture_data->status.device, capture_data->status.enabled_3d);
 	#endif
