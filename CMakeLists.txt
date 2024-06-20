@@ -205,6 +205,14 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
         POST_BUILD COMMAND ${CMAKE_SOURCE_DIR}/macos_bundle_setup.sh ${FW_APP}/Contents/MacOS/${OUTPUT_NAME}
         VERBATIM
     )
+    install(
+    CODE
+    "
+        include(BundleUtilities)
+        fixup_bundle(\"${FW_APP}\"  \"\" \"\")
+    "
+    DESTINATION .
+    COMPONENT Runtime)
 
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 else()
