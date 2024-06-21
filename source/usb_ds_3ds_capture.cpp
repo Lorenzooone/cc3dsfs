@@ -227,9 +227,7 @@ static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, c
 
     // Both DS and 3DS old CCs send data until end of frame, followed by 0-length packets
     do {
-        int transferSize = video_size - bytesIn;
-    	if(usb_device_desc->is_3ds)
-        	transferSize= (transferSize + 0x1ff) & ~0x1ff;  //multiple of maxPacketSize
+        int transferSize = ((video_size - bytesIn) + 0x1ff) & ~0x1ff; // multiple of maxPacketSize
         result = bulk_in(handle, usb_device_desc, video_data_ptr + bytesIn, transferSize, &transferred);
         if(result == LIBUSB_SUCCESS)
             bytesIn += transferred;

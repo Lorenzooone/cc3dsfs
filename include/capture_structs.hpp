@@ -64,6 +64,7 @@ struct PACKED USBOldDSFrameInfo {
 
 struct PACKED USBOldDSCaptureReceived {
 	USBOldDSVideoInputData video_in;
+	uint8_t unused_buffer[0x200];
 	USBOldDSFrameInfo frameinfo;
 };
 
