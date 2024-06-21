@@ -196,6 +196,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
                           MACOSX_BUNDLE TRUE
                           MACOSX_BUNDLE_BUNDLE_NAME ${OUTPUT_NAME}
                           MACOSX_BUNDLE_GUI_IDENTIFIER ${OUTPUT_NAME})
+	set(MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/data/MacOSXBundleInfo.plist.in)
     set(CMAKE_MACOSX_RPATH TRUE)
 
     add_custom_command(
@@ -205,11 +206,12 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
         VERBATIM
     )
 
-	INSTALL(CODE "
-	   include(BundleUtilities)
-	   fixup_bundle(\"${FW_APP}\"   \"\"   \"${FW_APP}/Contents/Frameworks\")
-       verify_app(\"${FW_APP}\")
-   	" COMPONENT Runtime)
+    add_custom_command(
+        TARGET ${OUTPUT_NAME}
+        COMMENT "Set bundle path for Frameworks"
+        POST_BUILD COMMAND ${CMAKE_SOURCE_DIR}/macos_bundle_setup.sh ${FW_APP}/Contents/MacOS/${OUTPUT_NAME}
+        VERBATIM
+    )
 
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 else()
