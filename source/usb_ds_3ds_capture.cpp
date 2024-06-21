@@ -206,51 +206,51 @@ static void capture_end(libusb_device_handle *dev, const usb_device* usb_device_
 }
 
 static uint64_t _usb_get_video_in_size(const usb_device* usb_device_desc) {
-    if(!usb_device_desc->is_3ds)
-    	return sizeof(USBOldDSVideoInputData);
+	if(!usb_device_desc->is_3ds)
+		return sizeof(USBOldDSVideoInputData);
 	return sizeof(USB3DSVideoInputData);
 }
 
 static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, const usb_device* usb_device_desc, CaptureReceived* data_buffer) {
-    int transferred = 0;
-    int result = 0;
-    int bytesIn=0;
-    uint64_t video_size = _usb_get_video_in_size(usb_device_desc);
-    uint8_t *video_data_ptr = (uint8_t*)data_buffer->usb_received_3ds.video_in.screen_data;
-    if(!usb_device_desc->is_3ds)
-    	video_data_ptr = (uint8_t*)data_buffer->usb_received_old_ds.video_in.screen_data;
+	int transferred = 0;
+	int result = 0;
+	int bytesIn=0;
+	uint64_t video_size = _usb_get_video_in_size(usb_device_desc);
+	uint8_t *video_data_ptr = (uint8_t*)data_buffer->usb_received_3ds.video_in.screen_data;
+	if(!usb_device_desc->is_3ds)
+		video_data_ptr = (uint8_t*)data_buffer->usb_received_old_ds.video_in.screen_data;
 
-    uint8_t dummy;
-    result = vend_out(handle, usb_device_desc, usb_device_desc->cmdout_capture_start, 0, 0, 0, &dummy);
-    if(result < 0)
-        return (result == LIBUSB_ERROR_TIMEOUT) ? USB_CAPTURE_SKIP: USB_CAPTURE_ERROR;
+	uint8_t dummy;
+	result = vend_out(handle, usb_device_desc, usb_device_desc->cmdout_capture_start, 0, 0, 0, &dummy);
+	if(result < 0)
+		return (result == LIBUSB_ERROR_TIMEOUT) ? USB_CAPTURE_SKIP: USB_CAPTURE_ERROR;
 
-    // Both DS and 3DS old CCs send data until end of frame, followed by 0-length packets
-    do {
-        int transferSize = ((video_size - bytesIn) + 0x1ff) & ~0x1ff; // multiple of maxPacketSize
-        result = bulk_in(handle, usb_device_desc, video_data_ptr + bytesIn, transferSize, &transferred);
-        if(result == LIBUSB_SUCCESS)
-            bytesIn += transferred;
-    } while(bytesIn < video_size && result == LIBUSB_SUCCESS && transferred > 0);
+	// Both DS and 3DS old CCs send data until end of frame, followed by 0-length packets
+	do {
+		int transferSize = ((video_size - bytesIn) + 0x1ff) & ~0x1ff; // multiple of maxPacketSize
+		result = bulk_in(handle, usb_device_desc, video_data_ptr + bytesIn, transferSize, &transferred);
+		if(result == LIBUSB_SUCCESS)
+			bytesIn += transferred;
+	} while(bytesIn < video_size && result == LIBUSB_SUCCESS && transferred > 0);
 
-    if(result==LIBUSB_ERROR_PIPE) {
-        libusb_clear_halt(handle, usb_device_desc->ep2_in);
-        return USB_CAPTURE_PIPE_ERROR;
-    } else if(result == LIBUSB_ERROR_TIMEOUT || (usb_device_desc->is_3ds && (bytesIn < video_size))) {
-        return USB_CAPTURE_SKIP;
-    } else if(result != LIBUSB_SUCCESS) {
-        return USB_CAPTURE_ERROR;
-    }
-
-    //if((!usb_device_desc->is_3ds) && (vend_in(handle, usb_device_desc, usb_device_desc->cmdin_frameinfo, 0, 0, sizeof(data_buffer->usb_received_old_ds.frameinfo), (uint8_t*)&data_buffer->usb_received_old_ds.frameinfo) < 0))
-    //    return USB_CAPTURE_FRAMEINFO_ERROR;
-    if(!usb_device_desc->is_3ds) {
-		data_buffer->usb_received_old_ds.frameinfo.valid = 1;
-		for(int i = 0; i < (HEIGHT_DS >> 3) << 1; i++)
-			data_buffer->usb_received_old_ds.frameinfo.half_line_flags[i] = 0xFF;
+	if(result==LIBUSB_ERROR_PIPE) {
+		libusb_clear_halt(handle, usb_device_desc->ep2_in);
+		return USB_CAPTURE_PIPE_ERROR;
+	} else if(result == LIBUSB_ERROR_TIMEOUT || (usb_device_desc->is_3ds && (bytesIn < video_size))) {
+		return USB_CAPTURE_SKIP;
+	} else if(result != LIBUSB_SUCCESS) {
+		return USB_CAPTURE_ERROR;
 	}
 
-    return USB_CAPTURE_SUCCESS;
+	if(!usb_device_desc->is_3ds) {
+		result = vend_out(handle, usb_device_desc, usb_device_desc->cmdout_capture_stop, 0, 0, 0, &dummy);
+		if(result < 0)
+			return (result == LIBUSB_ERROR_TIMEOUT) ? USB_CAPTURE_SKIP: USB_CAPTURE_ERROR;
+		if(vend_in(handle, usb_device_desc, usb_device_desc->cmdin_frameinfo, 0, 0, sizeof(data_buffer->usb_received_old_ds.frameinfo), (uint8_t*)&data_buffer->usb_received_old_ds.frameinfo) < 0)
+			return USB_CAPTURE_FRAMEINFO_ERROR;
+	}
+
+	return USB_CAPTURE_SUCCESS;
 }
 
 static inline void usb_oldDSconvertVideoToOutputRGBA(USBOldDSPixelData data, uint8_t* target) {
@@ -277,36 +277,36 @@ static inline void usb_oldDSconvertVideoToOutputRGBA(USBOldDSPixelData data, uin
 }
 
 static inline void usb_oldDSconvertVideoToOutputHalfLine(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, int halfline) {
-    //de-interleave pixels
-    for(int i = 0; i < WIDTH_DS / 2 ; i++) {
-    	uint32_t halfline_pixel = (halfline * (WIDTH_DS / 2)) + i;
-    	usb_oldDSconvertVideoToOutputRGBA(p_in->video_in.screen_data[halfline_pixel * 2], p_out->screen_data[halfline_pixel + (WIDTH_DS * HEIGHT_DS)]);
-    	usb_oldDSconvertVideoToOutputRGBA(p_in->video_in.screen_data[(halfline_pixel * 2) + 1], p_out->screen_data[halfline_pixel]);
-    }
+	//de-interleave pixels
+	for(int i = 0; i < WIDTH_DS / 2 ; i++) {
+		uint32_t halfline_pixel = (halfline * (WIDTH_DS / 2)) + i;
+		usb_oldDSconvertVideoToOutputRGBA(p_in->video_in.screen_data[halfline_pixel * 2], p_out->screen_data[halfline_pixel + (WIDTH_DS * HEIGHT_DS)]);
+		usb_oldDSconvertVideoToOutputRGBA(p_in->video_in.screen_data[(halfline_pixel * 2) + 1], p_out->screen_data[halfline_pixel]);
+	}
 }
 
 static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out) {
-    if(!p_in->frameinfo.valid) { //LCD was off
-        memset(p_out->screen_data, 0, WIDTH_DS * (2 * HEIGHT_DS) * 4);
-        return;
-    }
+	if(!p_in->frameinfo.valid) { //LCD was off
+		memset(p_out->screen_data, 0, WIDTH_DS * (2 * HEIGHT_DS) * 4);
+		return;
+	}
 
 	// Handle first line being off, if needed
-    memset(p_out->screen_data, 0, WIDTH_DS * 4);
+	memset(p_out->screen_data, 0, WIDTH_DS * 4);
 
 	for(int i = 0; i < 2; i++) {
-	    if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
-	    	usb_oldDSconvertVideoToOutputHalfLine(p_in, p_out, i);
-    }
+		if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
+			usb_oldDSconvertVideoToOutputHalfLine(p_in, p_out, i);
+	}
 
 	for(int i = 2; i < HEIGHT_DS * 2; i++) {
-	    if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
-	    	usb_oldDSconvertVideoToOutputHalfLine(p_in, p_out, i);
-	    else { // deal with missing half-line
-	    	memcpy(p_out->screen_data[i * (WIDTH_DS / 2)], p_out->screen_data[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * 4);
-	    	memcpy(p_out->screen_data[(i * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], p_out->screen_data[((i - 2) * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], (WIDTH_DS / 2) * 4);
-	    }
-    }
+		if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
+			usb_oldDSconvertVideoToOutputHalfLine(p_in, p_out, i);
+		else { // deal with missing half-line
+			memcpy(p_out->screen_data[i * (WIDTH_DS / 2)], p_out->screen_data[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * 4);
+			memcpy(p_out->screen_data[(i * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], p_out->screen_data[((i - 2) * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], (WIDTH_DS / 2) * 4);
+		}
+	}
 }
 
 static void usb_3DSconvertVideoToOutput(USB3DSCaptureReceived *p_in, VideoOutputData *p_out, bool enabled_3d) {
@@ -347,31 +347,31 @@ bool connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* de
 		return false;
 	const usb_device* usb_device_desc = _get_usb_device_desc(device);
 	libusb_device_handle *dev = usb_find_by_serial_number(usb_device_desc, device->serial_number);
-    if(!dev) {
+	if(!dev) {
 		capture_error_print(true, capture_data, "Device not found");
-        return false;
-    }
-    if(libusb_set_configuration(dev, usb_device_desc->default_config) != LIBUSB_SUCCESS) {
+		return false;
+	}
+	if(libusb_set_configuration(dev, usb_device_desc->default_config) != LIBUSB_SUCCESS) {
 		capture_error_print(true, capture_data, "Configuration failed");
-    	capture_end(dev, usb_device_desc, false);
-    	return false;
-    }
-    if(libusb_claim_interface(dev, usb_device_desc->capture_interface) != LIBUSB_SUCCESS) {
+		capture_end(dev, usb_device_desc, false);
+		return false;
+	}
+	if(libusb_claim_interface(dev, usb_device_desc->capture_interface) != LIBUSB_SUCCESS) {
 		capture_error_print(true, capture_data, "Interface claim failed");
-    	capture_end(dev, usb_device_desc, false);
-    	return false;
-    }
+		capture_end(dev, usb_device_desc, false);
+		return false;
+	}
 
 	if(usb_device_desc->is_3ds) {
 		//FW bug(?) workaround- first read times out sometimes
 		uint8_t dummy;
 		vend_out(dev, usb_device_desc, usb_device_desc->cmdout_capture_start, 0, 0, 0, &dummy);
 		default_sleep(usb_device_desc->bulk_timeout);
-    }
+	}
 
 	capture_data->handle = (void*)dev;
 
-    return true;
+	return true;
 }
 
 uint64_t usb_get_video_in_size(CaptureData* capture_data) {
@@ -439,9 +439,9 @@ void usb_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, Cap
 	if(!usb_initialized)
 		return;
 	if(capture_device->is_3ds)
-    	usb_3DSconvertVideoToOutput(&p_in->usb_received_3ds, p_out, enabled_3d);
-    else if(capture_device->rgb_bits_size == IN_VIDEO_BPP_SIZE_DS_BASIC)
-    	usb_oldDSconvertVideoToOutput(&p_in->usb_received_old_ds, p_out);
+		usb_3DSconvertVideoToOutput(&p_in->usb_received_3ds, p_out, enabled_3d);
+	else if(capture_device->rgb_bits_size == IN_VIDEO_BPP_SIZE_DS_BASIC)
+		usb_oldDSconvertVideoToOutput(&p_in->usb_received_old_ds, p_out);
 }
 
 void usb_init() {
