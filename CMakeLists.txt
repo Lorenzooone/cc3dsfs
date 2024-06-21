@@ -193,15 +193,12 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     set(FW_APP ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME}.app)
     set(FW_DIRS ${sfml_SOURCE_DIR}/extlibs/libs-osx/Frameworks)
     set_target_properties(${OUTPUT_NAME} PROPERTIES
-                          MACOSX_BUNDLE TRUE)
+                          MACOSX_BUNDLE TRUE
+                          MACOSX_BUNDLE_NAME ${OUTPUT_NAME}
+                          MACOSX_BUNDLE_GUI_IDENTIFIER ${OUTPUT_NAME})
     set(CMAKE_MACOSX_RPATH TRUE)
 
-    add_custom_command(
-        TARGET ${OUTPUT_NAME}
-        COMMENT "Copy Frameworks in bundle"
-        POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${FW_DIRS} ${FW_APP}/Contents/Frameworks
-        VERBATIM
-    )
+    install(DIRECTORY ${FW_DIRS} BUNDLE DESTINATION ${FW_APP}/Contents)
 
     add_custom_command(
         TARGET ${OUTPUT_NAME}
