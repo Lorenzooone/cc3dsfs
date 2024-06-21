@@ -11,6 +11,7 @@ enum CurrMenuType { DEFAULT_MENU_TYPE, CONNECT_MENU_TYPE, MAIN_MENU_TYPE, VIDEO_
 struct ScreenInfo {
 	bool is_blurred;
 	int crop_kind;
+	int crop_kind_ds;
 	double scaling;
 	bool is_fullscreen;
 	BottomRelativePosition bottom_pos;
@@ -36,12 +37,13 @@ struct DisplayData {
 	bool split;
 	bool mono_app_mode;
 	bool fast_poll;
+	bool last_connected_ds;
 };
 
 #pragma pack(push, 1)
 
 struct PACKED VideoOutputData {
-	uint8_t screen_data[IN_VIDEO_SIZE][4];
+	uint8_t screen_data[MAX_IN_VIDEO_SIZE][4];
 };
 
 #pragma pack(pop)
@@ -58,6 +60,8 @@ struct CropData {
 	bool allowed_joint;
 	bool allowed_top;
 	bool allowed_bottom;
+	bool allowed_3ds;
+	bool allowed_ds;
 	std::string name;
 };
 

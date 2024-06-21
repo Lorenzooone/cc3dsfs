@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(cc3dsfs VERSION 1.0.0 LANGUAGES CXX)
 include(ExternalProject)
 
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 set(CMAKE_HOST_CXX_COMPILER ${CMAKE_CXX_COMPILER} CACHE STRING "Host Compiler")
@@ -101,6 +102,10 @@ if(IS_DIRECTORY "${sfml_SOURCE_DIR}")
     set_property(DIRECTORY ${sfml_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL YES)
 endif()
 
+if(IS_DIRECTORY "${libusb1_SOURCE_DIR}")
+    set_property(DIRECTORY ${libusb1_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL YES)
+endif()
+
 file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/win)
 file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/macos)
 file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/linux)
@@ -145,7 +150,7 @@ file(MAKE_DIRECTORY ${TOOLS_DATA_DIR})
 set(OUTPUT_NAME cc3dsfs)
 
 add_executable(CMakeBin2C tools/bin2c.cpp)
-add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/3dscapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp)
+add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/3dscapture_ftdi.cpp source/usb_ds_3ds_capture.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp)
 add_dependencies(${OUTPUT_NAME} FTD3XX_BUILD_PROJECT CMakeBin2C)
 target_link_libraries(${OUTPUT_NAME} PRIVATE sfml-graphics sfml-audio sfml-window sfml-system usb-1.0 ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}/${FTD3XX_LIB} ${EXTRA_LIBRARIES})
 target_link_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER})
@@ -188,7 +193,10 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     set(FW_APP ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME}.app)
     set(FW_DIRS ${sfml_SOURCE_DIR}/extlibs/libs-osx/Frameworks)
     set_target_properties(${OUTPUT_NAME} PROPERTIES
-                          MACOSX_BUNDLE TRUE)
+                          MACOSX_BUNDLE TRUE
+                          MACOSX_BUNDLE_BUNDLE_NAME ${OUTPUT_NAME}
+                          MACOSX_BUNDLE_GUI_IDENTIFIER ${OUTPUT_NAME}
+                          MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/data/MacOSXBundleInfo.plist.in)
     set(CMAKE_MACOSX_RPATH TRUE)
 
     add_custom_command(
@@ -208,6 +216,8 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 else()
     install(FILES 51-ftd3xx.rules DESTINATION .)
+    install(FILES 95-usb3dscapture.rules DESTINATION .)
+    install(FILES 95-usbdscapture.rules DESTINATION .)
 endif()
 
 
