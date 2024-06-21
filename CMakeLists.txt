@@ -195,8 +195,8 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     set_target_properties(${OUTPUT_NAME} PROPERTIES
                           MACOSX_BUNDLE TRUE
                           MACOSX_BUNDLE_BUNDLE_NAME ${OUTPUT_NAME}
-                          MACOSX_BUNDLE_GUI_IDENTIFIER ${OUTPUT_NAME})
-	set(MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/data/MacOSXBundleInfo.plist.in)
+                          MACOSX_BUNDLE_GUI_IDENTIFIER ${OUTPUT_NAME}
+                          MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/data/MacOSXBundleInfo.plist.in)
     set(CMAKE_MACOSX_RPATH TRUE)
 
     add_custom_command(
