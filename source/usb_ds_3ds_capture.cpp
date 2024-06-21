@@ -16,6 +16,8 @@
 #define CAPTURE_SKIP_TIMEOUT_SECONDS 1.0
 #define USE_SHARED_SPECIAL_BIT_OLDDS
 
+#define SKIP_LOADING_FRAMEINFO
+
 enum usb_capture_status {
 	USB_CAPTURE_SUCCESS = 0,
 	USB_CAPTURE_SKIP,
@@ -243,11 +245,14 @@ static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, c
 	}
 
 	if(!usb_device_desc->is_3ds) {
-		result = vend_out(handle, usb_device_desc, usb_device_desc->cmdout_capture_stop, 0, 0, 0, &dummy);
-		if(result < 0)
-			return (result == LIBUSB_ERROR_TIMEOUT) ? USB_CAPTURE_SKIP: USB_CAPTURE_ERROR;
+		#ifndef SKIP_LOADING_FRAMEINFO
 		if(vend_in(handle, usb_device_desc, usb_device_desc->cmdin_frameinfo, 0, 0, sizeof(data_buffer->usb_received_old_ds.frameinfo), (uint8_t*)&data_buffer->usb_received_old_ds.frameinfo) < 0)
 			return USB_CAPTURE_FRAMEINFO_ERROR;
+		#else
+		data_buffer->usb_received_old_ds.frameinfo.valid = 1;
+		for(int i = 0; i < (HEIGHT_DS >> 3) << 1; i++)
+			data_buffer->usb_received_old_ds.frameinfo.half_line_flags[i] = 0xFF;
+		#endif
 	}
 
 	return USB_CAPTURE_SUCCESS;
