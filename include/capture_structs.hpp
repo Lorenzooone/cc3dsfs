@@ -52,6 +52,7 @@ struct PACKED FTDI3DSCaptureReceived_3D {
 
 struct PACKED USB3DSCaptureReceived {
 	USB3DSVideoInputData video_in;
+	uint8_t unused_buffer[0x200];
 };
 
 struct PACKED USBOldDSFrameInfo {
