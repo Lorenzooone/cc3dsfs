@@ -242,8 +242,13 @@ static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, c
         return USB_CAPTURE_ERROR;
     }
 
-    if((!usb_device_desc->is_3ds) && (vend_in(handle, usb_device_desc, usb_device_desc->cmdin_frameinfo, 0, 0, sizeof(data_buffer->usb_received_old_ds.frameinfo), (uint8_t*)&data_buffer->usb_received_old_ds.frameinfo) < 0))
-        return USB_CAPTURE_FRAMEINFO_ERROR;
+    //if((!usb_device_desc->is_3ds) && (vend_in(handle, usb_device_desc, usb_device_desc->cmdin_frameinfo, 0, 0, sizeof(data_buffer->usb_received_old_ds.frameinfo), (uint8_t*)&data_buffer->usb_received_old_ds.frameinfo) < 0))
+    //    return USB_CAPTURE_FRAMEINFO_ERROR;
+    if(!usb_device_desc->is_3ds) {
+		data_buffer->usb_received_old_ds.frameinfo.valid = 1;
+		for(int i = 0; i < (HEIGHT_DS >> 3) << 1; i++)
+			data_buffer->usb_received_old_ds.frameinfo.half_line_flags[i] = 0xFF;
+	}
 
     return USB_CAPTURE_SUCCESS;
 }
