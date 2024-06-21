@@ -237,7 +237,7 @@ static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, c
 		result = bulk_in(handle, usb_device_desc, video_data_ptr + bytesIn, transferSize, &transferred);
 		if(result == LIBUSB_SUCCESS)
 			bytesIn += transferred;
-	} while((bytesIn < video_size) && (result == LIBUSB_SUCCESS) && (transferred > 0));
+	} while((bytesIn < full_in_size) && (result == LIBUSB_SUCCESS) && (transferred > 0));
 
 	if(result==LIBUSB_ERROR_PIPE) {
 		libusb_clear_halt(handle, usb_device_desc->ep2_in);
