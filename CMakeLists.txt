@@ -194,13 +194,15 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     set(FW_DIRS ${sfml_SOURCE_DIR}/extlibs/libs-osx/Frameworks)
     set_target_properties(${OUTPUT_NAME} PROPERTIES
                           MACOSX_BUNDLE TRUE
-                          MACOSX_BUNDLE_NAME ${OUTPUT_NAME}
+                          MACOSX_BUNDLE_BUNDLE_NAME ${OUTPUT_NAME}
                           MACOSX_BUNDLE_GUI_IDENTIFIER ${OUTPUT_NAME})
     set(CMAKE_MACOSX_RPATH TRUE)
 
+    install(DIRECTORY ${FW_DIRS} DESTINATION ${FW_APP}/Contents)
+
 	INSTALL(CODE "
 	   include(BundleUtilities)
-	   fixup_bundle(\"${FW_APP}\"   \"\"   \"${FW_DIRS}\")
+	   fixup_bundle(\"${FW_APP}\"   \"\"   \"${FW_APP}/Contents/Frameworks\")
        verify_app(\"${FW_APP}\")
    	" COMPONENT Runtime)
 
