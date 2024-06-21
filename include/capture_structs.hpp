@@ -15,6 +15,8 @@
 
 #define FIX_PARTIAL_FIRST_FRAME_NUM 3
 
+#define EXTRA_DATA_BUFFER_USB_SIZE (1 << 9)
+
 #pragma pack(push, 1)
 
 struct PACKED FTDI3DSVideoInputData {
@@ -29,11 +31,14 @@ struct PACKED USB3DSVideoInputData {
 	uint8_t screen_data[IN_VIDEO_SIZE_3DS][3];
 };
 
+#define OLD_DS_PIXEL_B_BITS 5
+#define OLD_DS_PIXEL_G_BITS 6
+#define OLD_DS_PIXEL_R_BITS 5
+
 struct PACKED USBOldDSPixelData {
-	uint16_t b : 5;
-	uint16_t special : 1;
-	uint16_t g : 5;
-	uint16_t r : 5;
+	uint16_t b : OLD_DS_PIXEL_B_BITS;
+	uint16_t g : OLD_DS_PIXEL_G_BITS;
+	uint16_t r : OLD_DS_PIXEL_R_BITS;
 };
 
 struct PACKED USBOldDSVideoInputData {
@@ -52,7 +57,8 @@ struct PACKED FTDI3DSCaptureReceived_3D {
 
 struct PACKED USB3DSCaptureReceived {
 	USB3DSVideoInputData video_in;
-	uint8_t unused_buffer[0x200];
+	uint16_t audio_data[O3DS_SAMPLES_IN];
+	uint8_t unused_buffer[EXTRA_DATA_BUFFER_USB_SIZE];
 };
 
 struct PACKED USBOldDSFrameInfo {
@@ -64,7 +70,7 @@ struct PACKED USBOldDSFrameInfo {
 
 struct PACKED USBOldDSCaptureReceived {
 	USBOldDSVideoInputData video_in;
-	uint8_t unused_buffer[0x200];
+	uint8_t unused_buffer[EXTRA_DATA_BUFFER_USB_SIZE];
 	USBOldDSFrameInfo frameinfo;
 };
 

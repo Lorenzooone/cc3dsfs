@@ -28,6 +28,11 @@ void convertAudioToOutput(CaptureReceived *p_in, sf::Int16 *p_out, uint64_t n_sa
 			base_ptr = (uint8_t*)p_in->ftdi_received_3d.audio_data;
 	}
 	#endif
+	#ifdef USE_USB
+	if((!capture_data->status.device.is_ftdi) && capture_data->status.device.is_3ds) {
+		base_ptr = (uint8_t*)p_in->usb_received_3ds.audio_data;
+	}
+	#endif
 	if(base_ptr == NULL)
 		return;
 	if(!is_big_endian)

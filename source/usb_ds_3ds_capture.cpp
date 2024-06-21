@@ -14,7 +14,6 @@
 
 #define FIRST_3D_VERSION 6
 #define CAPTURE_SKIP_TIMEOUT_SECONDS 1.0
-#define USE_SHARED_SPECIAL_BIT_OLDDS
 
 enum usb_capture_status {
 	USB_CAPTURE_SUCCESS = 0,
@@ -146,7 +145,7 @@ static bool insert_device(std::vector<CaptureDevice> &devices_list, const usb_de
 	else
 		curr_serial_extra_id += 1;
 	if(usb_device_desc->is_3ds)
-		devices_list.emplace_back(serial_str, "3DS", false, true, capture_get_has_3d(handle, usb_device_desc), false, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, 0, usb_device_desc->bpp, 90, 0, 0, TOP_WIDTH_3DS, 0);
+		devices_list.emplace_back(serial_str, "3DS", false, true, capture_get_has_3d(handle, usb_device_desc), true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, O3DS_SAMPLES_IN, usb_device_desc->bpp, 90, 0, 0, TOP_WIDTH_3DS, 0);
 	else {
 		bool has_audio = false;
 		int max_samples_in = 0;
@@ -211,11 +210,18 @@ static uint64_t _usb_get_video_in_size(const usb_device* usb_device_desc) {
 	return sizeof(USB3DSVideoInputData);
 }
 
-static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, const usb_device* usb_device_desc, CaptureReceived* data_buffer) {
+static uint64_t _usb_get_full_in_size(const usb_device* usb_device_desc) {
+	if(!usb_device_desc->is_3ds)
+		return sizeof(USBOldDSVideoInputData);
+	return sizeof(USB3DSCaptureReceived) - EXTRA_DATA_BUFFER_USB_SIZE;
+}
+
+static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, const usb_device* usb_device_desc, CaptureReceived* data_buffer, int &bytesIn) {
+	bytesIn = 0;
 	int transferred = 0;
 	int result = 0;
-	int bytesIn=0;
 	uint64_t video_size = _usb_get_video_in_size(usb_device_desc);
+	uint64_t full_in_size = _usb_get_full_in_size(usb_device_desc);
 	uint8_t *video_data_ptr = (uint8_t*)data_buffer->usb_received_3ds.video_in.screen_data;
 	if(!usb_device_desc->is_3ds)
 		video_data_ptr = (uint8_t*)data_buffer->usb_received_old_ds.video_in.screen_data;
@@ -227,11 +233,11 @@ static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, c
 
 	// Both DS and 3DS old CCs send data until end of frame, followed by 0-length packets
 	do {
-		int transferSize = ((video_size - bytesIn) + 0x1ff) & ~0x1ff; // multiple of maxPacketSize
+		int transferSize = ((full_in_size - bytesIn) + (EXTRA_DATA_BUFFER_USB_SIZE - 1)) & ~(EXTRA_DATA_BUFFER_USB_SIZE - 1); // multiple of maxPacketSize
 		result = bulk_in(handle, usb_device_desc, video_data_ptr + bytesIn, transferSize, &transferred);
 		if(result == LIBUSB_SUCCESS)
 			bytesIn += transferred;
-	} while(bytesIn < video_size && result == LIBUSB_SUCCESS && transferred > 0);
+	} while((bytesIn < video_size) && (result == LIBUSB_SUCCESS) && (transferred > 0));
 
 	if(result==LIBUSB_ERROR_PIPE) {
 		libusb_clear_halt(handle, usb_device_desc->ep2_in);
@@ -257,26 +263,16 @@ static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, c
 	return USB_CAPTURE_SUCCESS;
 }
 
-static inline void usb_oldDSconvertVideoToOutputRGBA(USBOldDSPixelData data, uint8_t* target) {
-	int num_bits = 5;
-	uint8_t b = data.b;
-	uint8_t g = data.g;
-	uint8_t r = data.r;
-	#ifdef USE_SHARED_SPECIAL_BIT_OLDDS
-	// Uses the 5th bit of data as the sixth bit for all of them.
-	// Weird, but... It probably works...? Will check how it looks without it
-	// first...
-	num_bits = 6;
-	b = (b << 1) | data.special;
-	g = (g << 1) | data.special;
-	r = (r << 1) | data.special;
-	#endif
-	// Standard conversion stuff for x bits to 8 bits
+static inline uint8_t xbits_to_8bits(uint8_t value, int num_bits) {
 	int left_shift = 8 - num_bits;
 	int right_shift = num_bits - left_shift;
-	target[0] = (r << left_shift) | (r >> right_shift);
-	target[1] = (g << left_shift) | (g >> right_shift);
-	target[2] = (b << left_shift) | (b >> right_shift);
+	return (value << left_shift) | (value >> right_shift);
+}
+
+static inline void usb_oldDSconvertVideoToOutputRGBA(USBOldDSPixelData data, uint8_t* target) {
+	target[0] = xbits_to_8bits(data.r, OLD_DS_PIXEL_R_BITS);
+	target[1] = xbits_to_8bits(data.g, OLD_DS_PIXEL_G_BITS);
+	target[2] = xbits_to_8bits(data.b, OLD_DS_PIXEL_B_BITS);
 	target[3] = 255;
 }
 
@@ -394,7 +390,8 @@ void usb_capture_main_loop(CaptureData* capture_data) {
 
 	while((!done) && capture_data->status.connected && capture_data->status.running) {
 
-		usb_capture_status result = capture_read_oldds_3ds((libusb_device_handle*)capture_data->handle, usb_device_desc, &capture_data->capture_buf[inner_curr_in]);
+		int read_amount = 0;
+		usb_capture_status result = capture_read_oldds_3ds((libusb_device_handle*)capture_data->handle, usb_device_desc, &capture_data->capture_buf[inner_curr_in], read_amount);
 
 		const auto curr_time = std::chrono::high_resolution_clock::now();
 		const std::chrono::duration<double> diff = curr_time - clock_start;
@@ -417,7 +414,7 @@ void usb_capture_main_loop(CaptureData* capture_data) {
 			case USB_CAPTURE_SUCCESS:
 				clock_start = curr_time;
 				capture_data->time_in_buf[inner_curr_in] = diff.count();
-				capture_data->read[inner_curr_in] = _usb_get_video_in_size(usb_device_desc);
+				capture_data->read[inner_curr_in] = read_amount;
 
 				inner_curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
 				if(capture_data->status.cooldown_curr_in)
