@@ -48,6 +48,8 @@ sudo apt install \
 
 Additionally, when compiling for a Raspberry Pi, install gpiod and libgpiod-dev.
 
+On Windows, you may need to install the Visual C++ Redistributable set of libraries. They are available here: [Official Microsoft VC Redist Link](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-microsoft-visual-c-redistributable-version).
+
 ## Compilation
 
 To compile the program, assuming CMake, git and g++ are installed on the system, this is the command which should be launched:
@@ -58,6 +60,11 @@ cmake -B build ; cmake --build build --config Release
 
 This will download FTD3XX, libusb and SFML, which may take a while during the first execution of the command. Later runs should be much faster.
 On MacOS, you may also be prompted to install the Apple Command Line Developer Tools first.
+
+When compiling on a Raspberry Pi, to enable usage of GPIO, use:
+```
+cmake -B build -DRASPBERRY_PI_COMPILATION=TRUE ; cmake --build build --config Release
+```
 
 ## Controls
 
@@ -117,6 +124,10 @@ The current configuration can be saved to various extra profiles, creating the g
 
 The name of profiles can be changed by altering the __name__ field in its file.
 
+On Linux and MacOS, the profiles can be found at the "${HOME}/.config/cc3dsfs" folder. By default, "/home/<nome_utente>/.config/cc3dsfs".
+
+On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the directory in which the program runs from.
+
 ## Notes
 - On Linux, you may need to include the udev USB access rules. You can use the .rules files available in the repository, or define your own.
 - At startup, the audio may be unstable. It should fix itself, if you give it enough time.
@@ -125,14 +136,9 @@ The name of profiles can be changed by altering the __name__ field in its file.
 - Fullscreen mode on MacOS may mistake the screen for being bigger than what it really is. Changing the resolution to the proper one of the screen in the _Resolution Settings_ under Video Settings will fix the issue.
 - Current font in use: OFL Sorts Mill Goudy TT
 - Enabling Slow Poll may slightly boost the FPS of the software, at the cost of an extremely slight decrease in frame latency, and slower reaction times of the software to key presses. Disabled by default (as when the FPS are greater than the CC's, it's not reccomended).
-- When compiling on a Raspberry Pi, to enable usage of GPIO, use:
-```
-cmake -B build -DRASPBERRY_PI_COMPILATION=TRUE ; cmake --build build --config Release
-```
 - On MacOS, you may get a notice about the app being damaged. It's Apple quaranteening the app. To make it work, open a terminal and run the following:
 ```
 xattr -c ./cc3dsfs.app
 ```
 - It can also be achieved by opening a terminal, typing "xattr -c ", dragging the application to the terminal, and finally pressing Enter.
-- On Windows, you may need to install the Visual C++ Redistributable set of libraries. They are available here: https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-microsoft-visual-c-redistributable-version
 
