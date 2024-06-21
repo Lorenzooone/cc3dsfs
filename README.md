@@ -133,4 +133,5 @@ cmake -B build -DRASPBERRY_PI_COMPILATION=TRUE ; cmake --build build --config Re
 ```
 xattr -c ./cc3dsfs.app
 ```
+- It can also be achieved by opening a terminal, typing "xattr -c ", dragging the application to the terminal, and finally pressing Enter.
 
