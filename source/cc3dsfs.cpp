@@ -62,7 +62,7 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 	std::ifstream file(path + name);
 	std::string line;
 
-	if(!file.good()) {
+	if((!file) || (!file.is_open()) || (!file.good())) {
 		UpdateOutText(out_text_data, "File " + path + name + " load failed.\nDefaults re-loaded.", "Load failed\nDefaults re-loaded", TEXT_KIND_ERROR);
 		return false;
 	}
@@ -207,8 +207,8 @@ static void save_layout_file(int save_index, FrontendData *frontend_data, AudioD
 }
 
 static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
+	sf::Int16 (*out_buf)[MAX_SAMPLES_IN] = new sf::Int16[NUM_CONCURRENT_AUDIO_BUFFERS][MAX_SAMPLES_IN];
 	Audio audio(audio_data);
-	sf::Int16 out_buf[NUM_CONCURRENT_AUDIO_BUFFERS][MAX_SAMPLES_IN];
 	int curr_out, prev_out = NUM_CONCURRENT_DATA_BUFFERS - 1, audio_buf_counter = 0;
 	const bool endianness = is_big_endian();
 	volatile int loaded_samples;
@@ -259,6 +259,7 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 
 	audio.stop_audio();
 	audio.stop();
+	delete []out_buf;
 }
 
 static void poll_all_windows(FrontendData *frontend_data, bool do_everything, bool &polled) {
@@ -270,10 +271,10 @@ static void poll_all_windows(FrontendData *frontend_data, bool do_everything, bo
 	}
 }
 
-static void check_close_application(WindowScreen &screen, CaptureData* capture_data, int &ret_val) {
-	if(screen.close_capture() && capture_data->status.running) {
+static void check_close_application(WindowScreen *screen, CaptureData* capture_data, int &ret_val) {
+	if(screen->close_capture() && capture_data->status.running) {
 		capture_data->status.running = false;
-		ret_val = screen.get_ret_val();
+		ret_val = screen->get_ret_val();
 	}
 }
 
@@ -297,26 +298,26 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	out_buf = new VideoOutputData;
 	memset(out_buf, 0, sizeof(VideoOutputData));
 
-	WindowScreen top_screen(ScreenType::TOP, &capture_data->status, &frontend_data.display_data, audio_data, &extra_button_shortcuts);
-	WindowScreen bot_screen(ScreenType::BOTTOM, &capture_data->status, &frontend_data.display_data, audio_data, &extra_button_shortcuts);
-	WindowScreen joint_screen(ScreenType::JOINT, &capture_data->status, &frontend_data.display_data, audio_data, &extra_button_shortcuts);
-	frontend_data.top_screen = &top_screen;
-	frontend_data.bot_screen = &bot_screen;
-	frontend_data.joint_screen = &joint_screen;
+	WindowScreen *top_screen = new WindowScreen(ScreenType::TOP, &capture_data->status, &frontend_data.display_data, audio_data, &extra_button_shortcuts);
+	WindowScreen *bot_screen = new WindowScreen(ScreenType::BOTTOM, &capture_data->status, &frontend_data.display_data, audio_data, &extra_button_shortcuts);
+	WindowScreen *joint_screen = new WindowScreen(ScreenType::JOINT, &capture_data->status, &frontend_data.display_data, audio_data, &extra_button_shortcuts);
+	frontend_data.top_screen = top_screen;
+	frontend_data.bot_screen = bot_screen;
+	frontend_data.joint_screen = joint_screen;
 
 	load_layout_file(STARTUP_FILE_INDEX, &frontend_data, audio_data, out_text_data, &extra_button_shortcuts, skip_io, false);
 	// Due to the risk for seizures, at the start of the program, set BFI to false!
-	top_screen.m_info.bfi = false;
-	bot_screen.m_info.bfi = false;
-	joint_screen.m_info.bfi = false;
+	top_screen->m_info.bfi = false;
+	bot_screen->m_info.bfi = false;
+	joint_screen->m_info.bfi = false;
 
-	top_screen.build();
-	bot_screen.build();
-	joint_screen.build();
+	top_screen->build();
+	bot_screen->build();
+	joint_screen->build();
 
-	std::thread top_thread(screen_display_thread, &top_screen);
-	std::thread bot_thread(screen_display_thread, &bot_screen);
-	std::thread joint_thread(screen_display_thread, &joint_screen);
+	std::thread top_thread(screen_display_thread, top_screen);
+	std::thread bot_thread(screen_display_thread, bot_screen);
+	std::thread joint_thread(screen_display_thread, joint_screen);
 
 	capture_data->status.connected = connect(true, capture_data, &frontend_data);
 	SuccessConnectionOutTextGenerator(out_text_data, capture_data);
@@ -377,7 +378,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		int load_index = 0;
 		int save_index = 0;
 
-		if(top_screen.open_capture() || bot_screen.open_capture() || joint_screen.open_capture()) {
+		if(top_screen->open_capture() || bot_screen->open_capture() || joint_screen->open_capture()) {
 			capture_data->status.connected = connect(true, capture_data, &frontend_data);
 			SuccessConnectionOutTextGenerator(out_text_data, capture_data);
 		}
@@ -386,18 +387,18 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		check_close_application(bot_screen, capture_data, ret_val);
 		check_close_application(joint_screen, capture_data, ret_val);
 		
-		if((load_index = top_screen.load_data()) || (load_index = bot_screen.load_data()) || (load_index = joint_screen.load_data())) {
+		if((load_index = top_screen->load_data()) || (load_index = bot_screen->load_data()) || (load_index = joint_screen->load_data())) {
 			// This value should only be loaded when starting the program...
 			bool previous_last_connected_ds = frontend_data.display_data.last_connected_ds;
 			load_layout_file(load_index, &frontend_data, audio_data, out_text_data, &extra_button_shortcuts, skip_io, true);
 			frontend_data.display_data.last_connected_ds = previous_last_connected_ds;
 		}
 		
-		if((save_index = top_screen.save_data()) || (save_index = bot_screen.save_data()) || (save_index = joint_screen.save_data())) {
+		if((save_index = top_screen->save_data()) || (save_index = bot_screen->save_data()) || (save_index = joint_screen->save_data())) {
 			save_layout_file(save_index, &frontend_data, audio_data, out_text_data, &extra_button_shortcuts, skip_io, true);
-			top_screen.update_save_menu();
-			bot_screen.update_save_menu();
-			joint_screen.update_save_menu();
+			top_screen->update_save_menu();
+			bot_screen->update_save_menu();
+			joint_screen->update_save_menu();
 		}
 
 		if(audio_data->has_text_to_print()) {
@@ -411,24 +412,24 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 
 		if((!out_text_data.consumed) && (!frontend_data.reload)) {
 			ConsoleOutText(out_text_data.full_text);
-			top_screen.print_notification(out_text_data.small_text, out_text_data.kind);
-			bot_screen.print_notification(out_text_data.small_text, out_text_data.kind);
-			joint_screen.print_notification(out_text_data.small_text, out_text_data.kind);
+			top_screen->print_notification(out_text_data.small_text, out_text_data.kind);
+			bot_screen->print_notification(out_text_data.small_text, out_text_data.kind);
+			joint_screen->print_notification(out_text_data.small_text, out_text_data.kind);
 			out_text_data.consumed = true;
 		}
 	}
 
-	top_screen.end();
-	bot_screen.end();
-	joint_screen.end();
+	top_screen->end();
+	bot_screen->end();
+	joint_screen->end();
 
 	top_thread.join();
 	bot_thread.join();
 	joint_thread.join();
 
-	top_screen.after_thread_join();
-	bot_screen.after_thread_join();
-	joint_screen.after_thread_join();
+	top_screen->after_thread_join();
+	bot_screen->after_thread_join();
+	joint_screen->after_thread_join();
 
 	save_layout_file(STARTUP_FILE_INDEX, &frontend_data, audio_data, out_text_data, &extra_button_shortcuts, skip_io, false);
 

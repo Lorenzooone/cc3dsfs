@@ -134,4 +134,5 @@ cmake -B build -DRASPBERRY_PI_COMPILATION=TRUE ; cmake --build build --config Re
 xattr -c ./cc3dsfs.app
 ```
 - It can also be achieved by opening a terminal, typing "xattr -c ", dragging the application to the terminal, and finally pressing Enter.
+- On Windows, you may need to install the Visual C++ Redistributable set of libraries. They are available here: https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-microsoft-visual-c-redistributable-version
 

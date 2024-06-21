@@ -13,6 +13,7 @@ set(EXTRA_CXX_FLAGS "")
 set(RASPBERRY_PI_COMPILATION FALSE CACHE BOOL "Option for compiling the Raspberry Pi GPIO library in")
 set(SFML_BUILD_NETWORK FALSE)
 set(EXTRA_LIBRARIES "")
+set(FINAL_EXTENSION "")
 
 if (RASPBERRY_PI_COMPILATION)
 	set(EXTRA_LIBRARIES "gpiod")
@@ -35,6 +36,7 @@ FetchContent_Declare(libusb1
 
 set(FTD3XX_BASE_URL https://ftdichip.com/wp-content/uploads/)
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+	set(FINAL_EXTENSION ".exe")
     set(FTD3XX_BUILD_COMMAND ${CMAKE_SOURCE_DIR}/windows_setup_ftd3xx.bat)
     set(FTD3XX_URL_TIME 2024/01)
     set(FTD3XX_VER 1.3.0.9)
@@ -182,8 +184,7 @@ add_custom_command(
     VERBATIM
 )
 
-install(TARGETS ${OUTPUT_NAME} DESTINATION .)
-install(FILES LICENSE README.md DESTINATION .)
+install(FILES ${CMAKE_SOURCE_DIR}/${OUTPUT_NAME}${FINAL_EXTENSION} LICENSE README.md DESTINATION .)
 install(DIRECTORY "other licenses" DESTINATION .)
 if(WIN32)
     install(FILES openal32.dll DESTINATION .)
