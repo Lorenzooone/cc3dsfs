@@ -276,12 +276,13 @@ static inline void usb_oldDSconvertVideoToOutputRGBA(USBOldDSPixelData data, uin
 	target[3] = 255;
 }
 
-static inline void usb_oldDSconvertVideoToOutputHalfLine(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, int halfline) {
+static inline void usb_oldDSconvertVideoToOutputHalfLine(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, int input_halfline, int output_halfline) {
 	//de-interleave pixels
 	for(int i = 0; i < WIDTH_DS / 2 ; i++) {
-		uint32_t halfline_pixel = (halfline * (WIDTH_DS / 2)) + i;
-		usb_oldDSconvertVideoToOutputRGBA(p_in->video_in.screen_data[halfline_pixel * 2], p_out->screen_data[halfline_pixel + (WIDTH_DS * HEIGHT_DS)]);
-		usb_oldDSconvertVideoToOutputRGBA(p_in->video_in.screen_data[(halfline_pixel * 2) + 1], p_out->screen_data[halfline_pixel]);
+		uint32_t input_halfline_pixel = (input_halfline * (WIDTH_DS / 2)) + i;
+		uint32_t output_halfline_pixel = (output_halfline * (WIDTH_DS / 2)) + i;
+		usb_oldDSconvertVideoToOutputRGBA(p_in->video_in.screen_data[input_halfline_pixel * 2], p_out->screen_data[output_halfline_pixel + (WIDTH_DS * HEIGHT_DS)]);
+		usb_oldDSconvertVideoToOutputRGBA(p_in->video_in.screen_data[(input_halfline_pixel * 2) + 1], p_out->screen_data[output_halfline_pixel]);
 	}
 }
 
@@ -294,14 +295,15 @@ static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOu
 	// Handle first line being off, if needed
 	memset(p_out->screen_data, 0, WIDTH_DS * 4);
 
+	int input_halfline = 0;
 	for(int i = 0; i < 2; i++) {
 		if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
-			usb_oldDSconvertVideoToOutputHalfLine(p_in, p_out, i);
+			usb_oldDSconvertVideoToOutputHalfLine(p_in, p_out, input_halfline++, i);
 	}
 
 	for(int i = 2; i < HEIGHT_DS * 2; i++) {
 		if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
-			usb_oldDSconvertVideoToOutputHalfLine(p_in, p_out, i);
+			usb_oldDSconvertVideoToOutputHalfLine(p_in, p_out, input_halfline++, i);
 		else { // deal with missing half-line
 			memcpy(p_out->screen_data[i * (WIDTH_DS / 2)], p_out->screen_data[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * 4);
 			memcpy(p_out->screen_data[(i * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], p_out->screen_data[((i - 2) * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], (WIDTH_DS / 2) * 4);
