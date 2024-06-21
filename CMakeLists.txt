@@ -198,7 +198,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
                           MACOSX_BUNDLE_GUI_IDENTIFIER ${OUTPUT_NAME})
     set(CMAKE_MACOSX_RPATH TRUE)
 
-    install(DIRECTORY ${FW_DIRS} BUNDLE DESTINATION ${FW_APP}/Contents)
+    install(DIRECTORY ${FW_DIRS} DESTINATION ${FW_APP}/Contents)
 
     add_custom_command(
         TARGET ${OUTPUT_NAME}
