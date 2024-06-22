@@ -1,17 +1,17 @@
 #include "conversions.hpp"
 #include "devicecapture.hpp"
-#include "3dscapture_ftdi.hpp"
+#include "3dscapture_ftd3.hpp"
 #include "usb_ds_3ds_capture.hpp"
 
 #include <cstring>
 
 void convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureData* capture_data) {
-	#ifdef USE_FTDI
-	if(capture_data->status.device.is_ftdi)
-		ftdi_convertVideoToOutput(p_in, p_out, capture_data->status.enabled_3d);
+	#ifdef USE_FTD3
+	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
+		ftd3_convertVideoToOutput(p_in, p_out, capture_data->status.enabled_3d);
 	#endif
 	#ifdef USE_USB
-	if(!capture_data->status.device.is_ftdi)
+	if(capture_data->status.device.cc_type == CAPTURE_CONN_USB)
 		usb_convertVideoToOutput(p_in, p_out, &capture_data->status.device, capture_data->status.enabled_3d);
 	#endif
 }
@@ -20,17 +20,20 @@ void convertAudioToOutput(CaptureReceived *p_in, sf::Int16 *p_out, uint64_t n_sa
 	if(!capture_data->status.device.has_audio)
 		return;
 	uint8_t* base_ptr = NULL;
-	#ifdef USE_FTDI
-	if(capture_data->status.device.is_ftdi) {
+	#ifdef USE_FTD3
+	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3) {
 		if(!capture_data->status.enabled_3d)
-			base_ptr = (uint8_t*)p_in->ftdi_received.audio_data;
+			base_ptr = (uint8_t*)p_in->ftd3_received.audio_data;
 		else
-			base_ptr = (uint8_t*)p_in->ftdi_received_3d.audio_data;
+			base_ptr = (uint8_t*)p_in->ftd3_received_3d.audio_data;
 	}
 	#endif
 	#ifdef USE_USB
-	if((!capture_data->status.device.is_ftdi) && capture_data->status.device.is_3ds) {
-		base_ptr = (uint8_t*)p_in->usb_received_3ds.audio_data;
+	if(capture_data->status.device.cc_type == CAPTURE_CONN_USB) {
+		if(!capture_data->status.enabled_3d)
+			base_ptr = (uint8_t*)p_in->usb_received_3ds.audio_data;
+		else
+			base_ptr = (uint8_t*)p_in->usb_received_3ds_3d.audio_data;
 	}
 	#endif
 	if(base_ptr == NULL)

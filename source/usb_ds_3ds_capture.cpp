@@ -145,7 +145,7 @@ static bool insert_device(std::vector<CaptureDevice> &devices_list, const usb_de
 	else
 		curr_serial_extra_id += 1;
 	if(usb_device_desc->is_3ds)
-		devices_list.emplace_back(serial_str, "3DS", false, true, capture_get_has_3d(handle, usb_device_desc), true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, O3DS_SAMPLES_IN, usb_device_desc->bpp, 90, 0, 0, TOP_WIDTH_3DS, 0);
+		devices_list.emplace_back(serial_str, "3DS", CAPTURE_CONN_USB, true, capture_get_has_3d(handle, usb_device_desc), true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, O3DS_SAMPLES_IN, usb_device_desc->bpp, 90, 0, 0, TOP_WIDTH_3DS, 0);
 	else {
 		bool has_audio = false;
 		int max_samples_in = 0;
@@ -153,7 +153,7 @@ static bool insert_device(std::vector<CaptureDevice> &devices_list, const usb_de
 			has_audio = true;
 			max_samples_in = DS_SAMPLES_IN;
 		}
-		devices_list.emplace_back(serial_str, "DS", false, false, false, has_audio, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, max_samples_in, usb_device_desc->bpp, 0, 0, 0, 0, HEIGHT_DS);
+		devices_list.emplace_back(serial_str, "DS", CAPTURE_CONN_USB, false, false, has_audio, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, max_samples_in, usb_device_desc->bpp, 0, 0, 0, 0, HEIGHT_DS);
 	}
 	libusb_close(handle);
 	return true;
@@ -204,24 +204,28 @@ static void capture_end(libusb_device_handle *dev, const usb_device* usb_device_
 	libusb_close(dev);
 }
 
-static uint64_t _usb_get_video_in_size(const usb_device* usb_device_desc) {
+static uint64_t _usb_get_video_in_size(const usb_device* usb_device_desc, bool enabled_3d) {
 	if(!usb_device_desc->is_3ds)
 		return sizeof(USBOldDSVideoInputData);
-	return sizeof(USB3DSVideoInputData);
+	if(enabled_3d)
+		return sizeof(RGB83DSVideoInputData_3D);
+	return sizeof(RGB83DSVideoInputData);
 }
 
-static uint64_t _usb_get_full_in_size(const usb_device* usb_device_desc) {
+static uint64_t get_capture_size(const usb_device* usb_device_desc, bool enabled_3d) {
 	if(!usb_device_desc->is_3ds)
 		return sizeof(USBOldDSVideoInputData);
+	if(enabled_3d)
+		return sizeof(USB3DSCaptureReceived_3D) - EXTRA_DATA_BUFFER_USB_SIZE;
 	return sizeof(USB3DSCaptureReceived) - EXTRA_DATA_BUFFER_USB_SIZE;
 }
 
-static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, const usb_device* usb_device_desc, CaptureReceived* data_buffer, int &bytesIn) {
+static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, const usb_device* usb_device_desc, CaptureReceived* data_buffer, int &bytesIn, bool enabled_3d) {
 	bytesIn = 0;
 	int transferred = 0;
 	int result = 0;
-	uint64_t video_size = _usb_get_video_in_size(usb_device_desc);
-	uint64_t full_in_size = _usb_get_full_in_size(usb_device_desc);
+	uint64_t video_size = _usb_get_video_in_size(usb_device_desc, enabled_3d);
+	uint64_t full_in_size = get_capture_size(usb_device_desc, enabled_3d);
 	uint8_t *video_data_ptr = (uint8_t*)data_buffer->usb_received_3ds.video_in.screen_data;
 	if(!usb_device_desc->is_3ds)
 		video_data_ptr = (uint8_t*)data_buffer->usb_received_old_ds.video_in.screen_data;
@@ -311,7 +315,7 @@ static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOu
 	}
 }
 
-static void usb_3DSconvertVideoToOutput(USB3DSCaptureReceived *p_in, VideoOutputData *p_out, bool enabled_3d) {
+static void usb_3DSconvertVideoToOutput(USB3DSCaptureReceived *p_in, VideoOutputData *p_out) {
 	for(int i = 0; i < IN_VIDEO_HEIGHT_3DS; i++)
 		for(int j = 0; j < IN_VIDEO_WIDTH_3DS; j++) {
 			int pixel = (i * IN_VIDEO_WIDTH_3DS) + j;
@@ -377,7 +381,7 @@ bool connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* de
 }
 
 uint64_t usb_get_video_in_size(CaptureData* capture_data) {
-	return _usb_get_video_in_size(get_usb_device_desc(capture_data));
+	return _usb_get_video_in_size(get_usb_device_desc(capture_data), capture_data->status.enabled_3d);
 }
 
 void usb_capture_main_loop(CaptureData* capture_data) {
@@ -391,7 +395,7 @@ void usb_capture_main_loop(CaptureData* capture_data) {
 	while((!done) && capture_data->status.connected && capture_data->status.running) {
 
 		int read_amount = 0;
-		usb_capture_status result = capture_read_oldds_3ds((libusb_device_handle*)capture_data->handle, usb_device_desc, &capture_data->capture_buf[inner_curr_in], read_amount);
+		usb_capture_status result = capture_read_oldds_3ds((libusb_device_handle*)capture_data->handle, usb_device_desc, &capture_data->capture_buf[inner_curr_in], read_amount, capture_data->status.enabled_3d);
 
 		const auto curr_time = std::chrono::high_resolution_clock::now();
 		const std::chrono::duration<double> diff = curr_time - clock_start;
@@ -441,8 +445,10 @@ void usb_capture_cleanup(CaptureData* capture_data) {
 void usb_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureDevice* capture_device, bool enabled_3d) {
 	if(!usb_initialized)
 		return;
-	if(capture_device->is_3ds)
-		usb_3DSconvertVideoToOutput(&p_in->usb_received_3ds, p_out, enabled_3d);
+	if(capture_device->is_3ds) {
+		if(!enabled_3d)
+			usb_3DSconvertVideoToOutput(&p_in->usb_received_3ds, p_out);
+	}
 	else if(capture_device->rgb_bits_size == IN_VIDEO_BPP_SIZE_DS_BASIC)
 		usb_oldDSconvertVideoToOutput(&p_in->usb_received_old_ds, p_out);
 }

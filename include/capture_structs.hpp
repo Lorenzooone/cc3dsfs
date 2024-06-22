@@ -17,18 +17,16 @@
 
 #define EXTRA_DATA_BUFFER_USB_SIZE (1 << 9)
 
+enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_FTD2 };
+
 #pragma pack(push, 1)
 
-struct PACKED FTDI3DSVideoInputData {
+struct PACKED RGB83DSVideoInputData {
 	uint8_t screen_data[IN_VIDEO_SIZE_3DS][3];
 };
 
-struct PACKED FTDI3DSVideoInputData_3D {
+struct PACKED RGB83DSVideoInputData_3D {
 	uint8_t screen_data[IN_VIDEO_SIZE_3DS_3D][3];
-};
-
-struct PACKED USB3DSVideoInputData {
-	uint8_t screen_data[IN_VIDEO_SIZE_3DS][3];
 };
 
 #define OLD_DS_PIXEL_B_BITS 5
@@ -45,18 +43,24 @@ struct PACKED USBOldDSVideoInputData {
 	USBOldDSPixelData screen_data[IN_VIDEO_SIZE_DS];
 };
 
-struct PACKED FTDI3DSCaptureReceived {
-	FTDI3DSVideoInputData video_in;
+struct PACKED FTD3_3DSCaptureReceived {
+	RGB83DSVideoInputData video_in;
 	uint16_t audio_data[N3DSXL_SAMPLES_IN];
 };
 
-struct PACKED FTDI3DSCaptureReceived_3D {
-	FTDI3DSVideoInputData_3D video_in;
+struct PACKED FTD3_3DSCaptureReceived_3D {
+	RGB83DSVideoInputData_3D video_in;
 	uint16_t audio_data[N3DSXL_SAMPLES_IN];
 };
 
 struct PACKED USB3DSCaptureReceived {
-	USB3DSVideoInputData video_in;
+	RGB83DSVideoInputData video_in;
+	uint16_t audio_data[O3DS_SAMPLES_IN];
+	uint8_t unused_buffer[EXTRA_DATA_BUFFER_USB_SIZE];
+};
+
+struct PACKED USB3DSCaptureReceived_3D {
+	RGB83DSVideoInputData_3D video_in;
 	uint16_t audio_data[O3DS_SAMPLES_IN];
 	uint8_t unused_buffer[EXTRA_DATA_BUFFER_USB_SIZE];
 };
@@ -77,19 +81,20 @@ struct PACKED USBOldDSCaptureReceived {
 #pragma pack(pop)
 
 union CaptureReceived {
-	FTDI3DSCaptureReceived ftdi_received;
-	FTDI3DSCaptureReceived_3D ftdi_received_3d;
+	FTD3_3DSCaptureReceived ftd3_received;
+	FTD3_3DSCaptureReceived_3D ftd3_received_3d;
 	USB3DSCaptureReceived usb_received_3ds;
+	USB3DSCaptureReceived_3D usb_received_3ds_3d;
 	USBOldDSCaptureReceived usb_received_old_ds;
 };
 
 struct CaptureDevice {
-	CaptureDevice(std::string serial_number, std::string name, bool is_ftdi, bool is_3ds, bool has_3d, bool has_audio, int width, int height, int max_samples_in, int rgb_bits_size, int base_rotation, int top_screen_x, int top_screen_y, int bot_screen_x, int bot_screen_y): serial_number(serial_number), name(name), is_ftdi(is_ftdi), is_3ds(is_3ds), has_3d(has_3d), has_audio(has_audio), width(width), height(height), max_samples_in(max_samples_in), rgb_bits_size(rgb_bits_size), base_rotation(base_rotation), top_screen_x(top_screen_x), top_screen_y(top_screen_y), bot_screen_x(bot_screen_x), bot_screen_y(bot_screen_y) {}
-	CaptureDevice(): serial_number(""), name(""), is_ftdi(false), is_3ds(false), has_3d(false), has_audio(false), width(0), height(0), max_samples_in(0), rgb_bits_size(0), base_rotation(0), top_screen_x(0), top_screen_y(0), bot_screen_x(0), bot_screen_y(0) {}
+	CaptureDevice(std::string serial_number, std::string name, CaptureConnectionType cc_type, bool is_3ds, bool has_3d, bool has_audio, int width, int height, int max_samples_in, int rgb_bits_size, int base_rotation, int top_screen_x, int top_screen_y, int bot_screen_x, int bot_screen_y): serial_number(serial_number), name(name), cc_type(cc_type), is_3ds(is_3ds), has_3d(has_3d), has_audio(has_audio), width(width), height(height), max_samples_in(max_samples_in), rgb_bits_size(rgb_bits_size), base_rotation(base_rotation), top_screen_x(top_screen_x), top_screen_y(top_screen_y), bot_screen_x(bot_screen_x), bot_screen_y(bot_screen_y) {}
+	CaptureDevice(): serial_number(""), name(""), cc_type(CAPTURE_CONN_USB), is_3ds(false), has_3d(false), has_audio(false), width(0), height(0), max_samples_in(0), rgb_bits_size(0), base_rotation(0), top_screen_x(0), top_screen_y(0), bot_screen_x(0), bot_screen_y(0) {}
 
 	std::string serial_number;
 	std::string name;
-	bool is_ftdi;
+	CaptureConnectionType cc_type;
 	bool is_3ds;
 	bool has_3d;
 	bool has_audio;

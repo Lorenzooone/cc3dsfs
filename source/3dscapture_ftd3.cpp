@@ -1,4 +1,4 @@
-#include "3dscapture_ftdi.hpp"
+#include "3dscapture_ftd3.hpp"
 #include "devicecapture.hpp"
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -50,7 +50,7 @@ static bool get_is_bad_ftd3xx() {
 	return is_bad_ftd3xx;
 }
 
-void list_devices_ftdi(std::vector<CaptureDevice> &devices_list) {
+void list_devices_ftd3(std::vector<CaptureDevice> &devices_list) {
 	FT_STATUS ftStatus;
 	DWORD numDevs = 0;
 	std::string valid_descriptions[] = {"N3DSXL", "N3DSXL.2"};
@@ -73,7 +73,7 @@ void list_devices_ftdi(std::vector<CaptureDevice> &devices_list) {
 				for(int j = 0; j < sizeof(valid_descriptions) / sizeof(*valid_descriptions); j++) {
 					if(Description == valid_descriptions[j]) {
 						for(int u = 0; u < debug_multiplier; u++)
-							devices_list.emplace_back(std::string(SerialNumber), "N3DSXL", true, true, true, true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, N3DSXL_SAMPLES_IN, IN_VIDEO_BPP_SIZE_3DS, 90, 0, 0, TOP_WIDTH_3DS, 0);
+							devices_list.emplace_back(std::string(SerialNumber), "N3DSXL", CAPTURE_CONN_FTD3, true, true, true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, N3DSXL_SAMPLES_IN, IN_VIDEO_BPP_SIZE_3DS, 90, 0, 0, TOP_WIDTH_3DS, 0);
 						break;
 					}
 				}
@@ -82,16 +82,16 @@ void list_devices_ftdi(std::vector<CaptureDevice> &devices_list) {
 	}
 }
 
-uint64_t ftdi_get_video_in_size(CaptureData* capture_data) {
+uint64_t ftd3_get_video_in_size(CaptureData* capture_data) {
 	if(!capture_data->status.enabled_3d)
-		return sizeof(FTDI3DSVideoInputData);
-	return sizeof(FTDI3DSVideoInputData_3D);
+		return sizeof(RGB83DSVideoInputData);
+	return sizeof(RGB83DSVideoInputData_3D);
 }
 
 static uint64_t get_capture_size(CaptureData* capture_data) {
 	if(!capture_data->status.enabled_3d)
-		return sizeof(FTDI3DSCaptureReceived);
-	return sizeof(FTDI3DSCaptureReceived_3D);
+		return sizeof(FTD3_3DSCaptureReceived);
+	return sizeof(FTD3_3DSCaptureReceived_3D);
 }
 
 static void preemptive_close_connection(CaptureData* capture_data) {
@@ -99,7 +99,7 @@ static void preemptive_close_connection(CaptureData* capture_data) {
 	FT_Close(capture_data->handle);
 }
 
-bool connect_ftdi(bool print_failed, CaptureData* capture_data, CaptureDevice* device) {
+bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* device) {
 
 	char SerialNumber[SERIAL_NUMBER_SIZE] = { 0 };
 	strncpy(SerialNumber, device->serial_number.c_str(), REAL_SERIAL_NUMBER_SIZE);
@@ -233,7 +233,7 @@ static bool safe_capture_call(CaptureData* capture_data) {
 }
 #endif
 
-void ftdi_capture_main_loop(CaptureData* capture_data) {
+void ftd3_capture_main_loop(CaptureData* capture_data) {
 	#if !(defined(_WIN32) || defined(_WIN64))
 	if(!is_bad_ftd3xx)
 		fast_capture_call(capture_data, overlap);
@@ -244,7 +244,7 @@ void ftdi_capture_main_loop(CaptureData* capture_data) {
 	#endif
 }
 
-void ftdi_capture_cleanup(CaptureData* capture_data) {
+void ftd3_capture_cleanup(CaptureData* capture_data) {
 	FT_STATUS ftStatus;
 	if(!is_bad_ftd3xx) {
 		for(int inner_curr_in = 0; inner_curr_in < NUM_CONCURRENT_DATA_BUFFERS; ++inner_curr_in) {
@@ -264,7 +264,7 @@ void ftdi_capture_cleanup(CaptureData* capture_data) {
 	}
 }
 
-static inline void convertVideoToOutputChunk(FTDI3DSVideoInputData *p_in, VideoOutputData *p_out, int iters, int start_in, int start_out) {
+static inline void convertVideoToOutputChunk(RGB83DSVideoInputData *p_in, VideoOutputData *p_out, int iters, int start_in, int start_out) {
 	for(int i = 0; i < iters; i++)  {
 		for(int u = 0; u < 3; u++)
 			p_out->screen_data[start_out + i][u] = p_in->screen_data[start_in + i][u];
@@ -272,7 +272,7 @@ static inline void convertVideoToOutputChunk(FTDI3DSVideoInputData *p_in, VideoO
 	}
 }
 
-static inline void convertVideoToOutputChunk_3D(FTDI3DSVideoInputData_3D *p_in, VideoOutputData *p_out, int iters, int start_in, int start_out) {
+static inline void convertVideoToOutputChunk_3D(RGB83DSVideoInputData_3D *p_in, VideoOutputData *p_out, int iters, int start_in, int start_out) {
 	for(int i = 0; i < iters; i++)  {
 		for(int u = 0; u < 3; u++)
 			p_out->screen_data[start_out + i][u] = p_in->screen_data[start_in + i][u];
@@ -280,13 +280,13 @@ static inline void convertVideoToOutputChunk_3D(FTDI3DSVideoInputData_3D *p_in, 
 	}
 }
 
-void ftdi_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, bool enabled_3d) {
+void ftd3_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, bool enabled_3d) {
 	if(!enabled_3d) {
-		convertVideoToOutputChunk(&p_in->ftdi_received.video_in, p_out, IN_VIDEO_NO_BOTTOM_SIZE_3DS, 0, 0);
+		convertVideoToOutputChunk(&p_in->ftd3_received.video_in, p_out, IN_VIDEO_NO_BOTTOM_SIZE_3DS, 0, 0);
 
 		for(int i = 0; i < ((IN_VIDEO_SIZE_3DS - IN_VIDEO_NO_BOTTOM_SIZE_3DS) / (IN_VIDEO_WIDTH_3DS * 2)); i++) {
-			convertVideoToOutputChunk(&p_in->ftdi_received.video_in, p_out, IN_VIDEO_WIDTH_3DS, ((i * 2) * IN_VIDEO_WIDTH_3DS) + IN_VIDEO_NO_BOTTOM_SIZE_3DS, TOP_SIZE_3DS + (i * IN_VIDEO_WIDTH_3DS));
-			convertVideoToOutputChunk(&p_in->ftdi_received.video_in, p_out, IN_VIDEO_WIDTH_3DS, (((i * 2) + 1) * IN_VIDEO_WIDTH_3DS) + IN_VIDEO_NO_BOTTOM_SIZE_3DS, IN_VIDEO_NO_BOTTOM_SIZE_3DS + (i * IN_VIDEO_WIDTH_3DS));
+			convertVideoToOutputChunk(&p_in->ftd3_received.video_in, p_out, IN_VIDEO_WIDTH_3DS, ((i * 2) * IN_VIDEO_WIDTH_3DS) + IN_VIDEO_NO_BOTTOM_SIZE_3DS, TOP_SIZE_3DS + (i * IN_VIDEO_WIDTH_3DS));
+			convertVideoToOutputChunk(&p_in->ftd3_received.video_in, p_out, IN_VIDEO_WIDTH_3DS, (((i * 2) + 1) * IN_VIDEO_WIDTH_3DS) + IN_VIDEO_NO_BOTTOM_SIZE_3DS, IN_VIDEO_NO_BOTTOM_SIZE_3DS + (i * IN_VIDEO_WIDTH_3DS));
 		}
 	}
 }

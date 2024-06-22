@@ -1,5 +1,5 @@
 #include "devicecapture.hpp"
-#include "3dscapture_ftdi.hpp"
+#include "3dscapture_ftd3.hpp"
 #include "usb_ds_3ds_capture.hpp"
 
 #include <vector>
@@ -69,8 +69,8 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 
 	// Device Listing
 	std::vector<CaptureDevice> devices_list;
-	#ifdef USE_FTDI
-	list_devices_ftdi(devices_list);
+	#ifdef USE_FTD3
+	list_devices_ftd3(devices_list);
 	#endif
 	#ifdef USE_USB
 	list_devices_usb_ds_3ds(devices_list);
@@ -88,12 +88,12 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	}
 
 	// Actual connection
-	#ifdef USE_FTDI
-	if(devices_list[chosen_device].is_ftdi && (!connect_ftdi(print_failed, capture_data, &devices_list[chosen_device])))
+	#ifdef USE_FTD3
+	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_FTD3) && (!connect_ftd3(print_failed, capture_data, &devices_list[chosen_device])))
 		return false;
 	#endif
 	#ifdef USE_USB
-	if((!devices_list[chosen_device].is_ftdi) && (!connect_usb(print_failed, capture_data, &devices_list[chosen_device])))
+	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_USB) && (!connect_usb(print_failed, capture_data, &devices_list[chosen_device])))
 		return false;
 	#endif
 	update_connected_3ds_ds(frontend_data, capture_data->status.device, devices_list[chosen_device]);
@@ -118,12 +118,12 @@ void captureCall(CaptureData* capture_data) {
 		}
 
 		// Main capture loop
-		#ifdef USE_FTDI
-		if(capture_data->status.device.is_ftdi)
-			ftdi_capture_main_loop(capture_data);
+		#ifdef USE_FTD3
+		if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
+			ftd3_capture_main_loop(capture_data);
 		#endif
 		#ifdef USE_USB
-		if(!capture_data->status.device.is_ftdi)
+		if(capture_data->status.device.cc_type == CAPTURE_CONN_USB)
 			usb_capture_main_loop(capture_data);
 		#endif
 
@@ -136,12 +136,12 @@ void captureCall(CaptureData* capture_data) {
 		capture_data->status.audio_wait.unlock();
 
 		// Capture cleanup
-		#ifdef USE_FTDI
-		if(capture_data->status.device.is_ftdi)
-			ftdi_capture_cleanup(capture_data);
+		#ifdef USE_FTD3
+		if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
+			ftd3_capture_cleanup(capture_data);
 		#endif
 		#ifdef USE_USB
-		if(!capture_data->status.device.is_ftdi)
+		if(capture_data->status.device.cc_type == CAPTURE_CONN_USB)
 			usb_capture_cleanup(capture_data);
 		#endif
 
@@ -162,12 +162,12 @@ uint64_t get_audio_n_samples(CaptureData* capture_data, uint64_t read) {
 }
 
 uint64_t get_video_in_size(CaptureData* capture_data) {
-	#ifdef USE_FTDI
-	if(capture_data->status.device.is_ftdi)
-		return ftdi_get_video_in_size(capture_data);
+	#ifdef USE_FTD3
+	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
+		return ftd3_get_video_in_size(capture_data);
 	#endif
 	#ifdef USE_USB
-	if(!capture_data->status.device.is_ftdi)
+	if(capture_data->status.device.cc_type == CAPTURE_CONN_USB)
 		return usb_get_video_in_size(capture_data);
 	#endif
 	return 0;
