@@ -133,7 +133,6 @@ On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the
 - At startup, the audio may be unstable. It should fix itself, if you give it enough time.
 - If, at first, the connection to the 3DS/DS fails, reconnect the 3DS/DS and then try again. If that also doesn't work, try restarting the program. If that also doesn't work, try restarting the computer.
 - USB Hubs can be the cause of connection issues. If you're having problems, try checking whether the 3DS/DS connects fine or not without any other devices connected.
-- Fullscreen mode on MacOS may mistake the screen for being bigger than what it really is. Changing the resolution to the proper one of the screen in the _Resolution Settings_ under Video Settings will fix the issue.
 - Current font in use: OFL Sorts Mill Goudy TT
 - Enabling Slow Poll may slightly boost the FPS of the software, at the cost of an extremely slight decrease in frame latency, and slower reaction times of the software to key presses. Disabled by default (as when the FPS are greater than the CC's, it's not reccomended).
 - On MacOS, you may get a notice about the app being damaged. It's Apple quaranteening the app. To make it work, open a terminal and run the following:

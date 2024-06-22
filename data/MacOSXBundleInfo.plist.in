@@ -25,7 +25,9 @@
 	<key>CFBundleVersion</key>
 	<string>${MACOSX_BUNDLE_BUNDLE_VERSION}</string>
 	<key>NSHighResolutionCapable</key>
-	<true/>
+	<false/>
+	<key>NSHighResolutionMagnifyAllowed</key>
+	<false/>
 	<key>NSHumanReadableCopyright</key>
 	<string>${MACOSX_BUNDLE_COPYRIGHT}</string>
 </dict>
