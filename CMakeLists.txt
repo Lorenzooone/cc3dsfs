@@ -186,6 +186,7 @@ add_custom_command(
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 install(TARGETS ${OUTPUT_NAME} DESTINATION .)
+install(FILES un_quarantine_macos.sh DESTINATION .)
 else()
 install(FILES ${CMAKE_SOURCE_DIR}/${OUTPUT_NAME}${FINAL_EXTENSION} DESTINATION .)
 endif()
