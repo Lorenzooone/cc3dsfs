@@ -64,9 +64,9 @@
 #define MAX_IN_VIDEO_SIZE (MAX_IN_VIDEO_WIDTH * MAX_IN_VIDEO_HEIGHT)
 #define MAX_IN_VIDEO_BPP_SIZE IN_VIDEO_BPP_SIZE_3DS
 
-#define O3DS_SAMPLES_IN 1096
+#define O3DS_SAMPLES_IN (1096 * 2) // This one can go beyond the normal amount, so factor in a buffer of sorts. 2x is way more than needed, but better being safe than sorry!
 #define N3DSXL_SAMPLES_IN 1096
 #define DS_SAMPLES_IN 1096
-#define MAX_SAMPLES_IN N3DSXL_SAMPLES_IN
+#define MAX_SAMPLES_IN O3DS_SAMPLES_IN
 
 #endif
