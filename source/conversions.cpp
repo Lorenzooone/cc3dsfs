@@ -1,7 +1,6 @@
 #include "conversions.hpp"
 #include "devicecapture.hpp"
 #include "3dscapture_ftd3.hpp"
-#include "dscapture_ftd2.hpp"
 #include "usb_ds_3ds_capture.hpp"
 
 #include <cstring>
@@ -10,10 +9,6 @@ void convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, Capture
 	#ifdef USE_FTD3
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
 		ftd3_convertVideoToOutput(p_in, p_out, capture_data->status.enabled_3d);
-	#endif
-	#ifdef USE_FTD2
-	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD2)
-		ftd2_convertVideoToOutput(p_in, p_out, capture_data->status.enabled_3d);
 	#endif
 	#ifdef USE_USB
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_USB)
@@ -31,10 +26,6 @@ void convertAudioToOutput(CaptureReceived *p_in, sf::Int16 *p_out, uint64_t n_sa
 			base_ptr = (uint8_t*)p_in->ftd3_received.audio_data;
 		else
 			base_ptr = (uint8_t*)p_in->ftd3_received_3d.audio_data;
-	}
-	#endif
-	#ifdef USE_FTD2
-	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD2) {
 	}
 	#endif
 	#ifdef USE_USB
