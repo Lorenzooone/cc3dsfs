@@ -5,9 +5,6 @@
 #include <queue>
 #include "audio_data.hpp"
 #include "utils.hpp"
-#include "audio.hpp"
-#include "capture_structs.hpp"
-#include "hw_defs.hpp"
 
 struct Sample {
 	Sample(sf::Int16 *bytes, std::size_t size, float time);
@@ -24,6 +21,7 @@ public:
 	ConsumerMutex samples_wait;
 
 	Audio(AudioData *audio_data);
+	~Audio();
 	void update_volume();
 	void start_audio();
 	void stop_audio();
@@ -33,7 +31,7 @@ private:
 	int final_volume = -1;
 	bool terminate;
 	int num_consecutive_fast_seek;
-	sf::Int16 buffer[MAX_SAMPLES_IN];
+	sf::Int16 *buffer;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_time_start;
 
 	bool onGetData(sf::SoundStream::Chunk &data) override;

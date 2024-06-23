@@ -2,7 +2,7 @@
 #define __HW_DEFS_HPP
 
 #define AUDIO_CHANNELS 2
-#define SAMPLE_RATE 48000
+#define SAMPLE_RATE 96000
 #define PITCH_RATE (67027964 / ((float)SAMPLE_RATE * 2048))
 
 #define TOP_WIDTH_3DS 400

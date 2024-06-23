@@ -17,17 +17,17 @@ Sample::Sample(sf::Int16 *bytes, std::size_t size, float time) : bytes(bytes), s
 Audio::Audio(AudioData *audio_data) {
 	this->audio_data = audio_data;
 	// Consume old events
+	this->buffer = new sf::Int16[MAX_SAMPLES_IN];
 	this->audio_data->check_audio_restart_request();
 	sf::SoundStream::initialize(AUDIO_CHANNELS, SAMPLE_RATE);
 	this->setPitch(PITCH_RATE);
-	#if (SFML_VERSION_MAJOR > 2) || ((SFML_VERSION_MAJOR == 2) && (SFML_VERSION_MINOR >= 6))
-	// Since we receive data every 16.6 ms, this is useless,
-	// and only increases CPU load... (Default is 10 ms)
-	//sf::SoundStream::setProcessingInterval(sf::Time::Zero);
-	#endif
 	start_audio();
 	setVolume(0);
 	this->final_volume = 0;
+}
+
+Audio::~Audio() {
+	delete []this->buffer;
 }
 	
 void Audio::update_volume() {

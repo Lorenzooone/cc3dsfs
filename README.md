@@ -5,7 +5,7 @@ The main goal is to offer the ability to use the Capture Card with a TV, via ful
 
 ## Features
 
-- Performance-focused design, with low latency for both audio and video (measured to oscillate between 1 and 2 frames).
+- Performance-focused design, with low latency for both audio and video (measured to oscillate between 1 and 2 frames on 120hz displays).
 - Option to split the screens in separate windows, to address them separately.
 - Make your game run in fullscreen mode. If you own multiple displays, you can even use one per-window.
 - Many builtin crop options for the screens.
@@ -140,4 +140,10 @@ On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the
 xattr -c ./cc3dsfs.app
 ```
 - It can also be achieved by opening a terminal, typing "xattr -c ", dragging the application to the terminal, and finally pressing Enter.
-
+- Certain TVs/Monitors may add some audio delay for the purpose of video/lip syncing. If you're experiencing too much audio delay when using this software, try checking in the TV/Monitor settings whether you can reduce that added delay. One of the names used for that setting is "Lip Sync", or something along that line.
+- For the best audio latency and quality, it may be needed to change OpenAL's sound settings. Their location is OS-specific. On linux, you may use the "alsoft-config" command. In particular, the following parameters may help:
+```
+frequency = 96000
+periods = 2
+period_size = 64
+```
