@@ -1,5 +1,6 @@
 #include "devicecapture.hpp"
 #include "3dscapture_ftd3.hpp"
+#include "dscapture_ftd2.hpp"
 #include "usb_ds_3ds_capture.hpp"
 
 #include <vector>
@@ -72,6 +73,9 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	#ifdef USE_FTD3
 	list_devices_ftd3(devices_list);
 	#endif
+	#ifdef USE_FTD2
+	list_devices_ftd2(devices_list);
+	#endif
 	#ifdef USE_USB
 	list_devices_usb_ds_3ds(devices_list);
 	#endif
@@ -90,6 +94,10 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	// Actual connection
 	#ifdef USE_FTD3
 	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_FTD3) && (!connect_ftd3(print_failed, capture_data, &devices_list[chosen_device])))
+		return false;
+	#endif
+	#ifdef USE_FTD2
+	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_FTD2) && (!connect_ftd2(print_failed, capture_data, &devices_list[chosen_device])))
 		return false;
 	#endif
 	#ifdef USE_USB
@@ -122,6 +130,10 @@ void captureCall(CaptureData* capture_data) {
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
 			ftd3_capture_main_loop(capture_data);
 		#endif
+		#ifdef USE_FTD2
+		if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD2)
+			ftd2_capture_main_loop(capture_data);
+		#endif
 		#ifdef USE_USB
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_USB)
 			usb_capture_main_loop(capture_data);
@@ -139,6 +151,10 @@ void captureCall(CaptureData* capture_data) {
 		#ifdef USE_FTD3
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
 			ftd3_capture_cleanup(capture_data);
+		#endif
+		#ifdef USE_FTD2
+		if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD2)
+			ftd2_capture_cleanup(capture_data);
 		#endif
 		#ifdef USE_USB
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_USB)
@@ -165,6 +181,10 @@ uint64_t get_video_in_size(CaptureData* capture_data) {
 	#ifdef USE_FTD3
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
 		return ftd3_get_video_in_size(capture_data);
+	#endif
+	#ifdef USE_FTD2
+	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD2)
+		return ftd2_get_video_in_size(capture_data);
 	#endif
 	#ifdef USE_USB
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_USB)

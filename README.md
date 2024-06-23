@@ -21,7 +21,7 @@ cc3dsfs has three build dependencies: CMake, g++ and git.
 Make sure all are installed.
 On MacOS, [Homebrew](https://brew.sh/) can be used to install both CMake and git. An automatic popup should appear to install g++ at Compile time.
 
-cc3dsfs has three library dependencies: [FTDI's D3XX driver](https://ftdichip.com/drivers/d3xx-drivers/), [libusb](https://libusb.info/) and [SFML](https://www.sfml-dev.org/).
+cc3dsfs has four library dependencies: [FTDI's D3XX driver](https://ftdichip.com/drivers/d3xx-drivers/), [FTDI's D2XX driver](https://ftdichip.com/drivers/d2xx-drivers/), [libusb](https://libusb.info/) and [SFML](https://www.sfml-dev.org/).
 All of them should get downloaded automatically via CMake during the building process.
 
 Linux users will also need to install the SFML dependencies. Different distributions will require slightly different processes.
@@ -58,7 +58,7 @@ To compile the program, assuming CMake, git and g++ are installed on the system,
 cmake -B build ; cmake --build build --config Release
 ```
 
-This will download FTD3XX, libusb and SFML, which may take a while during the first execution of the command. Later runs should be much faster.
+This will download FTD3XX, FTD2XX, libusb and SFML, which may take a while during the first execution of the command. Later runs should be much faster.
 On MacOS, you may also be prompted to install the Apple Command Line Developer Tools first.
 
 When compiling on a Raspberry Pi, to enable usage of GPIO, use:
@@ -129,7 +129,7 @@ On Linux and MacOS, the profiles can be found at the "${HOME}/.config/cc3dsfs" f
 On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the directory in which the program runs from.
 
 ## Notes
-- On Linux, you may need to include the udev USB access rules. You can use the .rules files available in the repository, or define your own.
+- On Linux, you may need to include the udev USB access rules. You can use the .rules files available in the repository's usb\_rules directory, or define your own.
 - At startup, the audio may be unstable. It should fix itself, if you give it enough time.
 - If, at first, the connection to the 3DS/DS fails, reconnect the 3DS/DS and then try again. If that also doesn't work, try restarting the program. If that also doesn't work, try restarting the computer.
 - USB Hubs can be the cause of connection issues. If you're having problems, try checking whether the 3DS/DS connects fine or not without any other devices connected.
