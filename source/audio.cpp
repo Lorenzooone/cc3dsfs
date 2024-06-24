@@ -10,6 +10,13 @@
 // Number of consecutive failures to restart the audio when switching output.
 #define AUDIO_FAILURE_THRESHOLD 20
 
+// Test for audio panning issues
+//#define AUDIO_PANNING_TEST
+
+#ifdef AUDIO_PANNING_TEST
+static int greatest_diff = 0;
+#endif
+
 Sample::Sample(sf::Int16 *bytes, std::size_t size, float time) : bytes(bytes), size(size), time(time) {}
 
 //============================================================================
@@ -96,6 +103,30 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 		data.sampleCount += count;
 		samples.pop();
 	}
+
+	if(this->audio_data->get_audio_output_type() == AUDIO_OUTPUT_MONO)
+		for(int i = 0; i < data.sampleCount; i++) {
+			int sum = ((int)buffer[i * 2]) + buffer[(i * 2) + 1];
+			if(sum >= 32768)
+				sum += 1;
+			else if((sum < 0) && (sum > -32768))
+				sum += 1;
+			int avg = sum >> 1;
+			buffer[i * 2] = avg;
+			buffer[(i * 2) + 1] = avg;
+		}
+
+	#ifdef AUDIO_PANNING_TEST
+	int max_diff = 0;
+	for(int i = 0; i < data.sampleCount; i++) {
+		int diff = abs(buffer[i * 2] - buffer[(i * 2) + 1]);
+		if(diff > max_diff)
+			max_diff = diff;
+	}
+	if(max_diff > greatest_diff)
+		greatest_diff = max_diff;
+	printf("Current diff: %d - Greatest measured diff: %d\n", max_diff, greatest_diff);
+	#endif
 
 	// Basically, look into how low the time between calls of the function is
 	curr_time = std::chrono::high_resolution_clock::now();

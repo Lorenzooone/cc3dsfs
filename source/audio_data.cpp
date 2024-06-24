@@ -4,17 +4,29 @@ void AudioData::reset() {
 	this->volume = 50;
 	this->mute = false;
 	this->max_audio_latency = 2;
+	this->output_type = AUDIO_OUTPUT_STEREO;
 	this->restart_request = false;
 	this->text_updated = false;
 }
 
+void AudioData::change_max_audio_latency(bool is_change_positive) {
+	int change = 1;
+	if(!is_change_positive)
+		change = -1;
+	int initial_max_audio_latency = this->max_audio_latency;
+	this->set_max_audio_latency(this->max_audio_latency + change);
+	if(this->max_audio_latency != initial_max_audio_latency)
+		this->update_text("Max Audio Latency: " + std::to_string(this->max_audio_latency));
+}
 
-void AudioData::set_max_audio_latency(int new_value) {
-	if(new_value > MAX_MAX_AUDIO_LATENCY)
-		new_value = MAX_MAX_AUDIO_LATENCY;
-	if(new_value <= 0)
-		new_value = 1;
-	this->max_audio_latency = new_value;
+void AudioData::change_audio_output_type(bool is_change_positive) {
+	int change = 1;
+	if(!is_change_positive)
+		change = -1;
+	AudioOutputType initial_audio_output_type = this->output_type;
+	this->set_audio_output_type(this->output_type + change);
+	if(this->output_type != initial_audio_output_type)
+		this->update_text("Audio Output: " + this->get_audio_output_name());
 }
 
 void AudioData::change_audio_volume(bool is_change_positive) {
@@ -65,6 +77,27 @@ std::string AudioData::text_to_print() {
 	return this->text;
 }
 
+AudioOutputType AudioData::get_audio_output_type() {
+	return this->output_type;
+}
+
+std::string AudioData::get_audio_output_name() {
+	std::string chosen_str = "";
+	switch(this->output_type) {
+		case AUDIO_OUTPUT_STEREO:
+			chosen_str = "Stereo";
+			break;
+		case AUDIO_OUTPUT_MONO:
+			chosen_str = "Mono";
+			break;
+		default:
+			this->output_type = AUDIO_OUTPUT_STEREO;
+			chosen_str = "Stereo";
+			break;
+	}
+	return chosen_str;
+}
+
 int AudioData::get_max_audio_latency() {
 	return this->max_audio_latency;
 }
@@ -106,6 +139,10 @@ bool AudioData::load_audio_data(std::string key, std::string value) {
 		this->set_max_audio_latency(std::stoi(value));
 		return true;
 	}
+	if (key == this->output_type_str) {
+		this->set_audio_output_type(std::stoi(value));
+		return true;
+	}
 	return false;
 }
 
@@ -114,7 +151,24 @@ std::string AudioData::save_audio_data() {
 	out_str += this->mute_str + "=" + std::to_string(this->mute) + "\n";
 	out_str += this->volume_str + "=" + std::to_string(this->volume) + "\n";
 	out_str += this->max_audio_latency_str + "=" + std::to_string(this->max_audio_latency) + "\n";
+	out_str += this->output_type_str + "=" + std::to_string(this->output_type) + "\n";
 	return out_str;
+}
+
+void AudioData::set_max_audio_latency(int new_value) {
+	if(new_value > MAX_MAX_AUDIO_LATENCY)
+		new_value = MAX_MAX_AUDIO_LATENCY;
+	if(new_value <= 0)
+		new_value = 1;
+	this->max_audio_latency = new_value;
+}
+
+void AudioData::set_audio_output_type(int new_value) {
+	if(new_value >= AUDIO_OUTPUT_END)
+		new_value = 0;
+	if(new_value < 0)
+		new_value = AUDIO_OUTPUT_END - 1;
+	this->output_type = static_cast<AudioOutputType>(new_value);
 }
 
 void AudioData::set_audio_volume(int new_volume) {

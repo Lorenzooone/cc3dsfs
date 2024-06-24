@@ -27,6 +27,11 @@ static const AudioMenuOptionInfo audio_max_latency_option = {
 .is_inc = true, .dec_str = "-", .inc_str = "+", .inc_out_action = AUDIO_MENU_MAX_LATENCY_INC,
 .out_action = AUDIO_MENU_MAX_LATENCY_DEC};
 
+static const AudioMenuOptionInfo audio_output_type_option = {
+.base_name = "Audio Output", .false_name = "",
+.is_inc = true, .dec_str = "<", .inc_str = ">", .inc_out_action = AUDIO_MENU_OUTPUT_INC,
+.out_action = AUDIO_MENU_OUTPUT_DEC};
+
 static const AudioMenuOptionInfo audio_restart_option = {
 .base_name = "Restart Audio", .false_name = "",
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = AUDIO_MENU_NO_ACTION,
@@ -36,6 +41,7 @@ static const AudioMenuOptionInfo* pollable_options[] = {
 &audio_volume_option,
 &audio_mute_option,
 &audio_max_latency_option,
+&audio_output_type_option,
 &audio_restart_option,
 };
 
@@ -122,6 +128,9 @@ void AudioMenu::prepare(float menu_scaling_factor, int view_size_x, int view_siz
 				break;
 			case AUDIO_MENU_MAX_LATENCY_DEC:
 				this->labels[index]->setText(this->setTextOptionInt(real_index, audio_data->get_max_audio_latency()));
+				break;
+			case AUDIO_MENU_OUTPUT_DEC:
+				this->labels[index]->setText(this->setTextOptionString(real_index, audio_data->get_audio_output_name()));
 				break;
 			case AUDIO_MENU_MUTE:
 				this->labels[index]->setText(this->setTextOptionBool(real_index, audio_data->get_mute()));

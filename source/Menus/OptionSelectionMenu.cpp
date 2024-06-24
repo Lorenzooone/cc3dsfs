@@ -217,6 +217,10 @@ std::string OptionSelectionMenu::setTextOptionInt(int index, int value) {
 	return this->get_string_option(index, DEFAULT_ACTION) + ": " + std::to_string(value);
 }
 
+std::string OptionSelectionMenu::setTextOptionString(int index, std::string value) {
+	return this->get_string_option(index, DEFAULT_ACTION) + ": " + value;
+}
+
 std::string OptionSelectionMenu::setTextOptionBool(int index, bool value) {
 	if(value)
 		return this->get_string_option(index, DEFAULT_ACTION);
