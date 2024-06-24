@@ -107,11 +107,14 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 	if(this->audio_data->get_audio_output_type() == AUDIO_OUTPUT_MONO)
 		for(int i = 0; i < data.sampleCount; i++) {
 			int sum = ((int)buffer[i * 2]) + buffer[(i * 2) + 1];
-			if(sum >= 32768)
-				sum += 1;
-			else if((sum < 0) && (sum > -32768))
-				sum += 1;
-			int avg = sum >> 1;
+			// >> is apparently implementation-dependent. Do it like this...
+			int sign_mult = 1;
+			if(sum < 0)
+				sign_mult = -1;
+			int abs_sum = sum * sign_mult;
+			if(abs_sum >= 32768)
+				abs_sum += 1;
+			int avg = sign_mult * (abs_sum / 2);
 			buffer[i * 2] = avg;
 			buffer[(i * 2) + 1] = avg;
 		}
