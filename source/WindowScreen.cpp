@@ -641,6 +641,10 @@ void WindowScreen::prepare_size_ratios(bool top_increase, bool bot_increase, boo
 		bot_increase = false;
 	}
 	bool prioritize_top = (!bot_increase) && (top_increase || (this->m_info.bottom_pos == UNDER_TOP) || (this->m_info.bottom_pos == RIGHT_TOP));
+	if((this->m_info.top_par >= this->possible_pars.size()) || (this->m_info.top_par < 0))
+		this->m_info.top_par = 0;
+	if((this->m_info.bot_par >= this->possible_pars.size()) || (this->m_info.bot_par < 0))
+		this->m_info.bot_par = 0;
 	ResizingScreenData top_screen_resize_data = {.size = top_screen_size, .scaling = &this->m_info.top_scaling, .rotation = this->m_info.top_rotation, .par = this->possible_pars[this->m_info.top_par]};
 	ResizingScreenData bot_screen_resize_data = {.size = bot_screen_size, .scaling = &this->m_info.bot_scaling, .rotation = this->m_info.bot_rotation, .par = this->possible_pars[this->m_info.bot_par]};
 	if(prioritize_top)
@@ -715,6 +719,10 @@ void WindowScreen::resize_window_and_out_rects(bool do_work) {
 		top_scaling = this->loaded_info.top_scaling;
 		bot_scaling = this->loaded_info.bot_scaling;
 	}
+	if((this->loaded_info.top_par >= this->possible_pars.size()) || (this->loaded_info.top_par < 0))
+		this->loaded_info.top_par = 0;
+	if((this->loaded_info.bot_par >= this->possible_pars.size()) || (this->loaded_info.bot_par < 0))
+		this->loaded_info.bot_par = 0;
 	get_par_size(top_width, top_height, top_scaling, this->possible_pars[this->loaded_info.top_par]);
 	get_par_size(bot_width, bot_height, bot_scaling, this->possible_pars[this->loaded_info.bot_par]);
 
@@ -814,7 +822,7 @@ int* WindowScreen::get_crop_index_ptr(ScreenInfo* info) {
 sf::Vector2f WindowScreen::getShownScreenSize(bool is_top, ScreenInfo* info) {
 	std::vector<const CropData*> *crops = this->get_crop_data_vector(info);
 	int *crop_kind = this->get_crop_index_ptr(info);
-	if((*crop_kind) >= crops->size())
+	if(((*crop_kind) >= crops->size()) || ((*crop_kind) < 0))
 		*crop_kind = 0;
 	int width = (*crops)[*crop_kind]->top_width;
 	int height = (*crops)[*crop_kind]->top_height;
@@ -828,9 +836,6 @@ sf::Vector2f WindowScreen::getShownScreenSize(bool is_top, ScreenInfo* info) {
 void WindowScreen::crop() {
 	std::vector<const CropData*> *crops = this->get_crop_data_vector(&this->loaded_info);
 	int *crop_value = this->get_crop_index_ptr(&this->loaded_info);
-
-	if((*crop_value) >= crops->size())
-		*crop_value = 0;
 
 	sf::Vector2f top_screen_size = getShownScreenSize(true, &this->loaded_info);
 	sf::Vector2f bot_screen_size = getShownScreenSize(false, &this->loaded_info);
