@@ -100,6 +100,24 @@ const CropData vc_nes_crop = {
 .allowed_3ds = true, .allowed_ds = false,
 .name = "VC NES"};
 
+const CropData scaled_ds_pokemon_crop = {
+.top_width = TOP_SCALED_DS_WIDTH_3DS - 4, .top_height = HEIGHT_3DS - 4,
+.top_x = (TOP_WIDTH_3DS - TOP_SCALED_DS_WIDTH_3DS + 4) / 2, .top_y = 2,
+.bot_width = BOT_WIDTH_3DS, .bot_height = HEIGHT_3DS,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.allowed_3ds = true, .allowed_ds = false,
+.name = "Scaled Pokemon DS"};
+
+const CropData native_ds_pokemon_crop = {
+.top_width = WIDTH_DS - 2, .top_height = HEIGHT_DS - 2,
+.top_x = (TOP_WIDTH_3DS - WIDTH_DS + 2) / 2, .top_y = 1,
+.bot_width = WIDTH_DS, .bot_height = HEIGHT_DS,
+.bot_x = (BOT_WIDTH_3DS - WIDTH_DS) / 2, .bot_y = HEIGHT_3DS - HEIGHT_DS,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
+.allowed_3ds = true, .allowed_ds = false,
+.name = "Native Pokemon DS"};
+
 const CropData default_ds_crop = {
 .top_width = WIDTH_DS, .top_height = HEIGHT_DS,
 .top_x = 0, .top_y = 0,
@@ -127,6 +145,15 @@ const CropData bottom_gba_ds_crop = {
 .allowed_3ds = false, .allowed_ds = true,
 .name = "Bottom GBA"};
 
+const CropData ds_pokemon_crop = {
+.top_width = WIDTH_DS - 2, .top_height = HEIGHT_DS - 2,
+.top_x = 1, .top_y = 1,
+.bot_width = WIDTH_DS, .bot_height = HEIGHT_DS,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
+.allowed_3ds = false, .allowed_ds = true,
+.name = "Pokemon DS"};
+
 static const CropData* basic_possible_crops[] = {
 &default_3ds_crop,
 &special_ds_crop,
@@ -139,9 +166,12 @@ static const CropData* basic_possible_crops[] = {
 &scaled_snes_crop,
 &vc_snes_crop,
 &vc_nes_crop,
+&scaled_ds_pokemon_crop,
+&native_ds_pokemon_crop,
 &default_ds_crop,
 &top_gba_ds_crop,
 &bottom_gba_ds_crop,
+&ds_pokemon_crop,
 };
 
 const PARData base_par = {
