@@ -146,13 +146,16 @@ void WindowScreen::padding_change() {
 	this->print_notification_on_off("Extra Padding", this->m_info.rounded_corners_fix);
 }
 
+void WindowScreen::game_crop_enable_change() {
+	this->m_info.allow_games_crops = !this->m_info.allow_games_crops;
+	this->print_notification_on_off("Game Specific Crops", this->m_info.allow_games_crops);
+	this->prepare_size_ratios(false, false);
+	this->future_operations.call_crop = true;
+}
+
 void WindowScreen::crop_value_change(int new_crop_value) {
-	std::vector<const CropData*> *crops = &this->possible_crops;
-	int *crop_value = &this->m_info.crop_kind;
-	if(this->display_data->last_connected_ds) {
-		crops = &this->possible_crops_ds;
-		crop_value = &this->m_info.crop_kind_ds;
-	}
+	std::vector<const CropData*> *crops = this->get_crop_data_vector(&this->m_info);
+	int *crop_value = this->get_crop_index_ptr(&this->m_info);
 	int new_value = new_crop_value % crops->size();
 	if((*crop_value) != new_value) {
 		*crop_value = new_value;
@@ -295,10 +298,7 @@ bool WindowScreen::execute_cmd(PossibleWindowCommands id) {
 			this->fullscreen_change();
 			break;
 		case WINDOW_COMMAND_CROP:
-			if(this->display_data->last_connected_ds)
-				this->crop_value_change(this->m_info.crop_kind_ds + 1);
-			else
-				this->crop_value_change(this->m_info.crop_kind + 1);
+			this->crop_value_change(*this->get_crop_index_ptr(&this->m_info) + 1);
 			break;
 		case WINDOW_COMMAND_ASYNC:
 			this->async_change();
@@ -576,10 +576,7 @@ void WindowScreen::setup_crop_menu(bool reset_data) {
 		this->curr_menu = CROP_MENU_TYPE;
 		if(reset_data)
 			this->crop_menu->reset_data();
-		if(this->display_data->last_connected_ds)
-			this->crop_menu->insert_data(&this->possible_crops_ds);
-		else
-			this->crop_menu->insert_data(&this->possible_crops);
+		this->crop_menu->insert_data(this->get_crop_data_vector(&this->m_info));
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
 }
@@ -1335,6 +1332,9 @@ void WindowScreen::poll(bool do_everything) {
 							this->setup_relative_pos_menu();
 							done = true;
 							break;
+						case VIDEO_MENU_GAMES_CROPPING:
+							this->game_crop_enable_change();
+							break;
 						default:
 							break;
 					}
@@ -1810,7 +1810,7 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			this->video_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info, this->display_data->fast_poll);
 			break;
 		case CROP_MENU_TYPE:
-			this->crop_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.crop_kind);
+			this->crop_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, *this->get_crop_index_ptr(&this->loaded_info));
 			break;
 		case TOP_PAR_MENU_TYPE:
 			this->par_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.top_par);

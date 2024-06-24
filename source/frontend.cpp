@@ -7,7 +7,7 @@ const CropData default_3ds_crop = {
 .bot_width = BOT_WIDTH_3DS, .bot_height = HEIGHT_3DS,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
-.allowed_3ds = true, .allowed_ds = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = false,
 .name = "3DS"};
 
 const CropData special_ds_crop = {
@@ -16,7 +16,7 @@ const CropData special_ds_crop = {
 .bot_width = BOT_WIDTH_3DS, .bot_height = HEIGHT_3DS,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
-.allowed_3ds = true, .allowed_ds = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = false,
 .name = "16:10"};
 
 const CropData scaled_ds_crop = {
@@ -25,7 +25,7 @@ const CropData scaled_ds_crop = {
 .bot_width = BOT_WIDTH_3DS, .bot_height = HEIGHT_3DS,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
-.allowed_3ds = true, .allowed_ds = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = false,
 .name = "Scaled DS"};
 
 const CropData native_ds_crop = {
@@ -34,7 +34,7 @@ const CropData native_ds_crop = {
 .bot_width = WIDTH_DS, .bot_height = HEIGHT_DS,
 .bot_x = (BOT_WIDTH_3DS - WIDTH_DS) / 2, .bot_y = HEIGHT_3DS - HEIGHT_DS,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
-.allowed_3ds = true, .allowed_ds = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = false,
 .name = "Native DS"};
 
 const CropData scaled_gba_crop = {
@@ -43,7 +43,7 @@ const CropData scaled_gba_crop = {
 .bot_width = 0, .bot_height = 0,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
-.allowed_3ds = true, .allowed_ds = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = false,
 .name = "Scaled GBA"};
 
 const CropData native_gba_crop = {
@@ -52,7 +52,7 @@ const CropData native_gba_crop = {
 .bot_width = 0, .bot_height = 0,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
-.allowed_3ds = true, .allowed_ds = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = false,
 .name = "Native GBA"};
 
 const CropData scaled_vc_gb_crop = {
@@ -61,7 +61,7 @@ const CropData scaled_vc_gb_crop = {
 .bot_width = 0, .bot_height = 0,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
-.allowed_3ds = true, .allowed_ds = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = false,
 .name = "Scaled VC GB"};
 
 const CropData vc_gb_crop = {
@@ -70,7 +70,7 @@ const CropData vc_gb_crop = {
 .bot_width = 0, .bot_height = 0,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
-.allowed_3ds = true, .allowed_ds = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = false,
 .name = "VC GB"};
 
 const CropData scaled_snes_crop = {
@@ -79,7 +79,7 @@ const CropData scaled_snes_crop = {
 .bot_width = 0, .bot_height = 0,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
-.allowed_3ds = true, .allowed_ds = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = false,
 .name = "Scaled SNES"};
 
 const CropData vc_snes_crop = {
@@ -88,7 +88,7 @@ const CropData vc_snes_crop = {
 .bot_width = 0, .bot_height = 0,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
-.allowed_3ds = true, .allowed_ds = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = false,
 .name = "VC SNES"};
 
 const CropData vc_nes_crop = {
@@ -97,17 +97,26 @@ const CropData vc_nes_crop = {
 .bot_width = 0, .bot_height = 0,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
-.allowed_3ds = true, .allowed_ds = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = false,
 .name = "VC NES"};
 
 const CropData scaled_ds_pokemon_crop = {
-.top_width = TOP_SCALED_DS_WIDTH_3DS - 4, .top_height = HEIGHT_3DS - 4,
-.top_x = (TOP_WIDTH_3DS - TOP_SCALED_DS_WIDTH_3DS + 4) / 2, .top_y = 2,
+.top_width = TOP_SCALED_DS_WIDTH_3DS - 6, .top_height = HEIGHT_3DS - 6,
+.top_x = (TOP_WIDTH_3DS - TOP_SCALED_DS_WIDTH_3DS + 6) / 2, .top_y = 3,
 .bot_width = BOT_WIDTH_3DS, .bot_height = HEIGHT_3DS,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
-.allowed_3ds = true, .allowed_ds = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = true,
 .name = "Scaled Pokemon DS"};
+
+const CropData scaled_ds_pmd_brt_crop = {
+.top_width = TOP_SCALED_DS_WIDTH_3DS, .top_height = HEIGHT_3DS,
+.top_x = (TOP_WIDTH_3DS - TOP_SCALED_DS_WIDTH_3DS) / 2, .top_y = 0,
+.bot_width = BOT_WIDTH_3DS - 3, .bot_height = HEIGHT_3DS,
+.bot_x = 3, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = true,
+.name = "Scaled PMD:BRT"};
 
 const CropData native_ds_pokemon_crop = {
 .top_width = WIDTH_DS - 2, .top_height = HEIGHT_DS - 2,
@@ -115,8 +124,35 @@ const CropData native_ds_pokemon_crop = {
 .bot_width = WIDTH_DS, .bot_height = HEIGHT_DS,
 .bot_x = (BOT_WIDTH_3DS - WIDTH_DS) / 2, .bot_y = HEIGHT_3DS - HEIGHT_DS,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
-.allowed_3ds = true, .allowed_ds = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = true,
 .name = "Native Pokemon DS"};
+
+const CropData native_ds_pmd_brt_crop = {
+.top_width = WIDTH_DS, .top_height = HEIGHT_DS,
+.top_x = (TOP_WIDTH_3DS - WIDTH_DS) / 2, .top_y = 0,
+.bot_width = WIDTH_DS - 1, .bot_height = HEIGHT_DS,
+.bot_x = (BOT_WIDTH_3DS - WIDTH_DS + 2) / 2, .bot_y = HEIGHT_3DS - HEIGHT_DS,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = true,
+.name = "Native PMD:BRT"};
+
+const CropData scaled_gba_pmd_rrt_crop = {
+.top_width = WIDTH_SCALED_GBA - 3, .top_height = HEIGHT_SCALED_GBA,
+.top_x = (TOP_WIDTH_3DS - WIDTH_SCALED_GBA + 6) / 2, .top_y = (HEIGHT_3DS - HEIGHT_SCALED_GBA) / 2,
+.bot_width = 0, .bot_height = 0,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = true,
+.name = "Scaled PMD:RRT"};
+
+const CropData native_gba_pmd_rrt_crop = {
+.top_width = WIDTH_GBA - 1, .top_height = HEIGHT_GBA,
+.top_x = (TOP_WIDTH_3DS - WIDTH_GBA + 2) / 2, .top_y = (HEIGHT_3DS - HEIGHT_GBA) / 2,
+.bot_width = 0, .bot_height = 0,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.allowed_3ds = true, .allowed_ds = false, .is_game_specific = true,
+.name = "Native PMD:RRT"};
 
 const CropData default_ds_crop = {
 .top_width = WIDTH_DS, .top_height = HEIGHT_DS,
@@ -124,7 +160,7 @@ const CropData default_ds_crop = {
 .bot_width = WIDTH_DS, .bot_height = HEIGHT_DS,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
-.allowed_3ds = false, .allowed_ds = true,
+.allowed_3ds = false, .allowed_ds = true, .is_game_specific = false,
 .name = "DS"};
 
 const CropData top_gba_ds_crop = {
@@ -133,7 +169,7 @@ const CropData top_gba_ds_crop = {
 .bot_width = 0, .bot_height = 0,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
-.allowed_3ds = false, .allowed_ds = true,
+.allowed_3ds = false, .allowed_ds = true, .is_game_specific = false,
 .name = "Top GBA"};
 
 const CropData bottom_gba_ds_crop = {
@@ -142,7 +178,7 @@ const CropData bottom_gba_ds_crop = {
 .bot_width = WIDTH_GBA, .bot_height = HEIGHT_GBA,
 .bot_x = (WIDTH_DS - WIDTH_GBA) / 2, .bot_y = (HEIGHT_DS - HEIGHT_GBA) / 2,
 .allowed_joint = true, .allowed_top = false, .allowed_bottom = true,
-.allowed_3ds = false, .allowed_ds = true,
+.allowed_3ds = false, .allowed_ds = true, .is_game_specific = false,
 .name = "Bottom GBA"};
 
 const CropData ds_pokemon_crop = {
@@ -151,8 +187,35 @@ const CropData ds_pokemon_crop = {
 .bot_width = WIDTH_DS, .bot_height = HEIGHT_DS,
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
-.allowed_3ds = false, .allowed_ds = true,
+.allowed_3ds = false, .allowed_ds = true, .is_game_specific = true,
 .name = "Pokemon DS"};
+
+const CropData ds_pmd_brt_crop = {
+.top_width = WIDTH_DS, .top_height = HEIGHT_DS,
+.top_x = 0, .top_y = 0,
+.bot_width = WIDTH_DS - 1, .bot_height = HEIGHT_DS,
+.bot_x = 1, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
+.allowed_3ds = false, .allowed_ds = true, .is_game_specific = true,
+.name = "PMD:BRT"};
+
+const CropData top_gba_ds_pmd_rrt_crop = {
+.top_width = WIDTH_GBA - 1, .top_height = HEIGHT_GBA,
+.top_x = (WIDTH_DS - WIDTH_GBA + 2) / 2, .top_y = (HEIGHT_DS - HEIGHT_GBA) / 2,
+.bot_width = 0, .bot_height = 0,
+.bot_x = 0, .bot_y = 0,
+.allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
+.allowed_3ds = false, .allowed_ds = true, .is_game_specific = true,
+.name = "Top GBA"};
+
+const CropData bottom_gba_ds_pmd_rrt_crop = {
+.top_width = 0, .top_height = 0,
+.top_x = 0, .top_y = 0,
+.bot_width = WIDTH_GBA - 1, .bot_height = HEIGHT_GBA,
+.bot_x = (WIDTH_DS - WIDTH_GBA + 2) / 2, .bot_y = (HEIGHT_DS - HEIGHT_GBA) / 2,
+.allowed_joint = true, .allowed_top = false, .allowed_bottom = true,
+.allowed_3ds = false, .allowed_ds = true, .is_game_specific = true,
+.name = "Bottom GBA"};
 
 static const CropData* basic_possible_crops[] = {
 &default_3ds_crop,
@@ -166,37 +229,114 @@ static const CropData* basic_possible_crops[] = {
 &scaled_snes_crop,
 &vc_snes_crop,
 &vc_nes_crop,
-&scaled_ds_pokemon_crop,
-&native_ds_pokemon_crop,
 &default_ds_crop,
 &top_gba_ds_crop,
 &bottom_gba_ds_crop,
+&scaled_ds_pokemon_crop,
+&native_ds_pokemon_crop,
 &ds_pokemon_crop,
+&scaled_ds_pmd_brt_crop,
+&native_ds_pmd_brt_crop,
+&ds_pmd_brt_crop,
+&scaled_gba_pmd_rrt_crop,
+&native_gba_pmd_rrt_crop,
+&top_gba_ds_pmd_rrt_crop,
+&bottom_gba_ds_pmd_rrt_crop,
 };
 
 const PARData base_par = {
 .width_multiplier = 1.0, .width_divisor = 1.0,
-.is_width_main = true,
+.is_width_main = true, .is_fit = false,
 .name = "1:1"};
 
 const PARData snes_horizontal_par = {
 .width_multiplier = 8.0, .width_divisor = 7.0,
-.is_width_main = true,
+.is_width_main = true, .is_fit = false,
 .name = "SNES Horizontal"};
 
 const PARData snes_vertical_par = {
 .width_multiplier = 8.0, .width_divisor = 7.0,
-.is_width_main = false,
+.is_width_main = false, .is_fit = false,
 .name = "SNES Vertical"};
+
+const PARData lb_horizontal_par = {
+.width_multiplier = 4.0, .width_divisor = 3.0,
+.is_width_main = true, .is_fit = false,
+.name = "4:3 Horizontal"};
+
+const PARData lb_vertical_par = {
+.width_multiplier = 4.0, .width_divisor = 3.0,
+.is_width_main = false, .is_fit = false,
+.name = "4:3 Vertical"};
+
+const PARData top_3ds_horizontal_par = {
+.width_multiplier = 5.0, .width_divisor = 3.0,
+.is_width_main = true, .is_fit = false,
+.name = "5:3 Horizontal"};
+
+const PARData top_3ds_vertical_par = {
+.width_multiplier = 5.0, .width_divisor = 3.0,
+.is_width_main = false, .is_fit = false,
+.name = "5:3 Vertical"};
+
+const PARData wide_horizontal_par = {
+.width_multiplier = 16.0, .width_divisor = 9.0,
+.is_width_main = true, .is_fit = false,
+.name = "16:9 Horizontal"};
+
+const PARData wide_vertical_par = {
+.width_multiplier = 16.0, .width_divisor = 9.0,
+.is_width_main = false, .is_fit = false,
+.name = "16:9 Vertical"};
+
+const PARData fit_square_horizontal_par = {
+.width_multiplier = 1.0, .width_divisor = 1.0,
+.is_width_main = true, .is_fit = true,
+.name = "Fit to 1:1 H."};
+
+const PARData fit_square_vertical_par = {
+.width_multiplier = 1.0, .width_divisor = 1.0,
+.is_width_main = false, .is_fit = true,
+.name = "Fit to 1:1 V."};
+
+const PARData fit_lb_horizontal_par = {
+.width_multiplier = 4.0, .width_divisor = 3.0,
+.is_width_main = true, .is_fit = true,
+.name = "Fit to 4:3 H."};
+
+const PARData fit_lb_vertical_par = {
+.width_multiplier = 4.0, .width_divisor = 3.0,
+.is_width_main = false, .is_fit = true,
+.name = "Fit to 4:3 V."};
+
+const PARData fit_top_3ds_horizontal_par = {
+.width_multiplier = 5.0, .width_divisor = 3.0,
+.is_width_main = true, .is_fit = true,
+.name = "Fit to 5:3 H."};
+
+const PARData fit_top_3ds_vertical_par = {
+.width_multiplier = 5.0, .width_divisor = 3.0,
+.is_width_main = false, .is_fit = true,
+.name = "Fit to 5:3 V."};
+
+const PARData fit_wide_horizontal_par = {
+.width_multiplier = 16.0, .width_divisor = 9.0,
+.is_width_main = true, .is_fit = true,
+.name = "Fit to 16:9 H."};
+
+const PARData fit_wide_vertical_par = {
+.width_multiplier = 16.0, .width_divisor = 9.0,
+.is_width_main = false, .is_fit = true,
+.name = "Fit to 16:9 V."};
 
 const PARData special_3ds_horizontal_par = {
 .width_multiplier = 1.0, .width_divisor = 2.0,
-.is_width_main = true,
+.is_width_main = true, .is_fit = false,
 .name = "3DS 800x240 Horizontal"};
 
 const PARData special_3ds_vertical_par = {
 .width_multiplier = 1.0, .width_divisor = 2.0,
-.is_width_main = false,
+.is_width_main = false, .is_fit = false,
 .name = "3DS 800x240 Vertical"};
 
 static const PARData* basic_possible_pars[] = {
@@ -205,12 +345,28 @@ static const PARData* basic_possible_pars[] = {
 &snes_vertical_par,
 //&special_3ds_horizontal_par,
 //&special_3ds_vertical_par,
+&lb_horizontal_par,
+&lb_vertical_par,
+&top_3ds_horizontal_par,
+&top_3ds_vertical_par,
+&wide_horizontal_par,
+&wide_vertical_par,
+&fit_square_horizontal_par,
+&fit_square_vertical_par,
+&fit_lb_horizontal_par,
+&fit_lb_vertical_par,
+&fit_top_3ds_horizontal_par,
+&fit_top_3ds_vertical_par,
+&fit_wide_horizontal_par,
+&fit_wide_vertical_par,
 };
 
-static bool is_allowed_crop(const CropData* crop_data, ScreenType s_type, bool is_ds) {
+static bool is_allowed_crop(const CropData* crop_data, ScreenType s_type, bool is_ds, bool allow_game_specific) {
 	if(is_ds && (!crop_data->allowed_ds))
 		return false;
 	if((!is_ds) && (!crop_data->allowed_3ds))
+		return false;
+	if((!allow_game_specific) && (crop_data->is_game_specific))
 		return false;
 	if((s_type == ScreenType::JOINT) && (!crop_data->allowed_joint))
 		return false;
@@ -221,9 +377,9 @@ static bool is_allowed_crop(const CropData* crop_data, ScreenType s_type, bool i
 	return true;
 }
 
-void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type, bool is_ds) {
+void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type, bool is_ds, bool allow_game_specific) {
 	for(int i = 0; i < (sizeof(basic_possible_crops) / sizeof(basic_possible_crops[0])); i++) {
-		if(is_allowed_crop(basic_possible_crops[i], s_type, is_ds))
+		if(is_allowed_crop(basic_possible_crops[i], s_type, is_ds, allow_game_specific))
 			crop_vector.push_back(basic_possible_crops[i]);
 	}
 }
@@ -250,6 +406,9 @@ void reset_screen_info(ScreenInfo &info) {
 	info.is_blurred = false;
 	info.crop_kind = 0;
 	info.crop_kind_ds = 0;
+	info.crop_kind_games = 0;
+	info.crop_kind_ds_games = 0;
+	info.allow_games_crops = true;
 	info.scaling = 1.0;
 	info.is_fullscreen = false;
 	info.bottom_pos = UNDER_TOP;
@@ -293,6 +452,18 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 	}
 	if(key == (base + "crop_ds")) {
 		info.crop_kind_ds = std::stoi(value);
+		return true;
+	}
+	if(key == (base + "crop_kind_games")) {
+		info.crop_kind_games = std::stoi(value);
+		return true;
+	}
+	if(key == (base + "crop_kind_ds_games")) {
+		info.crop_kind_ds_games = std::stoi(value);
+		return true;
+	}
+	if(key == (base + "allow_games_crops")) {
+		info.allow_games_crops = std::stoi(value);
 		return true;
 	}
 	if(key == (base + "scale")) {
@@ -417,6 +588,9 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "blur=" + std::to_string(info.is_blurred) + "\n";
 	out += base + "crop=" + std::to_string(info.crop_kind) + "\n";
 	out += base + "crop_ds=" + std::to_string(info.crop_kind_ds) + "\n";
+	out += base + "crop_kind_games=" + std::to_string(info.crop_kind_games) + "\n";
+	out += base + "crop_kind_ds_games=" + std::to_string(info.crop_kind_ds_games) + "\n";
+	out += base + "allow_games_crops=" + std::to_string(info.allow_games_crops) + "\n";
 	out += base + "scale=" + std::to_string(info.scaling) + "\n";
 	out += base + "fullscreen=" + std::to_string(info.is_fullscreen) + "\n";
 	out += base + "bot_pos=" + std::to_string(info.bottom_pos) + "\n";
@@ -462,19 +636,18 @@ void get_par_size(int &width, int &height, float multiplier_factor, const PARDat
 	if(correction_factor->is_width_main)
 		correction_factor_divisor = correction_factor->width_divisor;
 	float correction_factor_approx_contribute = correction_factor_divisor / 2;
-	if(correction_factor->is_width_main)
-		width = ((width * correction_factor->width_multiplier) + correction_factor_approx_contribute) / correction_factor_divisor;
-	else
-		height = ((height * correction_factor->width_divisor) + correction_factor_approx_contribute) / correction_factor_divisor;
-}
-
-void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor) {
-	width *= multiplier_factor;
-	height *= multiplier_factor;
-	if(correction_factor->is_width_main)
-		width = (width * correction_factor->width_multiplier) / correction_factor->width_divisor;
-	else
-		height = (height * correction_factor->width_divisor) / correction_factor->width_multiplier;
+	if(correction_factor->is_fit) {
+		if(correction_factor->is_width_main)
+			width = ((height * correction_factor->width_multiplier) + correction_factor_approx_contribute) / correction_factor_divisor;
+		else
+			height = ((width * correction_factor->width_divisor) + correction_factor_approx_contribute) / correction_factor_divisor;
+	}
+	else {
+		if(correction_factor->is_width_main)
+			width = ((width * correction_factor->width_multiplier) + correction_factor_approx_contribute) / correction_factor_divisor;
+		else
+			height = ((height * correction_factor->width_divisor) + correction_factor_approx_contribute) / correction_factor_divisor;
+	}
 }
 
 JoystickDirection get_joystick_direction(uint32_t joystickId, sf::Joystick::Axis axis, float position) {

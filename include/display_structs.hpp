@@ -12,6 +12,9 @@ struct ScreenInfo {
 	bool is_blurred;
 	int crop_kind;
 	int crop_kind_ds;
+	int crop_kind_games;
+	int crop_kind_ds_games;
+	bool allow_games_crops;
 	double scaling;
 	bool is_fullscreen;
 	BottomRelativePosition bottom_pos;
@@ -62,6 +65,7 @@ struct CropData {
 	bool allowed_bottom;
 	bool allowed_3ds;
 	bool allowed_ds;
+	bool is_game_specific;
 	std::string name;
 };
 
@@ -69,6 +73,7 @@ struct PARData {
 	float width_multiplier;
 	float width_divisor;
 	bool is_width_main;
+	bool is_fit;
 	std::string name;
 };
 

@@ -157,8 +157,16 @@ static const VideoMenuOptionInfo fast_poll_option = {
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_FAST_POLL};
 
+static const VideoMenuOptionInfo allow_game_crops_option = {
+.base_name = "Disable Game Crops", .false_name = "Enable Game Crops",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
+.out_action = VIDEO_MENU_GAMES_CROPPING};
+
 static const VideoMenuOptionInfo* pollable_options[] = {
 &crop_option,
+//&allow_game_crops_option,
 &window_scaling_option,
 &fullscreen_scaling_option,
 &menu_scaling_option,
@@ -317,6 +325,8 @@ void VideoMenu::prepare(float menu_scaling_factor, int view_size_x, int view_siz
 				break;
 			case VIDEO_MENU_FAST_POLL:
 				this->labels[index]->setText(this->setTextOptionBool(real_index, fast_poll));
+			case VIDEO_MENU_GAMES_CROPPING:
+				this->labels[index]->setText(this->setTextOptionBool(real_index, info->allow_games_crops));
 			default:
 				break;
 		}

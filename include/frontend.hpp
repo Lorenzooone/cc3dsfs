@@ -144,6 +144,8 @@ private:
 	ActionSelectionMenu *action_selection_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const CropData*> possible_crops_ds;
+	std::vector<const CropData*> possible_crops_with_games;
+	std::vector<const CropData*> possible_crops_ds_with_games;
 	std::vector<const PARData*> possible_pars;
 	std::vector<sf::VideoMode> possible_resolutions;
 	std::vector<FileData> possible_files;
@@ -209,6 +211,7 @@ private:
 	void blur_change();
 	void fast_poll_change();
 	void padding_change();
+	void game_crop_enable_change();
 	void crop_value_change(int new_crop_value);
 	void par_value_change(int new_par_value, bool is_top);
 	void offset_change(float &value, float change);
@@ -245,7 +248,9 @@ private:
 	void open();
 	void update_screen_settings();
 	void rotate();
-	sf::Vector2f getShownScreenSize(bool is_top, int &crop_kind);
+	std::vector<const CropData*>* get_crop_data_vector(ScreenInfo* info);
+	int* get_crop_index_ptr(ScreenInfo* info);
+	sf::Vector2f getShownScreenSize(bool is_top, ScreenInfo* info);
 	void crop();
 	void setWinSize(bool is_main_thread);
 	bool can_setup_menu();
@@ -280,14 +285,13 @@ struct FrontendData {
 void FPSArrayInit(FPSArray *array);
 void FPSArrayDestroy(FPSArray *array);
 void FPSArrayInsertElement(FPSArray *array, double frame_time);
-void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type, bool is_ds);
+void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type, bool is_ds, bool allow_game_specific);
 void insert_basic_pars(std::vector<const PARData*> &par_vector);
 void reset_display_data(DisplayData *display_data);
 void reset_fullscreen_info(ScreenInfo &info);
 void reset_screen_info(ScreenInfo &info);
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
 std::string save_screen_info(std::string base, const ScreenInfo &info);
-void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor);
 void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor);
 void default_sleep(int wanted_ms = -1);
 void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL);

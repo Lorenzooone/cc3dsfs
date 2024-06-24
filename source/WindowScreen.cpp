@@ -10,8 +10,10 @@
 
 WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts) {
 	this->m_stype = stype;
-	insert_basic_crops(this->possible_crops, this->m_stype, false);
-	insert_basic_crops(this->possible_crops_ds, this->m_stype, true);
+	insert_basic_crops(this->possible_crops, this->m_stype, false, false);
+	insert_basic_crops(this->possible_crops_ds, this->m_stype, true, false);
+	insert_basic_crops(this->possible_crops_with_games, this->m_stype, false, true);
+	insert_basic_crops(this->possible_crops_ds_with_games, this->m_stype, true, true);
 	insert_basic_pars(this->possible_pars);
 	this->m_prepare_save = 0;
 	this->m_prepare_load = 0;
@@ -622,12 +624,8 @@ void WindowScreen::prepare_size_ratios(bool top_increase, bool bot_increase, boo
 	if(!this->m_info.is_fullscreen)
 		return;
 
-	sf::Vector2f top_screen_size = getShownScreenSize(true, this->m_info.crop_kind);
-	sf::Vector2f bot_screen_size = getShownScreenSize(false, this->m_info.crop_kind);
-	if(this->display_data->last_connected_ds) {
-		top_screen_size = getShownScreenSize(true, this->m_info.crop_kind_ds);
-		bot_screen_size = getShownScreenSize(false, this->m_info.crop_kind_ds);
-	}
+	sf::Vector2f top_screen_size = getShownScreenSize(true, &this->m_info);
+	sf::Vector2f bot_screen_size = getShownScreenSize(false, &this->m_info);
 
 	if(this->m_stype == ScreenType::TOP) {
 		bot_increase = true;
@@ -700,12 +698,8 @@ int WindowScreen::get_fullscreen_offset_y(int top_width, int top_height, int bot
 }
 
 void WindowScreen::resize_window_and_out_rects(bool do_work) {
-	sf::Vector2f top_screen_size = getShownScreenSize(true, this->loaded_info.crop_kind);
-	sf::Vector2f bot_screen_size = getShownScreenSize(false, this->loaded_info.crop_kind);
-	if(this->display_data->last_connected_ds) {
-		top_screen_size = getShownScreenSize(true, this->loaded_info.crop_kind_ds);
-		bot_screen_size = getShownScreenSize(false, this->loaded_info.crop_kind_ds);
-	}
+	sf::Vector2f top_screen_size = getShownScreenSize(true, &this->loaded_info);
+	sf::Vector2f bot_screen_size = getShownScreenSize(false, &this->loaded_info);
 	int top_width = top_screen_size.x;
 	int top_height = top_screen_size.y;
 	float top_scaling = this->loaded_info.scaling;
@@ -798,34 +792,53 @@ void WindowScreen::rotate() {
 	this->loaded_operations.call_screen_settings_update = true;
 }
 
-sf::Vector2f WindowScreen::getShownScreenSize(bool is_top, int &crop_kind) {
+std::vector<const CropData*>* WindowScreen::get_crop_data_vector(ScreenInfo* info) {
 	std::vector<const CropData*> *crops = &this->possible_crops;
-	if(this->display_data->last_connected_ds)
+	if(info->allow_games_crops)
+		crops = &this->possible_crops_with_games;
+	if(this->display_data->last_connected_ds) {
 		crops = &this->possible_crops_ds;
-	if(crop_kind >= crops->size())
-		crop_kind = 0;
-	int width = (*crops)[crop_kind]->top_width;
-	int height = (*crops)[crop_kind]->top_height;
+		if(info->allow_games_crops)
+			crops = &this->possible_crops_ds_with_games;
+	}
+	return crops;
+}
+
+int* WindowScreen::get_crop_index_ptr(ScreenInfo* info) {
+	int *crop_ptr = &info->crop_kind;
+	if(info->allow_games_crops)
+		crop_ptr = &info->crop_kind_games;
+	if(this->display_data->last_connected_ds) {
+		crop_ptr = &info->crop_kind_ds;
+		if(info->allow_games_crops)
+			crop_ptr = &info->crop_kind_ds_games;
+	}
+	return crop_ptr;
+}
+
+sf::Vector2f WindowScreen::getShownScreenSize(bool is_top, ScreenInfo* info) {
+	std::vector<const CropData*> *crops = this->get_crop_data_vector(info);
+	int *crop_kind = this->get_crop_index_ptr(info);
+	if((*crop_kind) >= crops->size())
+		*crop_kind = 0;
+	int width = (*crops)[*crop_kind]->top_width;
+	int height = (*crops)[*crop_kind]->top_height;
 	if(!is_top) {
-		width = (*crops)[crop_kind]->bot_width;
-		height = (*crops)[crop_kind]->bot_height;
+		width = (*crops)[*crop_kind]->bot_width;
+		height = (*crops)[*crop_kind]->bot_height;
 	}
 	return sf::Vector2f(width, height);
 }
 
 void WindowScreen::crop() {
-	std::vector<const CropData*> *crops = &this->possible_crops;
-	int *crop_value = &this->loaded_info.crop_kind;
-	if(this->display_data->last_connected_ds) {
-		crops = &this->possible_crops_ds;
-		crop_value = &this->loaded_info.crop_kind_ds;
-	}
+	std::vector<const CropData*> *crops = this->get_crop_data_vector(&this->loaded_info);
+	int *crop_value = this->get_crop_index_ptr(&this->loaded_info);
 
 	if((*crop_value) >= crops->size())
 		*crop_value = 0;
 
-	sf::Vector2f top_screen_size = getShownScreenSize(true, *crop_value);
-	sf::Vector2f bot_screen_size = getShownScreenSize(false, *crop_value);
+	sf::Vector2f top_screen_size = getShownScreenSize(true, &this->loaded_info);
+	sf::Vector2f bot_screen_size = getShownScreenSize(false, &this->loaded_info);
 
 	this->resize_in_rect(this->m_in_rect_top, this->capture_status->device.top_screen_x + (*crops)[*crop_value]->top_x, this->capture_status->device.top_screen_y + (*crops)[*crop_value]->top_y, top_screen_size.x, top_screen_size.y);
 	this->resize_in_rect(this->m_in_rect_bot, this->capture_status->device.bot_screen_x + (*crops)[*crop_value]->bot_x, this->capture_status->device.bot_screen_y + (*crops)[*crop_value]->bot_y, bot_screen_size.x, bot_screen_size.y);
