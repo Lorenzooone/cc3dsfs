@@ -1176,6 +1176,12 @@ void WindowScreen::poll(bool do_everything) {
 						case AUDIO_MENU_VOLUME_INC:
 							this->audio_data->change_audio_volume(true);
 							break;
+						case AUDIO_MENU_MAX_LATENCY_DEC:
+							this->audio_data->set_max_audio_latency(this->audio_data->get_max_audio_latency() - 1);
+							break;
+						case AUDIO_MENU_MAX_LATENCY_INC:
+							this->audio_data->set_max_audio_latency(this->audio_data->get_max_audio_latency() + 1);
+							break;
 						case AUDIO_MENU_MUTE:
 							this->audio_data->change_audio_mute();
 							break;

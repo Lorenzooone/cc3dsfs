@@ -26,8 +26,7 @@
 #include "conversions.hpp"
 
 // Threshold to keep the audio latency limited in "amount of frames".
-#define AUDIO_LATENCY_LIMIT 4
-#define NUM_CONCURRENT_AUDIO_BUFFERS ((AUDIO_LATENCY_LIMIT * 2) + 1)
+#define NUM_CONCURRENT_AUDIO_BUFFERS ((MAX_MAX_AUDIO_LATENCY * 2) + 1)
 
 struct OutTextData {
 	std::string full_text;
@@ -220,7 +219,7 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 
 			if((!capture_data->status.cooldown_curr_in) && (curr_out != prev_out)) {
 				loaded_samples = audio.samples.size();
-				if((capture_data->read[curr_out] > get_video_in_size(capture_data)) && (loaded_samples < AUDIO_LATENCY_LIMIT)) {
+				if((capture_data->read[curr_out] > get_video_in_size(capture_data)) && (loaded_samples < MAX_MAX_AUDIO_LATENCY)) {
 					int n_samples = get_audio_n_samples(capture_data, capture_data->read[curr_out]);
 					double out_time = capture_data->time_in_buf[curr_out];
 					convertAudioToOutput(&capture_data->capture_buf[curr_out], out_buf[audio_buf_counter], n_samples, endianness, capture_data);

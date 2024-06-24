@@ -64,9 +64,12 @@
 #define MAX_IN_VIDEO_SIZE (MAX_IN_VIDEO_WIDTH * MAX_IN_VIDEO_HEIGHT)
 #define MAX_IN_VIDEO_BPP_SIZE IN_VIDEO_BPP_SIZE_3DS
 
-#define O3DS_SAMPLES_IN (1096 * 8) // This one can go beyond the normal amount, so factor in a buffer of sorts. 8x is way more than needed, but better being safe than sorry!
-#define N3DSXL_SAMPLES_IN 1096
-#define DS_SAMPLES_IN 1096
+// 1096 is the value when things are ideal. However, it can actually happen that the transfer isn't 100% on time.
+// When that happens, a bit more audio data may get transfered. It's a ton on O3DS when Windows underprioritizes USB...
+// In general, it should be less than * 2, but you never know. For now, go for safety at x16...
+#define O3DS_SAMPLES_IN (1096 * 16)
+#define N3DSXL_SAMPLES_IN (1096 * 16)
+#define DS_SAMPLES_IN (1096 * 16)
 #define MAX_SAMPLES_IN O3DS_SAMPLES_IN
 
 #endif

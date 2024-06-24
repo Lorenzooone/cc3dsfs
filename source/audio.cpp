@@ -17,7 +17,7 @@ Sample::Sample(sf::Int16 *bytes, std::size_t size, float time) : bytes(bytes), s
 Audio::Audio(AudioData *audio_data) {
 	this->audio_data = audio_data;
 	// Consume old events
-	this->buffer = new sf::Int16[MAX_SAMPLES_IN];
+	this->buffer = new sf::Int16[MAX_SAMPLES_IN * (MAX_MAX_AUDIO_LATENCY + 1)];
 	this->audio_data->check_audio_restart_request();
 	sf::SoundStream::initialize(AUDIO_CHANNELS, SAMPLE_RATE);
 	this->setPitch(PITCH_RATE);
@@ -80,21 +80,22 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 	}
 	data.samples = (const sf::Int16*)buffer;
 
-	while(loaded_samples > 2) {
+	while(loaded_samples > this->audio_data->get_max_audio_latency()) {
 		samples.pop();
 		loaded_samples = samples.size();
 	}
 
-	const sf::Int16 *data_samples = samples.front().bytes;
-	int count = samples.front().size;
-	memcpy(buffer, data_samples, count * sizeof(sf::Int16));
+	data.sampleCount = 0;
 
-	data.sampleCount = count;
-
-	// Unused, but could be useful info
-	//double real_sample_rate = (1.0 / samples.front().time) * count / 2;
-
-	samples.pop();
+	for(int i = 0; i < loaded_samples; i++) {
+		const sf::Int16 *data_samples = samples.front().bytes;
+		int count = samples.front().size;
+		memcpy(buffer + data.sampleCount, data_samples, count * sizeof(sf::Int16));
+		// Unused, but could be useful info
+		//double real_sample_rate = (1.0 / samples.front().time) * count / 2;
+		data.sampleCount += count;
+		samples.pop();
+	}
 
 	// Basically, look into how low the time between calls of the function is
 	curr_time = std::chrono::high_resolution_clock::now();

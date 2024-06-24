@@ -3,8 +3,18 @@
 void AudioData::reset() {
 	this->volume = 50;
 	this->mute = false;
+	this->max_audio_latency = 2;
 	this->restart_request = false;
 	this->text_updated = false;
+}
+
+
+void AudioData::set_max_audio_latency(int new_value) {
+	if(new_value > MAX_MAX_AUDIO_LATENCY)
+		new_value = MAX_MAX_AUDIO_LATENCY;
+	if(new_value <= 0)
+		new_value = 1;
+	this->max_audio_latency = new_value;
 }
 
 void AudioData::change_audio_volume(bool is_change_positive) {
@@ -55,6 +65,10 @@ std::string AudioData::text_to_print() {
 	return this->text;
 }
 
+int AudioData::get_max_audio_latency() {
+	return this->max_audio_latency;
+}
+
 int AudioData::get_final_volume() {
 	if(this->mute)
 		return 0;
@@ -88,6 +102,10 @@ bool AudioData::load_audio_data(std::string key, std::string value) {
 		this->set_audio_volume(std::stoi(value));
 		return true;
 	}
+	if (key == this->max_audio_latency_str) {
+		this->set_max_audio_latency(std::stoi(value));
+		return true;
+	}
 	return false;
 }
 
@@ -95,6 +113,7 @@ std::string AudioData::save_audio_data() {
 	std::string out_str = "";
 	out_str += this->mute_str + "=" + std::to_string(this->mute) + "\n";
 	out_str += this->volume_str + "=" + std::to_string(this->volume) + "\n";
+	out_str += this->max_audio_latency_str + "=" + std::to_string(this->max_audio_latency) + "\n";
 	return out_str;
 }
 

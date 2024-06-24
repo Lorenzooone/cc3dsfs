@@ -2,14 +2,17 @@
 #define __AUDIO_DATA_HPP
 
 #include <string>
+#define MAX_MAX_AUDIO_LATENCY 10
 
 class AudioData {
 public:
 	void reset();
+	void set_max_audio_latency(int new_value);
 	void change_audio_volume(bool is_change_positive);
 	void change_audio_mute();
 	void request_audio_restart();
 	bool check_audio_restart_request();
+	int get_max_audio_latency();
 	int get_final_volume();
 	bool has_text_to_print();
 	std::string text_to_print();
@@ -20,6 +23,7 @@ public:
 
 private:
 	int volume;
+	int max_audio_latency;
 	bool mute;
 	bool restart_request = false;
 	bool text_updated;
@@ -27,6 +31,7 @@ private:
 	void set_audio_volume(int new_volume);
 	void set_audio_mute(bool new_mute);
 	void update_text(std::string text);
+	const std::string max_audio_latency_str = "max_audio_latency";
 	const std::string volume_str = "volume";
 	const std::string mute_str = "mute";
 };
