@@ -212,7 +212,7 @@ private:
 	void fast_poll_change();
 	void padding_change();
 	void game_crop_enable_change();
-	void crop_value_change(int new_crop_value);
+	void crop_value_change(int new_crop_value, bool do_print_notification = true, bool do_cycle = true);
 	void par_value_change(int new_par_value, bool is_top);
 	void offset_change(float &value, float change);
 	void menu_scaling_change(bool positive);

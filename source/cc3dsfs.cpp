@@ -174,6 +174,7 @@ static bool save(const std::string path, const std::string name, const std::stri
 	}
 
 	file << "name=" << save_name << std::endl;
+	file << "version=" << get_version_string(false) << std::endl;
 	file << save_screen_info("bot_", bottom_info);
 	file << save_screen_info("joint_", joint_info);
 	file << save_screen_info("top_", top_info);

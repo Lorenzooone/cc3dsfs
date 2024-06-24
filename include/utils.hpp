@@ -24,7 +24,7 @@
 #define SIMPLE_RESET_DATA_INDEX -2
 #define CREATE_NEW_FILE_INDEX -3
 
-std::string get_version_string();
+std::string get_version_string(bool get_letter = true);
 std::string LayoutNameGenerator(int index);
 std::string LayoutPathGenerator(int index);
 std::string load_layout_name(int index, bool &success);

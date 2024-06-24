@@ -806,13 +806,8 @@ std::vector<const CropData*>* WindowScreen::get_crop_data_vector(ScreenInfo* inf
 
 int* WindowScreen::get_crop_index_ptr(ScreenInfo* info) {
 	int *crop_ptr = &info->crop_kind;
-	if(info->allow_games_crops)
-		crop_ptr = &info->crop_kind_games;
-	if(this->display_data->last_connected_ds) {
+	if(this->display_data->last_connected_ds)
 		crop_ptr = &info->crop_kind_ds;
-		if(info->allow_games_crops)
-			crop_ptr = &info->crop_kind_ds_games;
-	}
 	return crop_ptr;
 }
 

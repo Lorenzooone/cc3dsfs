@@ -149,17 +149,21 @@ void WindowScreen::padding_change() {
 void WindowScreen::game_crop_enable_change() {
 	this->m_info.allow_games_crops = !this->m_info.allow_games_crops;
 	this->print_notification_on_off("Game Specific Crops", this->m_info.allow_games_crops);
-	this->prepare_size_ratios(false, false);
-	this->future_operations.call_crop = true;
+	this->crop_value_change(*this->get_crop_index_ptr(&this->m_info), false, false);
 }
 
-void WindowScreen::crop_value_change(int new_crop_value) {
+void WindowScreen::crop_value_change(int new_crop_value, bool do_print_notification, bool do_cycle) {
 	std::vector<const CropData*> *crops = this->get_crop_data_vector(&this->m_info);
 	int *crop_value = this->get_crop_index_ptr(&this->m_info);
 	int new_value = new_crop_value % crops->size();
+	if((!do_cycle) && ((new_crop_value < 0) || (new_crop_value >= crops->size())))
+		new_value = 0;
+	if(new_value < 0)
+		new_value = 0;
 	if((*crop_value) != new_value) {
 		*crop_value = new_value;
-		this->print_notification("Crop: " + (*crops)[*crop_value]->name);
+		if(do_print_notification)
+			this->print_notification("Crop: " + (*crops)[*crop_value]->name);
 		this->prepare_size_ratios(false, false);
 		this->future_operations.call_crop = true;
 	}
@@ -169,6 +173,8 @@ void WindowScreen::par_value_change(int new_par_value, bool is_top) {
 	if(((!is_top) && (this->m_stype == ScreenType::TOP)) || ((is_top) && (this->m_stype == ScreenType::BOTTOM)))
 		return;
 	int par_index = new_par_value % this->possible_pars.size();
+	if(par_index < 0)
+		par_index = 0;
 	std::string setting_name = "PAR: ";
 	bool updated = false;
 	if(is_top) {

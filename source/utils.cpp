@@ -30,8 +30,11 @@ bool is_big_endian(void) {
     return value.c[0] == 1;
 }
 
-std::string get_version_string() {
-	return std::to_string(APP_VERSION_MAJOR) + "." + std::to_string(APP_VERSION_MINOR) + "." + std::to_string(APP_VERSION_REVISION) + xstr(APP_VERSION_LETTER);
+std::string get_version_string(bool get_letter) {
+	std::string version_str = std::to_string(APP_VERSION_MAJOR) + "." + std::to_string(APP_VERSION_MINOR) + "." + std::to_string(APP_VERSION_REVISION);
+	if(get_letter)
+		return version_str + xstr(APP_VERSION_LETTER);
+	return version_str;
 }
 
 std::string get_float_str_decimals(float value, int decimals) {

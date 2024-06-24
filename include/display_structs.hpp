@@ -12,8 +12,6 @@ struct ScreenInfo {
 	bool is_blurred;
 	int crop_kind;
 	int crop_kind_ds;
-	int crop_kind_games;
-	int crop_kind_ds_games;
 	bool allow_games_crops;
 	double scaling;
 	bool is_fullscreen;

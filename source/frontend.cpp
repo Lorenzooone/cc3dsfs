@@ -406,8 +406,6 @@ void reset_screen_info(ScreenInfo &info) {
 	info.is_blurred = false;
 	info.crop_kind = 0;
 	info.crop_kind_ds = 0;
-	info.crop_kind_games = 0;
-	info.crop_kind_ds_games = 0;
 	info.allow_games_crops = false;
 	info.scaling = 1.0;
 	info.is_fullscreen = false;
@@ -452,14 +450,6 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 	}
 	if(key == (base + "crop_ds")) {
 		info.crop_kind_ds = std::stoi(value);
-		return true;
-	}
-	if(key == (base + "crop_kind_games")) {
-		info.crop_kind_games = std::stoi(value);
-		return true;
-	}
-	if(key == (base + "crop_kind_ds_games")) {
-		info.crop_kind_ds_games = std::stoi(value);
 		return true;
 	}
 	if(key == (base + "allow_games_crops")) {
@@ -588,8 +578,6 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "blur=" + std::to_string(info.is_blurred) + "\n";
 	out += base + "crop=" + std::to_string(info.crop_kind) + "\n";
 	out += base + "crop_ds=" + std::to_string(info.crop_kind_ds) + "\n";
-	out += base + "crop_kind_games=" + std::to_string(info.crop_kind_games) + "\n";
-	out += base + "crop_kind_ds_games=" + std::to_string(info.crop_kind_ds_games) + "\n";
 	out += base + "allow_games_crops=" + std::to_string(info.allow_games_crops) + "\n";
 	out += base + "scale=" + std::to_string(info.scaling) + "\n";
 	out += base + "fullscreen=" + std::to_string(info.is_fullscreen) + "\n";
