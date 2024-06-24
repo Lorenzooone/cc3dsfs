@@ -408,7 +408,7 @@ void reset_screen_info(ScreenInfo &info) {
 	info.crop_kind_ds = 0;
 	info.crop_kind_games = 0;
 	info.crop_kind_ds_games = 0;
-	info.allow_games_crops = true;
+	info.allow_games_crops = false;
 	info.scaling = 1.0;
 	info.is_fullscreen = false;
 	info.bottom_pos = UNDER_TOP;

@@ -166,7 +166,6 @@ static const VideoMenuOptionInfo allow_game_crops_option = {
 
 static const VideoMenuOptionInfo* pollable_options[] = {
 &crop_option,
-//&allow_game_crops_option,
 &window_scaling_option,
 &fullscreen_scaling_option,
 &menu_scaling_option,
@@ -183,6 +182,7 @@ static const VideoMenuOptionInfo* pollable_options[] = {
 &top_par_option,
 &bot_par_option,
 &one_par_option,
+&allow_game_crops_option,
 &resolution_settings_option,
 &padding_option,
 &bfi_settings_option,

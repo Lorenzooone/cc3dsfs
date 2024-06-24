@@ -90,7 +90,7 @@ _Note: Currently only tested using a PS5 controller._
 - __O key__: Open/Close connection to the 3DS/DS.
 - __F key__: Toggles Fullscreen mode on/off. Only guaranteed to work on the primary monitor. When using certain setups, it also works for multiple monitors.
 - __S key__: Swaps between Split mode and Joint mode. In Split mode, each screen has its own window. In Joint mode, they are combined into a single one.
-- __C key__: Cycles to the next Crop mode for the focused window. For 3DS, the currently supported cropping modes are: 3DS, 16:10 DS, scaled DS, native DS, scaled GBA, native GBA, scaled GB, native GB, scaled SNES, native SNES and native NES. For DS, the currently supported cropping modes are: DS, Top GBA and Bottom GBA.
+- __C key__: Cycles to the next Crop mode for the focused window. For 3DS, the currently supported cropping modes are: 3DS, 16:10 DS, scaled DS, native DS, scaled GBA, native GBA, scaled GB, native GB, scaled SNES, native SNES and native NES. For DS, the currently supported cropping modes are: DS, Top GBA and Bottom GBA. There are also game-specific cropping modes which can be enabled via the Video Settings.
 - __-/0 key__: Decrements/Increments the scaling by 0.5x for the non-Fullscreen focused window. 1.0x is the minimum. 45.0x is the maximum.
 - __Y/U key__: In Joint Fullscreen mode, increases the size of the top/bottom screen. Corresponds to the _Screens ratio_ Video Setting.
 - __Z/X key__: Decreases/Increases the Menu Scaling multiplier by 0.1. 0.3 is the minimum. 10.0 is the maximum.
