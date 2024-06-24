@@ -19,8 +19,8 @@ Audio::Audio(AudioData *audio_data) {
 	// Consume old events
 	this->buffer = new sf::Int16[MAX_SAMPLES_IN * (MAX_MAX_AUDIO_LATENCY + 1)];
 	this->audio_data->check_audio_restart_request();
-	sf::SoundStream::initialize(AUDIO_CHANNELS, SAMPLE_RATE);
-	this->setPitch(PITCH_RATE);
+	sf::SoundStream::initialize(AUDIO_CHANNELS, SAMPLE_RATE_BASE);
+	this->setPitch(1.0 / SAMPLE_RATE_DIVISOR);
 	start_audio();
 	setVolume(0);
 	this->final_volume = 0;
