@@ -135,7 +135,7 @@ On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the
 - USB Hubs can be the cause of connection issues. If you're having problems, try checking whether the 3DS/DS connects fine or not without any other devices connected.
 - Current font in use: OFL Sorts Mill Goudy TT
 - Enabling Slow Poll may slightly boost the FPS of the software, at the cost of an extremely slight decrease in frame latency, and slower reaction times of the software to key presses. Disabled by default (as when the FPS are greater than the CC's, it's not reccomended).
-- On MacOS, you may get a notice about the app being damaged. It's Apple quarantining the app. To make it work, either use the included script "un\_quarantine\_macos.sh", or open a terminal and run the following:
+- On MacOS, you may get a notice about the app being damaged. It's Apple quarantining the app. To make it work, either use the included script "un\_quarantine\_macos.sh" (though you may need to make it executable with chmod +x), or open a terminal and run the following:
 ```
 xattr -c ./cc3dsfs.app
 ```

@@ -308,7 +308,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     add_custom_command(
         TARGET ${OUTPUT_NAME}
         COMMENT "Copy Frameworks in bundle"
-        POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${FW_DIRS} ${FW_APP}/Contents/Frameworks
+        POST_BUILD COMMAND cp -R ${FW_DIRS} ${FW_APP}/Contents/Frameworks
         VERBATIM
     )
 
