@@ -85,6 +85,7 @@ private:
 		bool call_rotate;
 		bool call_blur;
 		bool call_screen_settings_update;
+		bool call_titlebar;
 	};
 	struct ResizingScreenData {
 		sf::Vector2f size;
@@ -227,6 +228,7 @@ private:
 	void bottom_pos_change(int new_bottom_pos);
 	void non_int_scaling_change(bool target_top);
 	void non_int_mode_change(bool positive);
+	void titlebar_change();
 	bool query_reset_request();
 	void reset_held_times();
 	void poll_window(bool do_everything);
@@ -255,7 +257,7 @@ private:
 	int get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height);
 	int get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height);
 	void resize_window_and_out_rects(bool do_work = true);
-	void create_window(bool re_prepare_size);
+	void create_window(bool re_prepare_size, bool reset_text  = true);
 	std::string title_factory();
 	void update_view_size();
 	void open();

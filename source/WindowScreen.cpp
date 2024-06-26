@@ -228,6 +228,7 @@ void WindowScreen::reset_operations(ScreenOperations &operations) {
 	operations.call_rotate = false;
 	operations.call_screen_settings_update = false;
 	operations.call_blur = false;
+	operations.call_titlebar = false;
 }
 
 void WindowScreen::free_ownership_of_window(bool is_main_thread) {
@@ -339,16 +340,30 @@ void WindowScreen::window_factory(bool is_main_thread) {
 		this->loaded_operations.call_create = false;
 	}
 	if(this->loaded_operations.call_create) {
-		this->notification->setShowText(false);
 		this->m_win.setActive(true);
 		this->main_thread_owns_window = is_main_thread;
+		bool previously_open = this->m_win.isOpen();
+		sf::Vector2i prev_pos = sf::Vector2i(0, 0);
+		if(previously_open)
+			prev_pos = this->m_win.getPosition();
 		if(!this->loaded_info.is_fullscreen) {
 			this->update_screen_settings();
-			this->m_win.create(sf::VideoMode(this->m_width, this->m_height), this->title_factory());
+			if(this->loaded_info.have_titlebar)
+				this->m_win.create(sf::VideoMode(this->m_width, this->m_height), this->title_factory());
+			else
+				this->m_win.create(sf::VideoMode(this->m_width, this->m_height), this->title_factory(), sf::Style::None);
 			this->update_view_size();
 		}
-		else
-			this->m_win.create(this->curr_desk_mode, this->title_factory(), sf::Style::Fullscreen);
+		else {
+			if(!this->loaded_info.failed_fullscreen)
+				this->m_win.create(this->curr_desk_mode, this->title_factory(), sf::Style::Fullscreen);
+			else if(this->loaded_info.have_titlebar)
+				this->m_win.create(this->curr_desk_mode, this->title_factory());
+			else
+				this->m_win.create(this->curr_desk_mode, this->title_factory(), sf::Style::None);
+		}
+		if(previously_open && this->loaded_operations.call_titlebar)
+			this->m_win.setPosition(prev_pos);
 		this->last_window_creation_time = std::chrono::high_resolution_clock::now();
 		this->update_screen_settings();
 		this->loaded_operations.call_create = false;
@@ -864,9 +879,13 @@ void WindowScreen::resize_window_and_out_rects(bool do_work) {
 	}
 }
 
-void WindowScreen::create_window(bool re_prepare_size) {
-	if(!this->m_info.is_fullscreen)
+void WindowScreen::create_window(bool re_prepare_size, bool reset_text) {
+	if(reset_text)
+		this->notification->setShowText(false);
+	this->m_info.failed_fullscreen = false;
+	if(!this->m_info.is_fullscreen) {
 		this->m_info.show_mouse = !this->display_data->mono_app_mode;
+	}
 	else {
 		bool success = false;
 		if((this->m_info.fullscreen_mode_width > 0) && (this->m_info.fullscreen_mode_height > 0) && (this->m_info.fullscreen_mode_bpp > 0)) {
@@ -890,12 +909,29 @@ void WindowScreen::create_window(bool re_prepare_size) {
 			success = this->curr_desk_mode.isValid();
 		}
 		#endif
+		if(!success) {
+			std::vector<sf::VideoMode> modes = sf::VideoMode::getFullscreenModes();
+			if(modes.size() > 0) {
+				this->curr_desk_mode = modes[0];
+				success = this->curr_desk_mode.isValid();
+			}
+		}
+		if(!success) {
+			if((this->m_info.fullscreen_mode_width <= 0) || (this->m_info.fullscreen_mode_height <= 0) || (this->m_info.fullscreen_mode_bpp <= 0)) {
+				this->m_info.fullscreen_mode_width = FALLBACK_FS_RESOLUTION_WIDTH;
+				this->m_info.fullscreen_mode_height = FALLBACK_FS_RESOLUTION_HEIGHT;
+				this->m_info.fullscreen_mode_bpp = FALLBACK_FS_RESOLUTION_BPP;
+			}
+			this->curr_desk_mode = sf::VideoMode(this->m_info.fullscreen_mode_width, this->m_info.fullscreen_mode_height, this->m_info.fullscreen_mode_bpp);
+			this->m_info.failed_fullscreen = true;
+		}
 		this->m_window_width = curr_desk_mode.width;
 		this->m_window_height = curr_desk_mode.height;
 		this->m_info.show_mouse = false;
 	}
 	if(re_prepare_size)
 		this->prepare_size_ratios(false, false);
+	this->reset_held_times();
 	this->future_operations.call_create = true;
 }
 

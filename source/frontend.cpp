@@ -434,6 +434,8 @@ void reset_screen_info(ScreenInfo &info) {
 	info.non_integer_mode = SMALLER_PRIORITY;
 	info.use_non_integer_scaling_top = false;
 	info.use_non_integer_scaling_bottom = false;
+	info.failed_fullscreen = false;
+	info.have_titlebar = true;
 }
 
 static float offset_sanitization(float value) {
@@ -592,6 +594,10 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		info.use_non_integer_scaling_bottom = std::stoi(value);
 		return true;
 	}
+	if(key == (base + "have_titlebar")) {
+		info.have_titlebar = std::stoi(value);
+		return true;
+	}
 	return false;
 }
 
@@ -627,6 +633,7 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "non_integer_mode=" + std::to_string(info.non_integer_mode) + "\n";
 	out += base + "use_non_integer_scaling_top=" + std::to_string(info.use_non_integer_scaling_top) + "\n";
 	out += base + "use_non_integer_scaling_bottom=" + std::to_string(info.use_non_integer_scaling_bottom) + "\n";
+	out += base + "have_titlebar=" + std::to_string(info.have_titlebar) + "\n";
 	return out;
 }
 

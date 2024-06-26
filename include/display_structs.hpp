@@ -37,6 +37,8 @@ struct ScreenInfo {
 	NonIntegerScalingModes non_integer_mode;
 	bool use_non_integer_scaling_top;
 	bool use_non_integer_scaling_bottom;
+	bool failed_fullscreen;
+	bool have_titlebar;
 };
 
 struct DisplayData {

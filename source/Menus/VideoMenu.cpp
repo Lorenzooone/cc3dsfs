@@ -7,6 +7,7 @@ struct VideoMenuOptionInfo {
 	const std::string false_name;
 	const bool active_fullscreen;
 	const bool active_windowed_screen;
+	const bool requires_titlebar_possible;
 	const bool active_joint_screen;
 	const bool active_top_screen;
 	const bool active_bottom_screen;
@@ -19,157 +20,164 @@ struct VideoMenuOptionInfo {
 
 static const VideoMenuOptionInfo vsync_option = {
 .base_name = "Turn VSync Off", .false_name = "Turn VSync On",
-.active_fullscreen = true, .active_windowed_screen = true,
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_VSYNC};
 
 static const VideoMenuOptionInfo async_option = {
 .base_name = "Turn Async Off", .false_name = "Turn Async On",
-.active_fullscreen = true, .active_windowed_screen = true,
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_ASYNC};
 
 static const VideoMenuOptionInfo blur_option = {
 .base_name = "Turn Blur Off", .false_name = "Turn Blur On",
-.active_fullscreen = true, .active_windowed_screen = true,
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_BLUR};
 
 static const VideoMenuOptionInfo padding_option = {
 .base_name = "Turn Padding Off", .false_name = "Turn Padding On",
-.active_fullscreen = false, .active_windowed_screen = true,
+.active_fullscreen = false, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_PADDING};
 
 static const VideoMenuOptionInfo crop_option = {
 .base_name = "Crop Settings", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = true,
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_CROPPING};
 
 static const VideoMenuOptionInfo top_par_option = {
 .base_name = "Top Screen PAR", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = true,
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_TOP_PAR};
 
 static const VideoMenuOptionInfo bot_par_option = {
 .base_name = "Bottom Screen PAR", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = true,
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_BOT_PAR};
 
 static const VideoMenuOptionInfo one_par_option = {
 .base_name = "Screen PAR", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = true,
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = false, .active_top_screen = true, .active_bottom_screen = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_ONE_PAR};
 
 static const VideoMenuOptionInfo bottom_screen_pos_option = {
 .base_name = "Screens Relative Positions", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = true,
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_BOTTOM_SCREEN_POS};
 
 static const VideoMenuOptionInfo small_screen_offset_option = {
 .base_name = "Screen Offset", .false_name = "",
-.active_fullscreen = false, .active_windowed_screen = true,
+.active_fullscreen = false, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
 .is_inc = true, .dec_str = "-", .inc_str = "+", .inc_out_action = VIDEO_MENU_SMALL_SCREEN_OFFSET_INC,
 .out_action = VIDEO_MENU_SMALL_SCREEN_OFFSET_DEC};
 
 static const VideoMenuOptionInfo offset_settings_option = {
 .base_name = "Offset Settings", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = false,
+.active_fullscreen = true, .active_windowed_screen = false, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_OFFSET_SETTINGS};
 
 static const VideoMenuOptionInfo window_scaling_option = {
 .base_name = "Scaling Factor", .false_name = "",
-.active_fullscreen = false, .active_windowed_screen = true,
+.active_fullscreen = false, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .is_inc = true, .dec_str = "-", .inc_str = "+", .inc_out_action = VIDEO_MENU_WINDOW_SCALING_INC,
 .out_action = VIDEO_MENU_WINDOW_SCALING_DEC};
 
 static const VideoMenuOptionInfo bfi_settings_option = {
 .base_name = "BFI Settings", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = true,
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_BFI_SETTINGS};
 
 static const VideoMenuOptionInfo menu_scaling_option = {
 .base_name = "Menu Scaling", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = true,
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .is_inc = true, .dec_str = "-", .inc_str = "+", .inc_out_action = VIDEO_MENU_MENU_SCALING_INC,
 .out_action = VIDEO_MENU_MENU_SCALING_DEC};
 
 static const VideoMenuOptionInfo resolution_settings_option = {
 .base_name = "Resolution Settings", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = false,
+.active_fullscreen = true, .active_windowed_screen = false, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_RESOLUTION_SETTINGS};
 
 static const VideoMenuOptionInfo rotation_settings_option = {
 .base_name = "Rotation Settings", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = true,
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_ROTATION_SETTINGS};
 
 static const VideoMenuOptionInfo top_one_rotation_option = {
 .base_name = "Screen Rotation", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = true,
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = false, .active_top_screen = true, .active_bottom_screen = false,
 .is_inc = true, .dec_str = "Left", .inc_str = "Right", .inc_out_action = VIDEO_MENU_TOP_ROTATION_INC,
 .out_action = VIDEO_MENU_TOP_ROTATION_DEC};
 
 static const VideoMenuOptionInfo bottom_one_rotation_option = {
 .base_name = "Screen Rotation", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = true,
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = false, .active_top_screen = false, .active_bottom_screen = true,
 .is_inc = true, .dec_str = "Left", .inc_str = "Right", .inc_out_action = VIDEO_MENU_BOTTOM_ROTATION_INC,
 .out_action = VIDEO_MENU_BOTTOM_ROTATION_DEC};
 
 static const VideoMenuOptionInfo fast_poll_option = {
 .base_name = "Disable Slow Poll", .false_name = "Enable Slow Poll",
-.active_fullscreen = true, .active_windowed_screen = true,
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_FAST_POLL};
 
 static const VideoMenuOptionInfo allow_game_crops_option = {
 .base_name = "Disable Game Crops", .false_name = "Enable Game Crops",
-.active_fullscreen = true, .active_windowed_screen = true,
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_GAMES_CROPPING};
 
 static const VideoMenuOptionInfo allow_fill_scaling_option = {
 .base_name = "Disable Fill Scaling", .false_name = "Enable Fill Scaling",
-.active_fullscreen = true, .active_windowed_screen = false,
+.active_fullscreen = true, .active_windowed_screen = false, .requires_titlebar_possible = false,
 .active_joint_screen = false, .active_top_screen = true, .active_bottom_screen = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_NON_INT_SCALING};
 
 static const VideoMenuOptionInfo scaling_ratio_settings_option = {
 .base_name = "Scaling & Ratio Settings", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = false,
+.active_fullscreen = true, .active_windowed_screen = false, .requires_titlebar_possible = false,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_SCALING_RATIO_SETTINGS};
+
+static const VideoMenuOptionInfo titlebar_change_option = {
+.base_name = "Disable Titlebar", .false_name = "Enable Titlebar",
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
+.out_action = VIDEO_MENU_CHANGE_TITLEBAR};
 
 static const VideoMenuOptionInfo* pollable_options[] = {
 &crop_option,
@@ -191,6 +199,7 @@ static const VideoMenuOptionInfo* pollable_options[] = {
 &bot_par_option,
 &one_par_option,
 &allow_game_crops_option,
+&titlebar_change_option,
 &resolution_settings_option,
 &padding_option,
 &bfi_settings_option,
@@ -222,7 +231,7 @@ void VideoMenu::class_setup() {
 	this->show_title = true;
 }
 
-void VideoMenu::insert_data(ScreenType s_type, bool is_fullscreen) {
+void VideoMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool can_have_titlebar) {
 	this->num_enabled_options = 0;
 	for(int i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
 		bool valid = true;
@@ -236,6 +245,8 @@ void VideoMenu::insert_data(ScreenType s_type, bool is_fullscreen) {
 			valid = valid && pollable_options[i]->active_bottom_screen;
 		else
 			valid = valid && pollable_options[i]->active_joint_screen;
+		if((!can_have_titlebar) && pollable_options[i]->requires_titlebar_possible)
+			valid = false;
 		if(valid) {
 			this->options_indexes[this->num_enabled_options] = i;
 			this->num_enabled_options++;
@@ -325,6 +336,9 @@ void VideoMenu::prepare(float menu_scaling_factor, int view_size_x, int view_siz
 					this->labels[index]->setText(this->setTextOptionBool(real_index, info->use_non_integer_scaling_top));
 				else if(screen_type == ScreenType::BOTTOM)
 					this->labels[index]->setText(this->setTextOptionBool(real_index, info->use_non_integer_scaling_bottom));
+				break;
+			case VIDEO_MENU_CHANGE_TITLEBAR:
+				this->labels[index]->setText(this->setTextOptionBool(real_index, info->have_titlebar));
 				break;
 			default:
 				break;

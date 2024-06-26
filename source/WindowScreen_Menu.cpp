@@ -2,6 +2,38 @@
 
 #define FPS_WINDOW_SIZE 64
 
+static const sf::VideoMode default_fs_mode_4_5k_macos = sf::VideoMode(4480, 2520);
+static const sf::VideoMode default_fs_mode_4k_macos = sf::VideoMode(4096, 2304);
+static const sf::VideoMode default_fs_mode_4k = sf::VideoMode(3840, 2160);
+static const sf::VideoMode default_fs_mode_1440p = sf::VideoMode(2560, 1440);
+static const sf::VideoMode default_fs_mode_4_5k_half_macos = sf::VideoMode(2240, 1260);
+static const sf::VideoMode default_fs_mode_4k_half_macos = sf::VideoMode(2048, 1152);
+static const sf::VideoMode default_fs_mode_1080p = sf::VideoMode(1920, 1080);
+static const sf::VideoMode default_fs_mode_1050p = sf::VideoMode(1680, 1050);
+static const sf::VideoMode default_fs_mode_900p = sf::VideoMode(1600, 900);
+static const sf::VideoMode default_fs_mode_720p = sf::VideoMode(1280, 720);
+static const sf::VideoMode default_fs_mode_600p = sf::VideoMode(800, 600);
+static const sf::VideoMode default_fs_mode_480p = sf::VideoMode(720, 480);
+static const sf::VideoMode default_fs_mode_240p = sf::VideoMode(400, 240);
+static const sf::VideoMode default_fs_mode_240p_2 = sf::VideoMode(320, 240);
+
+static const sf::VideoMode* default_fs_modes[] = {
+&default_fs_mode_4_5k_macos,
+&default_fs_mode_4k_macos,
+&default_fs_mode_4k,
+&default_fs_mode_1440p,
+&default_fs_mode_4_5k_half_macos,
+&default_fs_mode_4k_half_macos,
+&default_fs_mode_1080p,
+&default_fs_mode_1050p,
+&default_fs_mode_900p,
+&default_fs_mode_720p,
+&default_fs_mode_600p,
+&default_fs_mode_480p,
+&default_fs_mode_240p,
+&default_fs_mode_240p_2,
+};
+
 static void check_held_reset(bool value, HeldTime &action_time) {
 	if(value) {
 		if(!action_time.started) {
@@ -117,6 +149,8 @@ void WindowScreen::fullscreen_change() {
 		this->setup_no_menu();
 	this->m_info.is_fullscreen = !this->m_info.is_fullscreen;
 	this->create_window(true);
+	if(this->m_info.is_fullscreen && this->m_info.failed_fullscreen)
+		this->print_notification("Fullscreen impossible", TEXT_KIND_ERROR);
 }
 
 void WindowScreen::async_change() {
@@ -305,6 +339,12 @@ void WindowScreen::non_int_mode_change(bool positive) {
 	this->m_info.non_integer_mode = static_cast<NonIntegerScalingModes>((this->m_info.non_integer_mode + change) % END_NONINT_SCALE_MODES);
 	this->prepare_size_ratios(true, true);
 	this->future_operations.call_screen_settings_update = true;
+}
+
+void WindowScreen::titlebar_change() {
+	this->m_info.have_titlebar = !this->m_info.have_titlebar;
+	this->create_window(true, false);
+	this->future_operations.call_titlebar = true;
 }
 
 bool WindowScreen::can_execute_cmd(const WindowCommand* window_cmd, bool is_extra, bool is_always) {
@@ -594,7 +634,7 @@ void WindowScreen::setup_video_menu(bool reset_data) {
 		this->curr_menu = VIDEO_MENU_TYPE;
 		if(reset_data)
 			this->video_menu->reset_data();
-		this->video_menu->insert_data(this->m_stype, this->m_info.is_fullscreen);
+		this->video_menu->insert_data(this->m_stype, this->m_info.is_fullscreen, (!this->m_info.is_fullscreen) || this->m_info.failed_fullscreen);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
 }
@@ -736,11 +776,18 @@ void WindowScreen::setup_resolution_menu(bool reset_data) {
 	if(this->curr_menu != RESOLUTION_MENU_TYPE) {
 		this->possible_resolutions.clear();
 		std::vector<sf::VideoMode> modes = sf::VideoMode::getFullscreenModes();
-		if(modes.size() > 0)
+		if(modes.size() > 0) {
 			this->possible_resolutions.push_back(modes[0]);
-		for(int i = 1; i < modes.size(); ++i)
-			if(this->possible_resolutions[0].bitsPerPixel == modes[i].bitsPerPixel)
-				this->possible_resolutions.push_back(modes[i]);
+			for(int i = 1; i < modes.size(); ++i)
+				if(this->possible_resolutions[0].bitsPerPixel == modes[i].bitsPerPixel)
+					this->possible_resolutions.push_back(modes[i]);
+		}
+		else {
+			this->print_notification("No Fullscreen resolution found", TEXT_KIND_WARNING);
+			for(int i = 0; i < (sizeof(default_fs_modes) / sizeof(default_fs_modes[0])); i++) {
+				this->possible_resolutions.push_back(*default_fs_modes[i]);
+			}
+		}
 		if(this->possible_resolutions.size() > 0) {
 			this->curr_menu = RESOLUTION_MENU_TYPE;
 			if(reset_data)
@@ -748,8 +795,6 @@ void WindowScreen::setup_resolution_menu(bool reset_data) {
 			this->resolution_menu->insert_data(&this->possible_resolutions);
 			this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 		}
-		else
-			this->print_notification("No Resolution found", TEXT_KIND_WARNING);
 	}
 }
 
@@ -1376,6 +1421,9 @@ void WindowScreen::poll(bool do_everything) {
 							break;
 						case VIDEO_MENU_SCALING_RATIO_SETTINGS:
 							this->setup_scaling_ratio_menu();
+							break;
+						case VIDEO_MENU_CHANGE_TITLEBAR:
+							this->titlebar_change();
 							break;
 						default:
 							break;
