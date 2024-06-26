@@ -421,6 +421,8 @@ void reset_screen_info(ScreenInfo &info) {
 	info.async = true;
 	info.top_scaling = -1;
 	info.bot_scaling = -1;
+	info.non_integer_top_scaling = -1.0;
+	info.non_integer_bot_scaling = -1.0;
 	info.bfi = false;
 	info.bfi_divider = 2;
 	info.bfi_amount = 1;
@@ -429,6 +431,9 @@ void reset_screen_info(ScreenInfo &info) {
 	info.top_par = 0;
 	info.bot_par = 0;
 	reset_fullscreen_info(info);
+	info.non_integer_mode = SMALLER_PRIORITY;
+	info.use_non_integer_scaling_top = false;
+	info.use_non_integer_scaling_bottom = false;
 }
 
 static float offset_sanitization(float value) {
@@ -510,10 +515,12 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 	}
 	if(key == (base + "top_scaling")) {
 		info.top_scaling = std::stoi(value);
+		info.non_integer_top_scaling = info.top_scaling;
 		return true;
 	}
 	if(key == (base + "bot_scaling")) {
 		info.bot_scaling = std::stoi(value);
+		info.non_integer_bot_scaling = info.bot_scaling;
 		return true;
 	}
 	if(key == (base + "bfi")) {
@@ -570,6 +577,21 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		info.fullscreen_mode_bpp = std::stoi(value);
 		return true;
 	}
+	if(key == (base + "non_integer_mode")) {
+		int read_value = std::stoi(value);
+		if((read_value < 0) || (read_value >= END_NONINT_SCALE_MODES))
+			read_value = 0;
+		info.non_integer_mode = static_cast<NonIntegerScalingModes>(read_value);
+		return true;
+	}
+	if(key == (base + "use_non_integer_scaling_top")) {
+		info.use_non_integer_scaling_top = std::stoi(value);
+		return true;
+	}
+	if(key == (base + "use_non_integer_scaling_bottom")) {
+		info.use_non_integer_scaling_bottom = std::stoi(value);
+		return true;
+	}
 	return false;
 }
 
@@ -602,6 +624,9 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "fullscreen_mode_width=" + std::to_string(info.fullscreen_mode_width) + "\n";
 	out += base + "fullscreen_mode_height=" + std::to_string(info.fullscreen_mode_height) + "\n";
 	out += base + "fullscreen_mode_bpp=" + std::to_string(info.fullscreen_mode_bpp) + "\n";
+	out += base + "non_integer_mode=" + std::to_string(info.non_integer_mode) + "\n";
+	out += base + "use_non_integer_scaling_top=" + std::to_string(info.use_non_integer_scaling_top) + "\n";
+	out += base + "use_non_integer_scaling_bottom=" + std::to_string(info.use_non_integer_scaling_bottom) + "\n";
 	return out;
 }
 
@@ -636,6 +661,43 @@ void get_par_size(int &width, int &height, float multiplier_factor, const PARDat
 		else
 			height = ((height * correction_factor->width_divisor) + correction_factor_approx_contribute) / correction_factor_divisor;
 	}
+}
+
+float get_par_mult_factor(float width, float height, float max_width, float max_height, const PARData *correction_factor, bool is_rotated) {
+	float correction_factor_divisor = correction_factor->width_multiplier;
+	float correction_factor_multiplier = correction_factor->width_divisor;
+	if(correction_factor->is_width_main) {
+		correction_factor_divisor = correction_factor->width_divisor;
+		correction_factor_multiplier = correction_factor->width_multiplier;
+	}
+	if(correction_factor->is_fit) {
+		if(correction_factor->is_width_main)
+			width = height * correction_factor_multiplier;
+		else
+			height = width * correction_factor_multiplier;
+	}
+	else {
+		if(correction_factor->is_width_main)
+			width = width * correction_factor_multiplier;
+		else
+			height = height * correction_factor_multiplier;
+	}
+	bool apply_to_max_width = correction_factor->is_width_main;
+	if(is_rotated) {
+		std::swap(width, height);
+		apply_to_max_width = !apply_to_max_width;
+	}
+	if(apply_to_max_width)
+		max_width = max_width * correction_factor_divisor;
+	else
+		max_height = max_height * correction_factor_divisor;
+	if((height == 0) || (width == 0))
+		return 0;
+	float factor_width = max_width / width;
+	float factor_height = max_height / height;
+	if(factor_height < factor_width)
+		return factor_height;
+	return factor_width;
 }
 
 JoystickDirection get_joystick_direction(uint32_t joystickId, sf::Joystick::Axis axis, float position) {
@@ -722,9 +784,32 @@ void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &o
 		frontend_data->bot_screen->update_ds_3ds_connection(changed_type);
 		frontend_data->joint_screen->update_ds_3ds_connection(changed_type);
 	}
-
 }
 
 void screen_display_thread(WindowScreen *screen) {
 	screen->display_thread();
+}
+
+std::string get_name_non_int_mode(NonIntegerScalingModes input) {
+	std::string output = "";
+	switch(input) {
+		case SMALLER_PRIORITY:
+			output = "Smaller Priority";
+			break;
+		case EQUAL_PRIORITY:
+			output = "Same Priority";
+			break;
+		case PROPORTIONAL_PRIORITY:
+			output = "Prop. Priority";
+			break;
+		case INVERSE_PROPORTIONAL_PRIORITY:
+			output = "Inv. Prop. Priority";
+			break;
+		case BIGGER_PRIORITY:
+			output = "Bigger Priority";
+			break;
+		default:
+			break;
+	}
+	return output;
 }

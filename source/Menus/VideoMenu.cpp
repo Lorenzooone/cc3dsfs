@@ -101,13 +101,6 @@ static const VideoMenuOptionInfo window_scaling_option = {
 .is_inc = true, .dec_str = "-", .inc_str = "+", .inc_out_action = VIDEO_MENU_WINDOW_SCALING_INC,
 .out_action = VIDEO_MENU_WINDOW_SCALING_DEC};
 
-static const VideoMenuOptionInfo fullscreen_scaling_option = {
-.base_name = "Screens Ratio", .false_name = "",
-.active_fullscreen = true, .active_windowed_screen = false,
-.active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
-.is_inc = true, .dec_str = "+ Top", .inc_str = "+ Bot.", .inc_out_action = VIDEO_MENU_FULLSCREEN_SCALING_BOTTOM,
-.out_action = VIDEO_MENU_FULLSCREEN_SCALING_TOP};
-
 static const VideoMenuOptionInfo bfi_settings_option = {
 .base_name = "BFI Settings", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
@@ -164,10 +157,25 @@ static const VideoMenuOptionInfo allow_game_crops_option = {
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_GAMES_CROPPING};
 
+static const VideoMenuOptionInfo allow_fill_scaling_option = {
+.base_name = "Disable Fill Scaling", .false_name = "Enable Fill Scaling",
+.active_fullscreen = true, .active_windowed_screen = false,
+.active_joint_screen = false, .active_top_screen = true, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
+.out_action = VIDEO_MENU_NON_INT_SCALING};
+
+static const VideoMenuOptionInfo scaling_ratio_settings_option = {
+.base_name = "Scaling & Ratio Settings", .false_name = "",
+.active_fullscreen = true, .active_windowed_screen = false,
+.active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
+.out_action = VIDEO_MENU_SCALING_RATIO_SETTINGS};
+
 static const VideoMenuOptionInfo* pollable_options[] = {
 &crop_option,
 &window_scaling_option,
-&fullscreen_scaling_option,
+&allow_fill_scaling_option,
+&scaling_ratio_settings_option,
 &menu_scaling_option,
 &bottom_screen_pos_option,
 &vsync_option,
@@ -267,21 +275,7 @@ bool VideoMenu::is_option_inc_dec(int index) {
 	return pollable_options[this->options_indexes[index]]->is_inc;
 }
 
-std::string VideoMenu::setTextOptionDualPercentage(int index, int value_1, int value_2) {
-	int sum = value_1 + value_2;
-	if(sum > 0) {
-		value_1 = ((value_1 * 100) + (sum / 2)) / sum;
-		value_2 = ((value_2 * 100) + (sum / 2)) / sum;
-		value_1 += 100 - (value_1 + value_2);
-	}
-	else {
-		value_1 = 0;
-		value_2 = 0;
-	}
-	return this->get_string_option(index, DEFAULT_ACTION) + ": " + std::to_string(value_1) + " - " + std::to_string(value_2);
-}
-
-void VideoMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info, bool fast_poll) {
+void VideoMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info, bool fast_poll, ScreenType screen_type) {
 	int num_pages = this->get_num_pages();
 	if(this->future_data.page >= num_pages)
 		this->future_data.page = num_pages - 1;
@@ -311,9 +305,6 @@ void VideoMenu::prepare(float menu_scaling_factor, int view_size_x, int view_siz
 			case VIDEO_MENU_MENU_SCALING_DEC:
 				this->labels[index]->setText(this->setTextOptionFloat(real_index, info->menu_scaling_factor));
 				break;
-			case VIDEO_MENU_FULLSCREEN_SCALING_TOP:
-				this->labels[index]->setText(this->setTextOptionDualPercentage(real_index, info->top_scaling, info->bot_scaling));
-				break;
 			case VIDEO_MENU_SMALL_SCREEN_OFFSET_DEC:
 				this->labels[index]->setText(this->setTextOptionFloat(real_index, info->subscreen_offset));
 				break;
@@ -325,8 +316,16 @@ void VideoMenu::prepare(float menu_scaling_factor, int view_size_x, int view_siz
 				break;
 			case VIDEO_MENU_FAST_POLL:
 				this->labels[index]->setText(this->setTextOptionBool(real_index, fast_poll));
+				break;
 			case VIDEO_MENU_GAMES_CROPPING:
 				this->labels[index]->setText(this->setTextOptionBool(real_index, info->allow_games_crops));
+				break;
+			case VIDEO_MENU_NON_INT_SCALING:
+				if(screen_type == ScreenType::TOP)
+					this->labels[index]->setText(this->setTextOptionBool(real_index, info->use_non_integer_scaling_top));
+				else if(screen_type == ScreenType::BOTTOM)
+					this->labels[index]->setText(this->setTextOptionBool(real_index, info->use_non_integer_scaling_bottom));
+				break;
 			default:
 				break;
 		}

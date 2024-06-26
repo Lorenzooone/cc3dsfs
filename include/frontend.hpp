@@ -29,6 +29,7 @@
 #include "LicenseMenu.hpp"
 #include "ShortcutMenu.hpp"
 #include "ActionSelectionMenu.hpp"
+#include "ScalingRatioMenu.hpp"
 #include "display_structs.hpp"
 #include "WindowCommands.hpp"
 
@@ -88,6 +89,8 @@ private:
 	struct ResizingScreenData {
 		sf::Vector2f size;
 		int *scaling;
+		float* non_int_scaling;
+		bool use_non_int_scaling;
 		int rotation;
 		const PARData *par;
 	};
@@ -142,6 +145,7 @@ private:
 	LicenseMenu *license_menu;
 	ShortcutMenu *shortcut_menu;
 	ActionSelectionMenu *action_selection_menu;
+	ScalingRatioMenu *scaling_ratio_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const CropData*> possible_crops_ds;
 	std::vector<const CropData*> possible_crops_with_games;
@@ -221,6 +225,8 @@ private:
 	void ratio_change(bool top_priority, bool cycle = false);
 	void bfi_change();
 	void bottom_pos_change(int new_bottom_pos);
+	void non_int_scaling_change(bool target_top);
+	void non_int_mode_change(bool positive);
 	bool query_reset_request();
 	void reset_held_times();
 	void poll_window(bool do_everything);
@@ -236,8 +242,15 @@ private:
 	void display_data_to_window(bool actually_draw, bool is_debug = false);
 	void window_render_call();
 	void set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, bool do_work = true);
-	int prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotation, int width_limit, int height_limit, int other_rotation, const PARData *own_par);
+	float get_max_float_screen_multiplier(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation);
+	int prepare_screen_ratio(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation);
+	bool can_non_integerly_scale();
 	void calc_scaling_resize_screens(ResizingScreenData *own_screen, ResizingScreenData* other_screen, bool increase, bool mantain, bool set_to_zero, bool cycle);
+	void rescale_nonint_subscreen(ResizingScreenData *main_screen_resize_data, ResizingScreenData *sub_screen_resize_data);
+	void direct_scale_nonint_screen(ResizingScreenData *main_screen_resize_data, int sub_min_width, int sub_min_height, int sub_screen_rotation);
+	void non_int_scale_screens_with_main(ResizingScreenData *main_screen_resize_data, ResizingScreenData *sub_screen_resize_data, int sub_min_width, int sub_height_min);
+	void non_int_scale_screens_both(ResizingScreenData *main_screen_resize_data, ResizingScreenData *sub_screen_resize_data, int free_width, int free_height, float multiplier_main, int main_min_width, int main_height_min, int sub_min_width, int sub_height_min);
+	void non_integer_scale_screens(ResizingScreenData *top_screen_resize_data, ResizingScreenData *bot_screen_resize_data);
 	void prepare_size_ratios(bool top_increase, bool bot_increase, bool cycle = false);
 	int get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height);
 	int get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height);
@@ -271,6 +284,7 @@ private:
 	void setup_status_menu(bool reset_data = true);
 	void setup_licenses_menu(bool reset_data = true);
 	void setup_relative_pos_menu(bool reset_data = true);
+	void setup_scaling_ratio_menu(bool reset_data = true);
 	void update_connection();
 };
 
@@ -293,8 +307,10 @@ void reset_screen_info(ScreenInfo &info);
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
 std::string save_screen_info(std::string base, const ScreenInfo &info);
 void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor);
+float get_par_mult_factor(float width, float height, float max_width, float max_height, const PARData *correction_factor, bool is_rotated);
 void default_sleep(int wanted_ms = -1);
 void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL);
 void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &old_cc_device, const CaptureDevice &new_cc_device);
 void screen_display_thread(WindowScreen *screen);
+std::string get_name_non_int_mode(NonIntegerScalingModes input);
 #endif

@@ -76,6 +76,7 @@ void WindowScreen::init_menus() {
 	this->license_menu = new LicenseMenu(this->font_load_success, this->text_font);
 	this->shortcut_menu = new ShortcutMenu(this->font_load_success, this->text_font);
 	this->action_selection_menu = new ActionSelectionMenu(this->font_load_success, this->text_font);
+	this->scaling_ratio_menu = new ScalingRatioMenu(this->font_load_success, this->text_font);
 }
 
 void WindowScreen::destroy_menus() {
@@ -96,6 +97,7 @@ void WindowScreen::destroy_menus() {
 	delete this->license_menu;
 	delete this->shortcut_menu;
 	delete this->action_selection_menu;
+	delete this->scaling_ratio_menu;
 }
 
 void WindowScreen::set_close(int ret_val) {
@@ -281,6 +283,28 @@ void WindowScreen::bottom_pos_change(int new_bottom_pos) {
 		this->prepare_size_ratios(false, false);
 		this->future_operations.call_screen_settings_update = true;
 	}
+}
+
+void WindowScreen::non_int_scaling_change(bool target_top) {
+	if(this->m_stype == ScreenType::TOP)
+		target_top = true;
+	else if(this->m_stype == ScreenType::BOTTOM)
+		target_top = false;
+	if(target_top)
+		this->m_info.use_non_integer_scaling_top = !this->m_info.use_non_integer_scaling_top;
+	else
+		this->m_info.use_non_integer_scaling_bottom = !this->m_info.use_non_integer_scaling_bottom;
+	this->prepare_size_ratios(true, true);
+	this->future_operations.call_screen_settings_update = true;
+}
+
+void WindowScreen::non_int_mode_change(bool positive) {
+	int change = 1;
+	if(!positive)
+		change = END_NONINT_SCALE_MODES - 1;
+	this->m_info.non_integer_mode = static_cast<NonIntegerScalingModes>((this->m_info.non_integer_mode + change) % END_NONINT_SCALE_MODES);
+	this->prepare_size_ratios(true, true);
+	this->future_operations.call_screen_settings_update = true;
 }
 
 bool WindowScreen::can_execute_cmd(const WindowCommand* window_cmd, bool is_extra, bool is_always) {
@@ -818,6 +842,18 @@ void WindowScreen::setup_relative_pos_menu(bool reset_data) {
 	}
 }
 
+void WindowScreen::setup_scaling_ratio_menu(bool reset_data) {
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != SCALING_RATIO_MENU_TYPE) {
+		this->curr_menu = SCALING_RATIO_MENU_TYPE;
+		if(reset_data)
+			this->scaling_ratio_menu->reset_data();
+		this->scaling_ratio_menu->insert_data();
+		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
+	}
+}
+
 void WindowScreen::update_save_menu() {
 	if(this->curr_menu == SAVE_MENU_TYPE) {
 		this->curr_menu = DEFAULT_MENU_TYPE;
@@ -1312,12 +1348,6 @@ void WindowScreen::poll(bool do_everything) {
 						case VIDEO_MENU_SMALL_SCREEN_OFFSET_INC:
 							this->offset_change(this->m_info.subscreen_offset, 0.1);
 							break;
-						case VIDEO_MENU_FULLSCREEN_SCALING_TOP:
-							this->ratio_change(true);
-							break;
-						case VIDEO_MENU_FULLSCREEN_SCALING_BOTTOM:
-							this->ratio_change(false);
-							break;
 						case VIDEO_MENU_ROTATION_SETTINGS:
 							this->setup_rotation_menu();
 							done = true;
@@ -1340,6 +1370,12 @@ void WindowScreen::poll(bool do_everything) {
 							break;
 						case VIDEO_MENU_GAMES_CROPPING:
 							this->game_crop_enable_change();
+							break;
+						case VIDEO_MENU_NON_INT_SCALING:
+							this->non_int_scaling_change(false);
+							break;
+						case VIDEO_MENU_SCALING_RATIO_SETTINGS:
+							this->setup_scaling_ratio_menu();
 							break;
 						default:
 							break;
@@ -1652,6 +1688,40 @@ void WindowScreen::poll(bool do_everything) {
 					continue;
 				}
 				break;
+			case SCALING_RATIO_MENU_TYPE:
+				if(this->scaling_ratio_menu->poll(event_data)) {
+					switch(this->scaling_ratio_menu->selected_index) {
+						case SCALING_RATIO_MENU_BACK:
+							this->setup_video_menu(false);
+							done = true;
+							break;
+						case SCALING_RATIO_MENU_NO_ACTION:
+							break;
+						case SCALING_RATIO_MENU_FULLSCREEN_SCALING_TOP:
+							this->ratio_change(true);
+							break;
+						case SCALING_RATIO_MENU_FULLSCREEN_SCALING_BOTTOM:
+							this->ratio_change(false);
+							break;
+						case SCALING_RATIO_MENU_NON_INT_SCALING_TOP:
+							this->non_int_scaling_change(true);
+							break;
+						case SCALING_RATIO_MENU_NON_INT_SCALING_BOTTOM:
+							this->non_int_scaling_change(false);
+							break;
+						case SCALING_RATIO_MENU_ALGO_DEC:
+							this->non_int_mode_change(false);
+							break;
+						case SCALING_RATIO_MENU_ALGO_INC:
+							this->non_int_mode_change(true);
+							break;
+						default:
+							break;
+					}
+					this->scaling_ratio_menu->reset_output_option();
+					continue;
+				}
+				break;
 			default:
 				break;
 		}
@@ -1813,7 +1883,7 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			this->main_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->capture_status->connected);
 			break;
 		case VIDEO_MENU_TYPE:
-			this->video_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info, this->display_data->fast_poll);
+			this->video_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info, this->display_data->fast_poll, this->m_stype);
 			break;
 		case CROP_MENU_TYPE:
 			this->crop_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, *this->get_crop_index_ptr(&this->loaded_info));
@@ -1862,6 +1932,9 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			break;
 		case LICENSES_MENU_TYPE:
 			this->license_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+			break;
+		case SCALING_RATIO_MENU_TYPE:
+			this->scaling_ratio_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
 			break;
 		default:
 			break;
@@ -1926,6 +1999,9 @@ void WindowScreen::execute_menu_draws() {
 			break;
 		case LICENSES_MENU_TYPE:
 			this->license_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case SCALING_RATIO_MENU_TYPE:
+			this->scaling_ratio_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

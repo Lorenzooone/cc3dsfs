@@ -26,8 +26,6 @@ enum VideoMenuOutAction{
 	VIDEO_MENU_OFFSET_SETTINGS,
 	VIDEO_MENU_WINDOW_SCALING_DEC,
 	VIDEO_MENU_WINDOW_SCALING_INC,
-	VIDEO_MENU_FULLSCREEN_SCALING_TOP,
-	VIDEO_MENU_FULLSCREEN_SCALING_BOTTOM,
 	VIDEO_MENU_BFI_SETTINGS,
 	VIDEO_MENU_MENU_SCALING_DEC,
 	VIDEO_MENU_MENU_SCALING_INC,
@@ -38,13 +36,15 @@ enum VideoMenuOutAction{
 	VIDEO_MENU_BOTTOM_ROTATION_DEC,
 	VIDEO_MENU_BOTTOM_ROTATION_INC,
 	VIDEO_MENU_FAST_POLL,
+	VIDEO_MENU_NON_INT_SCALING,
+	VIDEO_MENU_SCALING_RATIO_SETTINGS,
 };
 
 class VideoMenu : public OptionSelectionMenu {
 public:
 	VideoMenu(bool font_load_success, sf::Font &text_font);
 	~VideoMenu();
-	void prepare(float scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info, bool fast_poll);
+	void prepare(float scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info, bool fast_poll, ScreenType screen_type);
 	void insert_data(ScreenType s_type, bool is_fullscreen);
 	VideoMenuOutAction selected_index = VideoMenuOutAction::VIDEO_MENU_NO_ACTION;
 	void reset_output_option();
@@ -57,6 +57,5 @@ protected:
 private:
 	int *options_indexes;
 	int num_enabled_options;
-	std::string setTextOptionDualPercentage(int index, int value_1, int value_2);
 };
 #endif

@@ -535,8 +535,8 @@ void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::
 		this->m_height = bot_end_y;
 }
 
-int WindowScreen::prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotation, int width_limit, int height_limit, int other_rotation, const PARData* own_par) {
-	if((screen_size.x < 1.0) || (screen_size.y < 1.0))
+float WindowScreen::get_max_float_screen_multiplier(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation) {
+	if((own_screen->size.x < 1.0) || (own_screen->size.y < 1.0))
 		return 0;
 
 	if((other_rotation / 10) % 2)
@@ -558,32 +558,20 @@ int WindowScreen::prepare_screen_ratio(sf::Vector2f &screen_size, int own_rotati
 			break;
 	}
 
-	int explored_multiplier = 1;
-	bool done = false;
-	while(!done) {
-		int own_width = screen_size.x;
-		int own_height = screen_size.y;
-		get_par_size(own_width, own_height, explored_multiplier, own_par);
+	return get_par_mult_factor(own_screen->size.x, own_screen->size.y, width_max, height_max, own_screen->par, (own_screen->rotation / 10) % 2);
+}
 
-		if((own_rotation / 10) % 2)
-			std::swap(own_width, own_height);
-
-		if((own_width > width_max) || (own_height > height_max))
-			done = true;
-		else
-			explored_multiplier += 1;
-	}
-
-	return explored_multiplier - 1;
+int WindowScreen::prepare_screen_ratio(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation) {
+	return this->get_max_float_screen_multiplier(own_screen, width_limit, height_limit, other_rotation);
 }
 
 void WindowScreen::calc_scaling_resize_screens(ResizingScreenData *own_screen, ResizingScreenData* other_screen, bool increase, bool mantain, bool set_to_zero, bool cycle) {
 	int other_width = other_screen->size.x;
 	int other_height = other_screen->size.y;
 	get_par_size(other_width, other_height, 1, other_screen->par);
-	int chosen_ratio = prepare_screen_ratio(own_screen->size, own_screen->rotation, other_width, other_height, other_screen->rotation, own_screen->par);
+	int chosen_ratio = prepare_screen_ratio(own_screen, other_width, other_height, other_screen->rotation);
 	if(chosen_ratio <= 0) {
-		chosen_ratio = prepare_screen_ratio(own_screen->size, own_screen->rotation, 0, 0, other_screen->rotation, own_screen->par);
+		chosen_ratio = prepare_screen_ratio(own_screen, 0, 0, other_screen->rotation);
 		if(chosen_ratio <= 0)
 			chosen_ratio = 0;
 	}
@@ -604,7 +592,7 @@ void WindowScreen::calc_scaling_resize_screens(ResizingScreenData *own_screen, R
 	if((increase && ((old_scaling == (*own_screen->scaling)) || ((*other_screen->scaling) == 0)) || (mantain && ((*other_screen->scaling) == 0))) && ((*own_screen->scaling) > 0))
 		(*other_screen->scaling) = 0;
 	else
-		(*other_screen->scaling) = prepare_screen_ratio(other_screen->size, other_screen->rotation, own_width, own_height, own_screen->rotation, other_screen->par);
+		(*other_screen->scaling) = prepare_screen_ratio(other_screen, own_width, own_height, own_screen->rotation);
 	if((*other_screen->scaling) < 0)
 		(*other_screen->scaling) = 0;
 	if((this->m_stype == ScreenType::JOINT) && (((*own_screen->scaling) > 0) || (((*other_screen->scaling) == 0) && ((*own_screen->scaling) == 0)))) {
@@ -614,9 +602,127 @@ void WindowScreen::calc_scaling_resize_screens(ResizingScreenData *own_screen, R
 		other_width = other_screen->size.x;
 		other_height = other_screen->size.y;
 		get_par_size(other_width, other_height, *other_screen->scaling, other_screen->par);
-		(*own_screen->scaling) = prepare_screen_ratio(own_screen->size, own_screen->rotation, other_width, other_height, other_screen->rotation, own_screen->par);
+		(*own_screen->scaling) = prepare_screen_ratio(own_screen, other_width, other_height, other_screen->rotation);
 		if((*own_screen->scaling) < 0)
 			(*own_screen->scaling) = 0;
+	}
+}
+
+bool WindowScreen::can_non_integerly_scale() {
+	return ((this->m_info.top_scaling != 0) || (this->m_info.bot_scaling != 0)) && ((this->m_info.use_non_integer_scaling_top && (this->m_info.top_scaling != 0)) || (this->m_info.use_non_integer_scaling_bottom && (this->m_info.bot_scaling != 0)));
+}
+
+void WindowScreen::rescale_nonint_subscreen(ResizingScreenData *main_screen_resize_data, ResizingScreenData *sub_screen_resize_data) {
+	int new_width = main_screen_resize_data->size.x;
+	int new_height = main_screen_resize_data->size.y;
+	get_par_size(new_width, new_height, *main_screen_resize_data->non_int_scaling, main_screen_resize_data->par);
+	*sub_screen_resize_data->non_int_scaling = this->get_max_float_screen_multiplier(sub_screen_resize_data, new_width, new_height, main_screen_resize_data->rotation);
+	if(!sub_screen_resize_data->use_non_int_scaling)
+		*sub_screen_resize_data->non_int_scaling = static_cast<int>(*sub_screen_resize_data->non_int_scaling);
+}
+
+void WindowScreen::direct_scale_nonint_screen(ResizingScreenData *main_screen_resize_data, int sub_min_width, int sub_height_min, int sub_screen_rotation) {
+	*main_screen_resize_data->non_int_scaling = this->get_max_float_screen_multiplier(main_screen_resize_data, sub_min_width, sub_height_min, sub_screen_rotation);
+	if(!main_screen_resize_data->use_non_int_scaling)
+		*main_screen_resize_data->non_int_scaling = static_cast<int>(*main_screen_resize_data->non_int_scaling);
+}
+
+void WindowScreen::non_int_scale_screens_with_main(ResizingScreenData *main_screen_resize_data, ResizingScreenData *sub_screen_resize_data, int sub_min_width, int sub_height_min) {
+	this->direct_scale_nonint_screen(main_screen_resize_data, sub_min_width, sub_height_min, sub_screen_resize_data->rotation);
+	this->rescale_nonint_subscreen(main_screen_resize_data, sub_screen_resize_data);
+}
+
+void WindowScreen::non_int_scale_screens_both(ResizingScreenData *main_screen_resize_data, ResizingScreenData *sub_screen_resize_data, int free_width, int free_height, float multiplier_main, int main_min_width, int main_height_min, int sub_min_width, int sub_height_min) {
+	int main_free_width = (free_width * multiplier_main) + 0.5;
+	int main_free_height = (free_height * multiplier_main) + 0.5;
+	int sub_free_width = free_width - main_free_width;
+	int sub_free_height = free_height - main_free_height;
+	this->direct_scale_nonint_screen(main_screen_resize_data, sub_min_width + sub_free_width, sub_height_min + sub_free_height, sub_screen_resize_data->rotation);
+	this->direct_scale_nonint_screen(sub_screen_resize_data, main_min_width + main_free_width, main_height_min + main_free_height, main_screen_resize_data->rotation);
+	this->rescale_nonint_subscreen(main_screen_resize_data, sub_screen_resize_data);
+	this->rescale_nonint_subscreen(sub_screen_resize_data, main_screen_resize_data);
+}
+
+void WindowScreen::non_integer_scale_screens(ResizingScreenData *top_screen_resize_data, ResizingScreenData *bot_screen_resize_data) {
+	if(!this->can_non_integerly_scale()) {
+		this->m_info.non_integer_top_scaling = this->m_info.top_scaling;
+		this->m_info.non_integer_bot_scaling = this->m_info.bot_scaling;
+		return;
+	}
+	if(this->m_info.top_scaling == 0) {
+		this->m_info.non_integer_top_scaling = 0;
+		this->m_info.non_integer_bot_scaling = this->get_max_float_screen_multiplier(bot_screen_resize_data, 0, 0, 0);
+		return;
+	}
+	if(this->m_info.bot_scaling == 0) {
+		this->m_info.non_integer_bot_scaling = 0;
+		this->m_info.non_integer_top_scaling = this->get_max_float_screen_multiplier(top_screen_resize_data, 0, 0, 0);
+		return;
+	}
+	int more_top_top_scaling = this->m_info.top_scaling;
+	int more_top_bot_scaling = this->m_info.bot_scaling;
+	int more_bot_top_scaling = this->m_info.top_scaling;
+	int more_bot_bot_scaling = this->m_info.bot_scaling;
+	top_screen_resize_data->scaling = &more_top_top_scaling;
+	bot_screen_resize_data->scaling = &more_top_bot_scaling;
+	calc_scaling_resize_screens(top_screen_resize_data, bot_screen_resize_data, true, false, this->m_stype == ScreenType::BOTTOM, false);
+	top_screen_resize_data->scaling = &more_bot_top_scaling;
+	bot_screen_resize_data->scaling = &more_bot_bot_scaling;
+	calc_scaling_resize_screens(bot_screen_resize_data, top_screen_resize_data, true, false, this->m_stype == ScreenType::TOP, false);
+	top_screen_resize_data->scaling = &this->m_info.top_scaling;
+	bot_screen_resize_data->scaling = &this->m_info.bot_scaling;
+	int min_top_scaling = more_bot_top_scaling + 1;
+	int min_bot_scaling = more_top_bot_scaling + 1;
+	if(min_top_scaling > this->m_info.top_scaling)
+		min_top_scaling = this->m_info.top_scaling;
+	if(min_bot_scaling > this->m_info.bot_scaling)
+		min_bot_scaling = this->m_info.bot_scaling;
+	int min_top_screen_width = top_screen_resize_data->size.x;
+	int min_top_screen_height = top_screen_resize_data->size.y;
+	int min_bot_screen_width = bot_screen_resize_data->size.x;
+	int min_bot_screen_height = bot_screen_resize_data->size.y;
+	get_par_size(min_top_screen_width, min_top_screen_height, min_top_scaling, top_screen_resize_data->par);
+	get_par_size(min_bot_screen_width, min_bot_screen_height, min_bot_scaling, bot_screen_resize_data->par);
+
+	ResizingScreenData *bigger_screen_resize_data = top_screen_resize_data;
+	ResizingScreenData *smaller_screen_resize_data = bot_screen_resize_data;
+	int min_bigger_screen_width = min_top_screen_width;
+	int min_bigger_screen_height = min_top_screen_height;
+	int min_smaller_screen_width = min_bot_screen_width;
+	int min_smaller_screen_height = min_bot_screen_height;
+	bool is_top_bigger = this->m_info.top_scaling >= this->m_info.bot_scaling;
+	if(!is_top_bigger) {
+		std::swap(bigger_screen_resize_data, smaller_screen_resize_data);
+		std::swap(min_bigger_screen_width, min_smaller_screen_width);
+		std::swap(min_bigger_screen_height, min_smaller_screen_height);
+	}
+
+	if((top_screen_resize_data->rotation / 10) % 2)
+		std::swap(min_top_screen_width, min_top_screen_height);
+	if((bot_screen_resize_data->rotation / 10) % 2)
+		std::swap(min_bot_screen_width, min_bot_screen_height);
+
+	int free_width = curr_desk_mode.width - (min_bot_screen_width + min_top_screen_width);
+	int free_height = curr_desk_mode.height - (min_bot_screen_height + min_top_screen_height);
+
+	switch(this->m_info.non_integer_mode) {
+		case SMALLER_PRIORITY:
+			this->non_int_scale_screens_with_main(smaller_screen_resize_data, bigger_screen_resize_data, min_bigger_screen_width, min_bigger_screen_height);
+			break;
+		case BIGGER_PRIORITY:
+			this->non_int_scale_screens_with_main(bigger_screen_resize_data, smaller_screen_resize_data, min_smaller_screen_width, min_smaller_screen_height);
+			break;
+		case EQUAL_PRIORITY:
+			this->non_int_scale_screens_both(bigger_screen_resize_data, smaller_screen_resize_data, free_width, free_height, 0.5, min_bigger_screen_width, min_bigger_screen_height, min_smaller_screen_width, min_smaller_screen_height);
+			break;
+		case PROPORTIONAL_PRIORITY:
+			this->non_int_scale_screens_both(bigger_screen_resize_data, smaller_screen_resize_data, free_width, free_height, ((float)(*bigger_screen_resize_data->scaling)) / ((*bigger_screen_resize_data->scaling) + (*smaller_screen_resize_data->scaling)), min_bigger_screen_width, min_bigger_screen_height, min_smaller_screen_width, min_smaller_screen_height);
+			break;
+		case INVERSE_PROPORTIONAL_PRIORITY:
+			this->non_int_scale_screens_both(bigger_screen_resize_data, smaller_screen_resize_data, free_width, free_height, ((float)(*smaller_screen_resize_data->scaling)) / ((*bigger_screen_resize_data->scaling) + (*smaller_screen_resize_data->scaling)), min_bigger_screen_width, min_bigger_screen_height, min_smaller_screen_width, min_smaller_screen_height);
+			break;
+		default:
+			break;
 	}
 }
 
@@ -645,12 +751,14 @@ void WindowScreen::prepare_size_ratios(bool top_increase, bool bot_increase, boo
 		this->m_info.top_par = 0;
 	if((this->m_info.bot_par >= this->possible_pars.size()) || (this->m_info.bot_par < 0))
 		this->m_info.bot_par = 0;
-	ResizingScreenData top_screen_resize_data = {.size = top_screen_size, .scaling = &this->m_info.top_scaling, .rotation = this->m_info.top_rotation, .par = this->possible_pars[this->m_info.top_par]};
-	ResizingScreenData bot_screen_resize_data = {.size = bot_screen_size, .scaling = &this->m_info.bot_scaling, .rotation = this->m_info.bot_rotation, .par = this->possible_pars[this->m_info.bot_par]};
+	ResizingScreenData top_screen_resize_data = {.size = top_screen_size, .scaling = &this->m_info.top_scaling, .non_int_scaling = &this->m_info.non_integer_top_scaling, .use_non_int_scaling = this->m_info.use_non_integer_scaling_top, .rotation = this->m_info.top_rotation, .par = this->possible_pars[this->m_info.top_par]};
+	ResizingScreenData bot_screen_resize_data = {.size = bot_screen_size, .scaling = &this->m_info.bot_scaling, .non_int_scaling = &this->m_info.non_integer_bot_scaling, .use_non_int_scaling = this->m_info.use_non_integer_scaling_bottom, .rotation = this->m_info.bot_rotation, .par = this->possible_pars[this->m_info.bot_par]};
 	if(prioritize_top)
 		calc_scaling_resize_screens(&top_screen_resize_data, &bot_screen_resize_data, top_increase, try_mantain_ratio, this->m_stype == ScreenType::BOTTOM, cycle);
 	else
 		calc_scaling_resize_screens(&bot_screen_resize_data, &top_screen_resize_data, bot_increase, try_mantain_ratio, this->m_stype == ScreenType::TOP, cycle);
+
+	this->non_integer_scale_screens(&top_screen_resize_data, &bot_screen_resize_data);
 }
 
 int WindowScreen::get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height) {
@@ -716,8 +824,8 @@ void WindowScreen::resize_window_and_out_rects(bool do_work) {
 	int max_y = 0;
 
 	if(this->loaded_info.is_fullscreen) {
-		top_scaling = this->loaded_info.top_scaling;
-		bot_scaling = this->loaded_info.bot_scaling;
+		top_scaling = this->loaded_info.non_integer_top_scaling;
+		bot_scaling = this->loaded_info.non_integer_bot_scaling;
 	}
 	if((this->loaded_info.top_par >= this->possible_pars.size()) || (this->loaded_info.top_par < 0))
 		this->loaded_info.top_par = 0;
