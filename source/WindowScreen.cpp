@@ -8,6 +8,10 @@
 #define TOP_ROUNDED_PADDING 0
 #define BOTTOM_ROUNDED_PADDING 5
 
+#define FALLBACK_FS_RESOLUTION_WIDTH 1920
+#define FALLBACK_FS_RESOLUTION_HEIGHT 1080
+#define FALLBACK_FS_RESOLUTION_BPP 32
+
 WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts) {
 	this->m_stype = stype;
 	insert_basic_crops(this->possible_crops, this->m_stype, false, false);
@@ -874,7 +878,18 @@ void WindowScreen::create_window(bool re_prepare_size) {
 		}
 		if(!success) {
 			this->curr_desk_mode = sf::VideoMode::getDesktopMode();
+			success = this->curr_desk_mode.isValid();
 		}
+		#ifdef __APPLE__
+		if(!success) {
+			this->curr_desk_mode = sf::VideoMode(2 * FALLBACK_FS_RESOLUTION_WIDTH, 2 * FALLBACK_FS_RESOLUTION_HEIGHT, FALLBACK_FS_RESOLUTION_BPP);
+			success = this->curr_desk_mode.isValid();
+		}
+		if(!success) {
+			this->curr_desk_mode = sf::VideoMode(FALLBACK_FS_RESOLUTION_WIDTH, FALLBACK_FS_RESOLUTION_HEIGHT, FALLBACK_FS_RESOLUTION_BPP);
+			success = this->curr_desk_mode.isValid();
+		}
+		#endif
 		this->m_window_width = curr_desk_mode.width;
 		this->m_window_height = curr_desk_mode.height;
 		this->m_info.show_mouse = false;
