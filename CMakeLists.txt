@@ -285,7 +285,6 @@ add_custom_command(
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 install(TARGETS ${OUTPUT_NAME} DESTINATION .)
-install(FILES ${SETUP_SCRIPTS_DIR}/un_quarantine_macos.sh DESTINATION .)
 else()
 install(FILES ${CMAKE_SOURCE_DIR}/${OUTPUT_NAME}${FINAL_EXTENSION} DESTINATION .)
 endif()
@@ -307,15 +306,8 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 
     add_custom_command(
         TARGET ${OUTPUT_NAME}
-        COMMENT "Copy Frameworks in bundle"
-        POST_BUILD COMMAND cp -R ${FW_DIRS} ${FW_APP}/Contents/Frameworks
-        VERBATIM
-    )
-
-    add_custom_command(
-        TARGET ${OUTPUT_NAME}
-        COMMENT "Set bundle path for Frameworks"
-        POST_BUILD COMMAND ${SETUP_SCRIPTS_DIR}/macos_bundle_setup.sh ${FW_APP}/Contents/MacOS/${OUTPUT_NAME}
+        COMMENT "Prepare bundle"
+        POST_BUILD COMMAND ${SETUP_SCRIPTS_DIR}/macos_bundle_setup.sh ${FW_APP}/Contents/MacOS/${OUTPUT_NAME} ${FW_DIRS} ${FW_APP}/Contents/Frameworks
         VERBATIM
     )
 

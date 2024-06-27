@@ -135,11 +135,7 @@ On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the
 - USB Hubs can be the cause of connection issues. If you're having problems, try checking whether the 3DS/DS connects fine or not without any other devices connected.
 - Current font in use: OFL Sorts Mill Goudy TT
 - Enabling Slow Poll may slightly boost the FPS of the software, at the cost of an extremely slight decrease in frame latency, and slower reaction times of the software to key presses. Disabled by default (as when the FPS are greater than the CC's, it's not reccomended).
-- On MacOS, you may get a notice about the app being damaged. It's Apple quarantining the app. To make it work, either use the included script "un\_quarantine\_macos.sh" (though you may need to make it executable with chmod +x), or open a terminal and run the following:
-```
-xattr -c ./cc3dsfs.app
-```
-- It can also be achieved by opening a terminal, typing "xattr -c ", dragging the application to the terminal, and finally pressing Enter.
+- On MacOS, you may get a notice about Apple being unable to check for malware, or the developer being unknown. To open the program regardless of that, while holding the Command key, right click the application, then select the "Open" option.
 - Certain TVs/Monitors may add some audio delay for the purpose of video/lip syncing. If you're experiencing too much audio delay when using this software, try checking in the TV/Monitor settings whether you can reduce that added delay. One of the names used for that setting is "Lip Sync", or something along that line.
 - For the best audio latency and quality, it may be needed to change OpenAL's sound settings. Their location is OS-specific. On linux, you may use the "alsoft-config" command. In particular, the following parameters may help:
 ```
