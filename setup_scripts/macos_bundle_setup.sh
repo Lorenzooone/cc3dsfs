@@ -1,5 +1,5 @@
 framework_change_pos() {
-    install_name_tool -change @rpath/../Frameworks/${2}.framework/Versions/A/${2} @executable_path/../Frameworks/${2}.framework/Versions/A/${2} ${1}
+    install_name_tool -change @rpath/../Frameworks/${2}.framework/Versions/A/${2} @executable_path/../Frameworks/${2}.framework/${2} ${1}
 }
 
 framework_change_pos ${1} 'freetype'
