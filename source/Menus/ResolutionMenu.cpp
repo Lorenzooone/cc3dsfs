@@ -49,10 +49,14 @@ sf::VideoMode ResolutionMenu::get_resolution(int index) {
 
 std::string ResolutionMenu::get_string_option(int index, int action) {
 	sf::VideoMode mode = this->get_resolution(index);
+	if((mode.width == 0) && (mode.height == 0)) {
+		mode = sf::VideoMode::getDesktopMode();
+		return "System Preference (" + std::to_string(mode.width) + " x " + std::to_string(mode.height)+")";
+	}
 	return std::to_string(mode.width) + " x " + std::to_string(mode.height);
 }
 
-void ResolutionMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, sf::VideoMode *curr_desk_mode) {
+void ResolutionMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, int fullscreen_mode_width, int fullscreen_mode_height) {
 	int num_pages = this->get_num_pages();
 	if(this->future_data.page >= num_pages)
 		this->future_data.page = num_pages - 1;
@@ -63,7 +67,7 @@ void ResolutionMenu::prepare(float menu_scaling_factor, int view_size_x, int vie
 			continue;
 		int mode_index = start + i;
 		sf::VideoMode mode = this->get_resolution(mode_index);
-		if((mode.width == curr_desk_mode->width) && (mode.height == curr_desk_mode->height))
+		if((mode.width == fullscreen_mode_width) && (mode.height == fullscreen_mode_height))
 			this->labels[index]->setText("<" + this->get_string_option(mode_index, DEFAULT_ACTION) + ">");
 		else
 			this->labels[index]->setText(this->get_string_option(mode_index, DEFAULT_ACTION));

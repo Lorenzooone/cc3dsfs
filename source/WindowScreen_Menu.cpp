@@ -777,9 +777,10 @@ void WindowScreen::setup_resolution_menu(bool reset_data) {
 		this->possible_resolutions.clear();
 		std::vector<sf::VideoMode> modes = sf::VideoMode::getFullscreenModes();
 		if(modes.size() > 0) {
+			this->possible_resolutions.push_back(sf::VideoMode(0, 0, 0));
 			this->possible_resolutions.push_back(modes[0]);
 			for(int i = 1; i < modes.size(); ++i)
-				if(this->possible_resolutions[0].bitsPerPixel == modes[i].bitsPerPixel)
+				if(modes[0].bitsPerPixel == modes[i].bitsPerPixel)
 					this->possible_resolutions.push_back(modes[i]);
 		}
 		else {
@@ -1958,7 +1959,7 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			this->relpos_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.bottom_pos);
 			break;
 		case RESOLUTION_MENU_TYPE:
-			this->resolution_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->curr_desk_mode);
+			this->resolution_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.fullscreen_mode_width, this->loaded_info.fullscreen_mode_height);
 			break;
 		case SAVE_MENU_TYPE:
 			this->fileconfig_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);

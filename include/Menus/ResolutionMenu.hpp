@@ -15,7 +15,7 @@ class ResolutionMenu : public OptionSelectionMenu {
 public:
 	ResolutionMenu(bool font_load_success, sf::Font &text_font);
 	~ResolutionMenu();
-	void prepare(float scaling_factor, int view_size_x, int view_size_y, sf::VideoMode *curr_desk_mode);
+	void prepare(float scaling_factor, int view_size_x, int view_size_y, int fullscreen_mode_width, int fullscreen_mode_height);
 	void insert_data(std::vector<sf::VideoMode>* possible_resolutions);
 	int selected_index = RESOLUTION_MENU_NO_ACTION;
 	void reset_output_option();
