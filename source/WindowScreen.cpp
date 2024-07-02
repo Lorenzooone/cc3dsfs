@@ -887,6 +887,8 @@ void WindowScreen::create_window(bool re_prepare_size, bool reset_text) {
 		this->m_info.show_mouse = !this->display_data->mono_app_mode;
 	}
 	else {
+		sf::VideoMode desktop_mode = sf::VideoMode::getDesktopMode();
+		printf("%d %d\n", desktop_mode.width, desktop_mode.height);
 		bool success = false;
 		if((this->m_info.fullscreen_mode_width > 0) && (this->m_info.fullscreen_mode_height > 0) && (this->m_info.fullscreen_mode_bpp > 0)) {
 			sf::VideoMode mode_created = sf::VideoMode(this->m_info.fullscreen_mode_width, this->m_info.fullscreen_mode_height, this->m_info.fullscreen_mode_bpp);
