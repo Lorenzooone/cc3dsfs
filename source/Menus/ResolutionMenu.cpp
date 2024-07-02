@@ -23,8 +23,9 @@ void ResolutionMenu::class_setup() {
 	this->show_title = true;
 }
 
-void ResolutionMenu::insert_data(std::vector<sf::VideoMode>* possible_resolutions) {
+void ResolutionMenu::insert_data(std::vector<sf::VideoMode>* possible_resolutions, const sf::VideoMode &desktop_resolution) {
 	this->possible_resolutions = possible_resolutions;
+	this->desktop_resolution = desktop_resolution;
 	this->prepare_options();
 }
 
@@ -50,8 +51,7 @@ sf::VideoMode ResolutionMenu::get_resolution(int index) {
 std::string ResolutionMenu::get_string_option(int index, int action) {
 	sf::VideoMode mode = this->get_resolution(index);
 	if((mode.width == 0) && (mode.height == 0)) {
-		mode = sf::VideoMode::getDesktopMode();
-		return "System Preference (" + std::to_string(mode.width) + " x " + std::to_string(mode.height)+")";
+		return "System Preference (" + std::to_string(this->desktop_resolution.width) + " x " + std::to_string(this->desktop_resolution.height) + ")";
 	}
 	return std::to_string(mode.width) + " x " + std::to_string(mode.height);
 }

@@ -141,5 +141,4 @@ On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the
 ```
 frequency = 96000
 periods = 2
-period_size = 64
 ```

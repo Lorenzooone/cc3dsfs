@@ -35,9 +35,15 @@ jobs:
       shell: bash
       run: cmake -S . -B build -DCMAKE_INSTALL_PREFIX=install ${{matrix.platform.flags}} ${{matrix.config.flags}}
 
-    - name: Build
+    - name: Build Windows
+      if: runner.os == 'Windows'
       shell: bash
       run: cmake --build build --config Release
+
+    - name: Build (not Windows)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: cmake --build build --config Release -j
 
     - name: Pack
       shell: bash

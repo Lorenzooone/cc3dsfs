@@ -793,7 +793,7 @@ void WindowScreen::setup_resolution_menu(bool reset_data) {
 			this->curr_menu = RESOLUTION_MENU_TYPE;
 			if(reset_data)
 				this->resolution_menu->reset_data();
-			this->resolution_menu->insert_data(&this->possible_resolutions);
+			this->resolution_menu->insert_data(&this->possible_resolutions, sf::VideoMode::getDesktopMode());
 			this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 		}
 	}
