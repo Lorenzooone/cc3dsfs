@@ -265,19 +265,11 @@ void ftd3_capture_cleanup(CaptureData* capture_data) {
 }
 
 static inline void convertVideoToOutputChunk(RGB83DSVideoInputData *p_in, VideoOutputData *p_out, int iters, int start_in, int start_out) {
-	for(int i = 0; i < iters; i++)  {
-		for(int u = 0; u < 3; u++)
-			p_out->screen_data[start_out + i][u] = p_in->screen_data[start_in + i][u];
-		p_out->screen_data[start_out + i][3] = 0xff;
-	}
+	memcpy(&p_out->screen_data[start_out], &p_in->screen_data[start_in], iters * 3);
 }
 
 static inline void convertVideoToOutputChunk_3D(RGB83DSVideoInputData_3D *p_in, VideoOutputData *p_out, int iters, int start_in, int start_out) {
-	for(int i = 0; i < iters; i++)  {
-		for(int u = 0; u < 3; u++)
-			p_out->screen_data[start_out + i][u] = p_in->screen_data[start_in + i][u];
-		p_out->screen_data[start_out + i][3] = 0xff;
-	}
+	memcpy(&p_out->screen_data[start_out], &p_in->screen_data[start_in], iters * 3);
 }
 
 void ftd3_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, bool enabled_3d) {

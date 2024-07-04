@@ -1,5 +1,6 @@
 #include "frontend.hpp"
 
+#include <SFML/OpenGL.hpp>
 #include <cstring>
 #include "font_ttf.h"
 
@@ -11,6 +12,17 @@
 #define FALLBACK_FS_RESOLUTION_WIDTH 1920
 #define FALLBACK_FS_RESOLUTION_HEIGHT 1080
 #define FALLBACK_FS_RESOLUTION_BPP 32
+
+const std::string no_effect_fragment_shader = \
+"uniform sampler2D Texture0;" \
+"" \
+"void main() {" \
+"	gl_FragColor = texture2D(Texture0, gl_TexCoord[0].xy);" \
+"}";
+
+static bool loaded_shaders = false;
+static int n_shader_refs = 0;
+static sf::Shader *base_shader;
 
 WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts) {
 	this->m_stype = stype;
@@ -55,6 +67,16 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->capture_status = capture_status;
 	if(this->display_data->mono_app_mode && this->m_stype == ScreenType::JOINT)
 		this->m_info.is_fullscreen = true;
+	if(!loaded_shaders) {
+		base_shader = new sf::Shader();
+		base_shader->loadFromMemory(no_effect_fragment_shader, sf::Shader::Fragment);
+		loaded_shaders = true;
+	}
+	n_shader_refs += 1;
+	this->in_top_shader = base_shader;
+	this->in_bot_shader = base_shader;
+	this->top_shader = base_shader;
+	this->bot_shader = base_shader;
 }
 
 WindowScreen::~WindowScreen() {
@@ -66,6 +88,11 @@ WindowScreen::~WindowScreen() {
 	FPSArrayDestroy(&this->in_fps);
 	FPSArrayDestroy(&this->draw_fps);
 	FPSArrayDestroy(&this->poll_fps);
+	if(n_shader_refs == 1) {
+		delete base_shader;
+		loaded_shaders = false;
+	}
+	n_shader_refs -= 1;
 }
 
 void WindowScreen::build() {
@@ -385,13 +412,28 @@ std::string WindowScreen::title_factory() {
 	return title;
 }
 
+void WindowScreen::update_texture() {
+	unsigned int m_texture = this->in_tex.getNativeHandle();
+    if (this->saved_buf && m_texture)
+    {
+        // Copy pixels from the given array to the texture
+        glBindTexture(GL_TEXTURE_2D, m_texture);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(0), static_cast<GLint>(0), static_cast<GLsizei>(this->capture_status->device.width), static_cast<GLsizei>(this->capture_status->device.height), GL_RGB, GL_UNSIGNED_BYTE, this->saved_buf);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+        // Force an OpenGL flush, so that the texture data will appear updated
+        // in all contexts immediately (solves problems in multi-threaded apps)
+        glFlush();
+    }
+}
+
 void WindowScreen::pre_texture_conversion_processing() {
 	if(this->loaded_menu == CONNECT_MENU_TYPE)
 		return;
 	//Place preprocessing window-specific effects here
 	if(!this->capture_status->connected)
 		return;
-	this->in_tex.update((uint8_t*)this->saved_buf, this->capture_status->device.width, this->capture_status->device.height, 0, 0);
+	this->update_texture();
 }
 
 void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug) {
@@ -409,7 +451,10 @@ void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, 
 	else {
 		rect_data.out_tex.clear();
 		if(this->capture_status->connected && actually_draw) {
-			rect_data.out_tex.draw(in_rect);
+			sf::Shader* chosen_shader = this->in_top_shader;
+			if(!is_top)
+				chosen_shader = this->in_bot_shader;
+			rect_data.out_tex.draw(in_rect, chosen_shader);
 			//Place postprocessing effects here
 		}
 	}
@@ -431,9 +476,9 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 	this->window_bg_processing();
 	if(this->loaded_menu != CONNECT_MENU_TYPE) {
 		if(this->m_stype != ScreenType::BOTTOM)
-			this->m_win.draw(this->m_out_rect_top.out_rect);
+			this->m_win.draw(this->m_out_rect_top.out_rect, this->top_shader);
 		if(this->m_stype != ScreenType::TOP)
-			this->m_win.draw(this->m_out_rect_bot.out_rect);
+			this->m_win.draw(this->m_out_rect_bot.out_rect, this->bot_shader);
 	}
 	this->execute_menu_draws();
 	this->notification->draw(this->m_win);

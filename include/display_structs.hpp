@@ -51,7 +51,7 @@ struct DisplayData {
 #pragma pack(push, 1)
 
 struct PACKED VideoOutputData {
-	uint8_t screen_data[MAX_IN_VIDEO_SIZE][4];
+	uint8_t screen_data[MAX_IN_VIDEO_SIZE][3];
 };
 
 #pragma pack(pop)

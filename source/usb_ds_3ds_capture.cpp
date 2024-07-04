@@ -277,7 +277,6 @@ static inline void usb_oldDSconvertVideoToOutputRGBA(USBOldDSPixelData data, uin
 	target[0] = xbits_to_8bits(data.r, OLD_DS_PIXEL_R_BITS);
 	target[1] = xbits_to_8bits(data.g, OLD_DS_PIXEL_G_BITS);
 	target[2] = xbits_to_8bits(data.b, OLD_DS_PIXEL_B_BITS);
-	target[3] = 255;
 }
 
 static inline void usb_oldDSconvertVideoToOutputHalfLine(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, int input_halfline, int output_halfline) {
@@ -292,12 +291,12 @@ static inline void usb_oldDSconvertVideoToOutputHalfLine(USBOldDSCaptureReceived
 
 static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out) {
 	if(!p_in->frameinfo.valid) { //LCD was off
-		memset(p_out->screen_data, 0, WIDTH_DS * (2 * HEIGHT_DS) * 4);
+		memset(p_out->screen_data, 0, WIDTH_DS * (2 * HEIGHT_DS) * 3);
 		return;
 	}
 
 	// Handle first line being off, if needed
-	memset(p_out->screen_data, 0, WIDTH_DS * 4);
+	memset(p_out->screen_data, 0, WIDTH_DS * 3);
 
 	int input_halfline = 0;
 	for(int i = 0; i < 2; i++) {
@@ -309,20 +308,14 @@ static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOu
 		if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
 			usb_oldDSconvertVideoToOutputHalfLine(p_in, p_out, input_halfline++, i);
 		else { // deal with missing half-line
-			memcpy(p_out->screen_data[i * (WIDTH_DS / 2)], p_out->screen_data[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * 4);
-			memcpy(p_out->screen_data[(i * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], p_out->screen_data[((i - 2) * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], (WIDTH_DS / 2) * 4);
+			memcpy(p_out->screen_data[i * (WIDTH_DS / 2)], p_out->screen_data[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * 3);
+			memcpy(p_out->screen_data[(i * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], p_out->screen_data[((i - 2) * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], (WIDTH_DS / 2) * 3);
 		}
 	}
 }
 
 static void usb_3DSconvertVideoToOutput(USB3DSCaptureReceived *p_in, VideoOutputData *p_out) {
-	for(int i = 0; i < IN_VIDEO_HEIGHT_3DS; i++)
-		for(int j = 0; j < IN_VIDEO_WIDTH_3DS; j++) {
-			int pixel = (i * IN_VIDEO_WIDTH_3DS) + j;
-			for(int u = 0; u < 3; u++)
-				p_out->screen_data[pixel][u] = p_in->video_in.screen_data[pixel][u];
-			p_out->screen_data[pixel][3] = 255;
-		}
+	memcpy(p_out->screen_data, p_in->video_in.screen_data, IN_VIDEO_HEIGHT_3DS * IN_VIDEO_WIDTH_3DS * 3);
 }
 
 void list_devices_usb_ds_3ds(std::vector<CaptureDevice> &devices_list) {
