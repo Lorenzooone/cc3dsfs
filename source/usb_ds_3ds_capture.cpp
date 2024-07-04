@@ -277,7 +277,6 @@ static inline void usb_oldDSconvertVideoToOutputRGBA(USBOldDSPixelData data, uin
 	target[0] = xbits_to_8bits(data.r, OLD_DS_PIXEL_R_BITS);
 	target[1] = xbits_to_8bits(data.g, OLD_DS_PIXEL_G_BITS);
 	target[2] = xbits_to_8bits(data.b, OLD_DS_PIXEL_B_BITS);
-	target[3] = 255;
 }
 
 static inline void usb_oldDSconvertVideoToOutputHalfLine(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, int input_halfline, int output_halfline) {
@@ -316,13 +315,7 @@ static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOu
 }
 
 static void usb_3DSconvertVideoToOutput(USB3DSCaptureReceived *p_in, VideoOutputData *p_out) {
-	for(int i = 0; i < IN_VIDEO_HEIGHT_3DS; i++)
-		for(int j = 0; j < IN_VIDEO_WIDTH_3DS; j++) {
-			int pixel = (i * IN_VIDEO_WIDTH_3DS) + j;
-			for(int u = 0; u < 3; u++)
-				p_out->screen_data[pixel][u] = p_in->video_in.screen_data[pixel][u];
-			p_out->screen_data[pixel][3] = 255;
-		}
+	memcpy(p_out->screen_data, p_in->video_in.screen_data, IN_VIDEO_HEIGHT_3DS * IN_VIDEO_WIDTH_3DS * 3);
 }
 
 void list_devices_usb_ds_3ds(std::vector<CaptureDevice> &devices_list) {

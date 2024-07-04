@@ -1,5 +1,6 @@
 #include "frontend.hpp"
 
+#include <SFML/OpenGL.hpp>
 #include <cstring>
 #include "font_ttf.h"
 
@@ -407,13 +408,28 @@ std::string WindowScreen::title_factory() {
 	return title;
 }
 
+void WindowScreen::update_texture() {
+	unsigned int m_texture = this->in_tex.getNativeHandle();
+    if (this->saved_buf && m_texture)
+    {
+        // Copy pixels from the given array to the texture
+        glBindTexture(GL_TEXTURE_2D, m_texture);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(0), static_cast<GLint>(0), static_cast<GLsizei>(this->capture_status->device.width), static_cast<GLsizei>(this->capture_status->device.height), GL_RGB, GL_UNSIGNED_BYTE, this->saved_buf);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+        // Force an OpenGL flush, so that the texture data will appear updated
+        // in all contexts immediately (solves problems in multi-threaded apps)
+        glFlush();
+    }
+}
+
 void WindowScreen::pre_texture_conversion_processing() {
 	if(this->loaded_menu == CONNECT_MENU_TYPE)
 		return;
 	//Place preprocessing window-specific effects here
 	if(!this->capture_status->connected)
 		return;
-	this->in_tex.update((uint8_t*)this->saved_buf, this->capture_status->device.width, this->capture_status->device.height, 0, 0);
+	this->update_texture();
 }
 
 void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug) {

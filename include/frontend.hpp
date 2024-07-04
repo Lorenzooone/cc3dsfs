@@ -238,6 +238,7 @@ private:
 	void prepare_screen_rendering();
 	bool window_needs_work();
 	void window_factory(bool is_main_thread);
+	void update_texture();
 	void pre_texture_conversion_processing();
 	void post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug);
 	void window_bg_processing();
