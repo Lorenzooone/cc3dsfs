@@ -32,7 +32,7 @@ endif()
 include(FetchContent)
 FetchContent_Declare(SFML
     GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG macos_fullscreen_v2.6)
+    GIT_TAG 2.6.1)
 
 FetchContent_Declare(libusb1
     GIT_REPOSITORY https://github.com/libusb/libusb-cmake.git
