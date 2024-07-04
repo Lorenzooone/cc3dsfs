@@ -118,9 +118,9 @@ _Note: The volume is independent of the actual volume level set with the physica
 
 ## Profiles/Layouts
 
-When starting the program for the first time, a message indicating a load failure for the cc3dsfs.cfg file will be displayed, and the same will occur when attempting to load from any given layout file if it hasn't been saved to before. These files must be created by the program first before they can be loaded from. The program saves its current configuration to the cc3dsfs.cfg file when the program is successfully closed, creating the file if it doesn't already exist, and loads from it every time at startup.
+When starting the program for the first time, a message indicating a load failure for the cc3dsfs.cfg file will be displayed, and the same will occur when attempting to load from any given layout file if it hasn't been saved to before. That is normal. These files must be created by the program first before they can be loaded from. The program saves its current configuration to the cc3dsfs.cfg file when the program is successfully closed, creating the file if it doesn't already exist, and loading from it every time at startup.
 
-The current configuration can be saved to various extra profiles, creating the given file if it doesn't already exist. Changing the configuration after a layout is loaded will not overwrite it unless the respective it is saved.
+The current configuration can be saved to various extra profiles, creating the given file if it doesn't already exist. Changing settings after a layout is loaded will not automatically overwrite its file. To make the changes permanent, saving the profile again is required.
 
 The name of profiles can be changed by altering the __name__ field in its file.
 
@@ -137,7 +137,7 @@ On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the
 - Enabling Slow Poll may slightly boost the FPS of the software, at the cost of an extremely slight decrease in frame latency, and slower reaction times of the software to key presses. Disabled by default (as when the FPS are greater than the CC's, it's not reccomended).
 - On MacOS, you may get a notice about Apple being unable to check for malware, or the developer being unknown. To open the program regardless of that, while holding the Command key, right click the application, then select the "Open" option.
 - Certain TVs/Monitors may add some audio delay for the purpose of video/lip syncing. If you're experiencing too much audio delay when using this software, try checking in the TV/Monitor settings whether you can reduce that added delay. One of the names used for that setting is "Lip Sync", or something along that line.
-- For the best audio latency and quality, it may be needed to change OpenAL's sound settings. Their location is OS-specific. On linux, you may use the "alsoft-config" command. In particular, the following parameters may help:
+- For the best audio latency and quality, it may be needed to change OpenAL's sound settings. Their location is OS-specific. On linux, you may also be able to use the "alsoft-config" command. In particular, the following parameters may help:
 ```
 frequency = 96000
 periods = 2
