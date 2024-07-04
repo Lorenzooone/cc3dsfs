@@ -291,12 +291,12 @@ static inline void usb_oldDSconvertVideoToOutputHalfLine(USBOldDSCaptureReceived
 
 static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out) {
 	if(!p_in->frameinfo.valid) { //LCD was off
-		memset(p_out->screen_data, 0, WIDTH_DS * (2 * HEIGHT_DS) * 4);
+		memset(p_out->screen_data, 0, WIDTH_DS * (2 * HEIGHT_DS) * 3);
 		return;
 	}
 
 	// Handle first line being off, if needed
-	memset(p_out->screen_data, 0, WIDTH_DS * 4);
+	memset(p_out->screen_data, 0, WIDTH_DS * 3);
 
 	int input_halfline = 0;
 	for(int i = 0; i < 2; i++) {
@@ -308,8 +308,8 @@ static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOu
 		if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
 			usb_oldDSconvertVideoToOutputHalfLine(p_in, p_out, input_halfline++, i);
 		else { // deal with missing half-line
-			memcpy(p_out->screen_data[i * (WIDTH_DS / 2)], p_out->screen_data[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * 4);
-			memcpy(p_out->screen_data[(i * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], p_out->screen_data[((i - 2) * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], (WIDTH_DS / 2) * 4);
+			memcpy(p_out->screen_data[i * (WIDTH_DS / 2)], p_out->screen_data[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * 3);
+			memcpy(p_out->screen_data[(i * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], p_out->screen_data[((i - 2) * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], (WIDTH_DS / 2) * 3);
 		}
 	}
 }
