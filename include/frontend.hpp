@@ -175,6 +175,7 @@ private:
 	volatile bool scheduled_work_on_window;
 	volatile bool is_thread_done;
 
+	sf::Shader *in_top_shader, *in_bot_shader, *top_shader, *bot_shader;
 	sf::RectangleShape m_in_rect_top, m_in_rect_bot;
 	out_rect_data m_out_rect_top, m_out_rect_bot;
 	ScreenType m_stype;
