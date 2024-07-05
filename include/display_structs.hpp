@@ -48,13 +48,9 @@ struct DisplayData {
 	bool last_connected_ds;
 };
 
-#pragma pack(push, 1)
-
-struct PACKED VideoOutputData {
+struct VideoOutputData {
 	uint8_t screen_data[MAX_IN_VIDEO_SIZE][3];
 };
-
-#pragma pack(pop)
 
 struct CropData {
 	int top_width;
