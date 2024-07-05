@@ -1,5 +1,6 @@
 #include "frontend.hpp"
 
+#define GL_SILENCE_DEPRECATION
 #include <SFML/OpenGL.hpp>
 #include <cstring>
 #include "font_ttf.h"

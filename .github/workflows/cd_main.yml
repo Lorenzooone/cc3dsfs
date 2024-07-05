@@ -18,7 +18,6 @@ jobs:
         platform:
         - { name: Windows VS2022,      os: windows-2022  }
         - { name: Linux GCC,           os: ubuntu-latest }
-        - { name: macOS x64,           os: macos-13  }
         - { name: macOS Apple Silicon, os: macos-14  }
         config:
         - { name: Static, flags: -DBUILD_SHARED_LIBS=FALSE }
@@ -49,15 +48,10 @@ jobs:
       shell: bash
       run: cd build && cpack -G ZIP
 
-    - name: Unpack Codesign Repack x64
-      if: (runner.os == 'macOS') && (runner.arch == 'x64')
+    - name: Unpack Codesign Repack
+      if: runner.os == 'macOS'
       shell: bash
-      run: setup_scripts/macos_bundle_signature.sh cc3dsfs_macos_x86_64
-
-    - name: Unpack Codesign Repack Arm64
-      if: (runner.os == 'macOS') && (runner.arch == 'ARM64')
-      shell: bash
-      run: setup_scripts/macos_bundle_signature.sh cc3dsfs_macos_arm64
+      run: setup_scripts/macos_bundle_signature.sh cc3dsfs_macos
 
     - name: Archive resulting artifact
       uses: actions/upload-artifact@v3
@@ -85,7 +79,6 @@ jobs:
         tag: "nightly-latest"
         replace: true
         files: >
-          cc3dsfs_macos_x86_64.zip
           cc3dsfs_windows_x86_64.zip
           cc3dsfs_linux_x86_64.zip
-          cc3dsfs_macos_arm64.zip
+          cc3dsfs_macos.zip
