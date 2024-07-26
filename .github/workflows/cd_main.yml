@@ -17,6 +17,7 @@ jobs:
       matrix:
         platform:
         - { name: Windows VS2022,      os: windows-2022  }
+        - { name: Windows VS2022 ARM,  os: windows-2022, flags: -A ARM64}
         - { name: Linux GCC,           os: ubuntu-latest }
         - { name: macOS Apple Silicon, os: macos-14  }
         config:
@@ -79,6 +80,7 @@ jobs:
         tag: "nightly-latest"
         replace: true
         files: >
+          cc3dsfs_windows_arm64.zip
           cc3dsfs_windows_x86_64.zip
           cc3dsfs_linux_x86_64.zip
           cc3dsfs_macos.zip

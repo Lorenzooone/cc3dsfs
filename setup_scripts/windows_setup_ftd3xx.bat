@@ -5,4 +5,4 @@ set "a=%a:/=\%"
 set "b=%b:/=\%"
 set "c=%c:/=\%"
 copy %a%\%c% %b%\
-copy %a%\FTD3XX.h %b%\
+copy %a%\FTD3XX.h %b%\ftd3xx.h

@@ -455,7 +455,10 @@ void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, 
 			sf::Shader* chosen_shader = this->in_top_shader;
 			if(!is_top)
 				chosen_shader = this->in_bot_shader;
-			rect_data.out_tex.draw(in_rect, chosen_shader);
+			if(sf::Shader::isAvailable())
+				rect_data.out_tex.draw(in_rect, chosen_shader);
+			else
+				rect_data.out_tex.draw(in_rect);
 			//Place postprocessing effects here
 		}
 	}
@@ -476,10 +479,18 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 		this->m_win.clear();
 	this->window_bg_processing();
 	if(this->loaded_menu != CONNECT_MENU_TYPE) {
-		if(this->m_stype != ScreenType::BOTTOM)
-			this->m_win.draw(this->m_out_rect_top.out_rect, this->top_shader);
-		if(this->m_stype != ScreenType::TOP)
-			this->m_win.draw(this->m_out_rect_bot.out_rect, this->bot_shader);
+		if (this->m_stype != ScreenType::BOTTOM) {
+			if (sf::Shader::isAvailable())
+				this->m_win.draw(this->m_out_rect_top.out_rect, this->top_shader);
+			else
+				this->m_win.draw(this->m_out_rect_top.out_rect);
+		}
+		if (this->m_stype != ScreenType::TOP) {
+			if (sf::Shader::isAvailable())
+				this->m_win.draw(this->m_out_rect_bot.out_rect, this->bot_shader);
+			else
+				this->m_win.draw(this->m_out_rect_bot.out_rect);
+		}
 	}
 	this->execute_menu_draws();
 	this->notification->draw(this->m_win);

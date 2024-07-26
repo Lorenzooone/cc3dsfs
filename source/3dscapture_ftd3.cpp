@@ -1,14 +1,13 @@
 #include "3dscapture_ftd3.hpp"
 #include "devicecapture.hpp"
 
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
 #define FTD3XX_STATIC
-#include <FTD3XX.h>
 #define FT_ASYNC_CALL FT_ReadPipeEx
 #else
-#include <ftd3xx.h>
 #define FT_ASYNC_CALL FT_ReadPipeAsync
 #endif
+#include <ftd3xx.h>
 
 #include <cstring>
 #include <thread>
@@ -18,7 +17,7 @@
 #define BULK_OUT 0x02
 #define BULK_IN 0x82
 
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
 #define FIFO_CHANNEL 0x82
 #else
 #define FIFO_CHANNEL 0
@@ -28,14 +27,20 @@
 #define SERIAL_NUMBER_SIZE (REAL_SERIAL_NUMBER_SIZE+1)
 
 static bool get_is_bad_ftd3xx();
+static bool get_skip_initial_pipe_abort();
 
 static OVERLAPPED overlap[NUM_CONCURRENT_DATA_BUFFERS];
 static bool is_bad_ftd3xx = get_is_bad_ftd3xx();
+static bool skip_initial_pipe_abort = get_skip_initial_pipe_abort();
 static ULONG read_buffers[NUM_CONCURRENT_DATA_BUFFERS];
 
 static bool get_is_bad_ftd3xx() {
-	#if (defined(_WIN32) || defined(_WIN64))
+	#ifdef _WIN32
+	#ifdef _M_ARM64
+	return true;
+	#else
 	return false;
+	#endif
 	#endif
 
 	bool is_bad_ftd3xx = false;
@@ -44,10 +49,27 @@ static bool get_is_bad_ftd3xx() {
 	if(FT_FAILED(FT_GetLibraryVersion(&ftd3xx_lib_version))) {
 		ftd3xx_lib_version = 0;
 	}
-	if(ftd3xx_lib_version == 0x0100001A) {
+	if(ftd3xx_lib_version >= 0x0100001A) {
 		is_bad_ftd3xx = true;
 	}
 	return is_bad_ftd3xx;
+}
+
+static bool get_skip_initial_pipe_abort() {
+	#ifdef _WIN32
+	return false;
+	#endif
+
+	bool skip_initial_pipe_abort = false;
+	DWORD ftd3xx_lib_version;
+
+	if(FT_FAILED(FT_GetLibraryVersion(&ftd3xx_lib_version))) {
+		ftd3xx_lib_version = 0;
+	}
+	if(ftd3xx_lib_version >= 0x0100001A) {
+		skip_initial_pipe_abort = true;
+	}
+	return skip_initial_pipe_abort;
 }
 
 void list_devices_ftd3(std::vector<CaptureDevice> &devices_list) {
@@ -90,8 +112,8 @@ uint64_t ftd3_get_video_in_size(CaptureData* capture_data) {
 
 static uint64_t get_capture_size(CaptureData* capture_data) {
 	if(!capture_data->status.enabled_3d)
-		return sizeof(FTD3_3DSCaptureReceived);
-	return sizeof(FTD3_3DSCaptureReceived_3D);
+		return sizeof(FTD3_3DSCaptureReceived) & (~(EXTRA_DATA_BUFFER_FTD3XX_SIZE - 1));
+	return sizeof(FTD3_3DSCaptureReceived_3D) & (~(EXTRA_DATA_BUFFER_FTD3XX_SIZE - 1));
 }
 
 static void preemptive_close_connection(CaptureData* capture_data) {
@@ -132,7 +154,7 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 		return false;
 	}
 
-	if(!get_is_bad_ftd3xx()) {
+	if(!skip_initial_pipe_abort) {
 		if(FT_AbortPipe(capture_data->handle, BULK_IN)) {
 			capture_error_print(print_failed, capture_data, "Abort failed");
 			preemptive_close_connection(capture_data);
@@ -147,6 +169,23 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 	}
 
 	return true;
+}
+
+static inline void data_output_update(CaptureData* capture_data, int &inner_curr_in, std::chrono::time_point<std::chrono::high_resolution_clock> &base_time, bool inc_inner_curr_in) {
+	const auto curr_time = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> diff = curr_time - base_time;
+	base_time = curr_time;
+	capture_data->time_in_buf[inner_curr_in] = diff.count();
+	capture_data->read[inner_curr_in] = read_buffers[inner_curr_in];
+
+	if(capture_data->status.cooldown_curr_in)
+		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
+	capture_data->status.curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
+	if(inc_inner_curr_in)
+		inner_curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
+	// Signal that there is data available
+	capture_data->status.video_wait.unlock();
+	capture_data->status.audio_wait.unlock();
 }
 
 static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_CONCURRENT_DATA_BUFFERS]) {
@@ -187,61 +226,38 @@ static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_
 			capture_error_print(true, capture_data, "Disconnected: USB error");
 			return;
 		}
-		const auto curr_time = std::chrono::high_resolution_clock::now();
-		const std::chrono::duration<double> diff = curr_time - clock_start;
-		capture_data->time_in_buf[inner_curr_in] = diff.count();
-		capture_data->read[inner_curr_in] = read_buffers[inner_curr_in];
-		clock_start = curr_time;
 
-		if(capture_data->status.cooldown_curr_in)
-			capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
-		capture_data->status.curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
-		// Signal that there is data available
-		capture_data->status.video_wait.unlock();
-		capture_data->status.audio_wait.unlock();
+		data_output_update(capture_data, inner_curr_in, clock_start, false);
 	}
 }
 
-#if !(defined(_WIN32) || defined(_WIN64))
 static bool safe_capture_call(CaptureData* capture_data) {
 	int inner_curr_in = 0;
+	auto clock_start = std::chrono::high_resolution_clock::now();
 
 	while(capture_data->status.connected && capture_data->status.running) {
 
-		auto clock_start = std::chrono::high_resolution_clock::now();
-
+		#ifdef _WIN32
+		FT_STATUS ftStatus = FT_ReadPipeEx(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&capture_data->capture_buf[inner_curr_in], get_capture_size(capture_data), &read_buffers[inner_curr_in], NULL);
+		#else
 		FT_STATUS ftStatus = FT_ReadPipeEx(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&capture_data->capture_buf[inner_curr_in], get_capture_size(capture_data), &read_buffers[inner_curr_in], 1000);
+		#endif
 		if(FT_FAILED(ftStatus)) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");
 			return true;
 		}
 
-		const auto curr_time = std::chrono::high_resolution_clock::now();
-		const std::chrono::duration<double> diff = curr_time - clock_start;
-		capture_data->time_in_buf[inner_curr_in] = diff.count();
-		capture_data->read[inner_curr_in] = read_buffers[inner_curr_in];
-
-		inner_curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
-		if(capture_data->status.cooldown_curr_in)
-			capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
-		capture_data->status.curr_in = inner_curr_in;
-		capture_data->status.video_wait.unlock();
-		capture_data->status.audio_wait.unlock();
+		data_output_update(capture_data, inner_curr_in, clock_start, true);
 	}
 
 	return false;
 }
-#endif
 
 void ftd3_capture_main_loop(CaptureData* capture_data) {
-	#if !(defined(_WIN32) || defined(_WIN64))
 	if(!is_bad_ftd3xx)
 		fast_capture_call(capture_data, overlap);
 	else
 		safe_capture_call(capture_data);
-	#else
-		fast_capture_call(capture_data, overlap);
-	#endif
 }
 
 void ftd3_capture_cleanup(CaptureData* capture_data) {

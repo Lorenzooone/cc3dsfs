@@ -16,6 +16,7 @@
 #define FIX_PARTIAL_FIRST_FRAME_NUM 3
 
 #define EXTRA_DATA_BUFFER_USB_SIZE (1 << 9)
+#define EXTRA_DATA_BUFFER_FTD3XX_SIZE (1 << 10)
 
 enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_FTD2 };
 
@@ -46,11 +47,13 @@ struct PACKED USBOldDSVideoInputData {
 struct PACKED FTD3_3DSCaptureReceived {
 	RGB83DSVideoInputData video_in;
 	uint16_t audio_data[N3DSXL_SAMPLES_IN];
+	uint8_t unused_buffer[EXTRA_DATA_BUFFER_FTD3XX_SIZE];
 };
 
 struct PACKED FTD3_3DSCaptureReceived_3D {
 	RGB83DSVideoInputData_3D video_in;
 	uint16_t audio_data[N3DSXL_SAMPLES_IN];
+	uint8_t unused_buffer[EXTRA_DATA_BUFFER_FTD3XX_SIZE];
 };
 
 struct PACKED USB3DSCaptureReceived {

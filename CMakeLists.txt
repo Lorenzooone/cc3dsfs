@@ -4,6 +4,7 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "11" CACHE STRING "Minimum OS X deployment versi
 project(cc3dsfs VERSION 1.0.0 LANGUAGES CXX)
 include(ExternalProject)
 
+set(WINDOWS_ARM64 0)
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
@@ -26,6 +27,10 @@ if (RASPBERRY_PI_COMPILATION)
 	set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS}-DRASPI 1 ")
 endif()
 
+if((${CMAKE_SYSTEM_NAME} STREQUAL "Windows") AND ((${CMAKE_GENERATOR_PLATFORM} MATCHES "ARM64") OR ("${CMAKE_GENERATOR_PLATFORM}" STREQUAL "" AND ${CMAKE_SYSTEM_PROCESSOR} MATCHES "ARM64")))
+    set(WINDOWS_ARM64 1)
+endif()
+
 # Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP in CMake 3.24:
 if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
     cmake_policy(SET CMP0135 NEW)
@@ -34,7 +39,7 @@ endif()
 include(FetchContent)
 FetchContent_Declare(SFML
     GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG 2.6.1)
+    GIT_TAG 2.6.x)
 
 FetchContent_Declare(libusb1
     GIT_REPOSITORY https://github.com/libusb/libusb-cmake.git
@@ -58,14 +63,31 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     if(${WINDOWS_FTD3XX_USE_SHARED_LIB})
         set(FTD3XX_WINDOWS_PATH_SPECIFIER DLL)
         set(FTD3XX_LIB FTD3XX.dll)
+        if(WINDOWS_ARM64)
+            set(FTD3XX_WINDOWS_PATH_SPECIFIER Dynamic)
+            set(FTD3XX_LIB FTD3XXWU.dll)
+        endif()
     else()
         set(FTD3XX_WINDOWS_PATH_SPECIFIER Static_Lib)
         set(FTD3XX_LIB FTD3XX.lib)
+        if(WINDOWS_ARM64)
+            set(FTD3XX_WINDOWS_PATH_SPECIFIER Static)
+            set(FTD3XX_LIB FTD3XXWU.lib)
+        endif()
     endif()
-    if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+    if(WINDOWS_ARM64)
+        set(FTD3XX_URL_TIME 2024/06)
+        set(FTD3XX_BUILD_COMMAND ${SETUP_SCRIPTS_DIR}/windows_setup_ftd3xx_winusb.bat)
+        set(FTD3XX_ARCHIVE FTD3XX_WinUSB_Package.zip)
+        set(FTD3XX_PATH_WINDOWS_ARCH ARM64)
+    elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
         set(FTD3XX_PATH_WINDOWS_ARCH Win32)
     else ()
         set(FTD3XX_PATH_WINDOWS_ARCH x64)
+    endif()
+    set(FTD3XX_PRE_WINDOWS_PATH ${FTD3XX_PATH_WINDOWS_ARCH}/${FTD3XX_WINDOWS_PATH_SPECIFIER})
+    if(WINDOWS_ARM64)
+        set(FTD3XX_PRE_WINDOWS_PATH ${FTD3XX_WINDOWS_PATH_SPECIFIER}/${FTD3XX_PATH_WINDOWS_ARCH})
     endif()
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     set(FTD3XX_BUILD_COMMAND ${SETUP_SCRIPTS_DIR}/macos_setup_ftd3xx.sh)
@@ -106,9 +128,13 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     set(FTD2XX_VOL CDM-v${FTD2XX_VER})
     set(FTD2XX_ARCHIVE ${FTD2XX_VOL}.zip)
     set(FTD2XX_SUBFOLDER win)
+    set(FTD2XX_HEADER_PATH ftd2xx.h)
     if(${WINDOWS_FTD2XX_USE_SHARED_LIB})
         set(FTD2XX_WINDOWS_PATH_SPECIFIER "")
-    	if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+        if(WINDOWS_ARM64)
+            set(FTD2XX_WINDOWS_PATH_SPECIFIER Release)
+            set(FTD2XX_LIB FTD2XX.dll)
+    	elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
         	set(FTD2XX_LIB ftd2xx.dll)
     	else()
     		set(FTD2XX_LIB ftd2xx64.dll)
@@ -116,11 +142,26 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     else()
         set(FTD2XX_WINDOWS_PATH_SPECIFIER Static)
         set(FTD2XX_LIB ftd2xx.lib)
+        if(WINDOWS_ARM64)
+            set(FTD2XX_WINDOWS_PATH_SPECIFIER Release)
+            set(FTD2XX_LIB FTD2XXstatic.lib)
+        endif()
     endif()
-    if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+    if(WINDOWS_ARM64)
+        set(FTD2XX_URL_TIME 2022/02)
+        set(FTD2XX_VER 2.12.36.4-for-ARM64-Signed-Distributable)
+        set(FTD2XX_VOL CDM-v${FTD2XX_VER})
+        set(FTD2XX_ARCHIVE ${FTD2XX_VOL}.zip)
+        set(FTD2XX_PATH_WINDOWS_ARCH ARM64)
+        set(FTD2XX_HEADER_PATH x86/FTD2XX.H)
+    elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
         set(FTD2XX_PATH_WINDOWS_ARCH i386)
     else ()
         set(FTD2XX_PATH_WINDOWS_ARCH amd64)
+    endif()
+    set(FTD2XX_PRE_WINDOWS_PATH ${FTD2XX_WINDOWS_PATH_SPECIFIER}/${FTD2XX_PATH_WINDOWS_ARCH})
+    if(WINDOWS_ARM64)
+        set(FTD2XX_PRE_WINDOWS_PATH ${FTD2XX_PATH_WINDOWS_ARCH}/${FTD2XX_WINDOWS_PATH_SPECIFIER})
     endif()
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     set(FTD2XX_BUILD_COMMAND ${SETUP_SCRIPTS_DIR}/macos_setup_ftd2xx.sh)
@@ -210,7 +251,7 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 ExternalProject_Add(FTD3XX_BUILD_PROJECT
     SOURCE_DIR ${ftd3xx_SOURCE_DIR}
     BINARY_DIR ${ftd3xx_BINARY_DIR}
-    BUILD_COMMAND ${FTD3XX_BUILD_COMMAND} ${ftd3xx_SOURCE_DIR} ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${FTD3XX_PATH_WINDOWS_ARCH}/${FTD3XX_WINDOWS_PATH_SPECIFIER}/${FTD3XX_LIB}
+    BUILD_COMMAND ${FTD3XX_BUILD_COMMAND} ${ftd3xx_SOURCE_DIR} ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${FTD3XX_PRE_WINDOWS_PATH}/${FTD3XX_LIB}
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     INSTALL_COMMAND ""
@@ -218,7 +259,7 @@ ExternalProject_Add(FTD3XX_BUILD_PROJECT
 ExternalProject_Add(FTD2XX_BUILD_PROJECT
     SOURCE_DIR ${ftd2xx_SOURCE_DIR}
     BINARY_DIR ${ftd2xx_BINARY_DIR}
-    BUILD_COMMAND ${FTD2XX_BUILD_COMMAND} ${ftd2xx_SOURCE_DIR} ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER} ${FTD2XX_WINDOWS_PATH_SPECIFIER}/${FTD2XX_PATH_WINDOWS_ARCH}/${FTD2XX_LIB}
+    BUILD_COMMAND ${FTD2XX_BUILD_COMMAND} ${ftd2xx_SOURCE_DIR} ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER} ${FTD2XX_PRE_WINDOWS_PATH}/${FTD2XX_LIB} ${FTD2XX_HEADER_PATH}
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     INSTALL_COMMAND ""
@@ -250,32 +291,42 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(TOOLS_DATA_DIR ${CMAKE_BINARY_DIR}/tools_and_data)
 file(MAKE_DIRECTORY ${TOOLS_DATA_DIR})
 
+execute_process(COMMAND ${CMAKE_COMMAND} -B ${TOOLS_DATA_DIR} ${CMAKE_SOURCE_DIR}/tools)
+execute_process(COMMAND ${CMAKE_COMMAND} --build ${TOOLS_DATA_DIR})
+
 set(OUTPUT_NAME cc3dsfs)
 
-add_executable(CMakeBin2C tools/bin2c.cpp)
 add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/3dscapture_ftd3.cpp source/dscapture_ftd2.cpp source/usb_ds_3ds_capture.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp source/Menus/ScalingRatioMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp)
-add_dependencies(${OUTPUT_NAME} FTD3XX_BUILD_PROJECT FTD2XX_BUILD_PROJECT CMakeBin2C)
+add_dependencies(${OUTPUT_NAME} FTD3XX_BUILD_PROJECT FTD2XX_BUILD_PROJECT)
 target_link_libraries(${OUTPUT_NAME} PRIVATE sfml-graphics sfml-audio sfml-window sfml-system usb-1.0 ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}/${FTD3XX_LIB} ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER}/${FTD2XX_LIB} ${EXTRA_LIBRARIES})
 target_link_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER})
 target_include_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER} ${TOOLS_DATA_DIR} ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/include/Menus)
 target_compile_features(${OUTPUT_NAME} PRIVATE cxx_std_20)
 target_compile_options(${OUTPUT_NAME} PRIVATE ${EXTRA_CXX_FLAGS})
-target_compile_features(CMakeBin2C PRIVATE cxx_std_17)
 
 add_custom_command(
     OUTPUT ${TOOLS_DATA_DIR}/font_ttf.cpp
     COMMENT "Convert font to binary"
-    COMMAND $<TARGET_FILE:CMakeBin2C> ${CMAKE_SOURCE_DIR}/data/font.ttf ${TOOLS_DATA_DIR} font_ttf font_ttf
-    DEPENDS ${CMAKE_SOURCE_DIR}/data/font.ttf CMakeBin2C
+    COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/data/font.ttf ${TOOLS_DATA_DIR} font_ttf font_ttf
+    DEPENDS ${CMAKE_SOURCE_DIR}/data/font.ttf ${TOOLS_DATA_DIR}/CMakeBin2C${FINAL_EXTENSION}
 )
 
 if(WIN32)
-    add_custom_command(
-        TARGET ${OUTPUT_NAME}
-        COMMENT "Copy OpenAL DLL"
-        PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${sfml_SOURCE_DIR}/extlibs/bin/$<IF:$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>,x64,x86>/openal32.dll ${CMAKE_SOURCE_DIR}
-        VERBATIM
-    )
+    if(WINDOWS_ARM64)
+        add_custom_command(
+            TARGET ${OUTPUT_NAME}
+            COMMENT "Copy OpenAL DLL"
+            PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${sfml_SOURCE_DIR}/extlibs/bin/ARM64/openal32.dll ${CMAKE_SOURCE_DIR}
+            VERBATIM
+        )
+    else()
+        add_custom_command(
+            TARGET ${OUTPUT_NAME}
+            COMMENT "Copy OpenAL DLL"
+            PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${sfml_SOURCE_DIR}/extlibs/bin/$<IF:$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>,x64,x86>/openal32.dll ${CMAKE_SOURCE_DIR}
+            VERBATIM
+        )
+    endif()
 endif()
 
 add_custom_command(
@@ -331,7 +382,9 @@ set(CPACK_VERBATIM_VARIABLES TRUE)
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}_macos)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "AMD64")
+	if(WINDOWS_ARM64)
+        set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}_windows_arm64)
+    elseif(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "AMD64")
         set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}_windows_x86_64)
     else()
         set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}_windows_${CMAKE_SYSTEM_PROCESSOR})
