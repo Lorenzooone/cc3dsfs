@@ -1,0 +1,3 @@
+#!/bin/sh
+
+docker-scripts/docker_build_base build64 "-DCMAKE_TOOLCHAIN_FILE=toolchains/linux_x86_64.cmake"

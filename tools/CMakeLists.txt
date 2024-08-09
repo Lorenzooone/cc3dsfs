@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
+unset(ENV{CC})
+unset(ENV{CXX})
 project(CMakeBin2C VERSION 1.0.0 LANGUAGES CXX)
 
 add_executable(CMakeBin2C bin2c.cpp)

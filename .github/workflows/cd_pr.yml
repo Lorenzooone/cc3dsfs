@@ -11,36 +11,42 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-        - { name: Windows VS2022,      os: windows-2022  }
-        - { name: Windows VS2022 ARM,  os: windows-2022, flags: -A ARM64}
-        - { name: Linux GCC,           os: ubuntu-latest }
-        - { name: macOS Apple Silicon, os: macos-14  }
+        - { name: Windows VS2022 x64,    os: windows-2022, flags: -A x64}
+        - { name: Windows VS2022 ARM,    os: windows-2022, flags: -A ARM64}
+        - { name: Windows VS2022 Win32,  os: windows-2022, flags: -A Win32}
+        - { name: Linux GCC x64,         os: ubuntu-latest, flags: 64}
+        - { name: Linux GCC 32,          os: ubuntu-latest, flags: 32}
+        - { name: Linux GCC ARM 64,      os: ubuntu-latest, flags: arm64}
+        - { name: Linux GCC ARM 32,      os: ubuntu-latest, flags: arm32}
+        - { name: macOS Apple Silicon,   os: macos-14  }
         config:
         - { name: Static, flags: -DBUILD_SHARED_LIBS=FALSE }
 
     steps:
-    - name: Install Linux Dependencies
-      if: runner.os == 'Linux'
-      run: sudo apt-get update && sudo apt-get install libxrandr-dev libxcursor-dev libudev-dev libopenal-dev libflac-dev libvorbis-dev libgl1-mesa-dev libegl1-mesa-dev
-
     - name: Checkout
       uses: actions/checkout@v3
 
     - name: Configure
+      if: runner.os != 'Linux'
       shell: bash
       run: cmake -S . -B build -DCMAKE_INSTALL_PREFIX=install ${{matrix.platform.flags}} ${{matrix.config.flags}}
+
+    - name: Build Linux
+      if: runner.os == 'Linux'
+      run: docker run --rm -u root -v ${PWD}:/home/builder/cc3dsfs lorenzooone/cc3dsfs:builder${{matrix.platform.flags}}
 
     - name: Build Windows
       if: runner.os == 'Windows'
       shell: bash
       run: cmake --build build --config Release
 
-    - name: Build (not Windows)
-      if: runner.os != 'Windows'
+    - name: Build macOS
+      if: runner.os == 'macOS'
       shell: bash
       run: cmake --build build --config Release -j
 
-    - name: Pack
+    - name: Pack (not Linux)
+      if: runner.os != 'Linux'
       shell: bash
       run: cd build && cpack -G ZIP
 

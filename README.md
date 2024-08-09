@@ -66,6 +66,11 @@ When compiling on a Raspberry Pi, to enable usage of GPIO, use:
 cmake -B build -DRASPBERRY_PI_COMPILATION=TRUE ; cmake --build build --config Release
 ```
 
+### Docker Compilation
+
+Alternatively, one may use Docker to compile the Linux version for its different architectures by running: `docker run --rm -it -v ${PWD}:/home/builder/cc3dsfs lorenzooone/cc3dsfs:<builder>`
+The following builders are available: builder32, builder64, builderarm32 and builderarm64.
+
 ## Controls
 
 The software has a GUI which exposes all of the available settings. There are also various available keyboard shortcuts which allow quicker access to the options.

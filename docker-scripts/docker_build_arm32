@@ -1,0 +1,4 @@
+#!/bin/sh
+
+docker-scripts/docker_build_base buildarm32 "-DCMAKE_TOOLCHAIN_FILE=toolchains/linux_arm32.cmake"
+docker-scripts/docker_build_base buildarm32 "-DRASPBERRY_PI_COMPILATION=TRUE -DCMAKE_TOOLCHAIN_FILE=toolchains/linux_arm32.cmake"

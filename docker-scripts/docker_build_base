@@ -1,0 +1,9 @@
+#!/bin/sh
+
+cmake -S . -B $1 $2
+cmake --build $1 --config Release -j
+cd $1
+cpack -G ZIP
+mkdir -p /home/builder/cc3dsfs/build
+cp cc3dsfs*.zip /home/builder/cc3dsfs/build
+cd ..

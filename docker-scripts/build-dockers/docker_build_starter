@@ -1,0 +1,6 @@
+#!/bin/sh
+
+cp -R /home/builder/cc3dsfs/. .
+chmod -R +x .
+
+$1

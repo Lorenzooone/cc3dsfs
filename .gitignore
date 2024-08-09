@@ -8,5 +8,7 @@ cc3dsfs.exe
 *.zip
 ftd3xx/
 presets/
-build/
+build*/
+!build-dockers/
 .config/
+out/
