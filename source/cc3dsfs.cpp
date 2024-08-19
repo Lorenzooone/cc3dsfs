@@ -284,6 +284,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	int num_elements_fps_array = 0;
 	int curr_out, prev_out = NUM_CONCURRENT_DATA_BUFFERS - 1;
 	FrontendData frontend_data;
+	ConsumerMutex draw_lock;
 	reset_display_data(&frontend_data.display_data);
 	frontend_data.display_data.mono_app_mode = mono_app;
 	frontend_data.reload = true;
@@ -298,9 +299,10 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	out_buf = new VideoOutputData;
 	memset(out_buf, 0, sizeof(VideoOutputData));
 
-	WindowScreen *top_screen = new WindowScreen(ScreenType::TOP, &capture_data->status, &frontend_data.display_data, audio_data, &extra_button_shortcuts);
-	WindowScreen *bot_screen = new WindowScreen(ScreenType::BOTTOM, &capture_data->status, &frontend_data.display_data, audio_data, &extra_button_shortcuts);
-	WindowScreen *joint_screen = new WindowScreen(ScreenType::JOINT, &capture_data->status, &frontend_data.display_data, audio_data, &extra_button_shortcuts);
+	draw_lock.unlock();
+	WindowScreen *top_screen = new WindowScreen(ScreenType::TOP, &capture_data->status, &frontend_data.display_data, audio_data, &extra_button_shortcuts, &draw_lock);
+	WindowScreen *bot_screen = new WindowScreen(ScreenType::BOTTOM, &capture_data->status, &frontend_data.display_data, audio_data, &extra_button_shortcuts, &draw_lock);
+	WindowScreen *joint_screen = new WindowScreen(ScreenType::JOINT, &capture_data->status, &frontend_data.display_data, audio_data, &extra_button_shortcuts, &draw_lock);
 	frontend_data.top_screen = top_screen;
 	frontend_data.bot_screen = bot_screen;
 	frontend_data.joint_screen = joint_screen;

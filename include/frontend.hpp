@@ -52,7 +52,7 @@ class WindowScreen {
 public:
 	ScreenInfo m_info;
 
-	WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts);
+	WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts, ConsumerMutex *draw_lock);
 	~WindowScreen();
 
 	void build();
@@ -188,6 +188,7 @@ private:
 	TextRectangle* notification;
 
 	ConsumerMutex display_lock;
+	ConsumerMutex *draw_lock;
 	bool done_display;
 	VideoOutputData *saved_buf;
 	ScreenInfo loaded_info;
