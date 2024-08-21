@@ -740,13 +740,6 @@ JoystickAction get_joystick_action(uint32_t joystickId, uint32_t joy_button) {
 	return JOY_ACTION_NONE;
 }
 
-void default_sleep(int wanted_ms) {
-	if(wanted_ms < 0)
-		sf::sleep(sf::milliseconds(1000/USB_CHECKS_PER_SECOND));
-	else
-		sf::sleep(sf::milliseconds(wanted_ms));
-}
-
 void update_output(FrontendData* frontend_data, double frame_time, VideoOutputData *out_buf) {
 	if(frontend_data->reload) {
 		frontend_data->top_screen->reload();
@@ -791,6 +784,13 @@ void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &o
 		frontend_data->bot_screen->update_ds_3ds_connection(changed_type);
 		frontend_data->joint_screen->update_ds_3ds_connection(changed_type);
 	}
+}
+
+void default_sleep(int wanted_ms) {
+	if(wanted_ms < 0)
+		sf::sleep(sf::milliseconds(1000/USB_CHECKS_PER_SECOND));
+	else
+		sf::sleep(sf::milliseconds(wanted_ms));
 }
 
 void screen_display_thread(WindowScreen *screen) {

@@ -18,7 +18,7 @@
 #define EXTRA_DATA_BUFFER_USB_SIZE (1 << 9)
 #define EXTRA_DATA_BUFFER_FTD3XX_SIZE (1 << 10)
 
-enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_FTD2 };
+enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_FTD2, CAPTURE_CONN_IS_NITRO };
 
 #pragma pack(push, 1)
 
@@ -42,6 +42,10 @@ struct PACKED USBOldDSPixelData {
 
 struct PACKED USBOldDSVideoInputData {
 	USBOldDSPixelData screen_data[IN_VIDEO_SIZE_DS];
+};
+
+struct PACKED ISNitroEmulatorVideoInputData {
+	uint8_t screen_data[IN_VIDEO_SIZE_DS][3];
 };
 
 struct PACKED FTD3_3DSCaptureReceived {
@@ -81,6 +85,10 @@ struct PACKED USBOldDSCaptureReceived {
 	USBOldDSFrameInfo frameinfo;
 };
 
+struct PACKED ISNitroCaptureReceived {
+	ISNitroEmulatorVideoInputData video_in;
+};
+
 #pragma pack(pop)
 
 union CaptureReceived {
@@ -89,6 +97,7 @@ union CaptureReceived {
 	USB3DSCaptureReceived usb_received_3ds;
 	USB3DSCaptureReceived_3D usb_received_3ds_3d;
 	USBOldDSCaptureReceived usb_received_old_ds;
+	ISNitroCaptureReceived is_nitro_capture_received;
 };
 
 struct CaptureDevice {

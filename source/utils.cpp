@@ -21,13 +21,44 @@
 #define APP_VERSION_LETTER M
 #endif
 
+static bool checked_be_once = false;
+static bool _is_be = false;
+
 bool is_big_endian(void) {
+	if(checked_be_once)
+		return _is_be;
     union {
         uint32_t i;
         char c[4];
     } value = {0x01020304};
 
-    return value.c[0] == 1;
+	checked_be_once = true;
+	_is_be = value.c[0] == 1;
+    return _is_be;
+}
+
+uint32_t to_le(uint32_t value) {
+	if(is_big_endian())
+		value = ((value & 0xFF) << 24) | ((value & 0xFF00) << 8) | ((value & 0xFF0000) >> 8) | ((value & 0xFF000000) >> 24);
+	return value;
+}
+
+uint32_t to_be(uint32_t value) {
+	if(!is_big_endian())
+		value = ((value & 0xFF) << 24) | ((value & 0xFF00) << 8) | ((value & 0xFF0000) >> 8) | ((value & 0xFF000000) >> 24);
+	return value;
+}
+
+uint16_t to_le(uint16_t value) {
+	if(is_big_endian())
+		value = ((value & 0xFF) << 8) | ((value & 0xFF00) >> 8);
+	return value;
+}
+
+uint16_t to_be(uint16_t value) {
+	if(!is_big_endian())
+		value = ((value & 0xFF) << 8) | ((value & 0xFF00) >> 8);
+	return value;
 }
 
 std::string get_version_string(bool get_letter) {

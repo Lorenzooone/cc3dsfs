@@ -3,6 +3,7 @@
 #include "3dscapture_ftd3.hpp"
 #include "dscapture_ftd2.hpp"
 #include "usb_ds_3ds_capture.hpp"
+#include "usb_is_nitro_capture.hpp"
 
 #include <cstring>
 
@@ -15,9 +16,13 @@ void convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, Capture
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD2)
 		ftd2_convertVideoToOutput(p_in, p_out, capture_data->status.enabled_3d);
 	#endif
-	#ifdef USE_USB
+	#ifdef USE_DS_3DS_USB
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_USB)
 		usb_convertVideoToOutput(p_in, p_out, &capture_data->status.device, capture_data->status.enabled_3d);
+	#endif
+	#ifdef USE_IS_NITRO_USB
+	if(capture_data->status.device.cc_type == CAPTURE_CONN_IS_NITRO)
+		usb_is_nitro_convertVideoToOutput(p_in, p_out, &capture_data->status.device);
 	#endif
 }
 

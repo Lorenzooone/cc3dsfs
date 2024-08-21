@@ -2,6 +2,7 @@
 #include "3dscapture_ftd3.hpp"
 #include "dscapture_ftd2.hpp"
 #include "usb_ds_3ds_capture.hpp"
+#include "usb_is_nitro_capture.hpp"
 
 #include <vector>
 #include <thread>
@@ -16,9 +17,8 @@ static bool poll_connection_window_screen(WindowScreen *screen, int &chosen_inde
 		chosen_index = screen->check_connection_menu_result();
 		return true;
 	}
-	if(screen->close_capture()) {
+	if(screen->close_capture())
 		return true;
-	}
 	return false;
 }
 
@@ -76,8 +76,11 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	#ifdef USE_FTD2
 	list_devices_ftd2(devices_list);
 	#endif
-	#ifdef USE_USB
+	#ifdef USE_DS_3DS_USB
 	list_devices_usb_ds_3ds(devices_list);
+	#endif
+	#ifdef USE_IS_NITRO_USB
+	list_devices_is_nitro(devices_list);
 	#endif
 
 	if(devices_list.size() <= 0) {
@@ -100,8 +103,12 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_FTD2) && (!connect_ftd2(print_failed, capture_data, &devices_list[chosen_device])))
 		return false;
 	#endif
-	#ifdef USE_USB
+	#ifdef USE_DS_3DS_USB
 	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_USB) && (!connect_usb(print_failed, capture_data, &devices_list[chosen_device])))
+		return false;
+	#endif
+	#ifdef USE_IS_NITRO_USB
+	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_IS_NITRO) && (!is_nitro_connect_usb(print_failed, capture_data, &devices_list[chosen_device])))
 		return false;
 	#endif
 	update_connected_3ds_ds(frontend_data, capture_data->status.device, devices_list[chosen_device]);
@@ -134,9 +141,13 @@ void captureCall(CaptureData* capture_data) {
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD2)
 			ftd2_capture_main_loop(capture_data);
 		#endif
-		#ifdef USE_USB
+		#ifdef USE_DS_3DS_USB
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_USB)
 			usb_capture_main_loop(capture_data);
+		#endif
+		#ifdef USE_IS_NITRO_USB
+		if(capture_data->status.device.cc_type == CAPTURE_CONN_IS_NITRO)
+			is_nitro_capture_main_loop(capture_data);
 		#endif
 
 		capture_data->status.close_success = false;
@@ -156,9 +167,13 @@ void captureCall(CaptureData* capture_data) {
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD2)
 			ftd2_capture_cleanup(capture_data);
 		#endif
-		#ifdef USE_USB
+		#ifdef USE_DS_3DS_USB
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_USB)
 			usb_capture_cleanup(capture_data);
+		#endif
+		#ifdef USE_IS_NITRO_USB
+		if(capture_data->status.device.cc_type == CAPTURE_CONN_IS_NITRO)
+			usb_is_nitro_capture_cleanup(capture_data);
 		#endif
 
 		capture_data->status.close_success = false;
@@ -186,21 +201,31 @@ uint64_t get_video_in_size(CaptureData* capture_data) {
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD2)
 		return ftd2_get_video_in_size(capture_data);
 	#endif
-	#ifdef USE_USB
+	#ifdef USE_DS_3DS_USB
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_USB)
 		return usb_get_video_in_size(capture_data);
+	#endif
+	#ifdef USE_IS_NITRO_USB
+	if(capture_data->status.device.cc_type == CAPTURE_CONN_IS_NITRO)
+		return usb_is_nitro_emulator_get_video_in_size(capture_data);
 	#endif
 	return 0;
 }
 
 void capture_init() {
-	#ifdef USE_USB
-	usb_init();
+	#ifdef USE_DS_3DS_USB
+	usb_ds_3ds_init();
+	#endif
+	#ifdef USE_IS_NITRO_USB
+	usb_is_nitro_init();
 	#endif
 }
 
 void capture_close() {
-	#ifdef USE_USB
-	usb_close();
+	#ifdef USE_DS_3DS_USB
+	usb_ds_3ds_close();
+	#endif
+	#ifdef USE_IS_NITRO_USB
+	usb_is_nitro_close();
 	#endif
 }

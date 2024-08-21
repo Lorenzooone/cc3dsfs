@@ -313,9 +313,9 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 std::string save_screen_info(std::string base, const ScreenInfo &info);
 void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor);
 float get_par_mult_factor(float width, float height, float max_width, float max_height, const PARData *correction_factor, bool is_rotated);
-void default_sleep(int wanted_ms = -1);
 void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL);
 void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &old_cc_device, const CaptureDevice &new_cc_device);
 void screen_display_thread(WindowScreen *screen);
 std::string get_name_non_int_mode(NonIntegerScalingModes input);
+void default_sleep(int wanted_ms = -1);
 #endif

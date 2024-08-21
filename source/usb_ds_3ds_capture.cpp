@@ -1,5 +1,6 @@
 #include "usb_ds_3ds_capture.hpp"
 #include "devicecapture.hpp"
+#include "usb_generic.hpp"
 
 #include <libusb.h>
 #include <cstring>
@@ -73,9 +74,6 @@ static const usb_device usb_old_ds_desc = {
 .i2caddr_3dsconfig = 0, .bitstream_3dscfg_ver = 0
 };
 
-static bool usb_initialized = false;
-static libusb_context *usb_ctx = NULL; // libusb session context
-
 // Read vendor request from control endpoint.  Returns bytes transferred (<0 = libusb error)
 static int vend_in(libusb_device_handle *handle, const usb_device* usb_device_desc, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint16_t wLength, uint8_t *buf) {
 	return libusb_control_transfer(handle, ((uint8_t)LIBUSB_REQUEST_TYPE_VENDOR | (uint8_t)LIBUSB_ENDPOINT_IN), bRequest, wValue, wIndex, buf, wLength, usb_device_desc->control_timeout);
@@ -129,6 +127,18 @@ static const usb_device* get_usb_device_desc(CaptureData* capture_data) {
 	return _get_usb_device_desc(&capture_data->status.device);
 }
 
+static std::string get_serial(libusb_device_handle *handle, libusb_device_descriptor *usb_descriptor, int &curr_serial_extra_id) {
+	uint8_t data[SERIAL_NUMBER_SIZE];
+	std::string serial_str = std::to_string(curr_serial_extra_id);
+	if(libusb_get_string_descriptor_ascii(handle, usb_descriptor->iSerialNumber, data, REAL_SERIAL_NUMBER_SIZE-1) >= 0) {
+		data[REAL_SERIAL_NUMBER_SIZE] = '\0';
+		serial_str = std::string((const char*)data);
+	}
+	else
+		curr_serial_extra_id += 1;
+	return serial_str;
+}
+
 static bool insert_device(std::vector<CaptureDevice> &devices_list, const usb_device* usb_device_desc, libusb_device *usb_device, libusb_device_descriptor *usb_descriptor, int &curr_serial_extra_id) {
 	libusb_device_handle *handle = NULL;
 	uint8_t data[SERIAL_NUMBER_SIZE];
@@ -137,13 +147,7 @@ static bool insert_device(std::vector<CaptureDevice> &devices_list, const usb_de
 	int result = libusb_open(usb_device, &handle);
 	if(result || (handle == NULL))
 		return true;
-	std::string serial_str = std::to_string(curr_serial_extra_id);
-	if(libusb_get_string_descriptor_ascii(handle, usb_descriptor->iSerialNumber, data, REAL_SERIAL_NUMBER_SIZE-1) >= 0) {
-		data[REAL_SERIAL_NUMBER_SIZE] = '\0';
-		serial_str = std::string((const char*)data);
-	}
-	else
-		curr_serial_extra_id += 1;
+	std::string serial_str = get_serial(handle, usb_descriptor, curr_serial_extra_id);
 	if(usb_device_desc->is_3ds)
 		devices_list.emplace_back(serial_str, "3DS", CAPTURE_CONN_USB, true, capture_get_has_3d(handle, usb_device_desc), true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, O3DS_SAMPLES_IN, usb_device_desc->bpp, 90, 0, 0, TOP_WIDTH_3DS, 0);
 	else {
@@ -160,10 +164,10 @@ static bool insert_device(std::vector<CaptureDevice> &devices_list, const usb_de
 }
 
 static libusb_device_handle* usb_find_by_serial_number(const usb_device* usb_device_desc, std::string &serial_number) {
-	if(!usb_initialized)
+	if(!usb_is_initialized())
 		return NULL;
 	libusb_device **usb_devices;
-	int num_devices = libusb_get_device_list(usb_ctx, &usb_devices);
+	int num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	libusb_device_descriptor usb_descriptor{};
 	libusb_device_handle *final_handle = NULL;
 
@@ -179,13 +183,7 @@ static libusb_device_handle* usb_find_by_serial_number(const usb_device* usb_dev
 		result = libusb_open(usb_devices[i], &handle);
 		if(result || (handle == NULL))
 			continue;
-		std::string device_serial_number = std::to_string(curr_serial_extra_id);
-		if(libusb_get_string_descriptor_ascii(handle, usb_descriptor.iSerialNumber, data, REAL_SERIAL_NUMBER_SIZE-1) >= 0) {
-			data[REAL_SERIAL_NUMBER_SIZE] = '\0';
-			device_serial_number = std::string((const char*)data);
-		}
-		else
-			curr_serial_extra_id += 1;
+		std::string device_serial_number = get_serial(handle, &usb_descriptor, curr_serial_extra_id);
 		if(serial_number == device_serial_number) {
 			final_handle = handle;
 			break;
@@ -319,10 +317,10 @@ static void usb_3DSconvertVideoToOutput(USB3DSCaptureReceived *p_in, VideoOutput
 }
 
 void list_devices_usb_ds_3ds(std::vector<CaptureDevice> &devices_list) {
-	if(!usb_initialized)
+	if(!usb_is_initialized())
 		return;
 	libusb_device **usb_devices;
-	int num_devices = libusb_get_device_list(usb_ctx, &usb_devices);
+	int num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	libusb_device_descriptor usb_descriptor{};
 	
 	int curr_serial_extra_id_3ds = 0;
@@ -342,7 +340,7 @@ void list_devices_usb_ds_3ds(std::vector<CaptureDevice> &devices_list) {
 }
 
 bool connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* device) {
-	if(!usb_initialized)
+	if(!usb_is_initialized())
 		return false;
 	const usb_device* usb_device_desc = _get_usb_device_desc(device);
 	libusb_device_handle *dev = usb_find_by_serial_number(usb_device_desc, device->serial_number);
@@ -378,7 +376,7 @@ uint64_t usb_get_video_in_size(CaptureData* capture_data) {
 }
 
 void usb_capture_main_loop(CaptureData* capture_data) {
-	if(!usb_initialized)
+	if(!usb_is_initialized())
 		return;
 	const usb_device* usb_device_desc = get_usb_device_desc(capture_data);
 	int inner_curr_in = 0;
@@ -429,14 +427,14 @@ void usb_capture_main_loop(CaptureData* capture_data) {
 }
 
 void usb_capture_cleanup(CaptureData* capture_data) {
-	if(!usb_initialized)
+	if(!usb_is_initialized())
 		return;
 	const usb_device* usb_device_desc = get_usb_device_desc(capture_data);
 	capture_end((libusb_device_handle*)capture_data->handle, usb_device_desc);
 }
 
 void usb_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureDevice* capture_device, bool enabled_3d) {
-	if(!usb_initialized)
+	if(!usb_is_initialized())
 		return;
 	if(capture_device->is_3ds) {
 		if(!enabled_3d)
@@ -446,22 +444,11 @@ void usb_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, Cap
 		usb_oldDSconvertVideoToOutput(&p_in->usb_received_old_ds, p_out);
 }
 
-void usb_init() {
-	if(usb_initialized)
-		return;
-	int result = libusb_init(&usb_ctx); // open session
-	if (result < 0) {
-		usb_ctx = NULL;
-		usb_initialized = false;
-		return;
-	}
-	usb_initialized = true;
+void usb_ds_3ds_init() {
+	return usb_init();
 }
 
-void usb_close() {
-	if(usb_initialized)
-		libusb_exit(usb_ctx);
-	usb_ctx = NULL;
-	usb_initialized = false;
+void usb_ds_3ds_close() {
+	usb_close();
 }
 
