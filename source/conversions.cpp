@@ -7,7 +7,8 @@
 
 #include <cstring>
 
-void convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureData* capture_data) {
+void convertVideoToOutput(int index, VideoOutputData *p_out, CaptureData* capture_data) {
+	CaptureReceived *p_in = &capture_data->capture_buf[index];
 	#ifdef USE_FTD3
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
 		ftd3_convertVideoToOutput(p_in, p_out, capture_data->status.enabled_3d);
@@ -22,13 +23,14 @@ void convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, Capture
 	#endif
 	#ifdef USE_IS_NITRO_USB
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_IS_NITRO)
-		usb_is_nitro_convertVideoToOutput(p_in, p_out, &capture_data->status.device);
+		usb_is_nitro_convertVideoToOutput(p_in, p_out, capture_data->capture_type[index]);
 	#endif
 }
 
-void convertAudioToOutput(CaptureReceived *p_in, sf::Int16 *p_out, uint64_t n_samples, const bool is_big_endian, CaptureData* capture_data) {
+void convertAudioToOutput(int index, sf::Int16 *p_out, uint64_t n_samples, const bool is_big_endian, CaptureData* capture_data) {
 	if(!capture_data->status.device.has_audio)
 		return;
+	CaptureReceived *p_in = &capture_data->capture_buf[index];
 	uint8_t* base_ptr = NULL;
 	#ifdef USE_FTD3
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3) {

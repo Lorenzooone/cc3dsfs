@@ -786,9 +786,17 @@ void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &o
 	}
 }
 
-void default_sleep(int wanted_ms) {
+void update_connected_specific_settings(FrontendData* frontend_data, const CaptureDevice &cc_device) {
+	if(cc_device.cc_type == CAPTURE_CONN_IS_NITRO) {
+		frontend_data->top_screen->update_capture_specific_settings();
+		frontend_data->bot_screen->update_capture_specific_settings();
+		frontend_data->joint_screen->update_capture_specific_settings();
+	}
+}
+
+void default_sleep(float wanted_ms) {
 	if(wanted_ms < 0)
-		sf::sleep(sf::milliseconds(1000/USB_CHECKS_PER_SECOND));
+		sf::sleep(sf::milliseconds(1000.0/USB_CHECKS_PER_SECOND));
 	else
 		sf::sleep(sf::milliseconds(wanted_ms));
 }

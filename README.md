@@ -3,7 +3,7 @@
 cc3dsfs is a multi-platform capture and display program for [3dscapture's](https://3dscapture.com/) N3DSXL, 3DS and DS (old) capture boards written in C++.
 The main goal is to offer the ability to use the Capture Card with a TV, via fullscreen mode.
 
-Tentative IS Nitro Emulator support (for newer revisions) is also present. Though results may vary (and the amount of video delay may be significantly higher).
+IS Nitro Emulator support (for newer revisions) is also present. Though results may vary (and the amount of video delay may be significantly higher based on the cable used).
 
 ## Features
 

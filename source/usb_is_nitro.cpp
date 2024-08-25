@@ -247,7 +247,7 @@ int DisableLca2(libusb_device_handle *handle) {
 	ret = WriteNecMemU16(handle, 0xF84000A, 1);
 	if(ret < 0)
 		return ret;
-	default_sleep(2000);
+	//default_sleep(2000);
 	return WriteNecMemU16(handle, 0xF84000A, 0);
 }
 
@@ -290,6 +290,7 @@ int UpdateFrameForwardEnable(libusb_device_handle *handle, uint8_t value) {
 }
 
 int ReadFrame(libusb_device_handle *handle, uint8_t* buf, int length) {
+	// Maybe making this async would be better for lower end hardware...
 	int num_bytes = 0;
 	int ret = bulk_in(handle, &usb_is_nitro_desc, buf, length, &num_bytes);
 	if(num_bytes != length)

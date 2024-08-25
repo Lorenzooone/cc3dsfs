@@ -30,6 +30,7 @@
 #include "ShortcutMenu.hpp"
 #include "ActionSelectionMenu.hpp"
 #include "ScalingRatioMenu.hpp"
+#include "ISNitroMenu.hpp"
 #include "display_structs.hpp"
 #include "WindowCommands.hpp"
 
@@ -68,6 +69,7 @@ public:
 	int check_connection_menu_result();
 	void end_connection_menu();
 	void update_ds_3ds_connection(bool changed_type);
+	void update_capture_specific_settings();
 	void update_save_menu();
 
 	void print_notification(std::string text, TextKind kind = TEXT_KIND_NORMAL);
@@ -146,6 +148,7 @@ private:
 	LicenseMenu *license_menu;
 	ShortcutMenu *shortcut_menu;
 	ActionSelectionMenu *action_selection_menu;
+	ISNitroMenu *is_nitro_menu;
 	ScalingRatioMenu *scaling_ratio_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const CropData*> possible_crops_ds;
@@ -219,6 +222,7 @@ private:
 	void fast_poll_change();
 	void padding_change();
 	void game_crop_enable_change();
+	void is_nitro_capture_type_change(bool positive);
 	void crop_value_change(int new_crop_value, bool do_print_notification = true, bool do_cycle = true);
 	void par_value_change(int new_par_value, bool is_top);
 	void offset_change(float &value, float change);
@@ -273,7 +277,7 @@ private:
 	void setWinSize(bool is_main_thread);
 	bool can_setup_menu();
 	void setup_no_menu();
-	void setup_main_menu(bool reset_data = true);
+	void setup_main_menu(bool reset_data = true, bool skip_setup_check = false);
 	void setup_video_menu(bool reset_data = true);
 	void setup_crop_menu(bool reset_data = true);
 	void setup_par_menu(bool is_top, bool reset_data = true);
@@ -290,6 +294,7 @@ private:
 	void setup_licenses_menu(bool reset_data = true);
 	void setup_relative_pos_menu(bool reset_data = true);
 	void setup_scaling_ratio_menu(bool reset_data = true);
+	void setup_is_nitro_menu(bool reset_data = true);
 	void update_connection();
 };
 
@@ -315,7 +320,8 @@ void get_par_size(int &width, int &height, float multiplier_factor, const PARDat
 float get_par_mult_factor(float width, float height, float max_width, float max_height, const PARData *correction_factor, bool is_rotated);
 void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL);
 void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &old_cc_device, const CaptureDevice &new_cc_device);
+void update_connected_specific_settings(FrontendData* frontend_data, const CaptureDevice &cc_device);
 void screen_display_thread(WindowScreen *screen);
 std::string get_name_non_int_mode(NonIntegerScalingModes input);
-void default_sleep(int wanted_ms = -1);
+void default_sleep(float wanted_ms = -1);
 #endif

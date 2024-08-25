@@ -57,7 +57,7 @@ static void SuccessConnectionOutTextGenerator(OutTextData &out_text_data, Captur
 	}
 }
 
-static bool load(const std::string path, const std::string name, ScreenInfo &top_info, ScreenInfo &bottom_info, ScreenInfo &joint_info, DisplayData &display_data, AudioData *audio_data, OutTextData &out_text_data, ExtraButtonShortcuts* extra_button_shortcuts) {
+static bool load(const std::string path, const std::string name, ScreenInfo &top_info, ScreenInfo &bottom_info, ScreenInfo &joint_info, DisplayData &display_data, AudioData *audio_data, OutTextData &out_text_data, ExtraButtonShortcuts* extra_button_shortcuts, CaptureStatus* capture_status) {
 	std::ifstream file(path + name);
 	std::string line;
 
@@ -110,6 +110,11 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 						continue;
 					}
 
+					if(key == "is_screen_capture_type") {
+						capture_status->capture_type =  static_cast<CaptureScreensType>(std::stoi(value) % CaptureScreensType::CAPTURE_SCREENS_ENUM_END);
+						continue;
+					}
+
 					if(audio_data->load_audio_data(key, value))
 						continue;
 				}
@@ -125,7 +130,9 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 	return result;
 }
 
-static void defaults_reload(FrontendData *frontend_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts) {
+static void defaults_reload(FrontendData *frontend_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts, CaptureStatus* capture_status) {
+	capture_status->enabled_3d = false;
+	capture_status->capture_type = CAPTURE_SCREENS_BOTH;
 	reset_screen_info(frontend_data->top_screen->m_info);
 	reset_screen_info(frontend_data->bot_screen->m_info);
 	reset_screen_info(frontend_data->joint_screen->m_info);
@@ -138,11 +145,11 @@ static void defaults_reload(FrontendData *frontend_data, AudioData* audio_data, 
 	frontend_data->reload = true;
 }
 
-static void load_layout_file(int load_index, FrontendData *frontend_data, AudioData* audio_data, OutTextData &out_text_data, ExtraButtonShortcuts* extra_button_shortcuts, bool skip_io, bool do_print) {
+static void load_layout_file(int load_index, FrontendData *frontend_data, AudioData* audio_data, OutTextData &out_text_data, ExtraButtonShortcuts* extra_button_shortcuts, CaptureStatus* capture_status, bool skip_io, bool do_print) {
 	if(skip_io)
 		return;
 
-	defaults_reload(frontend_data, audio_data, extra_button_shortcuts);
+	defaults_reload(frontend_data, audio_data, extra_button_shortcuts, capture_status);
 
 	if(load_index == SIMPLE_RESET_DATA_INDEX) {
 		UpdateOutText(out_text_data, "Reset detected. Defaults re-loaded", "Reset detected\nDefaults re-loaded", TEXT_KIND_WARNING);
@@ -152,16 +159,16 @@ static void load_layout_file(int load_index, FrontendData *frontend_data, AudioD
 	bool name_load_success = false;
 	std::string layout_name = LayoutNameGenerator(load_index);
 	std::string layout_path = LayoutPathGenerator(load_index);
-	bool op_success = load(layout_path, layout_name, frontend_data->top_screen->m_info, frontend_data->bot_screen->m_info, frontend_data->joint_screen->m_info, frontend_data->display_data, audio_data, out_text_data, extra_button_shortcuts);
+	bool op_success = load(layout_path, layout_name, frontend_data->top_screen->m_info, frontend_data->bot_screen->m_info, frontend_data->joint_screen->m_info, frontend_data->display_data, audio_data, out_text_data, extra_button_shortcuts, capture_status);
 	if(do_print && op_success) {
 		std::string load_name = load_layout_name(load_index, name_load_success);
 		UpdateOutText(out_text_data, "Layout loaded from: " + layout_path + layout_name, "Layout " + load_name + " loaded", TEXT_KIND_SUCCESS);
 	}
 	else if(!op_success)
-		defaults_reload(frontend_data, audio_data, extra_button_shortcuts);
+		defaults_reload(frontend_data, audio_data, extra_button_shortcuts, capture_status);
 }
 
-static bool save(const std::string path, const std::string name, const std::string save_name, const ScreenInfo &top_info, const ScreenInfo &bottom_info, const ScreenInfo &joint_info, DisplayData &display_data, AudioData *audio_data, OutTextData &out_text_data, ExtraButtonShortcuts* extra_button_shortcuts) {
+static bool save(const std::string path, const std::string name, const std::string save_name, const ScreenInfo &top_info, const ScreenInfo &bottom_info, const ScreenInfo &joint_info, DisplayData &display_data, AudioData *audio_data, OutTextData &out_text_data, ExtraButtonShortcuts* extra_button_shortcuts, CaptureStatus* capture_status) {
 	#if (!defined(_MSC_VER)) || (_MSC_VER > 1916)
 	std::filesystem::create_directories(path);
 	#else
@@ -183,13 +190,14 @@ static bool save(const std::string path, const std::string name, const std::stri
 	file << "last_connected_ds=" << display_data.last_connected_ds << std::endl;
 	file << "extra_button_enter_short=" << extra_button_shortcuts->enter_shortcut->cmd << std::endl;
 	file << "extra_button_page_up_short=" << extra_button_shortcuts->page_up_shortcut->cmd << std::endl;
+	file << "is_screen_capture_type=" << capture_status->capture_type << std::endl;
 	file << audio_data->save_audio_data();
 
 	file.close();
 	return true;
 }
 
-static void save_layout_file(int save_index, FrontendData *frontend_data, AudioData* audio_data, OutTextData &out_text_data, ExtraButtonShortcuts* extra_button_shortcuts, bool skip_io, bool do_print) {
+static void save_layout_file(int save_index, FrontendData *frontend_data, AudioData* audio_data, OutTextData &out_text_data, ExtraButtonShortcuts* extra_button_shortcuts, CaptureStatus* capture_status, bool skip_io, bool do_print) {
 	if(skip_io)
 		return;
 
@@ -200,7 +208,7 @@ static void save_layout_file(int save_index, FrontendData *frontend_data, AudioD
 	std::string save_name = load_layout_name(save_index, name_load_success);
 	std::string layout_name = LayoutNameGenerator(save_index);
 	std::string layout_path = LayoutPathGenerator(save_index);
-	bool op_success = save(layout_path, layout_name, save_name, frontend_data->top_screen->m_info, frontend_data->bot_screen->m_info, frontend_data->joint_screen->m_info, frontend_data->display_data, audio_data, out_text_data, extra_button_shortcuts);
+	bool op_success = save(layout_path, layout_name, save_name, frontend_data->top_screen->m_info, frontend_data->bot_screen->m_info, frontend_data->joint_screen->m_info, frontend_data->display_data, audio_data, out_text_data, extra_button_shortcuts, capture_status);
 	if(do_print && op_success) {
 		UpdateOutText(out_text_data, "Layout saved to: " + layout_path + layout_name, "Layout " + save_name + " saved", TEXT_KIND_SUCCESS);
 	}
@@ -223,7 +231,7 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 				if((capture_data->read[curr_out] > get_video_in_size(capture_data)) && (loaded_samples < MAX_MAX_AUDIO_LATENCY)) {
 					int n_samples = get_audio_n_samples(capture_data, capture_data->read[curr_out]);
 					double out_time = capture_data->time_in_buf[curr_out];
-					convertAudioToOutput(&capture_data->capture_buf[curr_out], out_buf[audio_buf_counter], n_samples, endianness, capture_data);
+					convertAudioToOutput(curr_out, out_buf[audio_buf_counter], n_samples, endianness, capture_data);
 					audio.samples.emplace(out_buf[audio_buf_counter], n_samples, out_time);
 					if(++audio_buf_counter == NUM_CONCURRENT_AUDIO_BUFFERS) {
 						audio_buf_counter = 0;
@@ -307,7 +315,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	frontend_data.bot_screen = bot_screen;
 	frontend_data.joint_screen = joint_screen;
 
-	load_layout_file(STARTUP_FILE_INDEX, &frontend_data, audio_data, out_text_data, &extra_button_shortcuts, skip_io, false);
+	load_layout_file(STARTUP_FILE_INDEX, &frontend_data, audio_data, out_text_data, &extra_button_shortcuts, &capture_data->status, skip_io, false);
 	// Due to the risk for seizures, at the start of the program, set BFI to false!
 	top_screen->m_info.bfi = false;
 	bot_screen->m_info.bfi = false;
@@ -322,6 +330,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	std::thread joint_thread(screen_display_thread, joint_screen);
 
 	capture_data->status.connected = connect(true, capture_data, &frontend_data);
+	bool last_connected = capture_data->status.connected;
 	SuccessConnectionOutTextGenerator(out_text_data, capture_data);
 
 	while(capture_data->status.running) {
@@ -337,13 +346,16 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		VideoOutputData *chosen_buf = out_buf;
 		bool blank_out = false;
 		if(capture_data->status.connected) {
+			if(!last_connected)
+				update_connected_specific_settings(&frontend_data, capture_data->status.device);
+			last_connected = true;
 			bool timed_out = !capture_data->status.video_wait.timed_lock();
 			curr_out = (capture_data->status.curr_in - 1 + NUM_CONCURRENT_DATA_BUFFERS) % NUM_CONCURRENT_DATA_BUFFERS;
 
 			if((!capture_data->status.cooldown_curr_in) && (curr_out != prev_out)) {
 				last_frame_time = capture_data->time_in_buf[curr_out];
 				if(capture_data->read[curr_out] >= get_video_in_size(capture_data)) {
-					convertVideoToOutput(&capture_data->capture_buf[curr_out], out_buf, capture_data);
+					convertVideoToOutput(curr_out, out_buf, capture_data);
 					num_allowed_blanks = MAX_ALLOWED_BLANKS;
 				}
 				else {
@@ -355,11 +367,14 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 					}
 				}
 			}
-			else if(capture_data->status.cooldown_curr_in)
+			else if((capture_data->status.cooldown_curr_in) || timed_out)
 				blank_out = true;
 			prev_out = curr_out;
 		}
 		else {
+			if(last_connected)
+				update_connected_specific_settings(&frontend_data, capture_data->status.device);
+			last_connected = false;
 			default_sleep();
 			blank_out = true;
 		}
@@ -392,12 +407,12 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		if((load_index = top_screen->load_data()) || (load_index = bot_screen->load_data()) || (load_index = joint_screen->load_data())) {
 			// This value should only be loaded when starting the program...
 			bool previous_last_connected_ds = frontend_data.display_data.last_connected_ds;
-			load_layout_file(load_index, &frontend_data, audio_data, out_text_data, &extra_button_shortcuts, skip_io, true);
+			load_layout_file(load_index, &frontend_data, audio_data, out_text_data, &extra_button_shortcuts, &capture_data->status, skip_io, true);
 			frontend_data.display_data.last_connected_ds = previous_last_connected_ds;
 		}
 		
 		if((save_index = top_screen->save_data()) || (save_index = bot_screen->save_data()) || (save_index = joint_screen->save_data())) {
-			save_layout_file(save_index, &frontend_data, audio_data, out_text_data, &extra_button_shortcuts, skip_io, true);
+			save_layout_file(save_index, &frontend_data, audio_data, out_text_data, &extra_button_shortcuts, &capture_data->status, skip_io, true);
 			top_screen->update_save_menu();
 			bot_screen->update_save_menu();
 			joint_screen->update_save_menu();
@@ -433,7 +448,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	bot_screen->after_thread_join();
 	joint_screen->after_thread_join();
 
-	save_layout_file(STARTUP_FILE_INDEX, &frontend_data, audio_data, out_text_data, &extra_button_shortcuts, skip_io, false);
+	save_layout_file(STARTUP_FILE_INDEX, &frontend_data, audio_data, out_text_data, &extra_button_shortcuts, &capture_data->status, skip_io, false);
 
 	if(!out_text_data.consumed) {
 		ConsoleOutText(out_text_data.full_text);

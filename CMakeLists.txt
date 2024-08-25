@@ -44,7 +44,7 @@ endif()
 include(FetchContent)
 FetchContent_Declare(SFML
     GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG macos_fullscreen_v2.6)
+    GIT_TAG 2.6.x)
 
 FetchContent_Declare(libusb1
     GIT_REPOSITORY https://github.com/libusb/libusb-cmake.git
@@ -301,7 +301,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} --build ${TOOLS_DATA_DIR})
 
 set(OUTPUT_NAME cc3dsfs)
 
-add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/3dscapture_ftd3.cpp source/dscapture_ftd2.cpp source/usb_ds_3ds_capture.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp source/Menus/ScalingRatioMenu.cpp source/usb_is_nitro.cpp source/usb_is_nitro_capture.cpp source/usb_generic.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp)
+add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/3dscapture_ftd3.cpp source/dscapture_ftd2.cpp source/usb_ds_3ds_capture.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp source/Menus/ScalingRatioMenu.cpp source/usb_is_nitro.cpp source/usb_is_nitro_capture.cpp source/usb_generic.cpp source/Menus/ISNitroMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp)
 add_dependencies(${OUTPUT_NAME} FTD3XX_BUILD_PROJECT FTD2XX_BUILD_PROJECT)
 target_link_libraries(${OUTPUT_NAME} PRIVATE sfml-graphics sfml-audio sfml-window sfml-system usb-1.0 ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}/${FTD3XX_LIB} ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER}/${FTD2XX_LIB} ${EXTRA_LIBRARIES})
 target_link_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER})

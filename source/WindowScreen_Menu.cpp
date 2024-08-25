@@ -109,6 +109,7 @@ void WindowScreen::init_menus() {
 	this->shortcut_menu = new ShortcutMenu(this->font_load_success, this->text_font);
 	this->action_selection_menu = new ActionSelectionMenu(this->font_load_success, this->text_font);
 	this->scaling_ratio_menu = new ScalingRatioMenu(this->font_load_success, this->text_font);
+	this->is_nitro_menu = new ISNitroMenu(this->font_load_success, this->text_font);
 }
 
 void WindowScreen::destroy_menus() {
@@ -130,6 +131,7 @@ void WindowScreen::destroy_menus() {
 	delete this->shortcut_menu;
 	delete this->action_selection_menu;
 	delete this->scaling_ratio_menu;
+	delete this->is_nitro_menu;
 }
 
 void WindowScreen::set_close(int ret_val) {
@@ -172,6 +174,15 @@ void WindowScreen::blur_change() {
 void WindowScreen::fast_poll_change() {
 	this->display_data->fast_poll = !this->display_data->fast_poll;
 	this->print_notification_on_off("Slow Poll", this->display_data->fast_poll);
+}
+
+void WindowScreen::is_nitro_capture_type_change(bool positive) {
+	int new_value = (int)(this->capture_status->capture_type);
+	if(positive)
+		new_value += 1;
+	else
+		new_value += CAPTURE_SCREENS_ENUM_END - 1;
+	this->capture_status->capture_type = static_cast<CaptureScreensType>(new_value % CAPTURE_SCREENS_ENUM_END);
 }
 
 void WindowScreen::padding_change() {
@@ -615,14 +626,14 @@ void WindowScreen::setup_no_menu() {
 	this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 }
 
-void WindowScreen::setup_main_menu(bool reset_data) {
-	if(!this->can_setup_menu())
+void WindowScreen::setup_main_menu(bool reset_data, bool skip_setup_check) {
+	if((!skip_setup_check) && (!this->can_setup_menu()))
 		return;
 	if(this->curr_menu != MAIN_MENU_TYPE) {
 		this->curr_menu = MAIN_MENU_TYPE;
 		if(reset_data)
 			this->main_menu->reset_data();
-		this->main_menu->insert_data(this->m_stype, this->m_info.is_fullscreen, this->display_data->mono_app_mode, is_shortcut_valid());
+		this->main_menu->insert_data(this->m_stype, this->m_info.is_fullscreen, this->display_data->mono_app_mode, is_shortcut_valid(), this->capture_status->device.cc_type, this->capture_status->connected);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
 }
@@ -896,6 +907,18 @@ void WindowScreen::setup_scaling_ratio_menu(bool reset_data) {
 		if(reset_data)
 			this->scaling_ratio_menu->reset_data();
 		this->scaling_ratio_menu->insert_data();
+		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
+	}
+}
+
+void WindowScreen::setup_is_nitro_menu(bool reset_data) {
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != ISN_MENU_TYPE) {
+		this->curr_menu = ISN_MENU_TYPE;
+		if(reset_data)
+			this->is_nitro_menu->reset_data();
+		this->is_nitro_menu->insert_data();
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
 }
@@ -1232,6 +1255,10 @@ void WindowScreen::poll(bool do_everything) {
 							break;
 						case MAIN_MENU_SHORTCUT_SETTINGS:
 							this->setup_shortcuts_menu();
+							done = true;
+							break;
+						case MAIN_MENU_ISN_SETTINGS:
+							this->setup_is_nitro_menu();
 							done = true;
 							break;
 						case MAIN_MENU_SHUTDOWN:
@@ -1771,6 +1798,30 @@ void WindowScreen::poll(bool do_everything) {
 					continue;
 				}
 				break;
+			case ISN_MENU_TYPE:
+				if(this->is_nitro_menu->poll(event_data)) {
+					switch(this->is_nitro_menu->selected_index) {
+						case ISN_MENU_BACK:
+							this->setup_main_menu(false);
+							done = true;
+							break;
+						case ISN_MENU_NO_ACTION:
+							break;
+						case ISN_MENU_DELAY:
+							break;
+						case ISN_MENU_TYPE_DEC:
+							this->is_nitro_capture_type_change(false);
+							break;
+						case ISN_MENU_TYPE_INC:
+							this->is_nitro_capture_type_change(true);
+							break;
+						default:
+							break;
+					}
+					this->is_nitro_menu->reset_output_option();
+					continue;
+				}
+				break;
 			default:
 				break;
 		}
@@ -1798,6 +1849,15 @@ void WindowScreen::update_ds_3ds_connection(bool changed_type) {
 		this->setup_no_menu();
 	this->prepare_size_ratios(false, false);
 	this->future_operations.call_crop = true;
+}
+
+void WindowScreen::update_capture_specific_settings() {
+	if(this->curr_menu == MAIN_MENU_TYPE) {
+		this->setup_no_menu();
+		this->setup_main_menu(true, true);
+	}
+	if(this->curr_menu == ISN_MENU_TYPE)
+		this->setup_no_menu();
 }
 
 int WindowScreen::load_data() {
@@ -1985,6 +2045,9 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 		case SCALING_RATIO_MENU_TYPE:
 			this->scaling_ratio_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
 			break;
+		case ISN_MENU_TYPE:
+			this->is_nitro_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->capture_status);
+			break;
 		default:
 			break;
 	}
@@ -2051,6 +2114,9 @@ void WindowScreen::execute_menu_draws() {
 			break;
 		case SCALING_RATIO_MENU_TYPE:
 			this->scaling_ratio_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case ISN_MENU_TYPE:
+			this->is_nitro_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

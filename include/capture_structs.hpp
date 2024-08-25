@@ -19,6 +19,7 @@
 #define EXTRA_DATA_BUFFER_FTD3XX_SIZE (1 << 10)
 
 enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_FTD2, CAPTURE_CONN_IS_NITRO };
+enum CaptureScreensType { CAPTURE_SCREENS_BOTH, CAPTURE_SCREENS_TOP, CAPTURE_SCREENS_BOTTOM, CAPTURE_SCREENS_ENUM_END };
 
 #pragma pack(push, 1)
 
@@ -125,18 +126,21 @@ struct CaptureStatus {
 	CaptureDevice device;
 	std::string error_text;
 	bool new_error_text;
-	bool enabled_3d = false;
 	volatile int curr_in = 0;
 	volatile int cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
 	volatile bool connected = false;
 	volatile bool running = true;
 	volatile bool close_success = true;
+	volatile int curr_delay = 0;
+	bool enabled_3d = false;
+	CaptureScreensType capture_type;
 	ConsumerMutex video_wait;
 	ConsumerMutex audio_wait;
 };
 
 struct CaptureData {
 	void* handle;
+	CaptureScreensType capture_type[NUM_CONCURRENT_DATA_BUFFERS];
 	uint64_t read[NUM_CONCURRENT_DATA_BUFFERS];
 	CaptureReceived capture_buf[NUM_CONCURRENT_DATA_BUFFERS];
 	double time_in_buf[NUM_CONCURRENT_DATA_BUFFERS];

@@ -12,6 +12,7 @@ struct MainMenuOptionInfo {
 	const bool active_bottom_screen;
 	const bool enabled_normal_mode;
 	const bool enabled_mono_mode;
+	const bool is_cc_specific;
 	const MainMenuOutAction out_action;
 };
 
@@ -19,106 +20,113 @@ static const MainMenuOptionInfo connect_option = {
 .base_name = "Disconnect", .false_name = "Connect",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.enabled_normal_mode = true, .enabled_mono_mode = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = false,
 .out_action = MAIN_MENU_OPEN};
 
 static const MainMenuOptionInfo windowed_option = {
 .base_name = "Windowed Mode", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.enabled_normal_mode = true, .enabled_mono_mode = false,
+.enabled_normal_mode = true, .enabled_mono_mode = false, .is_cc_specific = false,
 .out_action = MAIN_MENU_FULLSCREEN};
 
 static const MainMenuOptionInfo fullscreen_option = {
 .base_name = "Fullscreen Mode", .false_name = "",
 .active_fullscreen = false, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.enabled_normal_mode = true, .enabled_mono_mode = false,
+.enabled_normal_mode = true, .enabled_mono_mode = false, .is_cc_specific = false,
 .out_action = MAIN_MENU_FULLSCREEN};
 
 static const MainMenuOptionInfo join_screens_option = {
 .base_name = "Join Screens", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = false, .active_top_screen = true, .active_bottom_screen = true,
-.enabled_normal_mode = true, .enabled_mono_mode = false,
+.enabled_normal_mode = true, .enabled_mono_mode = false, .is_cc_specific = false,
 .out_action = MAIN_MENU_SPLIT};
 
 static const MainMenuOptionInfo split_screens_option = {
 .base_name = "Split Screens", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
-.enabled_normal_mode = true, .enabled_mono_mode = false,
+.enabled_normal_mode = true, .enabled_mono_mode = false, .is_cc_specific = false,
 .out_action = MAIN_MENU_SPLIT};
 
 static const MainMenuOptionInfo video_settings_option = {
 .base_name = "Video Settings", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.enabled_normal_mode = true, .enabled_mono_mode = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = false,
 .out_action = MAIN_MENU_VIDEO_SETTINGS};
 
 static const MainMenuOptionInfo quit_option = {
 .base_name = "Quit Application", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.enabled_normal_mode = true, .enabled_mono_mode = false,
+.enabled_normal_mode = true, .enabled_mono_mode = false, .is_cc_specific = false,
 .out_action = MAIN_MENU_QUIT_APPLICATION};
 
 static const MainMenuOptionInfo audio_settings_option = {
 .base_name = "Audio Settings", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.enabled_normal_mode = true, .enabled_mono_mode = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = false,
 .out_action = MAIN_MENU_AUDIO_SETTINGS};
 
 static const MainMenuOptionInfo save_profiles_option = {
 .base_name = "Save Profile", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.enabled_normal_mode = true, .enabled_mono_mode = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = false,
 .out_action = MAIN_MENU_SAVE_PROFILES};
 
 static const MainMenuOptionInfo load_profiles_option = {
 .base_name = "Load Profile", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.enabled_normal_mode = true, .enabled_mono_mode = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = false,
 .out_action = MAIN_MENU_LOAD_PROFILES};
 
 static const MainMenuOptionInfo status_option = {
 .base_name = "Status", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.enabled_normal_mode = true, .enabled_mono_mode = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = false,
 .out_action = MAIN_MENU_STATUS};
 
 static const MainMenuOptionInfo licenses_option = {
 .base_name = "Licenses", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.enabled_normal_mode = true, .enabled_mono_mode = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = false,
 .out_action = MAIN_MENU_LICENSES};
 
 static const MainMenuOptionInfo extra_settings_option = {
 .base_name = "Extra Settings", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.enabled_normal_mode = false, .enabled_mono_mode = true,
+.enabled_normal_mode = false, .enabled_mono_mode = true, .is_cc_specific = false,
 .out_action = MAIN_MENU_EXTRA_SETTINGS};
 
 static const MainMenuOptionInfo shortcut_option = {
 .base_name = "Shortcuts", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.enabled_normal_mode = true, .enabled_mono_mode = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = false,
 .out_action = MAIN_MENU_SHORTCUT_SETTINGS};
 
 static const MainMenuOptionInfo shutdown_option = {
 .base_name = "Shutdown", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.enabled_normal_mode = false, .enabled_mono_mode = true,
+.enabled_normal_mode = false, .enabled_mono_mode = true, .is_cc_specific = false,
 .out_action = MAIN_MENU_SHUTDOWN};
+
+static const MainMenuOptionInfo isn_settings_option = {
+.base_name = "Is Nitro Settings", .false_name = "",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = true,
+.out_action = MAIN_MENU_ISN_SETTINGS};
 
 static const MainMenuOptionInfo* pollable_options[] = {
 &connect_option,
@@ -132,6 +140,7 @@ static const MainMenuOptionInfo* pollable_options[] = {
 &load_profiles_option,
 &shortcut_option,
 &status_option,
+&isn_settings_option,
 &licenses_option,
 &extra_settings_option,
 &quit_option,
@@ -164,7 +173,13 @@ void MainMenu::class_setup() {
 	this->show_title = true;
 }
 
-void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_mode, bool enable_shortcut) {
+static bool check_cc_specific_option(const MainMenuOptionInfo* option, CaptureConnectionType cc_type) {
+	if((option->out_action == MAIN_MENU_ISN_SETTINGS) && (cc_type == CAPTURE_CONN_IS_NITRO))
+		return true;
+	return false;
+}
+
+void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_mode, bool enable_shortcut, CaptureConnectionType cc_type, bool connected) {
 	this->num_enabled_options = 0;
 	for(int i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
 		bool valid = true;
@@ -182,6 +197,8 @@ void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_
 			valid = valid && pollable_options[i]->enabled_mono_mode;
 		else
 			valid = valid && pollable_options[i]->enabled_normal_mode;
+		if(pollable_options[i]->is_cc_specific)
+			valid = valid && connected && check_cc_specific_option(pollable_options[i], cc_type);
 		if((pollable_options[i]->out_action == MAIN_MENU_SHORTCUT_SETTINGS) && (!enable_shortcut))
 			valid = false;
 		if(valid) {
