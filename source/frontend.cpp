@@ -642,9 +642,9 @@ void joystick_axis_poll(std::queue<SFEvent> &events_queue) {
 		if(!sf::Joystick::isConnected(i))
 			continue;
 		for(int j = 0; j < sf::Joystick::AxisCount; j++) {
-			sf::Joystick::Axis axis = sf::Joystick::Axis(sf::Joystick::Axis::X + j);
+			sf::Joystick::Axis axis = sf::Joystick::Axis((int)sf::Joystick::Axis::X + j);
 			if(sf::Joystick::hasAxis(i, axis))
-				events_queue.emplace(sf::Event::JoystickMoved, sf::Keyboard::Backspace, 0, i, 0, axis, sf::Joystick::getAxisPosition(i, axis), sf::Mouse::Left, 0, 0, false, false);
+				events_queue.emplace(i, axis, sf::Joystick::getAxisPosition(i, axis));
 		}
 	}
 }
@@ -709,9 +709,9 @@ float get_par_mult_factor(float width, float height, float max_width, float max_
 
 JoystickDirection get_joystick_direction(uint32_t joystickId, sf::Joystick::Axis axis, float position) {
 	bool is_horizontal = false;
-	if((axis == sf::Joystick::Z) || (axis == sf::Joystick::R))
+	if((axis == sf::Joystick::Axis::Z) || (axis == sf::Joystick::Axis::R))
 		return JOY_DIR_NONE;
-	if((axis == sf::Joystick::X) || (axis == sf::Joystick::U) || (axis == sf::Joystick::PovX))
+	if((axis == sf::Joystick::Axis::X) || (axis == sf::Joystick::Axis::U) || (axis == sf::Joystick::Axis::PovX))
 		is_horizontal = true;
 	int direction = 0;
 	if(position >= 90.0)

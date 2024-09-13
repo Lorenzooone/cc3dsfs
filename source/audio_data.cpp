@@ -1,7 +1,7 @@
 #include "audio_data.hpp"
 
 void AudioData::reset() {
-	this->volume = 50;
+	this->volume = 100;
 	this->mute = false;
 	this->max_audio_latency = 2;
 	this->output_type = AUDIO_OUTPUT_STEREO;
@@ -108,8 +108,8 @@ int AudioData::get_final_volume() {
 	int read_volume = this->volume;
 	if(read_volume < 0)
 		read_volume = 0;
-	if(read_volume > 100)
-		read_volume = 100;
+	if(read_volume > 200)
+		read_volume = 200;
 	return read_volume;
 }
 
@@ -117,8 +117,8 @@ int AudioData::get_real_volume() {
 	int read_volume = this->volume;
 	if(read_volume < 0)
 		read_volume = 0;
-	if(read_volume > 100)
-		read_volume = 100;
+	if(read_volume > 200)
+		read_volume = 200;
 	return read_volume;
 }
 
@@ -174,8 +174,8 @@ void AudioData::set_audio_output_type(int new_value) {
 void AudioData::set_audio_volume(int new_volume) {
 	if(new_volume < 0)
 		new_volume = 0;
-	if(new_volume > 100)
-		new_volume = 100;
+	if(new_volume > 200)
+		new_volume = 200;
 	this->volume = new_volume;
 }
 

@@ -1,5 +1,8 @@
 #include "utils.hpp"
 
+#if defined (__linux__) && defined(XLIB_BASED)
+#include <X11/Xlib.h>
+#endif
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -59,6 +62,12 @@ uint16_t to_be(uint16_t value) {
 	if(!is_big_endian())
 		value = ((value & 0xFF) << 8) | ((value & 0xFF00) >> 8);
 	return value;
+}
+
+void init_threads(void) {
+	#if defined(__linux__) && defined(XLIB_BASED)
+	XInitThreads();
+	#endif
 }
 
 std::string get_version_string(bool get_letter) {

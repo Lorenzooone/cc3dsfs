@@ -7,9 +7,9 @@
 #include "utils.hpp"
 
 struct Sample {
-	Sample(sf::Int16 *bytes, std::size_t size, float time);
+	Sample(std::int16_t *bytes, std::size_t size, float time);
 
-	sf::Int16 *bytes;
+	std::int16_t *bytes;
 	std::size_t size;
 	float time;
 };
@@ -25,13 +25,14 @@ public:
 	void update_volume();
 	void start_audio();
 	void stop_audio();
+	bool hasTooMuchTimeElapsed();
 
 private:
 	AudioData *audio_data;
 	int final_volume = -1;
 	bool terminate;
 	int num_consecutive_fast_seek;
-	sf::Int16 *buffer;
+	std::int16_t *buffer;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_time_start;
 
 	bool onGetData(sf::SoundStream::Chunk &data) override;

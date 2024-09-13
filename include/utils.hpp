@@ -34,6 +34,7 @@ uint32_t to_be(uint32_t value);
 uint16_t to_le(uint16_t value);
 uint16_t to_be(uint16_t value);
 std::string get_float_str_decimals(float value, int decimals);
+void init_threads(void);
 
 class ConsumerMutex {
 public:

@@ -71,10 +71,10 @@ bool ExtraButton::is_valid() {
 void ExtraButton::poll(std::queue<SFEvent> &events_queue) {
 	if(!this->is_valid())
 		return;
-	sf::Event::EventType event_kind = sf::Event::KeyReleased;
+	bool pressed = false;
 	if(this->is_pressed())
-		event_kind = sf::Event::KeyPressed;
-	if(event_kind == sf::Event::KeyPressed) {
+		pressed = true;
+	if(pressed) {
 		auto curr_time = std::chrono::high_resolution_clock::now();
 		const std::chrono::duration<double> diff = curr_time - this->last_press_time;
 		float press_frequency_limit = this->first_re_press_time;
@@ -95,7 +95,7 @@ void ExtraButton::poll(std::queue<SFEvent> &events_queue) {
 	}
 	else
 		this->started = false;
-	events_queue.emplace(event_kind, this->corresponding_key, 0, 0, 0, sf::Joystick::Axis::X, 0, sf::Mouse::Left, 0, 0, this->is_power, true);
+	events_queue.emplace(pressed, this->corresponding_key, this->is_power, true);
 }
 
 std::string get_extra_button_name(sf::Keyboard::Key corresponding_key) {
@@ -106,10 +106,10 @@ std::string get_extra_button_name(sf::Keyboard::Key corresponding_key) {
 }
 
 void init_extra_buttons_poll(int page_up_id, int page_down_id, int enter_id, int power_id, bool use_pud_up) {
-	pi_page_up.initialize(page_up_id, sf::Keyboard::PageUp, false, 0.5, 0.03, use_pud_up, "Select");
-	pi_page_down.initialize(page_down_id, sf::Keyboard::PageDown, false, 0.5, 0.03, use_pud_up, "Menu");
-	pi_enter.initialize(enter_id, sf::Keyboard::Enter, false, 0.5, 0.075, use_pud_up, "Enter");
-	pi_power.initialize(power_id, sf::Keyboard::Escape, true, 30.0, 30.0, use_pud_up, "Power");
+	pi_page_up.initialize(page_up_id, sf::Keyboard::Key::PageUp, false, 0.5, 0.03, use_pud_up, "Select");
+	pi_page_down.initialize(page_down_id, sf::Keyboard::Key::PageDown, false, 0.5, 0.03, use_pud_up, "Menu");
+	pi_enter.initialize(enter_id, sf::Keyboard::Key::Enter, false, 0.5, 0.075, use_pud_up, "Enter");
+	pi_power.initialize(power_id, sf::Keyboard::Key::Escape, true, 30.0, 30.0, use_pud_up, "Power");
 }
 
 void end_extra_buttons_poll() {

@@ -38,7 +38,6 @@ sudo apt install \
     libxrandr-dev \
     libxcursor-dev \
     libudev-dev \
-    libopenal-dev \
     libflac-dev \
     libvorbis-dev \
     libgl1-mesa-dev \
@@ -115,7 +114,7 @@ _Note: Currently only tested using a PS5 controller._
 - __R key__: Toggles extra padding on/off. It can be used to account for windows with rounded corners.
 - __2/3 key__: Cycles through the available Pixel Aspect Ratios (PAR) for the top/bottom screen. Useful for VC games and for Chrono Trigger DS.
 - __M key__: Toggles Audio mute on/off.
-- __,/. key__: Decrements/Increments the volume by 5 units. 0 is the minimum. 100 is the maximum.
+- __,/. key__: Decrements/Increments the volume by 5 units. 0 is the minimum. 200 is the maximum.
 - __N key__: Restarts the audio output. Useful if the audio stops working after changing OS settings.
 - __F1 - F4 keys__: Loads from layouts 1 through 4 respectively. To access more profiles, the GUI must be used.
 - __F5 - F8 keys__: Saves to layouts 1 through 4 respectively. To access more profiles, the GUI must be used.
@@ -136,7 +135,6 @@ On Linux and MacOS, the profiles can be found at the "${HOME}/.config/cc3dsfs" f
 On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the directory in which the program runs from.
 
 ## Notes
-- On Ubuntu 24.04, you may need to install libopenal1 in order for this software to work.
 - On Linux, you may need to include the udev USB access rules. You can use the .rules files available in the repository's usb\_rules directory, or define your own.
 - At startup, the audio may be unstable. It should fix itself, if you give it enough time.
 - If, at first, the connection to the 3DS/DS fails, reconnect the 3DS/DS and then try again. If that also doesn't work, try restarting the program. If that also doesn't work, try restarting the computer.
@@ -145,8 +143,3 @@ On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the
 - Enabling Slow Poll may slightly boost the FPS of the software, at the cost of an extremely slight decrease in frame latency, and slower reaction times of the software to key presses. Disabled by default (as when the FPS are greater than the CC's, it's not reccomended).
 - On MacOS, you may get a notice about Apple being unable to check for malware, or the developer being unknown. To open the program regardless of that, while holding the Command key, right click the application, then select the "Open" option.
 - Certain TVs/Monitors may add some audio delay for the purpose of video/lip syncing. If you're experiencing too much audio delay when using this software, try checking in the TV/Monitor settings whether you can reduce that added delay. One of the names used for that setting is "Lip Sync", or something along that line.
-- For the best audio latency and quality, it may be needed to change OpenAL's sound settings. Their location is OS-specific. On linux, you may also be able to use the "alsoft-config" command. In particular, the following parameters may help:
-```
-frequency = 96000
-periods = 2
-```

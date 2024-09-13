@@ -2,7 +2,7 @@
 #define __EXTRABUTTONS_HPP
 
 #include <chrono>
-#include "sfml_gfx_structs.hpp"
+#include "event_structs.hpp"
 #ifdef RASPI
 #include <gpiod.h>
 #endif

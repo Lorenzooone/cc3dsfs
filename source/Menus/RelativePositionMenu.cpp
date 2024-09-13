@@ -60,7 +60,7 @@ RelativePositionMenu::RelativePositionMenu(bool font_load_success, sf::Font &tex
 	this->class_setup();
 	this->after_class_setup_connected_values();
 	this->menu_rectangle.setFillColor(this->menu_color);
-	this->menu_rectangle.setPosition(1, 1);
+	this->menu_rectangle.setPosition({1, 1});
 	this->labels = new TextRectangle*[this->num_elements_displayed_per_screen];
 	this->selectable_labels = new bool[this->num_elements_displayed_per_screen];
 	for(int i = 0; i < this->num_elements_displayed_per_screen; i++) {
@@ -289,7 +289,7 @@ void RelativePositionMenu::right_code() {
 bool RelativePositionMenu::poll(SFEvent &event_data) {
 	bool consumed = true;
 	switch (event_data.type) {
-	case sf::Event::TextEntered:
+	case EVENT_TEXT_ENTERED:
 		switch (event_data.unicode) {
 		default:
 			consumed = false;
@@ -298,27 +298,27 @@ bool RelativePositionMenu::poll(SFEvent &event_data) {
 
 		break;
 		
-	case sf::Event::KeyPressed:
+	case EVENT_KEY_PRESSED:
 		switch (event_data.code) {
-		case sf::Keyboard::Up:
+		case sf::Keyboard::Key::Up:
 			this->up_code(false);
 			break;
-		case sf::Keyboard::Down:
+		case sf::Keyboard::Key::Down:
 			this->down_code(false);
 			break;
-		case sf::Keyboard::PageUp:
+		case sf::Keyboard::Key::PageUp:
 			this->up_code(true);
 			break;
-		case sf::Keyboard::PageDown:
+		case sf::Keyboard::Key::PageDown:
 			this->down_code(true);
 			break;
-		case sf::Keyboard::Left:
+		case sf::Keyboard::Key::Left:
 			this->left_code();
 			break;
-		case sf::Keyboard::Right:
+		case sf::Keyboard::Key::Right:
 			this->right_code();
 			break;
-		case sf::Keyboard::Enter:
+		case sf::Keyboard::Key::Enter:
 			this->option_selection_handling();
 			break;
 		default:
@@ -327,7 +327,7 @@ bool RelativePositionMenu::poll(SFEvent &event_data) {
 		}
 
 		break;
-	case sf::Event::MouseMoved:
+	case EVENT_MOUSE_MOVED:
 		this->future_data.option_selected = -1;
 		for(int i = 0; i < this->num_elements_displayed_per_screen; i++) {
 			if(!this->selectable_labels[i])
@@ -339,7 +339,7 @@ bool RelativePositionMenu::poll(SFEvent &event_data) {
 			}
 		}
 		break;
-	case sf::Event::MouseButtonPressed:
+	case EVENT_MOUSE_BTN_PRESSED:
 		this->future_data.option_selected = -1;
 		for(int i = 0; i < this->num_elements_displayed_per_screen; i++) {
 			if(!this->selectable_labels[i])
@@ -351,10 +351,10 @@ bool RelativePositionMenu::poll(SFEvent &event_data) {
 		}
 		if(this->future_data.option_selected == -1)
 			break;
-		if(event_data.mouse_button == sf::Mouse::Left)
+		if(event_data.mouse_button == sf::Mouse::Button::Left)
 			this->option_selection_handling();
 		break;
-	case sf::Event::JoystickButtonPressed:
+	case EVENT_JOYSTICK_BTN_PRESSED:
 		switch(get_joystick_action(event_data.joystickId, event_data.joy_button)) {
 			case JOY_ACTION_CONFIRM:
 				this->option_selection_handling();
@@ -367,7 +367,7 @@ bool RelativePositionMenu::poll(SFEvent &event_data) {
 				break;
 		}
 		break;
-	case sf::Event::JoystickMoved:
+	case EVENT_JOYSTICK_MOVED:
 		switch(get_joystick_direction(event_data.joystickId, event_data.axis, event_data.position)) {
 		case JOY_DIR_UP:
 			this->up_code(false);
@@ -398,7 +398,7 @@ void RelativePositionMenu::draw(float scaling_factor, sf::RenderTarget &window) 
 	if((this->loaded_data.menu_width != rect_size.x) || (this->loaded_data.menu_height != rect_size.y)) {
 		this->menu_rectangle.setSize(sf::Vector2f(this->loaded_data.menu_width, this->loaded_data.menu_height));
 	}
-	this->menu_rectangle.setPosition(this->loaded_data.pos_x, this->loaded_data.pos_y);
+	this->menu_rectangle.setPosition({(float)this->loaded_data.pos_x, (float)this->loaded_data.pos_y});
 	window.draw(this->menu_rectangle);
 	for(int i = 0; i < this->num_elements_displayed_per_screen; i++) {
 		this->labels[i]->draw(window);

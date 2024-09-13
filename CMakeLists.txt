@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build archs for Mac OS X" FORCE)
-set(CMAKE_OSX_DEPLOYMENT_TARGET "11" CACHE STRING "Minimum OS X deployment version")
-project(cc3dsfs VERSION 1.0.0 LANGUAGES CXX)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum OS X deployment version")
+set(TARGET_LANGUAGES CXX C)
+project(cc3dsfs VERSION 1.0.0 LANGUAGES ${TARGET_LANGUAGES})
 include(ExternalProject)
 
 set(WINDOWS_ARM64 0)
@@ -57,7 +58,7 @@ endif()
 include(FetchContent)
 FetchContent_Declare(SFML
     GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG 2.6.x)
+    GIT_TAG master)
 
 FetchContent_Declare(libusb1
     GIT_REPOSITORY https://github.com/libusb/libusb-cmake.git
@@ -308,7 +309,7 @@ set(OUTPUT_NAME cc3dsfs)
 
 add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/3dscapture_ftd3.cpp source/dscapture_ftd2.cpp source/usb_ds_3ds_capture.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp source/Menus/ScalingRatioMenu.cpp source/usb_is_nitro.cpp source/usb_is_nitro_capture.cpp source/usb_generic.cpp source/Menus/ISNitroMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp)
 add_dependencies(${OUTPUT_NAME} FTD3XX_BUILD_PROJECT FTD2XX_BUILD_PROJECT)
-target_link_libraries(${OUTPUT_NAME} PRIVATE sfml-graphics sfml-audio sfml-window sfml-system usb-1.0 ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}/${FTD3XX_LIB} ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER}/${FTD2XX_LIB} ${EXTRA_LIBRARIES})
+target_link_libraries(${OUTPUT_NAME} PRIVATE SFML::Graphics SFML::Audio SFML::Window SFML::System usb-1.0 ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}/${FTD3XX_LIB} ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER}/${FTD2XX_LIB} ${EXTRA_LIBRARIES})
 target_link_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER})
 target_include_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER} ${TOOLS_DATA_DIR} ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/include/Menus)
 target_compile_features(${OUTPUT_NAME} PRIVATE cxx_std_20)
@@ -322,21 +323,6 @@ add_custom_command(
 )
 
 if(WIN32)
-    if(WINDOWS_ARM64)
-        add_custom_command(
-            TARGET ${OUTPUT_NAME}
-            COMMENT "Copy OpenAL DLL"
-            PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${sfml_SOURCE_DIR}/extlibs/bin/ARM64/openal32.dll ${CMAKE_SOURCE_DIR}
-            VERBATIM
-        )
-    else()
-        add_custom_command(
-            TARGET ${OUTPUT_NAME}
-            COMMENT "Copy OpenAL DLL"
-            PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${sfml_SOURCE_DIR}/extlibs/bin/$<IF:$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>,x64,x86>/openal32.dll ${CMAKE_SOURCE_DIR}
-            VERBATIM
-        )
-    endif()
 	if(WINDOWS_FTD3XX_USE_SHARED_LIB)
         add_custom_command(
             TARGET ${OUTPUT_NAME}
@@ -370,7 +356,6 @@ endif()
 install(FILES LICENSE README.md DESTINATION .)
 install(DIRECTORY "other licenses" DESTINATION .)
 if(WIN32)
-    install(FILES openal32.dll DESTINATION .)
 	if(WINDOWS_FTD3XX_USE_SHARED_LIB)
     	install(FILES ${FTD3XX_DLL} DESTINATION .)
 	endif()

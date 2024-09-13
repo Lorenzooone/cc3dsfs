@@ -33,6 +33,7 @@
 #include "ISNitroMenu.hpp"
 #include "display_structs.hpp"
 #include "WindowCommands.hpp"
+#include "event_structs.hpp"
 
 struct HeldTime {
 	std::chrono::time_point<std::chrono::high_resolution_clock> start_time;

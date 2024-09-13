@@ -17,16 +17,16 @@
 static int greatest_diff = 0;
 #endif
 
-Sample::Sample(sf::Int16 *bytes, std::size_t size, float time) : bytes(bytes), size(size), time(time) {}
+Sample::Sample(std::int16_t *bytes, std::size_t size, float time) : bytes(bytes), size(size), time(time) {}
 
 //============================================================================
 
 Audio::Audio(AudioData *audio_data) {
 	this->audio_data = audio_data;
 	// Consume old events
-	this->buffer = new sf::Int16[MAX_SAMPLES_IN * (MAX_MAX_AUDIO_LATENCY + 1)];
+	this->buffer = new std::int16_t[MAX_SAMPLES_IN * (MAX_MAX_AUDIO_LATENCY + 1)];
 	this->audio_data->check_audio_restart_request();
-	sf::SoundStream::initialize(AUDIO_CHANNELS, SAMPLE_RATE_BASE);
+	sf::SoundStream::initialize(AUDIO_CHANNELS, SAMPLE_RATE_BASE, {sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight});
 	this->setPitch(1.0 / SAMPLE_RATE_DIVISOR);
 	start_audio();
 	setVolume(0);
@@ -56,20 +56,16 @@ void Audio::stop_audio() {
 	samples_wait.unlock();
 }
 
+bool Audio::hasTooMuchTimeElapsed() {
+	auto curr_time = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> diff = curr_time - this->clock_time_start;
+	return (diff.count() > 1.0);
+}
+
 bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 	if(terminate)
 		return false;
 
-	// Do all of this to understand if the audio has errored out and
-	// if it should be restarted...
-	auto curr_time = std::chrono::high_resolution_clock::now();
-	const std::chrono::duration<double> diff = curr_time - this->clock_time_start;
-	if(diff.count() < 0.0005)
-		num_consecutive_fast_seek++;
-	else
-		num_consecutive_fast_seek = 0;
-	if(num_consecutive_fast_seek > AUDIO_FAILURE_THRESHOLD)
-		restart = true;
 	if(this->audio_data->check_audio_restart_request())
 		restart = true;
 
@@ -85,7 +81,7 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 			return false;
 		loaded_samples = samples.size();
 	}
-	data.samples = (const sf::Int16*)buffer;
+	data.samples = (const std::int16_t*)buffer;
 
 	while(loaded_samples > this->audio_data->get_max_audio_latency()) {
 		samples.pop();
@@ -95,9 +91,9 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 	data.sampleCount = 0;
 
 	for(int i = 0; i < loaded_samples; i++) {
-		const sf::Int16 *data_samples = samples.front().bytes;
+		const std::int16_t *data_samples = samples.front().bytes;
 		int count = samples.front().size;
-		memcpy(buffer + data.sampleCount, data_samples, count * sizeof(sf::Int16));
+		memcpy(buffer + data.sampleCount, data_samples, count * sizeof(std::int16_t));
 		// Unused, but could be useful info
 		//double real_sample_rate = (1.0 / samples.front().time) * count / 2;
 		data.sampleCount += count;
@@ -132,8 +128,7 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 	#endif
 
 	// Basically, look into how low the time between calls of the function is
-	curr_time = std::chrono::high_resolution_clock::now();
-	clock_time_start = curr_time;
+	clock_time_start = std::chrono::high_resolution_clock::now();
 
 	return true;
 }

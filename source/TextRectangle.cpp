@@ -1,6 +1,6 @@
 #include "TextRectangle.hpp"
 
-TextRectangle::TextRectangle(bool font_load_success, sf::Font &text_font) {
+TextRectangle::TextRectangle(bool font_load_success, sf::Font &text_font) : actual_text(text_font) {
 	this->font_load_success = font_load_success;
 	this->setSize(1, 1);
 	this->setRealSize(1, 1, false);
@@ -101,7 +101,7 @@ void TextRectangle::draw(sf::RenderTarget &window) {
 		this->updateText(window.getView().getSize().x);
 	}
 	if(font_load_success && this->loaded_data.show_text && (!this->is_done_showing_text)) {
-		this->text_rect.out_rect.setPosition(this->loaded_data.pos_x, this->loaded_data.pos_y);
+		this->text_rect.out_rect.setPosition({(float)this->loaded_data.pos_x, (float)this->loaded_data.pos_y});
 		if(this->loaded_data.is_timed) {
 			float time_seconds[3];
 			this->updateSlides(time_seconds);
@@ -124,7 +124,7 @@ void TextRectangle::draw(sf::RenderTarget &window) {
 				rect_curr_height = -this->loaded_data.height + ((int)(factor * this->loaded_data.height));
 			else if(this->time_phase == 2)
 				rect_curr_height = ((int)(factor * this->loaded_data.height)) * -1;
-			this->text_rect.out_rect.setPosition(this->loaded_data.pos_x, this->loaded_data.pos_y + rect_curr_height);
+			this->text_rect.out_rect.setPosition({(float)this->loaded_data.pos_x, (float)this->loaded_data.pos_y + rect_curr_height});
 
 			if(factor >= 1) {
 				this->time_phase++;
@@ -175,7 +175,7 @@ void TextRectangle::setTextWithLineWrapping(int x_limit) {
 			curr_text += this->loaded_data.printed_text[i];
 		this->actual_text.setString(curr_text);
 		sf::FloatRect globalBounds = this->actual_text.getGlobalBounds();
-		int bounds_width = globalBounds.width + (globalBounds.left * 2);
+		int bounds_width = globalBounds.size.x + (globalBounds.position.x * 2);
 		if(line_started && (bounds_width > x_limit)) {
 			curr_text = new_text + "\n";
 			for(int i = pos; i < space_pos; i++)
@@ -196,8 +196,8 @@ void TextRectangle::setRealSize(int width, int height, bool check_previous) {
 			return;
 	}
 	this->text_rect.out_rect.setSize(sf::Vector2f(this->loaded_data.width, this->loaded_data.height));
-	this->text_rect.out_tex.create(this->loaded_data.width, this->loaded_data.height);
-	this->text_rect.out_rect.setTextureRect(sf::IntRect(0, 0, this->loaded_data.width, this->loaded_data.height));
+	(void)this->text_rect.out_tex.resize({(unsigned int)this->loaded_data.width, (unsigned int)this->loaded_data.height});
+	this->text_rect.out_rect.setTextureRect(sf::IntRect({0, 0}, {this->loaded_data.width, this->loaded_data.height}));
 }
 
 void TextRectangle::updateText(int x_limit) {
@@ -207,29 +207,29 @@ void TextRectangle::updateText(int x_limit) {
 	this->actual_text.setFillColor(sf::Color::White);
 	// set the text style
 	//this->actual_text.setStyle(sf::Text::Bold);
-	this->actual_text.setPosition(0, 0);
+	this->actual_text.setPosition({0, 0});
 	this->setTextWithLineWrapping(x_limit);
 	sf::FloatRect globalBounds;
 	if(this->loaded_data.proportional_box) {
 		globalBounds = this->actual_text.getGlobalBounds();
 		int new_width = this->loaded_data.width;
 		int new_height = this->loaded_data.height;
-		int bounds_width = globalBounds.width + (globalBounds.left * 2);
-		int bounds_height = globalBounds.height + (globalBounds.top * 2);
+		int bounds_width = globalBounds.size.x + (globalBounds.position.x * 2);
+		int bounds_height = globalBounds.size.y + (globalBounds.position.y * 2);
 		if(new_width < bounds_width)
 			new_width = bounds_width;
 		if(new_height < bounds_height)
 			new_height = bounds_height;
 		this->setRealSize(new_width, new_height);
-		this->actual_text.setPosition((int)(5 * (((float)this->loaded_data.font_pixel_height) / BASE_PIXEL_FONT_HEIGHT)), 0);
+		this->actual_text.setPosition({(float)((int)(5 * (((float)this->loaded_data.font_pixel_height) / BASE_PIXEL_FONT_HEIGHT))), 0});
 		globalBounds = this->actual_text.getGlobalBounds();
-		this->setRealSize(globalBounds.width + (globalBounds.left * 2), globalBounds.height + (globalBounds.top * 2));
+		this->setRealSize(globalBounds.size.x + (globalBounds.position.x * 2), globalBounds.size.y + (globalBounds.position.y * 2));
 	}
 	else {
 		this->setRealSize(this->loaded_data.width, this->loaded_data.height);
-		this->actual_text.setPosition(0, 0);
+		this->actual_text.setPosition({0, 0});
 		globalBounds = this->actual_text.getGlobalBounds();
-		this->actual_text.setPosition((int)((this->loaded_data.width - (globalBounds.width + (globalBounds.left * 2))) / 2), (int)((this->loaded_data.height - (globalBounds.height + (globalBounds.top * 2))) / 2));
+		this->actual_text.setPosition({(float)((int)((this->loaded_data.width - (globalBounds.size.x + (globalBounds.position.x * 2))) / 2)), (float)((int)((this->loaded_data.height - (globalBounds.size.y + (globalBounds.position.y * 2))) / 2))});
 	}
 	switch(this->loaded_data.kind) {
 		case TEXT_KIND_NORMAL:

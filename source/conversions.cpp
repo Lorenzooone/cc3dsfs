@@ -27,7 +27,7 @@ void convertVideoToOutput(int index, VideoOutputData *p_out, CaptureData* captur
 	#endif
 }
 
-void convertAudioToOutput(int index, sf::Int16 *p_out, uint64_t n_samples, const bool is_big_endian, CaptureData* capture_data) {
+void convertAudioToOutput(int index, std::int16_t *p_out, uint64_t n_samples, const bool is_big_endian, CaptureData* capture_data) {
 	if(!capture_data->status.device.has_audio)
 		return;
 	CaptureReceived *p_in = &capture_data->capture_buf[index];

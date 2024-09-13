@@ -1,8 +1,5 @@
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
-#if defined (__linux__) && defined(XLIB_BASED)
-#include <X11/Xlib.h>
-#endif
 
 #if (!defined(_MSC_VER)) || (_MSC_VER > 1916)
 #include <filesystem>
@@ -214,8 +211,18 @@ static void save_layout_file(int save_index, FrontendData *frontend_data, AudioD
 	}
 }
 
+static void executeSoundRestart(Audio &audio, AudioData* audio_data, bool do_restart) {
+	if(do_restart) {
+		audio.stop();
+		audio.~Audio();
+		::new(&audio) Audio(audio_data);
+	}
+	audio.start_audio();
+	audio.play();
+}
+
 static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
-	sf::Int16 (*out_buf)[MAX_SAMPLES_IN] = new sf::Int16[NUM_CONCURRENT_AUDIO_BUFFERS][MAX_SAMPLES_IN];
+	std::int16_t (*out_buf)[MAX_SAMPLES_IN] = new std::int16_t[NUM_CONCURRENT_AUDIO_BUFFERS][MAX_SAMPLES_IN];
 	Audio audio(audio_data);
 	int curr_out, prev_out = NUM_CONCURRENT_DATA_BUFFERS - 1, audio_buf_counter = 0;
 	const bool endianness = is_big_endian();
@@ -240,21 +247,18 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 				}
 			}
 			prev_out = curr_out;
-			
+
 			loaded_samples = audio.samples.size();
-			if(audio.getStatus() != sf::SoundStream::Playing) {
+			if(audio.getStatus() != sf::SoundStream::Status::Playing) {
 				audio.stop_audio();
-				if(loaded_samples > 0) {
-					if(audio.restart) {
-						audio.stop();
-						audio.~Audio();
-						::new(&audio) Audio(audio_data);
-					}
-					audio.start_audio();
-					audio.play();
-				}
+				if(loaded_samples > 0) 
+					executeSoundRestart(audio, audio_data, audio.restart);
 			}
 			else {
+				if(loaded_samples > 0) {
+					if(audio.hasTooMuchTimeElapsed())
+						executeSoundRestart(audio, audio_data, true);
+				}
 				audio.update_volume();
 			}
 		}
@@ -481,9 +485,7 @@ static bool parse_int_arg(int &index, int argc, char **argv, int &target, std::s
 }
 
 int main(int argc, char **argv) {
-	#if defined(__linux__) && defined(XLIB_BASED)
-	XInitThreads();
-	#endif
+	init_threads();
 	bool mono_app = false;
 	int page_up_id = -1;
 	int page_down_id = -1;

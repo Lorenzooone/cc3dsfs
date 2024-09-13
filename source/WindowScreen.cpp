@@ -39,13 +39,13 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->m_prepare_quit = false;
 	this->ret_val = 0;
 	reset_screen_info(this->m_info);
-	this->font_load_success = this->text_font.loadFromMemory(font_ttf, font_ttf_len);
+	this->font_load_success = this->text_font.openFromMemory(font_ttf, font_ttf_len);
 	this->notification = new TextRectangle(this->font_load_success, this->text_font);
 	this->init_menus();
 	FPSArrayInit(&this->in_fps);
 	FPSArrayInit(&this->draw_fps);
 	FPSArrayInit(&this->poll_fps);
-	this->in_tex.create(MAX_IN_VIDEO_WIDTH, MAX_IN_VIDEO_HEIGHT);
+	(void)this->in_tex.resize({MAX_IN_VIDEO_WIDTH, MAX_IN_VIDEO_HEIGHT});
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
 	this->display_data = display_data;
@@ -71,8 +71,8 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 		this->m_info.is_fullscreen = true;
 	if(!loaded_shaders) {
 		base_shader = new sf::Shader();
-		base_shader->loadFromMemory(no_effect_fragment_shader, sf::Shader::Fragment);
-		loaded_shaders = true;
+		if(base_shader->loadFromMemory(no_effect_fragment_shader, sf::Shader::Type::Fragment))
+			loaded_shaders = true;
 	}
 	n_shader_refs += 1;
 	this->in_top_shader = base_shader;
@@ -98,22 +98,22 @@ WindowScreen::~WindowScreen() {
 }
 
 void WindowScreen::build() {
-	sf::Vector2f top_screen_size = sf::Vector2f(TOP_WIDTH_3DS, HEIGHT_3DS);
-	sf::Vector2f bot_screen_size = sf::Vector2f(BOT_WIDTH_3DS, HEIGHT_3DS);
+	sf::Vector2f top_screen_size = {(float)TOP_WIDTH_3DS, (float)HEIGHT_3DS};
+	sf::Vector2f bot_screen_size = {(float)BOT_WIDTH_3DS, (float)HEIGHT_3DS};
 
 	int width = TOP_WIDTH_3DS;
 	if(this->m_stype == ScreenType::BOTTOM)
 		width = BOT_WIDTH_3DS;
 
-	this->m_out_rect_top.out_tex.create(top_screen_size.x, top_screen_size.y);
+	(void)this->m_out_rect_top.out_tex.resize({(unsigned int)top_screen_size.x, (unsigned int)top_screen_size.y});
 	this->m_out_rect_top.out_rect.setSize(top_screen_size);
 	this->m_out_rect_top.out_rect.setTexture(&this->m_out_rect_top.out_tex.getTexture());
 
-	this->m_out_rect_bot.out_tex.create(bot_screen_size.x, bot_screen_size.y);
+	(void)this->m_out_rect_bot.out_tex.resize({(unsigned int)bot_screen_size.x, (unsigned int)bot_screen_size.y});
 	this->m_out_rect_bot.out_rect.setSize(bot_screen_size);
 	this->m_out_rect_bot.out_rect.setTexture(&this->m_out_rect_bot.out_tex.getTexture());
 
-	this->m_view.setRotation(0);
+	this->m_view.setRotation(sf::degrees(0));
 
 	this->reload();
 }
@@ -141,7 +141,7 @@ void WindowScreen::display_call(bool is_main_thread) {
 	if(this->m_win.isOpen()) {
 		if(this->main_thread_owns_window != is_main_thread) {
 			this->draw_lock->lock();
-			this->m_win.setActive(true);
+			(void)this->m_win.setActive(true);
 			this->main_thread_owns_window = is_main_thread;
 			this->draw_lock->unlock();
 		}
@@ -163,7 +163,7 @@ void WindowScreen::display_thread() {
 	}
 	if(!this->main_thread_owns_window) {
 		this->draw_lock->lock();
-		this->m_win.setActive(false);
+		(void)this->m_win.setActive(false);
 		this->draw_lock->unlock();
 	}
 	this->done_display = true;
@@ -172,7 +172,7 @@ void WindowScreen::display_thread() {
 void WindowScreen::end() {
 	if(this->main_thread_owns_window) {
 		this->draw_lock->lock();
-		this->m_win.setActive(false);
+		(void)this->m_win.setActive(false);
 		this->draw_lock->unlock();
 	}
 	this->display_lock.unlock();
@@ -181,7 +181,7 @@ void WindowScreen::end() {
 void WindowScreen::after_thread_join() {
 	if(this->m_win.isOpen()) {
 		this->draw_lock->lock();
-		this->m_win.setActive(true);
+		(void)this->m_win.setActive(true);
 		this->m_win.close();
 		this->draw_lock->unlock();
 	}
@@ -274,7 +274,7 @@ void WindowScreen::free_ownership_of_window(bool is_main_thread) {
 	if(is_main_thread == this->main_thread_owns_window) {
 		if((this->scheduled_work_on_window) || (is_main_thread == this->loaded_info.async)) {
 			this->draw_lock->lock();
-			this->m_win.setActive(false);
+			(void)this->m_win.setActive(false);
 			this->draw_lock->unlock();
 		}
 	}
@@ -292,13 +292,13 @@ void WindowScreen::resize_in_rect(sf::RectangleShape &in_rect, int start_x, int 
 		std::swap(target_width, target_height);
 	}
 
-	in_rect.setTextureRect(sf::IntRect(target_x, target_y, target_width, target_height));
+	in_rect.setTextureRect(sf::IntRect({target_x, target_y}, {target_width, target_height}));
 
-	in_rect.setSize(sf::Vector2f(target_width, target_height));
-	in_rect.setOrigin(target_width / 2, target_height / 2);
+	in_rect.setSize({(float)target_width, (float)target_height});
+	in_rect.setOrigin({target_width / 2.0f, target_height / 2.0f});
 
-	in_rect.setRotation(target_rotation);
-	in_rect.setPosition(width / 2, height / 2);
+	in_rect.setRotation(sf::degrees(target_rotation));
+	in_rect.setPosition({width / 2.0f, height / 2.0f});
 }
 
 int WindowScreen::get_screen_corner_modifier_x(int rotation, int width) {
@@ -372,7 +372,7 @@ bool WindowScreen::window_needs_work() {
 void WindowScreen::window_factory(bool is_main_thread) {
 	if(this->loaded_operations.call_close) {
 		this->draw_lock->lock();
-		this->m_win.setActive(true);
+		(void)this->m_win.setActive(true);
 		this->main_thread_owns_window = is_main_thread;
 		this->m_win.close();
 		while(!events_queue.empty())
@@ -383,7 +383,7 @@ void WindowScreen::window_factory(bool is_main_thread) {
 	}
 	if(this->loaded_operations.call_create) {
 		this->draw_lock->lock();
-		this->m_win.setActive(true);
+		(void)this->m_win.setActive(true);
 		this->main_thread_owns_window = is_main_thread;
 		bool previously_open = this->m_win.isOpen();
 		sf::Vector2i prev_pos = sf::Vector2i(0, 0);
@@ -392,14 +392,14 @@ void WindowScreen::window_factory(bool is_main_thread) {
 		if(!this->loaded_info.is_fullscreen) {
 			this->update_screen_settings();
 			if(this->loaded_info.have_titlebar)
-				this->m_win.create(sf::VideoMode(this->m_width, this->m_height), this->title_factory());
+				this->m_win.create(sf::VideoMode({(unsigned int)this->m_width, (unsigned int)this->m_height}), this->title_factory());
 			else
-				this->m_win.create(sf::VideoMode(this->m_width, this->m_height), this->title_factory(), sf::Style::None);
+				this->m_win.create(sf::VideoMode({(unsigned int)this->m_width, (unsigned int)this->m_height}), this->title_factory(), sf::Style::None);
 			this->update_view_size();
 		}
 		else {
 			if(!this->loaded_info.failed_fullscreen)
-				this->m_win.create(this->curr_desk_mode, this->title_factory(), sf::Style::Fullscreen);
+				this->m_win.create(this->curr_desk_mode, this->title_factory(), sf::Style::Default, sf::State::Fullscreen);
 			else if(this->loaded_info.have_titlebar)
 				this->m_win.create(this->curr_desk_mode, this->title_factory());
 			else
@@ -417,7 +417,7 @@ void WindowScreen::window_factory(bool is_main_thread) {
 	}
 	if((is_main_thread == this->main_thread_owns_window) && (this->main_thread_owns_window == this->loaded_info.async)) {
 		this->draw_lock->lock();
-		this->m_win.setActive(false);
+		(void)this->m_win.setActive(false);
 		this->draw_lock->unlock();
 	}
 	this->update_connection();
@@ -617,8 +617,8 @@ void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::
 	}
 	if(do_work) {
 		float scale_issue_fix_offset = -0.005;
-		this->m_out_rect_top.out_rect.setPosition(top_screen_x + scale_issue_fix_offset + offset_x + get_screen_corner_modifier_x(this->loaded_info.top_rotation, top_screen_width), top_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.top_rotation, top_screen_height) + scale_issue_fix_offset);
-		this->m_out_rect_bot.out_rect.setPosition(bot_screen_x + scale_issue_fix_offset + offset_x + get_screen_corner_modifier_x(this->loaded_info.bot_rotation, bot_screen_width), bot_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.bot_rotation, bot_screen_height) + scale_issue_fix_offset);
+		this->m_out_rect_top.out_rect.setPosition({top_screen_x + scale_issue_fix_offset + offset_x + get_screen_corner_modifier_x(this->loaded_info.top_rotation, top_screen_width), top_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.top_rotation, top_screen_height) + scale_issue_fix_offset});
+		this->m_out_rect_bot.out_rect.setPosition({bot_screen_x + scale_issue_fix_offset + offset_x + get_screen_corner_modifier_x(this->loaded_info.bot_rotation, bot_screen_width), bot_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.bot_rotation, bot_screen_height) + scale_issue_fix_offset});
 	}
 
 	int top_end_x = top_screen_x + offset_x + top_screen_width;
@@ -639,8 +639,8 @@ float WindowScreen::get_max_float_screen_multiplier(ResizingScreenData *own_scre
 
 	if((other_rotation / 10) % 2)
 		std::swap(width_limit, height_limit);
-	int desk_height = curr_desk_mode.height;
-	int desk_width = curr_desk_mode.width;
+	int desk_height = curr_desk_mode.size.y;
+	int desk_width = curr_desk_mode.size.x;
 	int height_max = desk_height;
 	int width_max = desk_width;
 	switch(this->m_info.bottom_pos) {
@@ -800,8 +800,8 @@ void WindowScreen::non_integer_scale_screens(ResizingScreenData *top_screen_resi
 	if((bot_screen_resize_data->rotation / 10) % 2)
 		std::swap(min_bot_screen_width, min_bot_screen_height);
 
-	int free_width = curr_desk_mode.width - (min_bot_screen_width + min_top_screen_width);
-	int free_height = curr_desk_mode.height - (min_bot_screen_height + min_top_screen_height);
+	int free_width = curr_desk_mode.size.x - (min_bot_screen_width + min_top_screen_width);
+	int free_height = curr_desk_mode.size.y - (min_bot_screen_height + min_top_screen_height);
 
 	switch(this->m_info.non_integer_mode) {
 		case SMALLER_PRIORITY:
@@ -880,7 +880,7 @@ int WindowScreen::get_fullscreen_offset_x(int top_width, int top_height, int bot
 		default:
 			return 0;
 	}
-	return (curr_desk_mode.width - offset_contribute) * this->loaded_info.total_offset_x;
+	return (curr_desk_mode.size.x - offset_contribute) * this->loaded_info.total_offset_x;
 }
 
 int WindowScreen::get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height) {
@@ -904,7 +904,7 @@ int WindowScreen::get_fullscreen_offset_y(int top_width, int top_height, int bot
 		default:
 			return 0;
 	}
-	return (curr_desk_mode.height - offset_contribute) * this->loaded_info.total_offset_y;
+	return (curr_desk_mode.size.y - offset_contribute) * this->loaded_info.total_offset_y;
 }
 
 void WindowScreen::resize_window_and_out_rects(bool do_work) {
@@ -940,16 +940,16 @@ void WindowScreen::resize_window_and_out_rects(bool do_work) {
 	if(this->loaded_info.is_fullscreen) {
 		offset_x = get_fullscreen_offset_x(top_width, top_height, bot_width, bot_height);
 		offset_y = get_fullscreen_offset_y(top_width, top_height, bot_width, bot_height);
-		max_x = curr_desk_mode.width;
-		max_y = curr_desk_mode.height;
+		max_x = curr_desk_mode.size.x;
+		max_y = curr_desk_mode.size.y;
 	}
-	sf::Vector2f new_top_screen_size = sf::Vector2f(top_width, top_height);
-	sf::Vector2f new_bot_screen_size = sf::Vector2f(bot_width, bot_height);
+	sf::Vector2f new_top_screen_size = {(float)top_width, (float)top_height};
+	sf::Vector2f new_bot_screen_size = {(float)bot_width, (float)bot_height};
 	if(do_work) {
 		this->m_out_rect_top.out_rect.setSize(new_top_screen_size);
-		this->m_out_rect_top.out_rect.setTextureRect(sf::IntRect(0, 0, top_screen_size.x, top_screen_size.y));
+		this->m_out_rect_top.out_rect.setTextureRect(sf::IntRect({0, 0}, {(int)top_screen_size.x, (int)top_screen_size.y}));
 		this->m_out_rect_bot.out_rect.setSize(new_bot_screen_size);
-		this->m_out_rect_bot.out_rect.setTextureRect(sf::IntRect(0, 0, bot_screen_size.x, bot_screen_size.y));
+		this->m_out_rect_bot.out_rect.setTextureRect(sf::IntRect({0, 0}, {(int)bot_screen_size.x, (int)bot_screen_size.y}));
 	}
 	this->set_position_screens(new_top_screen_size, new_bot_screen_size, offset_x, offset_y, max_x, max_y, do_work);
 	if((!this->loaded_info.is_fullscreen) && this->loaded_info.rounded_corners_fix) {
@@ -968,7 +968,7 @@ void WindowScreen::create_window(bool re_prepare_size, bool reset_text) {
 	else {
 		bool success = false;
 		if((this->m_info.fullscreen_mode_width > 0) && (this->m_info.fullscreen_mode_height > 0) && (this->m_info.fullscreen_mode_bpp > 0)) {
-			sf::VideoMode mode_created = sf::VideoMode(this->m_info.fullscreen_mode_width, this->m_info.fullscreen_mode_height, this->m_info.fullscreen_mode_bpp);
+			sf::VideoMode mode_created = sf::VideoMode({(unsigned int)this->m_info.fullscreen_mode_width, (unsigned int)this->m_info.fullscreen_mode_height}, this->m_info.fullscreen_mode_bpp);
 			if(mode_created.isValid()) {
 				this->curr_desk_mode = mode_created;
 				success = true;
@@ -980,11 +980,11 @@ void WindowScreen::create_window(bool re_prepare_size, bool reset_text) {
 		}
 		#ifdef __APPLE__
 		if(!success) {
-			this->curr_desk_mode = sf::VideoMode(2 * FALLBACK_FS_RESOLUTION_WIDTH, 2 * FALLBACK_FS_RESOLUTION_HEIGHT, FALLBACK_FS_RESOLUTION_BPP);
+			this->curr_desk_mode = sf::VideoMode({2 * FALLBACK_FS_RESOLUTION_WIDTH, 2 * FALLBACK_FS_RESOLUTION_HEIGHT}, FALLBACK_FS_RESOLUTION_BPP);
 			success = this->curr_desk_mode.isValid();
 		}
 		if(!success) {
-			this->curr_desk_mode = sf::VideoMode(FALLBACK_FS_RESOLUTION_WIDTH, FALLBACK_FS_RESOLUTION_HEIGHT, FALLBACK_FS_RESOLUTION_BPP);
+			this->curr_desk_mode = sf::VideoMode({FALLBACK_FS_RESOLUTION_WIDTH, FALLBACK_FS_RESOLUTION_HEIGHT}, FALLBACK_FS_RESOLUTION_BPP);
 			success = this->curr_desk_mode.isValid();
 		}
 		#endif
@@ -1001,11 +1001,11 @@ void WindowScreen::create_window(bool re_prepare_size, bool reset_text) {
 				this->m_info.fullscreen_mode_height = FALLBACK_FS_RESOLUTION_HEIGHT;
 				this->m_info.fullscreen_mode_bpp = FALLBACK_FS_RESOLUTION_BPP;
 			}
-			this->curr_desk_mode = sf::VideoMode(this->m_info.fullscreen_mode_width, this->m_info.fullscreen_mode_height, this->m_info.fullscreen_mode_bpp);
+			this->curr_desk_mode = sf::VideoMode({(unsigned int)this->m_info.fullscreen_mode_width, (unsigned int)this->m_info.fullscreen_mode_height}, this->m_info.fullscreen_mode_bpp);
 			this->m_info.failed_fullscreen = true;
 		}
-		this->m_window_width = curr_desk_mode.width;
-		this->m_window_height = curr_desk_mode.height;
+		this->m_window_width = curr_desk_mode.size.x;
+		this->m_window_height = curr_desk_mode.size.y;
 		this->m_info.show_mouse = false;
 	}
 	if(re_prepare_size)
@@ -1019,7 +1019,7 @@ void WindowScreen::update_view_size() {
 		this->m_window_width = this->m_width;
 		this->m_window_height = this->m_height;
 	}
-	this->m_view.reset(sf::FloatRect(0, 0, this->m_window_width, this->m_window_height));
+	this->m_view = sf::View(sf::FloatRect({0, 0}, {(float)this->m_window_width, (float)this->m_window_height}));
 	this->m_win.setView(this->m_view);
 }
 
@@ -1033,8 +1033,8 @@ void WindowScreen::update_screen_settings() {
 }
 
 void WindowScreen::rotate() {
-	this->m_out_rect_top.out_rect.setRotation(this->loaded_info.top_rotation);
-	this->m_out_rect_bot.out_rect.setRotation(this->loaded_info.bot_rotation);
+	this->m_out_rect_top.out_rect.setRotation(sf::degrees(this->loaded_info.top_rotation));
+	this->m_out_rect_bot.out_rect.setRotation(sf::degrees(this->loaded_info.bot_rotation));
 	this->loaded_operations.call_screen_settings_update = true;
 }
 
@@ -1068,7 +1068,7 @@ sf::Vector2f WindowScreen::getShownScreenSize(bool is_top, ScreenInfo* info) {
 		width = (*crops)[*crop_kind]->bot_width;
 		height = (*crops)[*crop_kind]->bot_height;
 	}
-	return sf::Vector2f(width, height);
+	return {(float)width, (float)height};
 }
 
 void WindowScreen::crop() {
@@ -1094,9 +1094,9 @@ void WindowScreen::setWinSize(bool is_main_thread) {
 	int win_height = this->m_win.getSize().y;
 	if((win_width != width) || (win_height != height)) {
 		this->draw_lock->lock();
-		this->m_win.setActive(true);
+		(void)this->m_win.setActive(true);
 		this->main_thread_owns_window = is_main_thread;
-		this->m_win.setSize(sf::Vector2u(width, height));
+		this->m_win.setSize({(unsigned int)width, (unsigned int)height});
 		this->draw_lock->unlock();
 	}
 }

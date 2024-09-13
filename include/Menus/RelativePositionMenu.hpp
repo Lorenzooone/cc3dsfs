@@ -5,8 +5,8 @@
 #include <chrono>
 
 #include "TextRectangle.hpp"
-#include "sfml_gfx_structs.hpp"
 #include "display_structs.hpp"
+#include "event_structs.hpp"
 
 #define BACK_X_OUTPUT_OPTION -1
 

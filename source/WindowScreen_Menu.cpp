@@ -2,20 +2,20 @@
 
 #define FPS_WINDOW_SIZE 64
 
-static const sf::VideoMode default_fs_mode_4_5k_macos = sf::VideoMode(4480, 2520);
-static const sf::VideoMode default_fs_mode_4k_macos = sf::VideoMode(4096, 2304);
-static const sf::VideoMode default_fs_mode_4k = sf::VideoMode(3840, 2160);
-static const sf::VideoMode default_fs_mode_1440p = sf::VideoMode(2560, 1440);
-static const sf::VideoMode default_fs_mode_4_5k_half_macos = sf::VideoMode(2240, 1260);
-static const sf::VideoMode default_fs_mode_4k_half_macos = sf::VideoMode(2048, 1152);
-static const sf::VideoMode default_fs_mode_1080p = sf::VideoMode(1920, 1080);
-static const sf::VideoMode default_fs_mode_1050p = sf::VideoMode(1680, 1050);
-static const sf::VideoMode default_fs_mode_900p = sf::VideoMode(1600, 900);
-static const sf::VideoMode default_fs_mode_720p = sf::VideoMode(1280, 720);
-static const sf::VideoMode default_fs_mode_600p = sf::VideoMode(800, 600);
-static const sf::VideoMode default_fs_mode_480p = sf::VideoMode(720, 480);
-static const sf::VideoMode default_fs_mode_240p = sf::VideoMode(400, 240);
-static const sf::VideoMode default_fs_mode_240p_2 = sf::VideoMode(320, 240);
+static const sf::VideoMode default_fs_mode_4_5k_macos = sf::VideoMode({4480, 2520});
+static const sf::VideoMode default_fs_mode_4k_macos = sf::VideoMode({4096, 2304});
+static const sf::VideoMode default_fs_mode_4k = sf::VideoMode({3840, 2160});
+static const sf::VideoMode default_fs_mode_1440p = sf::VideoMode({2560, 1440});
+static const sf::VideoMode default_fs_mode_4_5k_half_macos = sf::VideoMode({2240, 1260});
+static const sf::VideoMode default_fs_mode_4k_half_macos = sf::VideoMode({2048, 1152});
+static const sf::VideoMode default_fs_mode_1080p = sf::VideoMode({1920, 1080});
+static const sf::VideoMode default_fs_mode_1050p = sf::VideoMode({1680, 1050});
+static const sf::VideoMode default_fs_mode_900p = sf::VideoMode({1600, 900});
+static const sf::VideoMode default_fs_mode_720p = sf::VideoMode({1280, 720});
+static const sf::VideoMode default_fs_mode_600p = sf::VideoMode({800, 600});
+static const sf::VideoMode default_fs_mode_480p = sf::VideoMode({720, 480});
+static const sf::VideoMode default_fs_mode_240p = sf::VideoMode({400, 240});
+static const sf::VideoMode default_fs_mode_240p_2 = sf::VideoMode({320, 240});
 
 static const sf::VideoMode* default_fs_modes[] = {
 &default_fs_mode_4_5k_macos,
@@ -53,7 +53,7 @@ static float check_held_diff(std::chrono::time_point<std::chrono::high_resolutio
 }
 
 static bool is_shortcut_valid() {
-	return (get_extra_button_name(sf::Keyboard::Enter) != "") || (get_extra_button_name(sf::Keyboard::PageUp) != "");
+	return (get_extra_button_name(sf::Keyboard::Key::Enter) != "") || (get_extra_button_name(sf::Keyboard::Key::PageUp) != "");
 }
 
 void FPSArrayInit(FPSArray *array) {
@@ -495,11 +495,11 @@ bool WindowScreen::execute_cmd(PossibleWindowCommands id) {
 bool WindowScreen::common_poll(SFEvent &event_data) {
 	bool consumed = true;
 	switch(event_data.type) {
-		case sf::Event::Closed:
+		case EVENT_CLOSED:
 			this->set_close(0);
 			break;
 
-		case sf::Event::TextEntered:
+		case EVENT_TEXT_ENTERED:
 			switch(event_data.unicode) {
 				case 's':
 					this->execute_cmd(WINDOW_COMMAND_SPLIT);
@@ -540,19 +540,19 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 
 			break;
 			
-		case sf::Event::KeyPressed:
+		case EVENT_KEY_PRESSED:
 			switch(event_data.code) {
-				case sf::Keyboard::Escape:
+				case sf::Keyboard::Key::Escape:
 					this->set_close(0);
 					break;
-				case sf::Keyboard::Enter:
+				case sf::Keyboard::Key::Enter:
 					if(event_data.is_extra)
 						check_held_reset(true, this->extra_enter_action);
 					else
 						check_held_reset(true, this->enter_action);
 					consumed = false;
 					break;
-				case sf::Keyboard::PageDown:
+				case sf::Keyboard::Key::PageDown:
 					if(event_data.is_extra)
 						check_held_reset(true, this->extra_pgdown_action);
 					else
@@ -565,16 +565,16 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 			}
 
 			break;
-		case sf::Event::KeyReleased:
+		case EVENT_KEY_RELEASED:
 			switch(event_data.code) {
-				case sf::Keyboard::Enter:
+				case sf::Keyboard::Key::Enter:
 					if(event_data.is_extra)
 						check_held_reset(false, this->extra_enter_action);
 					else
 						check_held_reset(false, this->enter_action);
 					consumed = false;
 					break;
-				case sf::Keyboard::PageDown:
+				case sf::Keyboard::Key::PageDown:
 					if(event_data.is_extra)
 						check_held_reset(false, this->extra_pgdown_action);
 					else
@@ -587,25 +587,25 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 			}
 
 			break;
-		case sf::Event::MouseMoved:
+		case EVENT_MOUSE_MOVED:
 			this->m_info.show_mouse = true;
 			this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
 			consumed = false;
 			break;
-		case sf::Event::MouseButtonPressed:
+		case EVENT_MOUSE_BTN_PRESSED:
 			this->m_info.show_mouse = true;
 			this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
 			consumed = false;
 			break;
-		case sf::Event::MouseButtonReleased:
+		case EVENT_MOUSE_BTN_RELEASED:
 			this->m_info.show_mouse = true;
 			this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
 			consumed = false;
 			break;
-		case sf::Event::JoystickButtonPressed:
+		case EVENT_JOYSTICK_BTN_PRESSED:
 			consumed = false;
 			break;
-		case sf::Event::JoystickMoved:
+		case EVENT_JOYSTICK_MOVED:
 			consumed = false;
 			break;
 		default:
@@ -788,7 +788,7 @@ void WindowScreen::setup_resolution_menu(bool reset_data) {
 		this->possible_resolutions.clear();
 		std::vector<sf::VideoMode> modes = sf::VideoMode::getFullscreenModes();
 		if(modes.size() > 0) {
-			this->possible_resolutions.push_back(sf::VideoMode(0, 0, 0));
+			this->possible_resolutions.push_back(sf::VideoMode({0, 0}, 0));
 			this->possible_resolutions.push_back(modes[0]);
 			for(int i = 1; i < modes.size(); ++i)
 				if(modes[0].bitsPerPixel == modes[i].bitsPerPixel)
@@ -848,14 +848,14 @@ void WindowScreen::setup_shortcuts_menu(bool reset_data) {
 		this->possible_buttons_names.clear();
 		this->possible_buttons_ptrs.clear();
 		this->possible_buttons_extras.clear();
-		if(get_extra_button_name(sf::Keyboard::Enter) != "") {
+		if(get_extra_button_name(sf::Keyboard::Key::Enter) != "") {
 			this->possible_buttons_ptrs.push_back(&extra_button_shortcuts->enter_shortcut);
-			this->possible_buttons_names.push_back(get_extra_button_name(sf::Keyboard::Enter) + " Button: " + extra_button_shortcuts->enter_shortcut->name);
+			this->possible_buttons_names.push_back(get_extra_button_name(sf::Keyboard::Key::Enter) + " Button: " + extra_button_shortcuts->enter_shortcut->name);
 			this->possible_buttons_extras.push_back(true);
 		}
-		if(get_extra_button_name(sf::Keyboard::PageUp) != "") {
+		if(get_extra_button_name(sf::Keyboard::Key::PageUp) != "") {
 			this->possible_buttons_ptrs.push_back(&extra_button_shortcuts->page_up_shortcut);
-			this->possible_buttons_names.push_back(get_extra_button_name(sf::Keyboard::PageUp) + " Button: " + extra_button_shortcuts->page_up_shortcut->name);
+			this->possible_buttons_names.push_back(get_extra_button_name(sf::Keyboard::Key::PageUp) + " Button: " + extra_button_shortcuts->page_up_shortcut->name);
 			this->possible_buttons_extras.push_back(true);
 		}
 		this->shortcut_menu->insert_data(this->possible_buttons_names);
@@ -933,16 +933,16 @@ void WindowScreen::update_save_menu() {
 bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 	bool consumed = true;
 	switch(event_data.type) {
-		case sf::Event::TextEntered:
+		case EVENT_TEXT_ENTERED:
 			switch(event_data.unicode) {
 				default:
 					consumed = false;
 					break;
 			}
 			break;
-		case sf::Event::KeyPressed:
+		case EVENT_KEY_PRESSED:
 			switch(event_data.code) {
-				case sf::Keyboard::Enter:
+				case sf::Keyboard::Key::Enter:
 					if(event_data.is_extra) {
 						consumed = this->can_execute_cmd(extra_button_shortcuts->enter_shortcut, true, false);
 						if(consumed)
@@ -951,13 +951,13 @@ bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 					else
 						this->setup_main_menu();
 					break;
-				case sf::Keyboard::PageDown:
+				case sf::Keyboard::Key::PageDown:
 					if(event_data.is_extra)
 						this->setup_main_menu();
 					else
 						consumed = false;
 					break;
-				case sf::Keyboard::PageUp:
+				case sf::Keyboard::Key::PageUp:
 					if(event_data.is_extra){
 						consumed = this->can_execute_cmd(extra_button_shortcuts->page_up_shortcut, true, false);
 						if(consumed)
@@ -971,19 +971,19 @@ bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 					break;
 			}
 			break;
-		case sf::Event::MouseMoved:
+		case EVENT_MOUSE_MOVED:
 			consumed = false;
 			break;
-		case sf::Event::MouseButtonPressed:
-			if(event_data.mouse_button == sf::Mouse::Right)
+		case EVENT_MOUSE_BTN_PRESSED:
+			if(event_data.mouse_button == sf::Mouse::Button::Right)
 				this->setup_main_menu();
 			else
 				consumed = false;
 			break;
-		case sf::Event::MouseButtonReleased:
+		case EVENT_MOUSE_BTN_RELEASED:
 			consumed = false;
 			break;
-		case sf::Event::JoystickButtonPressed:
+		case EVENT_JOYSTICK_BTN_PRESSED:
 			switch(get_joystick_action(event_data.joystickId, event_data.joy_button)) {
 				case JOY_ACTION_MENU:
 					this->setup_main_menu();
@@ -993,7 +993,7 @@ bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 					break;
 			}
 			break;
-		case sf::Event::JoystickMoved:
+		case EVENT_JOYSTICK_MOVED:
 			consumed = false;
 			break;
 		default:
@@ -1006,7 +1006,7 @@ bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 bool WindowScreen::main_poll(SFEvent &event_data) {
 	bool consumed = true;
 	switch(event_data.type) {
-		case sf::Event::TextEntered:
+		case EVENT_TEXT_ENTERED:
 			switch(event_data.unicode) {
 				case 'c':
 					this->execute_cmd(WINDOW_COMMAND_CROP);
@@ -1111,20 +1111,20 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 
 			break;
 			
-		case sf::Event::KeyPressed:
+		case EVENT_KEY_PRESSED:
 			switch(event_data.code) {
-				case sf::Keyboard::F1:
-				case sf::Keyboard::F2:
-				case sf::Keyboard::F3:
-				case sf::Keyboard::F4:
-					this->execute_cmd(static_cast<PossibleWindowCommands>(WINDOW_COMMAND_LOAD_PROFILE_1 + (event_data.code - sf::Keyboard::F1)));
+				case sf::Keyboard::Key::F1:
+				case sf::Keyboard::Key::F2:
+				case sf::Keyboard::Key::F3:
+				case sf::Keyboard::Key::F4:
+					this->execute_cmd(static_cast<PossibleWindowCommands>(WINDOW_COMMAND_LOAD_PROFILE_1 + ((int)event_data.code - (int)sf::Keyboard::Key::F1)));
 					break;
 
-				case sf::Keyboard::F5:
-				case sf::Keyboard::F6:
-				case sf::Keyboard::F7:
-				case sf::Keyboard::F8:
-					this->execute_cmd(static_cast<PossibleWindowCommands>(WINDOW_COMMAND_SAVE_PROFILE_1 + (event_data.code - sf::Keyboard::F5)));
+				case sf::Keyboard::Key::F5:
+				case sf::Keyboard::Key::F6:
+				case sf::Keyboard::Key::F7:
+				case sf::Keyboard::Key::F8:
+					this->execute_cmd(static_cast<PossibleWindowCommands>(WINDOW_COMMAND_SAVE_PROFILE_1 + ((int)event_data.code - (int)sf::Keyboard::Key::F5)));
 					break;
 				default:
 					consumed = false;
@@ -1132,19 +1132,19 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 			}
 
 			break;
-		case sf::Event::MouseMoved:
+		case EVENT_MOUSE_MOVED:
 			consumed = false;
 			break;
-		case sf::Event::MouseButtonPressed:
+		case EVENT_MOUSE_BTN_PRESSED:
 			consumed = false;
 			break;
-		case sf::Event::MouseButtonReleased:
+		case EVENT_MOUSE_BTN_RELEASED:
 			consumed = false;
 			break;
-		case sf::Event::JoystickButtonPressed:
+		case EVENT_JOYSTICK_BTN_PRESSED:
 			consumed = false;
 			break;
-		case sf::Event::JoystickMoved:
+		case EVENT_JOYSTICK_MOVED:
 			consumed = false;
 			break;
 		default:
@@ -1170,7 +1170,7 @@ void WindowScreen::poll(bool do_everything) {
 			break;
 		SFEvent event_data = events_queue.front();
 		events_queue.pop();
-		if((event_data.type == sf::Event::KeyPressed) && event_data.poweroff_cmd) {
+		if((event_data.type == EVENT_KEY_PRESSED) && event_data.poweroff_cmd) {
 			this->set_close(1);
 			done = true;
 			continue;
@@ -1657,8 +1657,8 @@ void WindowScreen::poll(bool do_everything) {
 						case RESOLUTION_MENU_NO_ACTION:
 							break;
 						default:
-							this->m_info.fullscreen_mode_width = possible_resolutions[this->resolution_menu->selected_index].width;
-							this->m_info.fullscreen_mode_height = possible_resolutions[this->resolution_menu->selected_index].height;
+							this->m_info.fullscreen_mode_width = possible_resolutions[this->resolution_menu->selected_index].size.x;
+							this->m_info.fullscreen_mode_height = possible_resolutions[this->resolution_menu->selected_index].size.y;
 							this->m_info.fullscreen_mode_bpp = possible_resolutions[this->resolution_menu->selected_index].bitsPerPixel;
 							this->create_window(true);
 							break;
@@ -1924,25 +1924,32 @@ void WindowScreen::poll_window(bool do_everything) {
 			const std::chrono::duration<double> diff = curr_time - this->last_poll_time;
 			FPSArrayInsertElement(&poll_fps, diff.count());
 			this->last_poll_time = curr_time;
-			sf::Event event;
-			while(this->m_win.pollEvent(event)) {
-				int joystickId = event.joystickConnect.joystickId;
-				if(event.type == sf::Event::JoystickButtonPressed)
-					joystickId = event.joystickButton.joystickId;
-				else if(event.type == sf::Event::JoystickMoved)
-					joystickId = event.joystickMove.joystickId;
-				int mouse_x = event.mouseButton.x;
-				int mouse_y = event.mouseButton.y;
-				if(event.type == sf::Event::MouseMoved) {
-					mouse_x = event.mouseMove.x;
-					mouse_y = event.mouseMove.y;
-				}
-				events_queue.emplace(event.type, event.key.code, event.text.unicode, joystickId, event.joystickButton.button, event.joystickMove.axis, 0.0, event.mouseButton.button, mouse_x, mouse_y, false, false);
+			while(const std::optional event = this->m_win.pollEvent()) {
+				if(event->is<sf::Event::Closed>())
+					events_queue.emplace(EVENT_CLOSED);
+				else if(const auto* keyPressed = event->getIf<sf::Event::KeyPressed>())
+					events_queue.emplace(true, keyPressed->code);
+				else if(const auto* keyReleased = event->getIf<sf::Event::KeyReleased>())
+					events_queue.emplace(false, keyReleased->code);
+				else if(const auto* textEntered = event->getIf<sf::Event::TextEntered>())
+					events_queue.emplace(textEntered->unicode);
+				else if(const auto* joystick_press = event->getIf<sf::Event::JoystickButtonPressed>())
+					events_queue.emplace(true, joystick_press->joystickId, joystick_press->button);
+				else if(const auto* joystick_release = event->getIf<sf::Event::JoystickButtonReleased>())
+					events_queue.emplace(false, joystick_release->joystickId, joystick_release->button);
+				else if(const auto* joystick_movement = event->getIf<sf::Event::JoystickMoved>())
+					events_queue.emplace(joystick_movement->joystickId, joystick_movement->axis, joystick_movement->position);
+				else if(const auto* mouse_pressed = event->getIf<sf::Event::MouseButtonPressed>())
+					events_queue.emplace(true, mouse_pressed->button, mouse_pressed->position);
+				else if(const auto* mouse_released = event->getIf<sf::Event::MouseButtonReleased>())
+					events_queue.emplace(false, mouse_released->button, mouse_released->position);
+				else if(const auto* mouse_movement = event->getIf<sf::Event::MouseMoved>())
+					events_queue.emplace(mouse_movement->position);
 			}
 		}
 		if(this->m_win.hasFocus()) {
 			if(do_everything) {
-				check_held_reset(sf::Mouse::isButtonPressed(sf::Mouse::Right), this->right_click_action);
+				check_held_reset(sf::Mouse::isButtonPressed(sf::Mouse::Button::Right), this->right_click_action);
 				bool found = false;
 				for(int i = 0; i < sf::Joystick::Count; i++) {
 					if(!sf::Joystick::isConnected(i))
@@ -1963,10 +1970,10 @@ void WindowScreen::poll_window(bool do_everything) {
 					auto curr_time = std::chrono::high_resolution_clock::now();
 					const std::chrono::duration<double> diff = curr_time - this->touch_right_click_action.start_time;
 					if(diff.count() > this->touch_long_press_timer) {
-						events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Right, touch_pos.x, touch_pos.y, false, false);
+						events_queue.emplace(true, sf::Mouse::Button::Right, touch_pos);
 						this->touch_right_click_action.start_time = std::chrono::high_resolution_clock::now();
 					}
-					events_queue.emplace(sf::Event::MouseButtonPressed, sf::Keyboard::Backspace, 0, 0, 0, sf::Joystick::Axis::X, 0.0, sf::Mouse::Left, touch_pos.x, touch_pos.y, false, false);
+					events_queue.emplace(true, sf::Mouse::Button::Left, touch_pos);
 				}
 				joystick_axis_poll(this->events_queue);
 			}
