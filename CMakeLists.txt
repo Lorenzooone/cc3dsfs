@@ -65,8 +65,8 @@ endif()
 
 include(FetchContent)
 FetchContent_Declare(SFML
-    GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG master)
+    GIT_REPOSITORY https://github.com/Lorenzooone/SFML.git
+    GIT_TAG macos_keyboard_fix)
 
 if(USB_IS_NITRO_USE OR USB_OLD_DS_3DS_USE)
 	FetchContent_Declare(libusb1
