@@ -2,6 +2,7 @@
 #include "utils.hpp"
 #include "audio.hpp"
 #include "hw_defs.hpp"
+#include "frontend.hpp"
 
 #include <chrono>
 #include <queue>
@@ -46,6 +47,7 @@ void Audio::update_volume() {
 	
 void Audio::start_audio() {
 	samples_wait.try_lock();
+	inside_onGetData = false;
 	terminate = false;
 	num_consecutive_fast_seek = 0;
 	this->clock_time_start = std::chrono::high_resolution_clock::now();
@@ -54,6 +56,8 @@ void Audio::start_audio() {
 void Audio::stop_audio() {
 	terminate = true;
 	samples_wait.unlock();
+	while(inside_onGetData)
+		default_sleep();
 }
 
 bool Audio::hasTooMuchTimeElapsed() {
@@ -74,11 +78,14 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 		return false;
 	}
 
+	inside_onGetData = true;
 	int loaded_samples = samples.size();
 	while(loaded_samples <= 0) {
 		samples_wait.lock();
-		if(terminate)
+		if(terminate) {
+			inside_onGetData = false;
 			return false;
+		}
 		loaded_samples = samples.size();
 	}
 	data.samples = (const std::int16_t*)buffer;
@@ -130,6 +137,7 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 	// Basically, look into how low the time between calls of the function is
 	clock_time_start = std::chrono::high_resolution_clock::now();
 
+	inside_onGetData = false;
 	return true;
 }
 

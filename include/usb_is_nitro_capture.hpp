@@ -7,8 +7,6 @@
 #include "capture_structs.hpp"
 #include "display_structs.hpp"
 
-#define USE_IS_NITRO_USB
-
 void list_devices_is_nitro(std::vector<CaptureDevice> &devices_list);
 bool is_nitro_connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* device);
 void is_nitro_capture_main_loop(CaptureData* capture_data);

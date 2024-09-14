@@ -5,6 +5,10 @@ set(TARGET_LANGUAGES CXX C)
 project(cc3dsfs VERSION 1.0.0 LANGUAGES ${TARGET_LANGUAGES})
 include(ExternalProject)
 
+set(FTD3XX_USE 1)
+set(FTD2XX_USE 1)
+set(USB_IS_NITRO_USE 1)
+set(USB_OLD_DS_3DS_USE 1)
 set(WINDOWS_ARM64 0)
 set(WINDOWS_x86_32 0)
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
@@ -29,7 +33,7 @@ set(RASPBERRY_PI_COMPILATION FALSE CACHE BOOL "Option for compiling the Raspberr
 set(SFML_BUILD_NETWORK FALSE)
 set(EXTRA_LIBRARIES "")
 if(MINGW_CROSS_COMPILATION)
-	set(EXTRA_LIBRARIES "libpthread.a")
+	list(APPEND EXTRA_LIBRARIES libpthread.a)
 endif()
 set(FINAL_EXTENSION "")
 set(HOST_FINAL_EXTENSION "")
@@ -38,8 +42,12 @@ set(USB_RULES_DIR ${CMAKE_SOURCE_DIR}/usb_rules)
 set(SCRIPT_EXTENSION "")
 
 if (RASPBERRY_PI_COMPILATION)
-	set(EXTRA_LIBRARIES "gpiod")
-	set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS}-DRASPI 1 ")
+	list(APPEND EXTRA_LIBRARIES gpiod)
+	if(MSVC)
+		list(APPEND EXTRA_CXX_FLAGS "/DRASPI 1")
+	else()
+		list(APPEND EXTRA_CXX_FLAGS "-DRASPI 1")
+	endif()
 endif()
 
 if((${CMAKE_SYSTEM_NAME} STREQUAL "Windows") AND ((${CMAKE_GENERATOR_PLATFORM} MATCHES "ARM64") OR (("${CMAKE_GENERATOR_PLATFORM}" STREQUAL "") AND (${CMAKE_SYSTEM_PROCESSOR} MATCHES "ARM64"))))
@@ -60,9 +68,11 @@ FetchContent_Declare(SFML
     GIT_REPOSITORY https://github.com/SFML/SFML.git
     GIT_TAG master)
 
-FetchContent_Declare(libusb1
-    GIT_REPOSITORY https://github.com/libusb/libusb-cmake.git
-    GIT_TAG main)
+if(USB_IS_NITRO_USE OR USB_OLD_DS_3DS_USE)
+	FetchContent_Declare(libusb1
+		GIT_REPOSITORY https://github.com/libusb/libusb-cmake.git
+		GIT_TAG main)
+endif()
 
 if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
 	set(HOST_FINAL_EXTENSION ".exe")
@@ -75,76 +85,80 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 	set(FINAL_EXTENSION ".exe")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 else()
-	set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS}-DXLIB_BASED 1 ")
+	if(MSVC)
+		list(APPEND EXTRA_CXX_FLAGS "/DXLIB_BASED 1")
+	else()
+		list(APPEND EXTRA_CXX_FLAGS "-DXLIB_BASED 1")
+	endif()
 endif()
 
 set(FTD3XX_BASE_URL https://ftdichip.com/wp-content/uploads/)
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    set(FTD3XX_BUILD_COMMAND ${SETUP_SCRIPTS_DIR}/windows_setup_ftd3xx)
-    set(FTD3XX_URL_TIME 2024/01)
-    set(FTD3XX_VER 1.3.0.9)
-    set(FTD3XX_VOL FTD3XXLibrary_v${FTD3XX_VER})
-    set(FTD3XX_ARCHIVE ${FTD3XX_VOL}.zip)
-    set(FTD3XX_SUBFOLDER win)
-    set(FTD3XX_LIB FTD3XX.lib)
-    set(FTD3XX_DLL FTD3XX.dll)
-    if(WINDOWS_ARM64)
-        set(FTD3XX_LIB FTD3XXWU.lib)
-	    set(FTD3XX_DLL FTD3XXWU.dll)
-        set(FTD3XX_URL_TIME 2024/06)
-        set(FTD3XX_BUILD_COMMAND ${SETUP_SCRIPTS_DIR}/windows_setup_ftd3xx_winusb)
-        set(FTD3XX_ARCHIVE FTD3XX_WinUSB_Package.zip)
-        set(FTD3XX_PATH_WINDOWS_ARCH ARM64)
-    elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
-        set(FTD3XX_PATH_WINDOWS_ARCH Win32)
-    else ()
-        set(FTD3XX_PATH_WINDOWS_ARCH x64)
-    endif()
-    if(${WINDOWS_FTD3XX_USE_SHARED_LIB})
-    	set(FTD3XX_BUILD_COMMAND ${FTD3XX_BUILD_COMMAND}_dll)
-        set(FTD3XX_WINDOWS_PATH_SPECIFIER DLL)
-        if(WINDOWS_ARM64)
-            set(FTD3XX_WINDOWS_PATH_SPECIFIER Dynamic)
-        endif()
-    else()
-        set(FTD3XX_WINDOWS_PATH_SPECIFIER Static_Lib)
-        if(WINDOWS_ARM64)
-            set(FTD3XX_WINDOWS_PATH_SPECIFIER Static)
-        endif()
-    endif()
-    set(FTD3XX_PRE_WINDOWS_PATH ${FTD3XX_PATH_WINDOWS_ARCH}/${FTD3XX_WINDOWS_PATH_SPECIFIER})
-    if(WINDOWS_ARM64)
-        set(FTD3XX_PRE_WINDOWS_PATH ${FTD3XX_WINDOWS_PATH_SPECIFIER}/${FTD3XX_PATH_WINDOWS_ARCH})
-    endif()
+	set(FTD3XX_BUILD_COMMAND ${SETUP_SCRIPTS_DIR}/windows_setup_ftd3xx)
+	set(FTD3XX_URL_TIME 2024/01)
+	set(FTD3XX_VER 1.3.0.9)
+	set(FTD3XX_VOL FTD3XXLibrary_v${FTD3XX_VER})
+	set(FTD3XX_ARCHIVE ${FTD3XX_VOL}.zip)
+	set(FTD3XX_SUBFOLDER win)
+	set(FTD3XX_LIB FTD3XX.lib)
+	set(FTD3XX_DLL FTD3XX.dll)
+	if(WINDOWS_ARM64)
+	    set(FTD3XX_LIB FTD3XXWU.lib)
+		set(FTD3XX_DLL FTD3XXWU.dll)
+	    set(FTD3XX_URL_TIME 2024/06)
+	    set(FTD3XX_BUILD_COMMAND ${SETUP_SCRIPTS_DIR}/windows_setup_ftd3xx_winusb)
+	    set(FTD3XX_ARCHIVE FTD3XX_WinUSB_Package.zip)
+	    set(FTD3XX_PATH_WINDOWS_ARCH ARM64)
+	elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+	    set(FTD3XX_PATH_WINDOWS_ARCH Win32)
+	else ()
+	    set(FTD3XX_PATH_WINDOWS_ARCH x64)
+	endif()
+	if(${WINDOWS_FTD3XX_USE_SHARED_LIB})
+		set(FTD3XX_BUILD_COMMAND ${FTD3XX_BUILD_COMMAND}_dll)
+	    set(FTD3XX_WINDOWS_PATH_SPECIFIER DLL)
+	    if(WINDOWS_ARM64)
+	        set(FTD3XX_WINDOWS_PATH_SPECIFIER Dynamic)
+	    endif()
+	else()
+	    set(FTD3XX_WINDOWS_PATH_SPECIFIER Static_Lib)
+	    if(WINDOWS_ARM64)
+	        set(FTD3XX_WINDOWS_PATH_SPECIFIER Static)
+	    endif()
+	endif()
+	set(FTD3XX_PRE_WINDOWS_PATH ${FTD3XX_PATH_WINDOWS_ARCH}/${FTD3XX_WINDOWS_PATH_SPECIFIER})
+	if(WINDOWS_ARM64)
+	    set(FTD3XX_PRE_WINDOWS_PATH ${FTD3XX_WINDOWS_PATH_SPECIFIER}/${FTD3XX_PATH_WINDOWS_ARCH})
+	endif()
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-    set(FTD3XX_BUILD_COMMAND ${SETUP_SCRIPTS_DIR}/macos_setup_ftd3xx)
-    set(FTD3XX_URL_TIME 2023/03)
-    set(FTD3XX_VER 1.0.5)
-    set(FTD3XX_VOL d3xx-osx.${FTD3XX_VER})
-    set(FTD3XX_ARCHIVE ${FTD3XX_VOL}.dmg)
-    set(FTD3XX_LIB libftd3xx-static.a)
-    set(FTD3XX_MOUNTED_FOLDER /Volumes/${FTD3XX_VOL})
-    set(FTD3XX_SUBFOLDER macos)
+	set(FTD3XX_BUILD_COMMAND ${SETUP_SCRIPTS_DIR}/macos_setup_ftd3xx)
+	set(FTD3XX_URL_TIME 2023/03)
+	set(FTD3XX_VER 1.0.5)
+	set(FTD3XX_VOL d3xx-osx.${FTD3XX_VER})
+	set(FTD3XX_ARCHIVE ${FTD3XX_VOL}.dmg)
+	set(FTD3XX_LIB libftd3xx-static.a)
+	set(FTD3XX_MOUNTED_FOLDER /Volumes/${FTD3XX_VOL})
+	set(FTD3XX_SUBFOLDER macos)
 else()
-    set(FTD3XX_BUILD_COMMAND ${SETUP_SCRIPTS_DIR}/linux_setup_ftd3xx)
-    set(FTD3XX_URL_TIME 2023/03)
-    set(FTD3XX_VER 1.0.5)
-    if((${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch") OR (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm"))
-        if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
-            set(FTD3XX_VOL libftd3xx-linux-arm-v8-${FTD3XX_VER})
-        elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
-            set(FTD3XX_VOL libftd3xx-linux-arm-v7_32-${FTD3XX_VER})
-        endif()
-    else()
-        if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
-            set(FTD3XX_VOL libftd3xx-linux-x86_64-${FTD3XX_VER})
-        elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
-            set(FTD3XX_VOL libftd3xx-linux-x86_32-${FTD3XX_VER})
-        endif()
-    endif()
-    set(FTD3XX_ARCHIVE ${FTD3XX_VOL}.tgz)
-    set(FTD3XX_LIB libftd3xx-static.a)
-    set(FTD3XX_SUBFOLDER linux)
+	set(FTD3XX_BUILD_COMMAND ${SETUP_SCRIPTS_DIR}/linux_setup_ftd3xx)
+	set(FTD3XX_URL_TIME 2023/03)
+	set(FTD3XX_VER 1.0.5)
+	if((${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch") OR (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm"))
+	    if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
+	        set(FTD3XX_VOL libftd3xx-linux-arm-v8-${FTD3XX_VER})
+	    elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+	        set(FTD3XX_VOL libftd3xx-linux-arm-v7_32-${FTD3XX_VER})
+	    endif()
+	else()
+	    if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
+	        set(FTD3XX_VOL libftd3xx-linux-x86_64-${FTD3XX_VER})
+	    elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+	        set(FTD3XX_VOL libftd3xx-linux-x86_32-${FTD3XX_VER})
+	    endif()
+	endif()
+	set(FTD3XX_ARCHIVE ${FTD3XX_VOL}.tgz)
+	set(FTD3XX_LIB libftd3xx-static.a)
+	set(FTD3XX_SUBFOLDER linux)
 endif()
 
 set(FTD2XX_BASE_URL https://ftdichip.com/wp-content/uploads/)
@@ -226,40 +240,112 @@ else()
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-FetchContent_Declare(FTD3XX
-    URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
-    DOWNLOAD_NO_EXTRACT TRUE
-)
-FetchContent_Declare(FTD2XX
-    URL ${FTD2XX_BASE_URL}${FTD2XX_URL_TIME}/${FTD2XX_ARCHIVE}
-    DOWNLOAD_NO_EXTRACT TRUE
-)
+if(FTD3XX_USE)
+	FetchContent_Declare(FTD3XX
+		URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
+		DOWNLOAD_NO_EXTRACT TRUE
+	)
+endif()
+if(FTD2XX_USE)
+	FetchContent_Declare(FTD2XX
+		URL ${FTD2XX_BASE_URL}${FTD2XX_URL_TIME}/${FTD2XX_ARCHIVE}
+		DOWNLOAD_NO_EXTRACT TRUE
+	)
+endif()
 else()
-FetchContent_Declare(FTD3XX
-    URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
-)
-FetchContent_Declare(FTD2XX
-    URL ${FTD2XX_BASE_URL}${FTD2XX_URL_TIME}/${FTD2XX_ARCHIVE}
-)
+if(FTD3XX_USE)
+	FetchContent_Declare(FTD3XX
+		URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
+	)
+endif()
+if(FTD2XX_USE)
+	FetchContent_Declare(FTD2XX
+		URL ${FTD2XX_BASE_URL}${FTD2XX_URL_TIME}/${FTD2XX_ARCHIVE}
+	)
+endif()
 endif()
 
-FetchContent_MakeAvailable(SFML FTD3XX FTD2XX libusb1)
+set(FETCH_CONTENT_MAKE_AVAILABLE_LIBRARIES "")
+set(SOURCE_CPP_EXTRA_FILES "")
+set(EXTRA_DEPENDENCIES "")
+if(FTD3XX_USE)
+	list(APPEND FETCH_CONTENT_MAKE_AVAILABLE_LIBRARIES FTD3XX)
+	list(APPEND SOURCE_CPP_EXTRA_FILES source/3dscapture_ftd3.cpp)
+	list(APPEND EXTRA_DEPENDENCIES FTD3XX_BUILD_PROJECT)
+	if(MSVC)
+		list(APPEND EXTRA_CXX_FLAGS "/DUSE_FTD3")
+	else()
+		list(APPEND EXTRA_CXX_FLAGS "-DUSE_FTD3")
+	endif()
+endif()
+if(FTD2XX_USE)
+	list(APPEND FETCH_CONTENT_MAKE_AVAILABLE_LIBRARIES FTD2XX)
+	list(APPEND SOURCE_CPP_EXTRA_FILES source/dscapture_ftd2.cpp)
+	list(APPEND EXTRA_DEPENDENCIES FTD2XX_BUILD_PROJECT)
+	if(MSVC)
+		list(APPEND EXTRA_CXX_FLAGS "/DUSE_FTD2")
+	else()
+		list(APPEND EXTRA_CXX_FLAGS "-DUSE_FTD2")
+	endif()
+endif()
+if(USB_IS_NITRO_USE OR USB_OLD_DS_3DS_USE)
+	list(APPEND EXTRA_LIBRARIES usb-1.0)
+	list(APPEND FETCH_CONTENT_MAKE_AVAILABLE_LIBRARIES libusb1)
+	list(APPEND SOURCE_CPP_EXTRA_FILES source/usb_generic.cpp)
+	if(USB_IS_NITRO_USE)
+		list(APPEND SOURCE_CPP_EXTRA_FILES source/usb_is_nitro.cpp source/usb_is_nitro_capture.cpp)
+		if(MSVC)
+			list(APPEND EXTRA_CXX_FLAGS "/DUSE_IS_NITRO_USB")
+		else()
+			list(APPEND EXTRA_CXX_FLAGS "-DUSE_IS_NITRO_USB")
+		endif()
+	endif()
+	if(USB_OLD_DS_3DS_USE)
+		list(APPEND SOURCE_CPP_EXTRA_FILES source/usb_ds_3ds_capture.cpp)
+		if(MSVC)
+			list(APPEND EXTRA_CXX_FLAGS "/DUSE_DS_3DS_USB")
+		else()
+			list(APPEND EXTRA_CXX_FLAGS "-DUSE_DS_3DS_USB")
+		endif()
+	endif()
+endif()
+
+FetchContent_MakeAvailable(SFML ${FETCH_CONTENT_MAKE_AVAILABLE_LIBRARIES})
+
+set(EXTRA_LINK_DIRECTORIES "")
+set(EXTRA_INCLUDE_DIRECTORIES "")
+if(FTD3XX_USE)
+	list(APPEND EXTRA_LIBRARIES ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}/${FTD3XX_LIB})
+	list(APPEND EXTRA_LINK_DIRECTORIES ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER})
+	list(APPEND EXTRA_INCLUDE_DIRECTORIES ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER})
+endif()
+if(FTD2XX_USE)
+	list(APPEND EXTRA_LIBRARIES ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER}/${FTD2XX_LIB})
+	list(APPEND EXTRA_LINK_DIRECTORIES ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER})
+	list(APPEND EXTRA_INCLUDE_DIRECTORIES ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER})
+endif()
 
 if(IS_DIRECTORY "${sfml_SOURCE_DIR}")
     set_property(DIRECTORY ${sfml_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL YES)
 endif()
 
-if(IS_DIRECTORY "${libusb1_SOURCE_DIR}")
-    set_property(DIRECTORY ${libusb1_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL YES)
+if(USB_IS_NITRO_USE OR USB_OLD_DS_3DS_USE)
+	if(IS_DIRECTORY "${libusb1_SOURCE_DIR}")
+		set_property(DIRECTORY ${libusb1_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL YES)
+	endif()
 endif()
 
-file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/win)
-file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/macos)
-file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/linux)
+if(FTD3XX_USE)
+	file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/win)
+	file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/macos)
+	file(MAKE_DIRECTORY ${ftd3xx_BINARY_DIR}/linux)
+endif()
 
-file(MAKE_DIRECTORY ${ftd2xx_BINARY_DIR}/win)
-file(MAKE_DIRECTORY ${ftd2xx_BINARY_DIR}/macos)
-file(MAKE_DIRECTORY ${ftd2xx_BINARY_DIR}/linux)
+if(FTD2XX_USE)
+	file(MAKE_DIRECTORY ${ftd2xx_BINARY_DIR}/win)
+	file(MAKE_DIRECTORY ${ftd2xx_BINARY_DIR}/macos)
+	file(MAKE_DIRECTORY ${ftd2xx_BINARY_DIR}/linux)
+endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 set(FTD3XX_BUILD_COMMAND_PARAMETERS ${ftd3xx_SOURCE_DIR}/${FTD3XX_ARCHIVE} ${FTD3XX_MOUNTED_FOLDER} ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${FTD3XX_LIB})
@@ -277,22 +363,26 @@ else()
 set(FTD3XX_BUILD_COMMAND_PARAMETERS ${ftd3xx_SOURCE_DIR} ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${FTD3XX_LIB})
 set(FTD2XX_BUILD_COMMAND_PARAMETERS ${ftd2xx_SOURCE_DIR} ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER} build/${FTD2XX_LIB})
 endif()
-ExternalProject_Add(FTD3XX_BUILD_PROJECT
-	SOURCE_DIR ${ftd3xx_SOURCE_DIR}
-	BINARY_DIR ${ftd3xx_BINARY_DIR}
-	BUILD_COMMAND ${FTD3XX_BUILD_COMMAND}${SCRIPT_EXTENSION} ${FTD3XX_BUILD_COMMAND_PARAMETERS}
-	UPDATE_COMMAND ""
-	CONFIGURE_COMMAND ""
-	INSTALL_COMMAND ""
-)
-ExternalProject_Add(FTD2XX_BUILD_PROJECT
-	SOURCE_DIR ${ftd2xx_SOURCE_DIR}
-	BINARY_DIR ${ftd2xx_BINARY_DIR}
-	BUILD_COMMAND ${FTD2XX_BUILD_COMMAND}${SCRIPT_EXTENSION} ${FTD2XX_BUILD_COMMAND_PARAMETERS}
-	UPDATE_COMMAND ""
-	CONFIGURE_COMMAND ""
-	INSTALL_COMMAND ""
-)
+if(FTD3XX_USE)
+	ExternalProject_Add(FTD3XX_BUILD_PROJECT
+		SOURCE_DIR ${ftd3xx_SOURCE_DIR}
+		BINARY_DIR ${ftd3xx_BINARY_DIR}
+		BUILD_COMMAND ${FTD3XX_BUILD_COMMAND}${SCRIPT_EXTENSION} ${FTD3XX_BUILD_COMMAND_PARAMETERS}
+		UPDATE_COMMAND ""
+		CONFIGURE_COMMAND ""
+		INSTALL_COMMAND ""
+	)
+endif()
+if(FTD2XX_USE)
+	ExternalProject_Add(FTD2XX_BUILD_PROJECT
+		SOURCE_DIR ${ftd2xx_SOURCE_DIR}
+		BINARY_DIR ${ftd2xx_BINARY_DIR}
+		BUILD_COMMAND ${FTD2XX_BUILD_COMMAND}${SCRIPT_EXTENSION} ${FTD2XX_BUILD_COMMAND_PARAMETERS}
+		UPDATE_COMMAND ""
+		CONFIGURE_COMMAND ""
+		INSTALL_COMMAND ""
+	)
+endif()
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 
@@ -307,11 +397,13 @@ execute_process(COMMAND ${CMAKE_COMMAND} --build ${TOOLS_DATA_DIR})
 
 set(OUTPUT_NAME cc3dsfs)
 
-add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/3dscapture_ftd3.cpp source/dscapture_ftd2.cpp source/usb_ds_3ds_capture.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp source/Menus/ScalingRatioMenu.cpp source/usb_is_nitro.cpp source/usb_is_nitro_capture.cpp source/usb_generic.cpp source/Menus/ISNitroMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp)
-add_dependencies(${OUTPUT_NAME} FTD3XX_BUILD_PROJECT FTD2XX_BUILD_PROJECT)
-target_link_libraries(${OUTPUT_NAME} PRIVATE SFML::Graphics SFML::Audio SFML::Window SFML::System usb-1.0 ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER}/${FTD3XX_LIB} ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER}/${FTD2XX_LIB} ${EXTRA_LIBRARIES})
-target_link_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER})
-target_include_directories(${OUTPUT_NAME} PRIVATE ${ftd3xx_BINARY_DIR}/${FTD3XX_SUBFOLDER} ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER} ${TOOLS_DATA_DIR} ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/include/Menus)
+add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp source/Menus/ScalingRatioMenu.cpp source/Menus/ISNitroMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp ${SOURCE_CPP_EXTRA_FILES})
+if(NOT ("${EXTRA_DEPENDENCIES}" STREQUAL ""))
+	add_dependencies(${OUTPUT_NAME} ${EXTRA_DEPENDENCIES})
+endif()
+target_link_libraries(${OUTPUT_NAME} PRIVATE SFML::Graphics SFML::Audio SFML::Window SFML::System ${EXTRA_LIBRARIES})
+target_link_directories(${OUTPUT_NAME} PRIVATE ${EXTRA_LINK_DIRECTORIES})
+target_include_directories(${OUTPUT_NAME} PRIVATE ${EXTRA_INCLUDE_DIRECTORIES} ${TOOLS_DATA_DIR} ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/include/Menus)
 target_compile_features(${OUTPUT_NAME} PRIVATE cxx_std_20)
 target_compile_options(${OUTPUT_NAME} PRIVATE ${EXTRA_CXX_FLAGS})
 
@@ -323,7 +415,7 @@ add_custom_command(
 )
 
 if(WIN32)
-	if(WINDOWS_FTD3XX_USE_SHARED_LIB)
+	if(FTD3XX_USE AND WINDOWS_FTD3XX_USE_SHARED_LIB)
         add_custom_command(
             TARGET ${OUTPUT_NAME}
             COMMENT "Copy FTD3XX DLL"
@@ -331,7 +423,7 @@ if(WIN32)
             VERBATIM
         )
     endif()
-	if(WINDOWS_FTD2XX_USE_SHARED_LIB)
+	if(FTD2XX_USE AND WINDOWS_FTD2XX_USE_SHARED_LIB)
         add_custom_command(
             TARGET ${OUTPUT_NAME}
             COMMENT "Copy FTD2XX DLL"
@@ -356,17 +448,17 @@ endif()
 install(FILES LICENSE README.md DESTINATION .)
 install(DIRECTORY "other licenses" DESTINATION .)
 if(WIN32)
-	if(WINDOWS_FTD3XX_USE_SHARED_LIB)
+	if(FTD3XX_USE AND WINDOWS_FTD3XX_USE_SHARED_LIB)
     	install(FILES ${FTD3XX_DLL} DESTINATION .)
 	endif()
-	if(WINDOWS_FTD2XX_USE_SHARED_LIB)
+	if(FTD2XX_USE AND WINDOWS_FTD2XX_USE_SHARED_LIB)
     	install(FILES ${FTD2XX_DLL} DESTINATION .)
 	endif()
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     set(FW_APP ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME}.app)
-    set(FW_DIRS ${sfml_SOURCE_DIR}/extlibs/libs-osx/Frameworks)
+    set(FW_DIRS ${sfml_SOURCE_DIR}/extlibs/libs-macos/Frameworks)
     set_target_properties(${OUTPUT_NAME} PROPERTIES
                           MACOSX_BUNDLE TRUE
                           MACOSX_BUNDLE_BUNDLE_NAME ${OUTPUT_NAME}

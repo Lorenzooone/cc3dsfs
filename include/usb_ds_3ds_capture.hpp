@@ -7,8 +7,6 @@
 #include "capture_structs.hpp"
 #include "display_structs.hpp"
 
-#define USE_DS_3DS_USB
-
 void list_devices_usb_ds_3ds(std::vector<CaptureDevice> &devices_list);
 bool connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* device);
 void usb_capture_main_loop(CaptureData* capture_data);

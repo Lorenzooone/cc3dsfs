@@ -16,7 +16,7 @@ struct Sample {
 
 class Audio : public sf::SoundStream {
 public:
-	bool restart = false;
+	volatile bool restart = false;
 	std::queue<Sample> samples;
 	ConsumerMutex samples_wait;
 
@@ -30,7 +30,8 @@ public:
 private:
 	AudioData *audio_data;
 	int final_volume = -1;
-	bool terminate;
+	volatile bool inside_onGetData = false;
+	volatile bool terminate = false;
 	int num_consecutive_fast_seek;
 	std::int16_t *buffer;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_time_start;

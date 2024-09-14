@@ -7,8 +7,6 @@
 #include "capture_structs.hpp"
 #include "display_structs.hpp"
 
-#define USE_FTD3
-
 void list_devices_ftd3(std::vector<CaptureDevice> &devices_list);
 bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* device);
 void ftd3_capture_main_loop(CaptureData* capture_data);

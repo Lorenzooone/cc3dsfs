@@ -256,8 +256,10 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 			}
 			else {
 				if(loaded_samples > 0) {
-					if(audio.hasTooMuchTimeElapsed())
+					if(audio.hasTooMuchTimeElapsed()) {
+						audio.stop_audio();
 						executeSoundRestart(audio, audio_data, true);
+					}
 				}
 				audio.update_volume();
 			}
