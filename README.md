@@ -135,7 +135,7 @@ On Linux and MacOS, the profiles can be found at the "${HOME}/.config/cc3dsfs" f
 On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the directory in which the program runs from.
 
 ## Notes
-- On Linux, you may need to include the udev USB access rules. You can use the .rules files available in the repository's usb\_rules directory, or define your own.
+- On Linux, you may need to include the udev USB access rules. You can use the .rules files available in the repository's usb\_rules directory, or define your own. For ease of use, releases come bundled with a script to do it named install\_usb\_rules.sh.
 - At startup, the audio may be unstable. It should fix itself, if you give it enough time.
 - If, at first, the connection to the 3DS/DS fails, reconnect the 3DS/DS and then try again. If that also doesn't work, try restarting the program. If that also doesn't work, try restarting the computer.
 - USB Hubs can be the cause of connection issues. If you're having problems, try checking whether the 3DS/DS connects fine or not without any other devices connected.

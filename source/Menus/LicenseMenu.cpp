@@ -24,8 +24,18 @@ static const LicenseMenuOptionInfo sfml_license_4_option = {
 static const LicenseMenuOptionInfo ftd3xx_license_0_option = {
 .base_name = "This software makes use of"};
 
+#if defined(USE_FTD3) && defined(USE_FTD2)
+static const LicenseMenuOptionInfo ftd3xx_license_1_option = {
+.base_name = "FTD3XX and FTD2XX."};
+#else
+#ifdef USE_FTD3
 static const LicenseMenuOptionInfo ftd3xx_license_1_option = {
 .base_name = "FTD3XX."};
+#else
+static const LicenseMenuOptionInfo ftd3xx_license_1_option = {
+.base_name = "FTD2XX."};
+#endif
+#endif
 
 static const LicenseMenuOptionInfo ftd3xx_license_2_option = {
 .base_name = "For its license, check:"};
@@ -66,21 +76,6 @@ static const LicenseMenuOptionInfo freetype_license_3_option = {
 static const LicenseMenuOptionInfo freetype_license_4_option = {
 .base_name = ""};
 
-static const LicenseMenuOptionInfo openal_soft_license_0_option = {
-.base_name = "This software makes use of"};
-
-static const LicenseMenuOptionInfo openal_soft_license_1_option = {
-.base_name = "OpenAL Soft."};
-
-static const LicenseMenuOptionInfo openal_soft_license_2_option = {
-.base_name = "For its license, check:"};
-
-static const LicenseMenuOptionInfo openal_soft_license_3_option = {
-.base_name = "www.gnu.org/licenses/"};
-
-static const LicenseMenuOptionInfo openal_soft_license_4_option = {
-.base_name = "lgpl-3.0.html"};
-
 static const LicenseMenuOptionInfo font_license_0_option = {
 .base_name = "This software uses the font"};
 
@@ -117,26 +112,25 @@ static const LicenseMenuOptionInfo* pollable_options[] = {
 &sfml_license_2_option,
 &sfml_license_3_option,
 &sfml_license_4_option,
+#if defined(USE_FTD3) || defined(USE_FTD2)
 &ftd3xx_license_0_option,
 &ftd3xx_license_1_option,
 &ftd3xx_license_2_option,
 &ftd3xx_license_3_option,
 &ftd3xx_license_4_option,
+#endif
+#if defined(USE_DS_3DS_USB) || defined(USE_IS_NITRO_USB) || defined(USE_FTD3) || defined(USE_FTD2)
 &libusb_license_0_option,
 &libusb_license_1_option,
 &libusb_license_2_option,
 &libusb_license_3_option,
 &libusb_license_4_option,
+#endif
 &freetype_license_0_option,
 &freetype_license_1_option,
 &freetype_license_2_option,
 &freetype_license_3_option,
 &freetype_license_4_option,
-&openal_soft_license_0_option,
-&openal_soft_license_1_option,
-&openal_soft_license_2_option,
-&openal_soft_license_3_option,
-&openal_soft_license_4_option,
 &font_license_0_option,
 &font_license_1_option,
 &font_license_2_option,

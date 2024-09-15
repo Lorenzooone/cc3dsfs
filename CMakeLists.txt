@@ -65,8 +65,8 @@ endif()
 
 include(FetchContent)
 FetchContent_Declare(SFML
-    GIT_REPOSITORY https://github.com/Lorenzooone/SFML.git
-    GIT_TAG macos_keyboard_fix)
+    GIT_REPOSITORY https://github.com/SFML/SFML.git
+    GIT_TAG master)
 
 if(USB_IS_NITRO_USE OR USB_OLD_DS_3DS_USE)
 	FetchContent_Declare(libusb1
@@ -478,6 +478,8 @@ else()
     install(FILES ${USB_RULES_DIR}/51-ftd3xx.rules DESTINATION .)
     install(FILES ${USB_RULES_DIR}/95-usb3dscapture.rules DESTINATION .)
     install(FILES ${USB_RULES_DIR}/95-usbdscapture.rules DESTINATION .)
+    install(FILES ${USB_RULES_DIR}/51-isnitro.rules DESTINATION .)
+    install(FILES ${SETUP_SCRIPTS_DIR}/install_usb_rules${SCRIPT_EXTENSION} DESTINATION .)
 endif()
 
 

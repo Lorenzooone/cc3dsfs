@@ -42,6 +42,9 @@ static bool get_is_bad_ftd3xx() {
 	return false;
 	#endif
 	#endif
+	// For some reason, the version scheme seems broken...
+	// For now, just return false... :/
+	return false;
 
 	bool is_bad_ftd3xx = false;
 	DWORD ftd3xx_lib_version;

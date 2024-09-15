@@ -3,7 +3,6 @@ framework_change_pos() {
 }
 cp -R ${2} ${3}
 framework_change_pos ${1} 'freetype'
-framework_change_pos ${1} 'OpenAL'
 framework_change_pos ${1} 'vorbisenc'
 framework_change_pos ${1} 'vorbisfile'
 framework_change_pos ${1} 'FLAC'

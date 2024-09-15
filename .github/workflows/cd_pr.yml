@@ -60,3 +60,26 @@ jobs:
       with:
         name: cc3dsfs_zip
         path: build/cc3dsfs*.zip
+
+  create_pi_setup:
+    name: Create Pi Mono Setup
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Download a single artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: cc3dsfs_zip
+
+    - name: Execute pi_setup
+      shell: bash
+      run: setup_scripts/rpi_mono_setup_setup.sh
+
+    - name: Archive resulting artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: cc3dsfs_zip
+        path: cc3dsfs_rpi_mono_setup.zip

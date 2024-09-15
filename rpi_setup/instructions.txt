@@ -1,0 +1,23 @@
+Use the official Raspberry Pi OS tool to install "Raspberry Pi OS (64-bit)" (or 32 bit if that is not available) (Debian Bookworm, at the time of writing)
+for your version of the Pi on an SD card. User name and password are not important.
+If you want to save space, use the Lite version of the OS. The setup is compatible with those versions as well.
+
+Turn on the Pi with the SD card and complete the first setup (if any).
+
+Place the cc3dsfs_rpi_mono_setup.zip file in the Pi (either by downloading it, or by using an USB stick).
+
+You will need an active internet connection to complete the setup.
+Decompress all the files of the .zip into a folder.
+Right Click on setup.sh > Properties > Permissions > Change Execute from "Nobody" to "Owner only".
+Double Click on setup.sh and select "Execute in Terminal". Then wait for the script to finish. It will reboot on its own.
+
+(Audio may not work after the first reboot. If that happens, remove the power and try turning the Raspberry Pi on again)
+
+---
+
+By default, the setup will work with a specific GPIO buttons layout. But scripts to account for other button layouts are also included. To change the default, replace the file Desktop/cc3dsfs_script.sh with one of the others included in Desktop/premade_scripts (or make your own).
+
+To launch back the Desktop environment (can be useful to update the software), you can use the "Quit Application" "Extra Setting" (or press Esc on a keyboard). This should show a terminal. Then, type:
+startx
+
+By default the setup will try to expand the filesystem during the first reboot after the setup. To avoid that, create a file at "/expanded_rootfs". If you wish for the filesystem expansion to run again, simply delete the "/expanded_rootfs" file and reboot.

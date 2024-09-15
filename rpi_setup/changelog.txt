@@ -1,0 +1,16 @@
+1.1.1
+- Improved performance on both capture data conversion, and pixel drawing.
+- Switched back to previous MacOS fullscreen setup. Seems compatible with more hardware.
+-----------------------------------------
+1.1.0
+- Added support for older Loopy DS and 3DS Capture Cards.
+- Improved audio quality, reduced sound pops and introduced more audio settings.
+- Introduced ability to use non-integer scale factors in fullscreen mode, with separate controls for each separate screen.
+- Introduced game-specific crops (hidden by default).
+- Added extra PAR settings, as well as ones able to make the chosen screen fit a specific aspect ratio.
+- Fixed issue with non-integer scale factors having artifacts.
+- Fixed issue with macos application bundle signature.
+- Fixed issue with fullscreen mode crashing on macos.
+-----------------------------------------
+1.0.0
+- Initial Release

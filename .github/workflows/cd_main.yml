@@ -66,10 +66,33 @@ jobs:
         name: cc3dsfs_zip
         path: build/cc3dsfs*.zip
 
+  create_pi_setup:
+    name: Create Pi Mono Setup
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Download a single artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: cc3dsfs_zip
+
+    - name: Execute pi_setup
+      shell: bash
+      run: setup_scripts/rpi_mono_setup_setup.sh
+
+    - name: Archive resulting artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: cc3dsfs_zip
+        path: cc3dsfs_rpi_mono_setup.zip
+
   publish:
     name: Publishing
     runs-on: ubuntu-latest
-    needs: build
+    needs: create_pi_setup
     permissions:
       contents: write
     steps:
@@ -77,6 +100,7 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: cc3dsfs_zip
+
     - name: Auto-Release the zips
       uses: IsaacShelton/update-existing-release@v1.3.2
       with:
@@ -96,3 +120,4 @@ jobs:
           cc3dsfs_linux_pi32.zip
           cc3dsfs_linux_pi64.zip
           cc3dsfs_macos.zip
+          cc3dsfs_rpi_mono_setup.zip
