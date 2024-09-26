@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - test_sfml2
 
 jobs:
   build:
@@ -81,9 +82,9 @@ jobs:
       uses: IsaacShelton/update-existing-release@v1.3.2
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        release: "Automatic Build"
+        release: "test sfml2"
         prerelease: true
-        tag: "nightly-latest"
+        tag: "test_sfml2"
         replace: true
         files: >
           cc3dsfs_windows_arm64.zip

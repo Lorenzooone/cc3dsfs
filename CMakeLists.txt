@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build archs for Mac OS X" FORCE)
-set(CMAKE_OSX_DEPLOYMENT_TARGET "11" CACHE STRING "Minimum OS X deployment version")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum OS X deployment version")
 project(cc3dsfs VERSION 1.0.0 LANGUAGES CXX)
 include(ExternalProject)
 
