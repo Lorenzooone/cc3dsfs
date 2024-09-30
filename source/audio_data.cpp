@@ -54,6 +54,10 @@ void AudioData::request_audio_restart() {
 	this->update_text("Restarting audio...");
 }
 
+void AudioData::signal_conversion_error() {
+	this->update_text("Audio conversion failed...");
+}
+
 bool AudioData::check_audio_restart_request() {
 	bool retval = this->restart_request;
 	if(retval)

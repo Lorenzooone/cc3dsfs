@@ -14,6 +14,7 @@ public:
 	void change_audio_volume(bool is_change_positive);
 	void change_audio_mute();
 	void request_audio_restart();
+	void signal_conversion_error();
 	bool check_audio_restart_request();
 	AudioOutputType get_audio_output_type();
 	std::string get_audio_output_name();

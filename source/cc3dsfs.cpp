@@ -238,7 +238,9 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 				if((capture_data->read[curr_out] > get_video_in_size(capture_data)) && (loaded_samples < MAX_MAX_AUDIO_LATENCY)) {
 					int n_samples = get_audio_n_samples(capture_data, capture_data->read[curr_out]);
 					double out_time = capture_data->time_in_buf[curr_out];
-					convertAudioToOutput(curr_out, out_buf[audio_buf_counter], n_samples, endianness, capture_data);
+					bool conversion_success = convertAudioToOutput(curr_out, out_buf[audio_buf_counter], n_samples, endianness, capture_data);
+					if(!conversion_success)
+						audio_data->signal_conversion_error();
 					audio.samples.emplace(out_buf[audio_buf_counter], n_samples, out_time);
 					if(++audio_buf_counter == NUM_CONCURRENT_AUDIO_BUFFERS) {
 						audio_buf_counter = 0;
@@ -361,7 +363,9 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 			if((!capture_data->status.cooldown_curr_in) && (curr_out != prev_out)) {
 				last_frame_time = capture_data->time_in_buf[curr_out];
 				if(capture_data->read[curr_out] >= get_video_in_size(capture_data)) {
-					convertVideoToOutput(curr_out, out_buf, capture_data);
+					bool conversion_success = convertVideoToOutput(curr_out, out_buf, capture_data);
+					if(!conversion_success)
+						UpdateOutText(out_text_data, "", "Video conversion failed...", TEXT_KIND_NORMAL);
 					num_allowed_blanks = MAX_ALLOWED_BLANKS;
 				}
 				else {
