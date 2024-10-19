@@ -26,7 +26,6 @@ enum usb_capture_status {
 
 struct usb_device {
 	bool is_3ds;
-	int bpp;
 	int vid;
 	int pid;
 	int default_config;
@@ -51,7 +50,7 @@ struct usb_ds_status {
 };
 
 static const usb_device usb_3ds_desc = {
-.is_3ds = true, .bpp = IN_VIDEO_BPP_SIZE_3DS,
+.is_3ds = true,
 .vid = 0x16D0, .pid = 0x06A3,
 .default_config = 1, .capture_interface = 0,
 .control_timeout = 30, .bulk_timeout = 50,
@@ -63,7 +62,7 @@ static const usb_device usb_3ds_desc = {
 };
 
 static const usb_device usb_old_ds_desc = {
-.is_3ds = false, .bpp = IN_VIDEO_BPP_SIZE_DS_BASIC,
+.is_3ds = false,
 .vid = 0x16D0, .pid = 0x0647,
 .default_config = 1, .capture_interface = 0,
 .control_timeout = 500, .bulk_timeout = 500,
@@ -115,12 +114,7 @@ static bool capture_get_has_3d(libusb_device_handle *handle, const usb_device* u
 }
 
 static const usb_device* _get_usb_device_desc(CaptureDevice* device) {
-	const usb_device* usb_device_desc = &usb_3ds_desc;
-	if(!device->is_3ds) {
-		if(device->rgb_bits_size == usb_old_ds_desc.bpp)
-			usb_device_desc = &usb_old_ds_desc;
-	}
-	return usb_device_desc;
+	return (usb_device*)device->descriptor;
 }
 
 static const usb_device* get_usb_device_desc(CaptureData* capture_data) {
@@ -149,16 +143,9 @@ static bool insert_device(std::vector<CaptureDevice> &devices_list, const usb_de
 		return true;
 	std::string serial_str = get_serial(handle, usb_descriptor, curr_serial_extra_id);
 	if(usb_device_desc->is_3ds)
-		devices_list.emplace_back(serial_str, "3DS", CAPTURE_CONN_USB, true, capture_get_has_3d(handle, usb_device_desc), true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, O3DS_SAMPLES_IN, usb_device_desc->bpp, 90, 0, 0, TOP_WIDTH_3DS, 0);
-	else {
-		bool has_audio = false;
-		int max_samples_in = 0;
-		if(usb_device_desc->bpp > IN_VIDEO_BPP_SIZE_DS_BASIC) {
-			has_audio = true;
-			max_samples_in = DS_SAMPLES_IN;
-		}
-		devices_list.emplace_back(serial_str, "DS", CAPTURE_CONN_USB, false, false, has_audio, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, max_samples_in, usb_device_desc->bpp, 0, 0, 0, 0, HEIGHT_DS);
-	}
+		devices_list.emplace_back(serial_str, "3DS", CAPTURE_CONN_USB, (void*)usb_device_desc, true, capture_get_has_3d(handle, usb_device_desc), true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, O3DS_SAMPLES_IN, 90, 0, 0, TOP_WIDTH_3DS, 0);
+	else
+		devices_list.emplace_back(serial_str, "DS", CAPTURE_CONN_USB, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS);
 	libusb_close(handle);
 	return true;
 }
@@ -440,7 +427,7 @@ void usb_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, Cap
 		if(!enabled_3d)
 			usb_3DSconvertVideoToOutput(&p_in->usb_received_3ds, p_out);
 	}
-	else if(capture_device->rgb_bits_size == IN_VIDEO_BPP_SIZE_DS_BASIC)
+	else
 		usb_oldDSconvertVideoToOutput(&p_in->usb_received_old_ds, p_out);
 }
 

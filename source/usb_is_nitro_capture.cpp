@@ -40,9 +40,12 @@ enum usb_capture_status {
 	USB_CAPTURE_ERROR
 };
 
-static int drain_frames(libusb_device_handle *handle, int num_frames, int start_frames, CaptureScreensType capture_type);
-static int StartCapture(libusb_device_handle *handle, uint16_t *out_frame_count, float* single_frame_time, CaptureScreensType capture_type);
-static int EndCapture(libusb_device_handle *handle, bool do_drain_frames, int start_frames, CaptureScreensType capture_type);
+static int drain_frames(libusb_device_handle *handle, int num_frames, int start_frames, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc);
+static int EndCapture(libusb_device_handle *handle, bool do_drain_frames, int start_frames, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc);
+static void is_nitro_capture_capture_main_loop(CaptureData* capture_data);
+static void is_nitro_emulator_capture_main_loop(CaptureData* capture_data);
+static int StartEmulatorCapture(libusb_device_handle *handle, uint16_t &out_frame_count, float &single_frame_time, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc);
+static int StartCaptureCapture(libusb_device_handle *handle, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc);
 
 static std::string get_serial(const is_nitro_usb_device* usb_device_desc, libusb_device_handle *handle, int &curr_serial_extra_id) {
 	uint8_t data[SERIAL_NUMBER_SIZE];
@@ -52,13 +55,13 @@ static std::string get_serial(const is_nitro_usb_device* usb_device_desc, libusb
 		conn_success = false;
 	if(conn_success && libusb_claim_interface(handle, usb_device_desc->default_interface) != LIBUSB_SUCCESS)
 		conn_success = false;
-	if(conn_success && EndCapture(handle, false, 0, CAPTURE_SCREENS_BOTH) != LIBUSB_SUCCESS)
+	if((!usb_device_desc->is_capture) && conn_success && EndCapture(handle, false, 0, CAPTURE_SCREENS_BOTH, usb_device_desc) != LIBUSB_SUCCESS)
 		conn_success = false;
-	if(conn_success && (GetDeviceSerial(handle, data) != LIBUSB_SUCCESS)) {
+	if(conn_success && (GetDeviceSerial(handle, data, usb_device_desc) != LIBUSB_SUCCESS)) {
 		int ret = 0;
 		while(ret >= 0)
-			ret = drain_frames(handle, FRAME_BUFFER_SIZE * 2, 0, CAPTURE_SCREENS_TOP);
-		if((GetDeviceSerial(handle, data) != LIBUSB_SUCCESS))
+			ret = drain_frames(handle, FRAME_BUFFER_SIZE * 2, 0, CAPTURE_SCREENS_TOP, usb_device_desc);
+		if((GetDeviceSerial(handle, data, usb_device_desc) != LIBUSB_SUCCESS))
 			conn_success = false;
 	}
 	if(conn_success) {
@@ -72,18 +75,18 @@ static std::string get_serial(const is_nitro_usb_device* usb_device_desc, libusb
 	return serial_str;
 }
 
-static bool insert_device(std::vector<CaptureDevice> &devices_list, const is_nitro_usb_device* usb_device_desc, libusb_device *usb_device, libusb_device_descriptor *usb_descriptor, int &curr_serial_extra_id) {
+static int insert_device(std::vector<CaptureDevice> &devices_list, const is_nitro_usb_device* usb_device_desc, libusb_device *usb_device, libusb_device_descriptor *usb_descriptor, int &curr_serial_extra_id) {
 	libusb_device_handle *handle = NULL;
 	if((usb_descriptor->idVendor != usb_device_desc->vid) || (usb_descriptor->idProduct != usb_device_desc->pid))
-		return false;
+		return LIBUSB_ERROR_NOT_FOUND;
 	if((usb_descriptor->iManufacturer != usb_device_desc->manufacturer_id) || (usb_descriptor->iProduct != usb_device_desc->product_id))
-		return false;
+		return LIBUSB_ERROR_NOT_FOUND;
 	int result = libusb_open(usb_device, &handle);
-	if(result || (handle == NULL))
-		return true;
-	devices_list.emplace_back(get_serial(usb_device_desc, handle, curr_serial_extra_id), "IS Nitro Emulator", CAPTURE_CONN_IS_NITRO, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 24, 0, 0, 0, 0, HEIGHT_DS);
+	if((result < 0) || (handle == NULL))
+		return result;
+	devices_list.emplace_back(get_serial(usb_device_desc, handle, curr_serial_extra_id), usb_device_desc->name, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS);
 	libusb_close(handle);
-	return true;
+	return result;
 }
 
 static libusb_device_handle* usb_find_by_serial_number(const is_nitro_usb_device* usb_device_desc, std::string &serial_number) {
@@ -133,36 +136,47 @@ void list_devices_is_nitro(std::vector<CaptureDevice> &devices_list) {
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
 		if(result < 0)
 			continue;
-		if(insert_device(devices_list, &usb_is_nitro_desc, usb_devices[i], &usb_descriptor, curr_serial_extra_id_is_nitro_emulator))
+		result = insert_device(devices_list, GetISNitroDesc(IS_NITRO_EMULATOR_COMMON_ID), usb_devices[i], &usb_descriptor, curr_serial_extra_id_is_nitro_emulator);
+		if(result != LIBUSB_ERROR_NOT_FOUND) {
 			continue;
+		}
+		result = insert_device(devices_list, GetISNitroDesc(IS_NITRO_EMULATOR_RARE_ID), usb_devices[i], &usb_descriptor, curr_serial_extra_id_is_nitro_emulator);
+		if(result != LIBUSB_ERROR_NOT_FOUND) {
+			continue;
+		}
+		result = insert_device(devices_list, GetISNitroDesc(IS_NITRO_CAPTURE_ID), usb_devices[i], &usb_descriptor, curr_serial_extra_id_is_nitro_emulator);
+		if(result != LIBUSB_ERROR_NOT_FOUND) {
+			continue;
+		}
 	}
 
 	if(num_devices >= 0)
 		libusb_free_device_list(usb_devices, 1);
 }
 
-static void is_nitro_connection_end(libusb_device_handle *dev, bool interface_claimed = true) {
+static void is_nitro_connection_end(libusb_device_handle *dev, const is_nitro_usb_device *device_desc, bool interface_claimed = true) {
 	if(interface_claimed)
-		libusb_release_interface(dev, usb_is_nitro_desc.default_interface);
+		libusb_release_interface(dev, device_desc->default_interface);
 	libusb_close(dev);
 }
 
 bool is_nitro_connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* device) {
 	if(!usb_is_initialized())
 		return false;
-	libusb_device_handle *dev = usb_find_by_serial_number(&usb_is_nitro_desc, device->serial_number);
+	const is_nitro_usb_device* usb_device_info = (const is_nitro_usb_device*)device->descriptor;
+	libusb_device_handle *dev = usb_find_by_serial_number(usb_device_info, device->serial_number);
 	if(!dev) {
 		capture_error_print(true, capture_data, "Device not found");
 		return false;
 	}
-	if(libusb_set_configuration(dev, usb_is_nitro_desc.default_config) != LIBUSB_SUCCESS) {
+	if(libusb_set_configuration(dev, usb_device_info->default_config) != LIBUSB_SUCCESS) {
 		capture_error_print(true, capture_data, "Configuration failed");
-		is_nitro_connection_end(dev, false);
+		is_nitro_connection_end(dev, usb_device_info, false);
 		return false;
 	}
-	if(libusb_claim_interface(dev, usb_is_nitro_desc.default_interface) != LIBUSB_SUCCESS) {
+	if(libusb_claim_interface(dev, usb_device_info->default_interface) != LIBUSB_SUCCESS) {
 		capture_error_print(true, capture_data, "Interface claim failed");
-		is_nitro_connection_end(dev, false);
+		is_nitro_connection_end(dev, usb_device_info, false);
 		return false;
 	}
 	capture_data->handle = (void*)dev;
@@ -180,40 +194,41 @@ uint64_t usb_is_nitro_emulator_get_video_in_size(CaptureData* capture_data) {
 	return _is_nitro_emulator_get_video_in_size(capture_data->status.capture_type);
 }
 
-static int drain_frames(libusb_device_handle *handle, int num_frames, int start_frames, CaptureScreensType capture_type) {
+static int drain_frames(libusb_device_handle *handle, int num_frames, int start_frames, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc) {
 	ISNitroEmulatorVideoInputData video_in_buffer;
 	for (int i = start_frames; i < num_frames; i++) {
-		int ret = ReadFrame(handle, (uint8_t*)&video_in_buffer, _is_nitro_emulator_get_video_in_size(capture_type));
+		int ret = ReadFrame(handle, (uint8_t*)&video_in_buffer, _is_nitro_emulator_get_video_in_size(capture_type), usb_device_desc);
 		if(ret < 0)
 			return ret;
 	}
 	return LIBUSB_SUCCESS;
 }
 
-static int set_capture_mode(libusb_device_handle *handle, CaptureScreensType capture_type) {
-	uint8_t capture_mode_flag = IS_NITRO_FORWARD_CONFIG_MODE_BOTH;
+static int set_capture_mode(libusb_device_handle *handle, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc) {
+	is_nitro_forward_config_values_screens capture_mode_flag = IS_NITRO_FORWARD_CONFIG_MODE_BOTH;
 	if(capture_type == CAPTURE_SCREENS_TOP)
 		capture_mode_flag = IS_NITRO_FORWARD_CONFIG_MODE_TOP;
 	if(capture_type == CAPTURE_SCREENS_BOTTOM)
 		capture_mode_flag = IS_NITRO_FORWARD_CONFIG_MODE_BOTTOM;
-	return UpdateFrameForwardConfig(handle, IS_NITRO_FORWARD_CONFIG_COLOR_RGB24 | capture_mode_flag | IS_NITRO_FORWARD_CONFIG_RATE_FULL);
+	return UpdateFrameForwardConfig(handle, IS_NITRO_FORWARD_CONFIG_COLOR_RGB24, capture_mode_flag, IS_NITRO_FORWARD_CONFIG_RATE_FULL, usb_device_desc);
 }
 
-static int StartCapture(libusb_device_handle *handle, uint16_t &out_frame_count, float &single_frame_time, CaptureScreensType capture_type) {
-	int ret = DisableLca2(handle);
+static int StartEmulatorCapture(libusb_device_handle *handle, uint16_t &out_frame_count, float &single_frame_time, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc) {
+	int ret = 0;
+	ret = DisableLca2(handle, usb_device_desc);
 	if(ret < 0)
 		return ret;
-	ret = set_capture_mode(handle, capture_type);
+	ret = set_capture_mode(handle, capture_type, usb_device_desc);
 	if(ret < 0)
 		return ret;
-	ret = SetForwardFrameCount(handle, FRAME_BUFFER_SIZE);
+	ret = SetForwardFrameCount(handle, FRAME_BUFFER_SIZE, usb_device_desc);
 	if(ret < 0)
 		return ret;
 	// Reset this in case it's high. At around 0xFFFF, reading from the USB DMA seems to fail...
-	ret = UpdateFrameForwardEnable(handle, IS_NITRO_FORWARD_ENABLE_RESTART | IS_NITRO_FORWARD_ENABLE_ENABLE);
+	ret = UpdateFrameForwardEnable(handle, true, true, usb_device_desc);
 	if(ret < 0)
 		return ret;
-	ret = UpdateFrameForwardEnable(handle, IS_NITRO_FORWARD_ENABLE_ENABLE);
+	ret = UpdateFrameForwardEnable(handle, true, false, usb_device_desc);
 	if(ret < 0)
 		return ret;
 
@@ -221,12 +236,12 @@ static int StartCapture(libusb_device_handle *handle, uint16_t &out_frame_count,
 	auto clock_start = std::chrono::high_resolution_clock::now();
 	uint16_t oldFrameCount;
 	uint16_t newFrameCount;
-	ret = GetFrameCounter(handle, &oldFrameCount);
+	ret = GetFrameCounter(handle, &oldFrameCount, usb_device_desc);
 	if(ret < 0)
 		return ret;
 	newFrameCount = oldFrameCount;
 	while(newFrameCount == oldFrameCount) {
-		ret = GetFrameCounter(handle, &newFrameCount);
+		ret = GetFrameCounter(handle, &newFrameCount, usb_device_desc);
 		if(ret < 0)
 			return ret;
 		const auto curr_time = std::chrono::high_resolution_clock::now();
@@ -240,12 +255,12 @@ static int StartCapture(libusb_device_handle *handle, uint16_t &out_frame_count,
 	// We also do this to measure the time that is needed for each frame...
 	// To do so, a minimum of 4 frames is required (FRAME_BUFFER_SIZE - 1 + 4)
 	clock_start = std::chrono::high_resolution_clock::now();
-	ret = GetFrameCounter(handle, &oldFrameCount);
+	ret = GetFrameCounter(handle, &oldFrameCount, usb_device_desc);
 	if(ret < 0)
 		return ret;
 	uint16_t targetFrameCount = (newFrameCount + FRAME_BUFFER_SIZE + 3) & (~(FRAME_BUFFER_SIZE - 1));
 	while(oldFrameCount != targetFrameCount) {
-		ret = GetFrameCounter(handle, &oldFrameCount);
+		ret = GetFrameCounter(handle, &oldFrameCount, usb_device_desc);
 		if(ret < 0)
 			return ret;
 		// Placing a sleep of some kind here would be much better...
@@ -273,23 +288,39 @@ static int StartCapture(libusb_device_handle *handle, uint16_t &out_frame_count,
 
 	// Start the actual DMA
 	if(single_frame_time > 0) {
-		ret = StartUsbCaptureDma(handle);
+		ret = StartUsbCaptureDma(handle, usb_device_desc);
 		if(ret < 0)
 			return ret;
 	}
 	return ret;
 }
 
-static int EndCapture(libusb_device_handle *handle, bool do_drain_frames, int start_frames, CaptureScreensType capture_type) {
+static int StartCaptureCapture(libusb_device_handle *handle, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc) {
+	int ret = 0;
+	ret = set_capture_mode(handle, capture_type, usb_device_desc);
+	if(ret < 0)
+		return ret;
+	ret = SetForwardFramePermanent(handle, usb_device_desc);
+	if(ret < 0)
+		return ret;
+	ret = UpdateFrameForwardEnable(handle, true, true, usb_device_desc);
+	if(ret < 0)
+		return ret;
+	return StartUsbCaptureDma(handle, usb_device_desc);
+}
+
+static int EndCapture(libusb_device_handle *handle, bool do_drain_frames, int start_frames, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc) {
+	if(usb_device_desc->is_capture)
+		return StopUsbCaptureDma(handle, usb_device_desc);
 	int ret = 0;
 	if(do_drain_frames)
-		ret = drain_frames(handle, FRAME_BUFFER_SIZE, start_frames, capture_type);
+		ret = drain_frames(handle, FRAME_BUFFER_SIZE, start_frames, capture_type, usb_device_desc);
 	if(ret < 0)
 		return ret;
-	ret = StopUsbCaptureDma(handle);
+	ret = StopUsbCaptureDma(handle, usb_device_desc);
 	if(ret < 0)
 		return ret;
-	return UpdateFrameForwardEnable(handle, IS_NITRO_FORWARD_ENABLE_DISABLE);
+	return UpdateFrameForwardEnable(handle, false, false, usb_device_desc);
 }
 
 static void frame_wait(float single_frame_time, std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_reset, int curr_frame_counter, int last_frame_counter) {
@@ -308,11 +339,11 @@ static void frame_wait(float single_frame_time, std::chrono::time_point<std::chr
 	}
 }
 
-int reset_capture_frames(libusb_device_handle* handle, uint16_t &curr_frame_counter, uint16_t &last_frame_counter, float &single_frame_time, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_reset, CaptureScreensType &curr_capture_type, CaptureScreensType wanted_capture_type, int multiplier) {
+static int reset_capture_frames(libusb_device_handle* handle, uint16_t &curr_frame_counter, uint16_t &last_frame_counter, float &single_frame_time, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_reset, CaptureScreensType &curr_capture_type, CaptureScreensType wanted_capture_type, int multiplier, const is_nitro_usb_device* usb_device_desc) {
 	curr_frame_counter += 1;
 
 	if(curr_frame_counter == FRAME_BUFFER_SIZE) {
-		int ret = StopUsbCaptureDma(handle);
+		int ret = StopUsbCaptureDma(handle, usb_device_desc);
 		if(ret < 0)
 			return ret;
 
@@ -320,7 +351,7 @@ int reset_capture_frames(libusb_device_handle* handle, uint16_t &curr_frame_coun
 		// Though it may lag for a bit...
 		if(wanted_capture_type != curr_capture_type) {
 			curr_capture_type = wanted_capture_type;
-			ret = set_capture_mode(handle, curr_capture_type);
+			ret = set_capture_mode(handle, curr_capture_type, usb_device_desc);
 			if(ret < 0)
 				return ret;
 		}
@@ -331,7 +362,7 @@ int reset_capture_frames(libusb_device_handle* handle, uint16_t &curr_frame_coun
 		int diff_target = FRAME_BUFFER_SIZE * multiplier;
 		do {
 			// Check how many frames have passed...
-			ret = GetFrameCounter(handle, &internalFrameCount);
+			ret = GetFrameCounter(handle, &internalFrameCount, usb_device_desc);
 			full_internalFrameCount = internalFrameCount;
 			// Sometimes the upper 8 bits aren't updated... Use only the lower 8 bits.
 			internalFrameCount &= 0xFF;
@@ -368,19 +399,19 @@ int reset_capture_frames(libusb_device_handle* handle, uint16_t &curr_frame_coun
 		// If we're nearing 0xFFFF for the frame counter, reset it.
 		// It's a problematic value for DMA reading
 		if(frame_diff && (full_internalFrameCount >= 0xF000)) {
-			ret = UpdateFrameForwardEnable(handle, IS_NITRO_FORWARD_ENABLE_RESTART | IS_NITRO_FORWARD_ENABLE_ENABLE);
+			ret = UpdateFrameForwardEnable(handle, true, true, usb_device_desc);
 			if(ret < 0)
 				return ret;
 			clock_last_reset = std::chrono::high_resolution_clock::now();
 		}
-		ret = UpdateFrameForwardEnable(handle, IS_NITRO_FORWARD_ENABLE_ENABLE);
+		ret = UpdateFrameForwardEnable(handle, true, false, usb_device_desc);
 		if(ret < 0)
 			return ret;
 		curr_frame_counter = 0;
 
 		// Start the actual DMA
 		if(single_frame_time > 0) {
-			ret = StartUsbCaptureDma(handle);
+			ret = StartUsbCaptureDma(handle, usb_device_desc);
 			if(ret < 0)
 				return ret;
 		}
@@ -388,15 +419,64 @@ int reset_capture_frames(libusb_device_handle* handle, uint16_t &curr_frame_coun
 	return LIBUSB_SUCCESS;
 }
 
-void is_nitro_capture_main_loop(CaptureData* capture_data) {
-	if(!usb_is_initialized())
-		return;
+static void is_nitro_capture_capture_main_loop(CaptureData* capture_data) {
 	libusb_device_handle *handle = (libusb_device_handle*)capture_data->handle;
+	const is_nitro_usb_device* usb_device_desc = (const is_nitro_usb_device*)capture_data->status.device.descriptor;
+	CaptureScreensType curr_capture_type = capture_data->status.capture_type;
+	int ret = StartCaptureCapture(handle, curr_capture_type, usb_device_desc);
+	if(ret < 0) {
+		capture_error_print(true, capture_data, "Capture Start: Failed");
+		return;
+	}
+	int inner_curr_in = 0;
+	auto clock_start = std::chrono::high_resolution_clock::now();
+	auto clock_last_reset = std::chrono::high_resolution_clock::now();
+
+	while(capture_data->status.connected && capture_data->status.running) {
+		ret = ReadFrame(handle, (uint8_t*)&capture_data->capture_buf[inner_curr_in], _is_nitro_emulator_get_video_in_size(curr_capture_type), usb_device_desc);
+		if(ret < 0) {
+			capture_error_print(true, capture_data, "Disconnected: Read error");
+			break;
+		}
+		// Output to the other threads...
+		const auto curr_time = std::chrono::high_resolution_clock::now();
+		const std::chrono::duration<double> diff = curr_time - clock_start;
+		clock_start = curr_time;
+		capture_data->time_in_buf[inner_curr_in] = diff.count();
+		capture_data->read[inner_curr_in] = _is_nitro_emulator_get_video_in_size(curr_capture_type);
+		capture_data->capture_type[inner_curr_in] = curr_capture_type;
+
+		inner_curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
+		if(capture_data->status.cooldown_curr_in)
+			capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
+		capture_data->status.curr_in = inner_curr_in;
+		capture_data->status.video_wait.unlock();
+		capture_data->status.audio_wait.unlock();
+		if(curr_capture_type != capture_data->status.capture_type) {
+			ret = EndCapture(handle, true, 0, curr_capture_type, usb_device_desc);
+			if(ret < 0) {
+				capture_error_print(true, capture_data, "Capture End: Failed");
+				return;
+			}
+			curr_capture_type = capture_data->status.capture_type;
+			ret = StartCaptureCapture(handle, curr_capture_type, usb_device_desc);
+			if(ret < 0) {
+				capture_error_print(true, capture_data, "Capture Restart: Failed");
+				return;
+			}
+		}
+	}
+	EndCapture(handle, true, 0, curr_capture_type, usb_device_desc);
+}
+
+static void is_nitro_emulator_capture_main_loop(CaptureData* capture_data) {
+	libusb_device_handle *handle = (libusb_device_handle*)capture_data->handle;
+	const is_nitro_usb_device* usb_device_desc = (const is_nitro_usb_device*)capture_data->status.device.descriptor;
 	uint16_t last_frame_counter = 0;
 	float single_frame_time = 0;
 	uint16_t curr_frame_counter = 0;
 	CaptureScreensType curr_capture_type = capture_data->status.capture_type;
-	int ret = StartCapture(handle, last_frame_counter, single_frame_time, curr_capture_type);
+	int ret = StartEmulatorCapture(handle, last_frame_counter, single_frame_time, curr_capture_type, usb_device_desc);
 	if(ret < 0) {
 		capture_error_print(true, capture_data, "Capture Start: Failed");
 		return;
@@ -409,7 +489,7 @@ void is_nitro_capture_main_loop(CaptureData* capture_data) {
 		frame_wait(single_frame_time, clock_last_reset, curr_frame_counter, last_frame_counter);
 
 		if(single_frame_time > 0) {
-			ret = ReadFrame(handle, (uint8_t*)&capture_data->capture_buf[inner_curr_in], _is_nitro_emulator_get_video_in_size(curr_capture_type));
+			ret = ReadFrame(handle, (uint8_t*)&capture_data->capture_buf[inner_curr_in], _is_nitro_emulator_get_video_in_size(curr_capture_type), usb_device_desc);
 			if(ret < 0) {
 				capture_error_print(true, capture_data, "Disconnected: Read error");
 				break;
@@ -434,19 +514,28 @@ void is_nitro_capture_main_loop(CaptureData* capture_data) {
 			default_sleep(20);
 		}
 		capture_data->status.curr_delay = last_frame_counter % FRAME_BUFFER_SIZE;
-		ret = reset_capture_frames(handle, curr_frame_counter, last_frame_counter, single_frame_time, clock_last_reset, curr_capture_type, capture_data->status.capture_type, 1);
+		ret = reset_capture_frames(handle, curr_frame_counter, last_frame_counter, single_frame_time, clock_last_reset, curr_capture_type, capture_data->status.capture_type, 1, usb_device_desc);
     	if(ret < 0) {
 			capture_error_print(true, capture_data, "Disconnected: Frame counter reset error");
     		break;
 		}
 	}
-	EndCapture(handle, true, curr_frame_counter, curr_capture_type);
+	EndCapture(handle, true, curr_frame_counter, curr_capture_type, usb_device_desc);
+}
+
+void is_nitro_capture_main_loop(CaptureData* capture_data) {
+	if(!usb_is_initialized())
+		return;
+	if(((const is_nitro_usb_device*)(capture_data->status.device.descriptor))->is_capture)
+		is_nitro_capture_capture_main_loop(capture_data);
+	else
+		is_nitro_emulator_capture_main_loop(capture_data);
 }
 
 void usb_is_nitro_capture_cleanup(CaptureData* capture_data) {
 	if(!usb_is_initialized())
 		return;
-	is_nitro_connection_end((libusb_device_handle*)capture_data->handle);
+	is_nitro_connection_end((libusb_device_handle*)capture_data->handle, (const is_nitro_usb_device*)capture_data->status.device.descriptor);
 }
 
 void usb_is_nitro_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureScreensType capture_type) {

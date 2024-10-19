@@ -40,27 +40,59 @@ bool is_big_endian(void) {
     return _is_be;
 }
 
+static uint32_t reverse_endianness(uint32_t value) {
+	return ((value & 0xFF) << 24) | ((value & 0xFF00) << 8) | ((value & 0xFF0000) >> 8) | ((value & 0xFF000000) >> 24);
+}
+
+static uint16_t reverse_endianness(uint16_t value) {
+	return ((value & 0xFF) << 8) | ((value & 0xFF00) >> 8);
+}
+
 uint32_t to_le(uint32_t value) {
 	if(is_big_endian())
-		value = ((value & 0xFF) << 24) | ((value & 0xFF00) << 8) | ((value & 0xFF0000) >> 8) | ((value & 0xFF000000) >> 24);
+		value = reverse_endianness(value);
 	return value;
 }
 
 uint32_t to_be(uint32_t value) {
 	if(!is_big_endian())
-		value = ((value & 0xFF) << 24) | ((value & 0xFF00) << 8) | ((value & 0xFF0000) >> 8) | ((value & 0xFF000000) >> 24);
+		value = reverse_endianness(value);
 	return value;
 }
 
 uint16_t to_le(uint16_t value) {
 	if(is_big_endian())
-		value = ((value & 0xFF) << 8) | ((value & 0xFF00) >> 8);
+		value = reverse_endianness(value);
 	return value;
 }
 
 uint16_t to_be(uint16_t value) {
 	if(!is_big_endian())
-		value = ((value & 0xFF) << 8) | ((value & 0xFF00) >> 8);
+		value = reverse_endianness(value);
+	return value;
+}
+
+uint32_t from_le(uint32_t value) {
+	if(is_big_endian())
+		value = reverse_endianness(value);
+	return value;
+}
+
+uint32_t from_be(uint32_t value) {
+	if(!is_big_endian())
+		value = reverse_endianness(value);
+	return value;
+}
+
+uint16_t from_le(uint16_t value) {
+	if(is_big_endian())
+		value = reverse_endianness(value);
+	return value;
+}
+
+uint16_t from_be(uint16_t value) {
+	if(!is_big_endian())
+		value = reverse_endianness(value);
 	return value;
 }
 

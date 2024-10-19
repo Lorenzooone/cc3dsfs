@@ -33,6 +33,10 @@ uint32_t to_le(uint32_t value);
 uint32_t to_be(uint32_t value);
 uint16_t to_le(uint16_t value);
 uint16_t to_be(uint16_t value);
+uint32_t from_le(uint32_t value);
+uint32_t from_be(uint32_t value);
+uint16_t from_le(uint16_t value);
+uint16_t from_be(uint16_t value);
 std::string get_float_str_decimals(float value, int decimals);
 void init_threads(void);
 
