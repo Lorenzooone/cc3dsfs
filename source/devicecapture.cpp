@@ -2,7 +2,7 @@
 #include "3dscapture_ftd3.hpp"
 #include "dscapture_ftd2.hpp"
 #include "usb_ds_3ds_capture.hpp"
-#include "usb_is_nitro_capture.hpp"
+#include "usb_is_nitro_acquisition.hpp"
 
 #include <vector>
 #include <thread>
@@ -147,7 +147,7 @@ void captureCall(CaptureData* capture_data) {
 		#endif
 		#ifdef USE_IS_NITRO_USB
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_IS_NITRO)
-			is_nitro_capture_main_loop(capture_data);
+			is_nitro_acquisition_main_loop(capture_data);
 		#endif
 
 		capture_data->status.close_success = false;
@@ -173,7 +173,7 @@ void captureCall(CaptureData* capture_data) {
 		#endif
 		#ifdef USE_IS_NITRO_USB
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_IS_NITRO)
-			usb_is_nitro_capture_cleanup(capture_data);
+			usb_is_nitro_acquisition_cleanup(capture_data);
 		#endif
 
 		capture_data->status.close_success = false;
@@ -207,7 +207,7 @@ uint64_t get_video_in_size(CaptureData* capture_data) {
 	#endif
 	#ifdef USE_IS_NITRO_USB
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_IS_NITRO)
-		return usb_is_nitro_emulator_get_video_in_size(capture_data);
+		return usb_is_nitro_get_video_in_size(capture_data);
 	#endif
 	return 0;
 }

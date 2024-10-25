@@ -73,6 +73,11 @@ static const usb_device usb_old_ds_desc = {
 .i2caddr_3dsconfig = 0, .bitstream_3dscfg_ver = 0
 };
 
+static const usb_device* usb_devices_desc_list[] = {
+	&usb_3ds_desc,
+	&usb_old_ds_desc,
+};
+
 // Read vendor request from control endpoint.  Returns bytes transferred (<0 = libusb error)
 static int vend_in(libusb_device_handle *handle, const usb_device* usb_device_desc, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint16_t wLength, uint8_t *buf) {
 	return libusb_control_transfer(handle, ((uint8_t)LIBUSB_REQUEST_TYPE_VENDOR | (uint8_t)LIBUSB_ENDPOINT_IN), bRequest, wValue, wIndex, buf, wLength, usb_device_desc->control_timeout);
@@ -133,21 +138,21 @@ static std::string get_serial(libusb_device_handle *handle, libusb_device_descri
 	return serial_str;
 }
 
-static bool insert_device(std::vector<CaptureDevice> &devices_list, const usb_device* usb_device_desc, libusb_device *usb_device, libusb_device_descriptor *usb_descriptor, int &curr_serial_extra_id) {
+static int insert_device(std::vector<CaptureDevice> &devices_list, const usb_device* usb_device_desc, libusb_device *usb_device, libusb_device_descriptor *usb_descriptor, int &curr_serial_extra_id) {
 	libusb_device_handle *handle = NULL;
 	uint8_t data[SERIAL_NUMBER_SIZE];
 	if((usb_descriptor->idVendor != usb_device_desc->vid) || (usb_descriptor->idProduct != usb_device_desc->pid))
-		return false;
+		return LIBUSB_ERROR_NOT_FOUND;
 	int result = libusb_open(usb_device, &handle);
 	if(result || (handle == NULL))
-		return true;
+		return result;
 	std::string serial_str = get_serial(handle, usb_descriptor, curr_serial_extra_id);
 	if(usb_device_desc->is_3ds)
 		devices_list.emplace_back(serial_str, "3DS", CAPTURE_CONN_USB, (void*)usb_device_desc, true, capture_get_has_3d(handle, usb_device_desc), true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, O3DS_SAMPLES_IN, 90, 0, 0, TOP_WIDTH_3DS, 0);
 	else
 		devices_list.emplace_back(serial_str, "DS", CAPTURE_CONN_USB, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS);
 	libusb_close(handle);
-	return true;
+	return result;
 }
 
 static libusb_device_handle* usb_find_by_serial_number(const usb_device* usb_device_desc, std::string &serial_number) {
@@ -309,17 +314,24 @@ void list_devices_usb_ds_3ds(std::vector<CaptureDevice> &devices_list) {
 	libusb_device **usb_devices;
 	int num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	libusb_device_descriptor usb_descriptor{};
-	
-	int curr_serial_extra_id_3ds = 0;
-	int curr_serial_extra_id_old_ds = 0;
+
+	const size_t num_usb_desc = sizeof(usb_devices_desc_list) / sizeof(usb_devices_desc_list[0]);
+	bool no_access_elems[num_usb_desc];
+	int curr_serial_extra_ids[num_usb_desc];
+	for (int i = 0; i < num_usb_desc; i++) {
+		no_access_elems[i] = false;
+		curr_serial_extra_ids[i] = 0;
+	}
 	for(int i = 0; i < num_devices; i++) {
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
 		if(result < 0)
 			continue;
-		if(insert_device(devices_list, &usb_3ds_desc, usb_devices[i], &usb_descriptor, curr_serial_extra_id_3ds))
-			continue;
-		if(insert_device(devices_list, &usb_old_ds_desc, usb_devices[i], &usb_descriptor, curr_serial_extra_id_old_ds))
-			continue;
+		for(int j = 0; j < num_usb_desc; j++)
+			if(insert_device(devices_list, usb_devices_desc_list[j], usb_devices[i], &usb_descriptor, curr_serial_extra_ids[j]) != LIBUSB_ERROR_NOT_FOUND) {
+				if (result == LIBUSB_ERROR_ACCESS)
+					no_access_elems[j] = true;
+				break;
+			}
 	}
 
 	if(num_devices >= 0)

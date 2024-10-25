@@ -3,7 +3,7 @@
 #include "3dscapture_ftd3.hpp"
 #include "dscapture_ftd2.hpp"
 #include "usb_ds_3ds_capture.hpp"
-#include "usb_is_nitro_capture.hpp"
+#include "usb_is_nitro_acquisition.hpp"
 
 #include <cstring>
 
