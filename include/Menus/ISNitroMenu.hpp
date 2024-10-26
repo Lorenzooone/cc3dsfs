@@ -15,6 +15,7 @@ enum ISNitroMenuOutAction{
 	ISN_MENU_DELAY,
 	ISN_MENU_TYPE_DEC,
 	ISN_MENU_TYPE_INC,
+	ISN_MENU_RESET,
 };
 
 class ISNitroMenu : public OptionSelectionMenu {
@@ -22,7 +23,7 @@ public:
 	ISNitroMenu(bool font_load_success, sf::Font &text_font);
 	~ISNitroMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, CaptureStatus* capture_status);
-	void insert_data();
+	void insert_data(CaptureDevice* device);
 	ISNitroMenuOutAction selected_index = ISNitroMenuOutAction::ISN_MENU_NO_ACTION;
 	void reset_output_option();
 protected:

@@ -171,6 +171,7 @@ int is_nitro_read_frame_and_output(CaptureData* capture_data, int &inner_curr_in
 void is_nitro_acquisition_main_loop(CaptureData* capture_data) {
 	if(!usb_is_initialized())
 		return;
+	capture_data->status.reset_hardware = false;
 	if(((const is_nitro_usb_device*)(capture_data->status.device.descriptor))->is_capture)
 		is_nitro_acquisition_capture_main_loop(capture_data);
 	else
@@ -201,6 +202,11 @@ void usb_is_nitro_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p
 		p_out->screen_data[i + out_start_pos][1] = p_in->is_nitro_capture_received.video_in.screen_data[i][1];
 		p_out->screen_data[i + out_start_pos][2] = p_in->is_nitro_capture_received.video_in.screen_data[i][0];
 	}
+}
+
+bool is_nitro_is_capture(CaptureDevice* device) {
+	const is_nitro_usb_device* usb_device_info = (const is_nitro_usb_device*)device->descriptor;
+	return usb_device_info->is_capture;
 }
 
 void usb_is_nitro_init() {

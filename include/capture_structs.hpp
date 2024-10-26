@@ -134,6 +134,7 @@ struct CaptureStatus {
 	volatile bool running = true;
 	volatile bool close_success = true;
 	volatile int curr_delay = 0;
+	volatile bool reset_hardware = false;
 	bool enabled_3d = false;
 	CaptureScreensType capture_type;
 	ConsumerMutex video_wait;

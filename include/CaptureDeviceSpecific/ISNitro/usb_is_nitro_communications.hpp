@@ -57,7 +57,12 @@ int GetFrameCounter(is_nitro_device_handlers* handlers, uint16_t* out, const is_
 int GetDeviceSerial(is_nitro_device_handlers* handlers, uint8_t* buf, const is_nitro_usb_device* device_desc);
 int UpdateFrameForwardConfig(is_nitro_device_handlers* handlers, is_nitro_forward_config_values_colors colors, is_nitro_forward_config_values_screens screens, is_nitro_forward_config_values_rate rate, const is_nitro_usb_device* device_desc);
 int UpdateFrameForwardEnable(is_nitro_device_handlers* handlers, bool enable, bool restart, const is_nitro_usb_device* device_desc);
-int ReadLidState(is_nitro_device_handlers* handlers, uint32_t* out, const is_nitro_usb_device* device_desc);
+int ReadLidState(is_nitro_device_handlers* handlers, bool* out, const is_nitro_usb_device* device_desc);
+int ReadDebugButtonState(is_nitro_device_handlers* handlers, bool* out, const is_nitro_usb_device* device_desc);
+int ReadPowerButtonState(is_nitro_device_handlers* handlers, bool* out, const is_nitro_usb_device* device_desc);
+int ResetCPUStart(is_nitro_device_handlers* handlers, const is_nitro_usb_device* device_desc);
+int ResetCPUEnd(is_nitro_device_handlers* handlers, const is_nitro_usb_device* device_desc);
+int ResetFullHardware(is_nitro_device_handlers* handlers, const is_nitro_usb_device* device_desc);
 int ReadFrame(is_nitro_device_handlers* handlers, uint8_t* buf, int length, const is_nitro_usb_device* device_desc);
 
 #endif

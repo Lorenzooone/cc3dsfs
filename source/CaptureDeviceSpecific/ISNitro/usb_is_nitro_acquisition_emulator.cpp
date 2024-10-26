@@ -28,6 +28,7 @@
 // For this reason, the code was split into two device-specific files.
 
 #define FRAME_BUFFER_SIZE 32
+#define SLEEP_CHECKS_TIME 20
 
 static int drain_frames(is_nitro_device_handlers* handlers, int num_frames, int start_frames, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc) {
 	ISNitroEmulatorVideoInputData* video_in_buffer = new ISNitroEmulatorVideoInputData;
@@ -274,7 +275,7 @@ void is_nitro_acquisition_emulator_main_loop(CaptureData* capture_data) {
 		}
 		else {
 			capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
-			default_sleep(20);
+			default_sleep(SLEEP_CHECKS_TIME);
 		}
 		capture_data->status.curr_delay = last_frame_counter % FRAME_BUFFER_SIZE;
 		ret = reset_acquisition_frames(handlers, curr_frame_counter, last_frame_counter, single_frame_time, clock_last_reset, curr_capture_type, capture_data->status.capture_type, 1, usb_device_desc);

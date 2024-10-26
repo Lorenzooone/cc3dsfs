@@ -58,6 +58,8 @@ enum is_nitro_emulator_command {
 	IS_NITRO_EMU_CMD_READ_NEC_MEM = 0x17,
 	IS_NITRO_EMU_CMD_WRITE_NEC_MEM = 0x24,
 	IS_NITRO_EMU_CMD_SET_READ_NEC_MEM = 0x25,
+	IS_NITRO_EMU_CMD_FULL_HARDWARE_RESET = 0x81,
+	IS_NITRO_EMU_CMD_CPU_RESET = 0x8A,
 	IS_NITRO_EMU_CMD_AD = 0xAD,
 };
 
@@ -68,8 +70,12 @@ enum is_nitro_capture_command {
 	IS_NITRO_CAP_CMD_SET_FWD_MODE = 0x13,
 	IS_NITRO_CAP_CMD_SET_FWD_COLOURS = 0x14,
 	IS_NITRO_CAP_CMD_SET_FWD_FRAMES = 0x15,
+	IS_NITRO_CAP_CMD_GET_DEBUG_STATE = 0x18,
+	IS_NITRO_CAP_CMD_SET_RESTART_FULL = 0x18,
 	IS_NITRO_CAP_CMD_GET_LID_STATE = 0x19,
 	IS_NITRO_CAP_CMD_SET_FWD_RESTART = 0x1C,
+	IS_NITRO_CAP_CMD_SET_RESET_CPU_ON = 0x21,
+	IS_NITRO_CAP_CMD_SET_RESET_CPU_OFF = 0x22,
 };
 
 enum is_nitro_emulator_forward_bits {
@@ -432,13 +438,13 @@ int GetFrameCounter(is_nitro_device_handlers* handlers, uint16_t* out, const is_
 int UpdateFrameForwardConfig(is_nitro_device_handlers* handlers, is_nitro_forward_config_values_colors colors, is_nitro_forward_config_values_screens screens, is_nitro_forward_config_values_rate rate, const is_nitro_usb_device* device_desc) {
 	if(!device_desc->is_capture)
 		return WriteNecMemU16(handlers, 0x0800000A, ((colors & 1) << 4) | ((screens & 3) << 2) | ((rate & 3) << 0), device_desc);
-	int ret = SendWriteCommandU32(handlers, IS_NITRO_CAP_CMD_SET_FWD_COLOURS, colors & 1, device_desc);
+	int ret = SendWriteCommandU32(handlers, IS_NITRO_CAP_CMD_SET_FWD_RATE, rate & 3, device_desc);
 	if(ret < 0)
 		return ret;
-	ret = SendWriteCommandU32(handlers, IS_NITRO_CAP_CMD_SET_FWD_RATE, rate & 3, device_desc);
+	ret = SendWriteCommandU32(handlers, IS_NITRO_CAP_CMD_SET_FWD_MODE, screens & 3, device_desc);
 	if(ret < 0)
 		return ret;
-	return SendWriteCommandU32(handlers, IS_NITRO_CAP_CMD_SET_FWD_MODE, screens & 3, device_desc);
+	return SendWriteCommandU32(handlers, IS_NITRO_CAP_CMD_SET_FWD_COLOURS, colors & 1, device_desc);
 }
 
 int UpdateFrameForwardEnable(is_nitro_device_handlers* handlers, bool enable, bool restart, const is_nitro_usb_device* device_desc) {
@@ -455,15 +461,60 @@ int UpdateFrameForwardEnable(is_nitro_device_handlers* handlers, bool enable, bo
 	return SendWriteCommandU32(handlers, IS_NITRO_CAP_CMD_SET_FWD_RESTART, value, device_desc);
 }
 
-int ReadLidState(is_nitro_device_handlers* handlers, uint32_t* out, const is_nitro_usb_device* device_desc) {
-	if(device_desc->is_capture)
-		return SendReadCommandU32(handlers, IS_NITRO_CAP_CMD_GET_LID_STATE, out, device_desc);
-    uint16_t flags = 0;
-    int ret = ReadNecMemU16(handlers, 0x08000000, &flags, device_desc);
+int ReadLidState(is_nitro_device_handlers* handlers, bool* out, const is_nitro_usb_device* device_desc) {
+    uint32_t flags = 0;
+	if(device_desc->is_capture) {
+		int ret = SendReadCommandU32(handlers, IS_NITRO_CAP_CMD_GET_LID_STATE, &flags, device_desc);
+		*out = (flags & 1) ? true : false;
+		return ret;
+	}
+    int ret = ReadNecMemU32(handlers, 0x08000000, &flags, device_desc);
     if(ret < 0)
     	return ret;
-    *out = (flags & 2) >> 1;
+    *out = (flags & 2) ? true : false;
     return ret;
+}
+
+int ReadDebugButtonState(is_nitro_device_handlers* handlers, bool* out, const is_nitro_usb_device* device_desc) {
+    uint32_t flags = 0;
+	if(device_desc->is_capture) {
+		int ret = SendReadCommandU32(handlers, IS_NITRO_CAP_CMD_GET_DEBUG_STATE, &flags, device_desc);
+		*out = (flags & 1) ? true : false;
+		return ret;
+	}
+    int ret = ReadNecMemU32(handlers, 0x08000000, &flags, device_desc);
+    if(ret < 0)
+    	return ret;
+    *out = (flags & 1) ? true : false;
+    return ret;
+}
+
+int ReadPowerButtonState(is_nitro_device_handlers* handlers, bool* out, const is_nitro_usb_device* device_desc) {
+	return ReadDebugButtonState(handlers, out, device_desc);
+}
+
+static int ResetCPUEmulatorGeneral(is_nitro_device_handlers* handlers, bool on, const is_nitro_usb_device* device_desc) {
+	uint8_t data[] = {IS_NITRO_EMU_CMD_CPU_RESET, 0, (uint8_t)(on ? 1 : 0), 0};
+	return SendWriteCommand(handlers, IS_NITRO_EMU_CMD_CPU_RESET, data, sizeof(data), device_desc);
+}
+
+int ResetCPUStart(is_nitro_device_handlers* handlers, const is_nitro_usb_device* device_desc) {
+	if(device_desc->is_capture)
+		return SendWriteCommand(handlers, IS_NITRO_CAP_CMD_SET_RESET_CPU_ON, NULL, 0, device_desc);
+	return ResetCPUEmulatorGeneral(handlers, true, device_desc);
+}
+
+int ResetCPUEnd(is_nitro_device_handlers* handlers, const is_nitro_usb_device* device_desc) {
+	if(device_desc->is_capture)
+		return SendWriteCommand(handlers, IS_NITRO_CAP_CMD_SET_RESET_CPU_OFF, NULL, 0, device_desc);
+	return ResetCPUEmulatorGeneral(handlers, false, device_desc);
+}
+
+int ResetFullHardware(is_nitro_device_handlers* handlers, const is_nitro_usb_device* device_desc) {
+	if(device_desc->is_capture)
+		return SendWriteCommand(handlers, IS_NITRO_CAP_CMD_SET_RESTART_FULL, NULL, 0, device_desc);
+	uint8_t data[] = {IS_NITRO_EMU_CMD_FULL_HARDWARE_RESET, 0xF2};
+	return SendWriteCommand(handlers, IS_NITRO_EMU_CMD_FULL_HARDWARE_RESET, data, sizeof(data), device_desc);
 }
 
 int ReadFrame(is_nitro_device_handlers* handlers, uint8_t* buf, int length, const is_nitro_usb_device* device_desc) {

@@ -13,6 +13,7 @@ void is_nitro_acquisition_main_loop(CaptureData* capture_data);
 void usb_is_nitro_acquisition_cleanup(CaptureData* capture_data);
 void usb_is_nitro_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureScreensType capture_type);
 uint64_t usb_is_nitro_get_video_in_size(CaptureData* capture_data);
+bool is_nitro_is_capture(CaptureDevice* device);
 void usb_is_nitro_init();
 void usb_is_nitro_close();
 

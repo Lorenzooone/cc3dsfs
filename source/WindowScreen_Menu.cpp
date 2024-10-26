@@ -185,6 +185,10 @@ void WindowScreen::is_nitro_capture_type_change(bool positive) {
 	this->capture_status->capture_type = static_cast<CaptureScreensType>(new_value % CAPTURE_SCREENS_ENUM_END);
 }
 
+void WindowScreen::is_nitro_capture_reset_hw() {
+	this->capture_status->reset_hardware = true;
+}
+
 void WindowScreen::padding_change() {
 	if(this->m_info.is_fullscreen)
 		return;
@@ -918,7 +922,7 @@ void WindowScreen::setup_is_nitro_menu(bool reset_data) {
 		this->curr_menu = ISN_MENU_TYPE;
 		if(reset_data)
 			this->is_nitro_menu->reset_data();
-		this->is_nitro_menu->insert_data();
+		this->is_nitro_menu->insert_data(&this->capture_status->device);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
 }
@@ -1814,6 +1818,9 @@ void WindowScreen::poll(bool do_everything) {
 							break;
 						case ISN_MENU_TYPE_INC:
 							this->is_nitro_capture_type_change(true);
+							break;
+						case ISN_MENU_RESET:
+							this->is_nitro_capture_reset_hw();
 							break;
 						default:
 							break;
