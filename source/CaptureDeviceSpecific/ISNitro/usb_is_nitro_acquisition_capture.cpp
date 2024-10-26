@@ -10,7 +10,7 @@
 
 #define CAPTURE_SKIP_LID_REOPEN_FRAMES 32
 #define RESET_TIMEOUT 4.0
-#define SLEEP_CHECKS_TIME 20
+#define SLEEP_CHECKS_TIME_MS 20
 
 static int StartAcquisitionCapture(is_nitro_device_handlers* handlers, CaptureScreensType capture_type, bool* is_acquisition_off, const is_nitro_usb_device* usb_device_desc) {
 	int ret = 0;
@@ -107,7 +107,7 @@ void is_nitro_acquisition_capture_main_loop(CaptureData* capture_data) {
 			return;
 		}
 		if(is_acquisition_off) {
-			default_sleep(SLEEP_CHECKS_TIME);
+			default_sleep(SLEEP_CHECKS_TIME_MS);
 			ret = LidReopenCaptureCheck(capture_data, curr_capture_type, &is_acquisition_off);
 			if(ret < 0) {
 				capture_error_print(true, capture_data, "Lid Reopen: Failed");

@@ -1,4 +1,5 @@
 #include "StatusMenu.hpp"
+#include "devicecapture.hpp"
 
 #define NUM_TOTAL_MENU_OPTIONS (sizeof(pollable_options)/sizeof(pollable_options[0]))
 
@@ -8,6 +9,7 @@ enum StatusMenuID {
 	STATUS_MENU_FPS_IN,
 	STATUS_MENU_FPS_POLL,
 	STATUS_MENU_FPS_DRAW,
+	STATUS_MENU_CONNECTION,
 };
 
 struct StatusMenuOptionInfo {
@@ -36,8 +38,13 @@ static const StatusMenuOptionInfo status_fps_draw_option = {
 .base_name = "Output FPS:", .is_inc = true,
 .id = STATUS_MENU_FPS_DRAW};
 
+static const StatusMenuOptionInfo status_curr_device_option = {
+.base_name = "", .is_inc = false,
+.id = STATUS_MENU_CONNECTION};
+
 static const StatusMenuOptionInfo* pollable_options[] = {
 &status_name_version_option,
+&status_curr_device_option,
 &status_url_option,
 &status_fps_in_option,
 &status_fps_poll_option,
@@ -112,7 +119,7 @@ bool StatusMenu::is_option_selectable(int index, int action) {
 	return false;
 }
 
-void StatusMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, double in_fps, double poll_fps, double draw_fps) {
+void StatusMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, double in_fps, double poll_fps, double draw_fps, CaptureStatus* capture_status) {
 	if(!this->do_update) {
 		auto curr_time = std::chrono::high_resolution_clock::now();
 		const std::chrono::duration<double> diff = curr_time - this->last_update_time;
@@ -134,6 +141,9 @@ void StatusMenu::prepare(float menu_scaling_factor, int view_size_x, int view_si
 			switch(pollable_options[option_index]->id) {
 				case STATUS_MENU_NAME_VERSION:
 					this->labels[index]->setText(this->get_string_option(real_index, DEFAULT_ACTION) + " - V." + get_version_string());
+					break;
+				case STATUS_MENU_CONNECTION:
+					this->labels[index]->setText(get_name_of_device(capture_status));
 					break;
 				case STATUS_MENU_FPS_IN:
 					this->labels[index + INC_ACTION]->setText(get_float_str_decimals(in_fps, 2));

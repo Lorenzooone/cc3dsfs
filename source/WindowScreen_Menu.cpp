@@ -2051,7 +2051,7 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			this->action_selection_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, (*this->possible_buttons_ptrs[this->chosen_button])->cmd);
 			break;
 		case STATUS_MENU_TYPE:
-			this->status_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, FPSArrayGetAverage(&in_fps), FPSArrayGetAverage(&poll_fps), FPSArrayGetAverage(&draw_fps));
+			this->status_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, FPSArrayGetAverage(&in_fps), FPSArrayGetAverage(&poll_fps), FPSArrayGetAverage(&draw_fps), this->capture_status);
 			break;
 		case LICENSES_MENU_TYPE:
 			this->license_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);

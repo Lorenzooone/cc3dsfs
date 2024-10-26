@@ -212,6 +212,12 @@ uint64_t get_video_in_size(CaptureData* capture_data) {
 	return 0;
 }
 
+std::string get_name_of_device(CaptureStatus* capture_status) {
+	if(!capture_status->connected)
+		return "Not connected";
+	return capture_status->device.name + " - " + capture_status->device.serial_number;
+}
+
 void capture_init() {
 	#ifdef USE_DS_3DS_USB
 	usb_ds_3ds_init();

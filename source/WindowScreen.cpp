@@ -4,6 +4,7 @@
 #include <SFML/OpenGL.hpp>
 #include <cstring>
 #include "font_ttf.h"
+#include "devicecapture.hpp"
 
 #define LEFT_ROUNDED_PADDING 5
 #define RIGHT_ROUNDED_PADDING 5
@@ -427,7 +428,7 @@ void WindowScreen::window_factory(bool is_main_thread) {
 std::string WindowScreen::title_factory() {
 	std::string title = this->win_title;
 	if(this->capture_status->connected)
-		title += " - " + this->capture_status->device.name + " - " + this->capture_status->device.serial_number;
+		title += " - " + get_name_of_device(this->capture_status);
 	return title;
 }
 

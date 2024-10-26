@@ -7,6 +7,7 @@
 #include "TextRectangle.hpp"
 #include "sfml_gfx_structs.hpp"
 #include "display_structs.hpp"
+#include "capture_structs.hpp"
 
 enum StatusMenuOutAction{
 	STATUS_MENU_NO_ACTION,
@@ -17,7 +18,7 @@ class StatusMenu : public OptionSelectionMenu {
 public:
 	StatusMenu(bool font_load_success, sf::Font &text_font);
 	~StatusMenu();
-	void prepare(float scaling_factor, int view_size_x, int view_size_y, double in_fps, double poll_fps, double draw_fps);
+	void prepare(float scaling_factor, int view_size_x, int view_size_y, double in_fps, double poll_fps, double draw_fps, CaptureStatus* capture_status);
 	void insert_data();
 	StatusMenuOutAction selected_index = StatusMenuOutAction::STATUS_MENU_NO_ACTION;
 	void reset_output_option();
