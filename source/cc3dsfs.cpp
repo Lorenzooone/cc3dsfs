@@ -433,7 +433,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		}
 
 		if(capture_data->status.new_error_text) {
-			UpdateOutText(out_text_data, capture_data->status.error_text, capture_data->status.error_text, TEXT_KIND_ERROR);
+			UpdateOutText(out_text_data, capture_data->status.detailed_error_text, capture_data->status.graphical_error_text, TEXT_KIND_ERROR);
 			capture_data->status.new_error_text = false;
 		}
 

@@ -96,6 +96,19 @@ uint16_t from_be(uint16_t value) {
 	return value;
 }
 
+std::string to_hex(uint16_t value) {
+	const int num_digits = sizeof(value) * 2;
+	char digits[num_digits];
+	for(int i = 0; i < num_digits; i++) {
+		uint8_t subvalue = (value >> (4 * (num_digits - 1 - i))) & 0xF;
+		char digit = '0' + subvalue;
+		if(subvalue >= 0xA)
+			digit = 'A' + (subvalue - 0xA);
+		digits[i] = digit;
+	}
+	return static_cast<std::string>(digits);
+}
+
 void init_threads(void) {
 	#if defined(__linux__) && defined(XLIB_BASED)
 	XInitThreads();

@@ -9,7 +9,7 @@
 #include <chrono>
 #include <iostream>
 
-void list_devices_ftd2(std::vector<CaptureDevice> &devices_list) {
+void list_devices_ftd2(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list) {
 }
 
 uint64_t ftd2_get_video_in_size(CaptureData* capture_data) {

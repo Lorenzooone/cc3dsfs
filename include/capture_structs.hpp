@@ -126,7 +126,8 @@ struct CaptureDevice {
 
 struct CaptureStatus {
 	CaptureDevice device;
-	std::string error_text;
+	std::string graphical_error_text;
+	std::string detailed_error_text;
 	bool new_error_text;
 	volatile int curr_in = 0;
 	volatile int cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;

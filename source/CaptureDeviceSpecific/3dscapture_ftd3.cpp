@@ -8,6 +8,9 @@
 #define FT_ASYNC_CALL FT_ReadPipeAsync
 #endif
 #include <ftd3xx.h>
+#if defined(USE_IS_NITRO_USB) || defined(USE_DS_3DS_USB)
+#include "usb_generic.hpp"
+#endif
 
 #include <cstring>
 #include <thread>
@@ -23,8 +26,13 @@
 #define FIFO_CHANNEL 0
 #endif
 
+#define FTD3XX_VID 0x0403
+
 #define REAL_SERIAL_NUMBER_SIZE 16
 #define SERIAL_NUMBER_SIZE (REAL_SERIAL_NUMBER_SIZE+1)
+
+const uint16_t ftd3xx_valid_vids[] = {FTD3XX_VID};
+const uint16_t ftd3xx_valid_pids[] = {0x601e, 0x601f, 0x602a, 0x602b, 0x602c, 0x602d, 0x602f};
 
 static bool get_is_bad_ftd3xx();
 static bool get_skip_initial_pipe_abort();
@@ -75,11 +83,12 @@ static bool get_skip_initial_pipe_abort() {
 	return skip_initial_pipe_abort;
 }
 
-void list_devices_ftd3(std::vector<CaptureDevice> &devices_list) {
+void list_devices_ftd3(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list) {
 	FT_STATUS ftStatus;
 	DWORD numDevs = 0;
 	std::string valid_descriptions[] = {"N3DSXL", "N3DSXL.2"};
 	ftStatus = FT_CreateDeviceInfoList(&numDevs);
+	size_t num_inserted = 0;
 	if (!FT_FAILED(ftStatus) && numDevs > 0)
 	{
 		const int debug_multiplier = 1;
@@ -104,6 +113,12 @@ void list_devices_ftd3(std::vector<CaptureDevice> &devices_list) {
 				}
 			}
 		}
+	}
+	if(num_inserted == 0) {
+		#if defined(USE_IS_NITRO_USB) || defined(USE_DS_3DS_USB)
+		if(get_usb_total_filtered_devices(ftd3xx_valid_vids, sizeof(ftd3xx_valid_vids) / sizeof(ftd3xx_valid_vids[0]), ftd3xx_valid_pids, sizeof(ftd3xx_valid_pids) / sizeof(ftd3xx_valid_pids[0])) != numDevs)
+			no_access_list.emplace_back("FTD3XX");
+		#endif
 	}
 }
 

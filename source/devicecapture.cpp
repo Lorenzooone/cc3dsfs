@@ -50,8 +50,13 @@ static int choose_device(std::vector<CaptureDevice> *devices_list, FrontendData*
 }
 
 void capture_error_print(bool print_failed, CaptureData* capture_data, std::string error_string) {
+	capture_error_print(print_failed, capture_data, error_string, error_string);
+}
+
+void capture_error_print(bool print_failed, CaptureData* capture_data, std::string graphical_string, std::string detailed_string) {
 	if(print_failed) {
-		capture_data->status.error_text = error_string;
+		capture_data->status.graphical_error_text = graphical_string;
+		capture_data->status.detailed_error_text = detailed_string;
 		capture_data->status.new_error_text = true;
 	}
 }
@@ -70,21 +75,34 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 
 	// Device Listing
 	std::vector<CaptureDevice> devices_list;
+	std::vector<no_access_recap_data> no_access_list;
 	#ifdef USE_FTD3
-	list_devices_ftd3(devices_list);
+	list_devices_ftd3(devices_list, no_access_list);
 	#endif
 	#ifdef USE_FTD2
-	list_devices_ftd2(devices_list);
+	list_devices_ftd2(devices_list, no_access_list);
 	#endif
 	#ifdef USE_DS_3DS_USB
-	list_devices_usb_ds_3ds(devices_list);
+	list_devices_usb_ds_3ds(devices_list, no_access_list);
 	#endif
 	#ifdef USE_IS_NITRO_USB
-	list_devices_is_nitro(devices_list);
+	list_devices_is_nitro(devices_list, no_access_list);
 	#endif
 
 	if(devices_list.size() <= 0) {
-		capture_error_print(print_failed, capture_data, "No device was found");
+		if(no_access_list.size() <= 0)
+			capture_error_print(print_failed, capture_data, "No device was found");
+		else {
+			std::string full_error_part = "";
+			for(int i = 0; i < no_access_list.size(); i++) {
+				full_error_part += " - ";
+				if(no_access_list[i].vid == -1)
+					full_error_part += no_access_list[i].name;
+				else
+					full_error_part += "VID: " + to_hex(no_access_list[i].vid) + ", PID: " + to_hex(no_access_list[i].pid);
+			}
+			capture_error_print(print_failed, capture_data, "No device was found\nPossible permission error", "No device was found - Possible permission error" + full_error_part);
+		}
 		return false;
 	}
 

@@ -308,7 +308,7 @@ static void usb_3DSconvertVideoToOutput(USB3DSCaptureReceived *p_in, VideoOutput
 	memcpy(p_out->screen_data, p_in->video_in.screen_data, IN_VIDEO_HEIGHT_3DS * IN_VIDEO_WIDTH_3DS * 3);
 }
 
-void list_devices_usb_ds_3ds(std::vector<CaptureDevice> &devices_list) {
+void list_devices_usb_ds_3ds(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list) {
 	if(!usb_is_initialized())
 		return;
 	libusb_device **usb_devices;
@@ -336,6 +336,10 @@ void list_devices_usb_ds_3ds(std::vector<CaptureDevice> &devices_list) {
 
 	if(num_devices >= 0)
 		libusb_free_device_list(usb_devices, 1);
+
+	for(int i = 0; i < num_usb_desc; i++)
+		if(no_access_elems[i])
+			no_access_list.emplace_back(usb_devices_desc_list[i]->vid, usb_devices_desc_list[i]->pid);
 }
 
 bool connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* device) {

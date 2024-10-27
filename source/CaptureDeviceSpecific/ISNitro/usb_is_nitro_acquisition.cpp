@@ -77,7 +77,7 @@ static is_nitro_device_handlers* usb_find_by_serial_number(const is_nitro_usb_de
 	return final_handlers;
 }
 
-void list_devices_is_nitro(std::vector<CaptureDevice> &devices_list) {
+void list_devices_is_nitro(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list) {
 	const size_t num_is_nitro_desc = GetNumISNitroDesc();
 	int* curr_serial_extra_id_is_nitro = new int[num_is_nitro_desc];
 	bool* no_access_elems = new bool[num_is_nitro_desc];
@@ -90,9 +90,14 @@ void list_devices_is_nitro(std::vector<CaptureDevice> &devices_list) {
 	is_nitro_libusb_list_devices(devices_list, no_access_elems, not_supported_elems, curr_serial_extra_id_is_nitro, num_is_nitro_desc);
 
 	bool any_not_supported = false;
-	for (int i = 0; i < num_is_nitro_desc; i++)
+	for(int i = 0; i < num_is_nitro_desc; i++)
 		any_not_supported |= not_supported_elems[i];
-	if (any_not_supported)
+	for(int i = 0; i < num_is_nitro_desc; i++)
+		if(no_access_elems[i]) {
+			const is_nitro_usb_device* usb_device = GetISNitroDesc(i);
+			no_access_list.emplace_back(usb_device->vid, usb_device->pid);
+		}
+	if(any_not_supported)
 		is_driver_list_devices(devices_list, not_supported_elems, curr_serial_extra_id_is_nitro, num_is_nitro_desc);
 
 	delete[] curr_serial_extra_id_is_nitro;

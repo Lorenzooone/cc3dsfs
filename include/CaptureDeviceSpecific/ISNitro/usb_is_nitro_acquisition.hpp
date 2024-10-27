@@ -6,8 +6,9 @@
 #include "hw_defs.hpp"
 #include "capture_structs.hpp"
 #include "display_structs.hpp"
+#include "devicecapture.hpp"
 
-void list_devices_is_nitro(std::vector<CaptureDevice> &devices_list);
+void list_devices_is_nitro(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list);
 bool is_nitro_connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* device);
 void is_nitro_acquisition_main_loop(CaptureData* capture_data);
 void usb_is_nitro_acquisition_cleanup(CaptureData* capture_data);
