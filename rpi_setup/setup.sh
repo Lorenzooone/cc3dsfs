@@ -1,5 +1,10 @@
 #!/bin/sh
 
+if [ "$(id -u)" -eq "0" ]; then
+   echo "This script must be run as a regular user!";
+   exit 1;
+fi
+
 sudo apt update
 sudo apt -y install xterm gpiod xserver-xorg xinit libxcursor1 x11-xserver-utils pipewire pipewire-alsa
 
