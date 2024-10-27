@@ -16,6 +16,8 @@
 #define FIRST_3D_VERSION 6
 #define CAPTURE_SKIP_TIMEOUT_SECONDS 1.0
 
+#define SIMPLE_DS_FRAME_SKIP
+
 enum usb_capture_status {
 	USB_CAPTURE_SUCCESS = 0,
 	USB_CAPTURE_SKIP,
@@ -243,6 +245,7 @@ static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, c
 	}
 
 	if(!usb_device_desc->is_3ds) {
+		#ifndef SIMPLE_DS_FRAME_SKIP
 		if(bytesIn < video_size) {
 			if(vend_in(handle, usb_device_desc, usb_device_desc->cmdin_frameinfo, 0, 0, sizeof(data_buffer->usb_received_old_ds.frameinfo), (uint8_t*)&data_buffer->usb_received_old_ds.frameinfo) < 0)
 				return USB_CAPTURE_FRAMEINFO_ERROR;
@@ -252,6 +255,10 @@ static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, c
 			for(int i = 0; i < (HEIGHT_DS >> 3) << 1; i++)
 				data_buffer->usb_received_old_ds.frameinfo.half_line_flags[i] = 0xFF;
 		}
+		#else
+		if(bytesIn < video_size)
+			return USB_CAPTURE_SKIP;
+		#endif
 	}
 
 	return USB_CAPTURE_SUCCESS;
@@ -280,6 +287,7 @@ static inline void usb_oldDSconvertVideoToOutputHalfLine(USBOldDSCaptureReceived
 }
 
 static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out) {
+	#ifndef SIMPLE_DS_FRAME_SKIP
 	if(!p_in->frameinfo.valid) { //LCD was off
 		memset(p_out->screen_data, 0, WIDTH_DS * (2 * HEIGHT_DS) * 3);
 		return;
@@ -302,6 +310,10 @@ static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOu
 			memcpy(p_out->screen_data[(i * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], p_out->screen_data[((i - 2) * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], (WIDTH_DS / 2) * 3);
 		}
 	}
+	#else
+	for(int i = 0; i < HEIGHT_DS * 2; i++)
+		usb_oldDSconvertVideoToOutputHalfLine(p_in, p_out, i, i);
+	#endif
 }
 
 static void usb_3DSconvertVideoToOutput(USB3DSCaptureReceived *p_in, VideoOutputData *p_out) {
