@@ -30,6 +30,8 @@
 #define FRAME_BUFFER_SIZE 32
 #define SLEEP_CHECKS_TIME_MS 20
 
+#define SLEEP_TIME_DIVISOR 8
+
 static int drain_frames(is_nitro_device_handlers* handlers, int num_frames, int start_frames, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc) {
 	ISNitroEmulatorVideoInputData* video_in_buffer = new ISNitroEmulatorVideoInputData;
 	for (int i = start_frames; i < num_frames; i++) {
@@ -133,42 +135,51 @@ static bool do_sleep(float single_frame_time, std::chrono::time_point<std::chron
 	int adding_single_frame_time_divisor = 0;
 	switch(capture_speed) {
 		case CAPTURE_SPEEDS_HALF:
-			adding_single_frame_time_divisor = 3;
+			adding_single_frame_time_divisor = 1;
 			break;
 		case CAPTURE_SPEEDS_THIRD:
-			adding_single_frame_time_divisor = 4;
+			adding_single_frame_time_divisor = 2;
 			break;
 		case CAPTURE_SPEEDS_QUARTER:
-			adding_single_frame_time_divisor = 6;
+			adding_single_frame_time_divisor = 3;
 			break;
 	}
 	if((capture_type == CAPTURE_SCREENS_TOP) || (capture_type == CAPTURE_SCREENS_BOTTOM))
 		adding_single_frame_time_divisor *= 2;
-	if(adding_single_frame_time_divisor > 0)
-		expected_time += (single_frame_time * (adding_single_frame_time_divisor - 1)) / adding_single_frame_time_divisor;
+	if(adding_single_frame_time_divisor > 0) {
+		float adding_single_frame_time_multiplier = adding_single_frame_time_divisor - 1;
+		if(adding_single_frame_time_multiplier == 0)
+			adding_single_frame_time_multiplier = 0.33;
+		expected_time += (single_frame_time * adding_single_frame_time_multiplier) / adding_single_frame_time_divisor;
+	}
 	float low_single_frame_time = 1.0 / ((int)((1.0 / single_frame_time) + 1));
 	float low_expected_time = low_single_frame_time * curr_frame_counter;
-	float divisor = 4;
 	// If the current time is too low, sleep a bit to make sure we don't overrun the framerate counter
 	// Don't do it regardless of the situation, and only in small increments...
 	// Otherwise there is the risk of sleeping too much
-	bool result = (diff.count() < expected_time) && ((expected_time - diff.count()) > (single_frame_time / divisor));
-	*out_time = (expected_time - diff.count()) / divisor;
+	bool result = (diff.count() < expected_time) && ((expected_time - diff.count()) > (single_frame_time / SLEEP_TIME_DIVISOR));
+	*out_time = single_frame_time;
 	if(last_frame_counter & (FRAME_BUFFER_SIZE - 1)) {
-		result = (diff.count() < low_expected_time) && ((low_expected_time - diff.count()) > (low_single_frame_time / divisor));
-		*out_time = (low_expected_time - diff.count()) / divisor;
+		result = (diff.count() < low_expected_time) && ((low_expected_time - diff.count()) > (low_single_frame_time / SLEEP_TIME_DIVISOR));
+		*out_time = low_single_frame_time;
 	}
 	return result;
 }
 
 static void frame_wait(float single_frame_time, std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_reset, CaptureScreensType capture_type, CaptureSpeedsType capture_speed, int curr_frame_counter, int last_frame_counter) {
 	float sleep_time = 0;
-	while(do_sleep(single_frame_time, clock_last_reset, capture_type, capture_speed, curr_frame_counter, last_frame_counter, &sleep_time))
-		default_sleep(sleep_time);
+	int sleep_counter = 0;
+	while(do_sleep(single_frame_time, clock_last_reset, capture_type, capture_speed, curr_frame_counter, last_frame_counter, &sleep_time)) {
+		default_sleep(sleep_time * 1000.0 / SLEEP_TIME_DIVISOR);
+		sleep_counter++;
+	}
 }
 
 static int reset_acquisition_frames(is_nitro_device_handlers* handlers, uint16_t &curr_frame_counter, uint16_t &last_frame_counter, float &single_frame_time, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_reset, CaptureScreensType &curr_capture_type, CaptureScreensType wanted_capture_type, CaptureSpeedsType &curr_capture_speed, CaptureSpeedsType wanted_capture_speed, const is_nitro_usb_device* usb_device_desc) {
 	curr_frame_counter += 1;
+
+	if(curr_frame_counter < FRAME_BUFFER_SIZE)
+		return LIBUSB_SUCCESS;
 
 	int multiplier = 1;
 	switch(curr_capture_speed) {
@@ -183,80 +194,86 @@ static int reset_acquisition_frames(is_nitro_device_handlers* handlers, uint16_t
 			break;
 	}
 
-	if(curr_frame_counter == FRAME_BUFFER_SIZE) {
-		int ret = StopUsbCaptureDma(handlers, usb_device_desc);
+	int ret = StopUsbCaptureDma(handlers, usb_device_desc);
+	if(ret < 0)
+		return ret;
+
+	// If the user requests a mode change, accomodate them.
+	// Though it may lag for a bit...
+	if((wanted_capture_type != curr_capture_type) || (wanted_capture_speed != curr_capture_speed)) {
+		curr_capture_type = wanted_capture_type;
+		curr_capture_speed = wanted_capture_speed;
+		ret = set_acquisition_mode(handlers, curr_capture_type, curr_capture_speed, usb_device_desc);
 		if(ret < 0)
 			return ret;
+	}
 
-		// If the user requests a mode change, accomodate them.
-		// Though it may lag for a bit...
-		if((wanted_capture_type != curr_capture_type) || (wanted_capture_speed != curr_capture_speed)) {
-			curr_capture_type = wanted_capture_type;
-			curr_capture_speed = wanted_capture_speed;
-			ret = set_acquisition_mode(handlers, curr_capture_type, curr_capture_speed, usb_device_desc);
-			if(ret < 0)
-				return ret;
+	uint16_t internalFrameCount = 0;
+	uint16_t full_internalFrameCount = 0;
+	int frame_diff = 0;
+	int diff_target = FRAME_BUFFER_SIZE * multiplier;
+	std::chrono::time_point<std::chrono::high_resolution_clock> curr_time;
+	std::chrono::duration<double> diff;
+	do {
+		// Is this not the first loop? Also, do not sleep too much...
+		if((frame_diff > 0) && ((internalFrameCount & (FRAME_BUFFER_SIZE - 1) < (FRAME_BUFFER_SIZE - 1)))) {
+			float expected_time = single_frame_time * FRAME_BUFFER_SIZE;
+			if(diff.count() < expected_time)
+				default_sleep(single_frame_time * 1000.0 / SLEEP_TIME_DIVISOR);
 		}
-
-		uint16_t internalFrameCount = 0;
-		uint16_t full_internalFrameCount = 0;
-		int frame_diff = 0;
-		int diff_target = FRAME_BUFFER_SIZE * multiplier;
-		do {
-			// Check how many frames have passed...
-			ret = GetFrameCounter(handlers, &internalFrameCount, usb_device_desc);
-			full_internalFrameCount = internalFrameCount;
-			// Sometimes the upper 8 bits aren't updated... Use only the lower 8 bits.
-			internalFrameCount &= 0xFF;
-			if(ret < 0)
-				return ret;
-			frame_diff = internalFrameCount - last_frame_counter;
-			if(frame_diff < 0)
-				frame_diff += 1 << 8;
-			// If the frames haven't advanced, the DS is either turned off or sleeping. If so, avoid locking up
-			if(frame_diff == 0)
-				break;
-			const auto curr_time = std::chrono::high_resolution_clock::now();
-			const std::chrono::duration<double> diff = curr_time - clock_last_reset;
-			// If too much time has passed, the DS is probably either turned off or sleeping. If so, avoid locking up
-			if(diff.count() > (1.0 * multiplier)) {
-				frame_diff = 0;
-				break;
-			}
-			// Exit if enough frames have passed, or if there currently is some delay.
-			// Exiting early makes it possible to catch up to the DMA, if we're behind.
-		} while(((frame_diff < diff_target) && (!(last_frame_counter & (FRAME_BUFFER_SIZE - 1)))) || ((internalFrameCount & (FRAME_BUFFER_SIZE - 1)) >= (FRAME_BUFFER_SIZE - (1 + multiplier))));
-		// Determine how much time a single frame takes. We'll use it for sleeps
-		const auto curr_time = std::chrono::high_resolution_clock::now();
-		const std::chrono::duration<double> diff = curr_time - clock_last_reset;
+		// Check how many frames have passed...
+		ret = GetFrameCounter(handlers, &internalFrameCount, usb_device_desc);
+		full_internalFrameCount = internalFrameCount;
+		// Sometimes the upper 8 bits aren't updated... Use only the lower 8 bits.
+		internalFrameCount &= 0xFF;
+		if(ret < 0)
+			return ret;
+		frame_diff = internalFrameCount - last_frame_counter;
+		if(frame_diff < 0)
+			frame_diff += 1 << 8;
+		// If the frames haven't advanced, the DS is either turned off or sleeping. If so, avoid locking up
 		if(frame_diff == 0)
-			single_frame_time = 0;
-		else
-			single_frame_time = diff.count() / (frame_diff / ((float)multiplier));
-		clock_last_reset = curr_time;
-
-		// Save the current frame counter's 8 LSB
-		last_frame_counter = internalFrameCount;
-
-		// If we're nearing 0xFFFF for the frame counter, reset it.
-		// It's a problematic value for DMA reading
-		if(frame_diff && (full_internalFrameCount >= 0xF000)) {
-			ret = UpdateFrameForwardEnable(handlers, true, true, usb_device_desc);
-			if(ret < 0)
-				return ret;
-			clock_last_reset = std::chrono::high_resolution_clock::now();
+			break;
+		curr_time = std::chrono::high_resolution_clock::now();
+		diff = curr_time - clock_last_reset;
+		// If too much time has passed, the DS is probably either turned off or sleeping. If so, avoid locking up
+		if(diff.count() > (1.0 * multiplier)) {
+			frame_diff = 0;
+			break;
 		}
-		ret = UpdateFrameForwardEnable(handlers, true, false, usb_device_desc);
+		// Exit if enough frames have passed, or if there currently is some delay.
+		// Exiting early makes it possible to catch up to the DMA, if we're behind.
+	} while(((frame_diff < diff_target) && (!(last_frame_counter & (FRAME_BUFFER_SIZE - 1)))) || ((internalFrameCount & (FRAME_BUFFER_SIZE - 1)) >= (FRAME_BUFFER_SIZE - (1 + multiplier))));
+	// Determine how much time a single frame takes. We'll use it for sleeps
+	curr_time = std::chrono::high_resolution_clock::now();
+	diff = curr_time - clock_last_reset;
+	if(frame_diff == 0)
+		single_frame_time = 0;
+	else
+		single_frame_time = diff.count() / (frame_diff / ((float)multiplier));
+	clock_last_reset = curr_time;
+
+	// Save the current frame counter's 8 LSB
+	last_frame_counter = internalFrameCount;
+
+	// If we're nearing 0xFFFF for the frame counter, reset it.
+	// It's a problematic value for DMA reading
+	if(frame_diff && (full_internalFrameCount >= 0xF000)) {
+		ret = UpdateFrameForwardEnable(handlers, true, true, usb_device_desc);
 		if(ret < 0)
 			return ret;
-		curr_frame_counter = 0;
+		clock_last_reset = std::chrono::high_resolution_clock::now();
+	}
+	ret = UpdateFrameForwardEnable(handlers, true, false, usb_device_desc);
+	if(ret < 0)
+		return ret;
+	curr_frame_counter = 0;
 
-		// Start the actual DMA
-		if(single_frame_time > 0) {
-			ret = StartUsbCaptureDma(handlers, usb_device_desc);
-			if(ret < 0)
-				return ret;
-		}
+	// Start the actual DMA
+	if(single_frame_time > 0) {
+		ret = StartUsbCaptureDma(handlers, usb_device_desc);
+		if(ret < 0)
+			return ret;
 	}
 	return LIBUSB_SUCCESS;
 }
