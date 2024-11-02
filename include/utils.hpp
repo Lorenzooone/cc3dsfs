@@ -7,8 +7,10 @@
 
 #if _MSC_VER && !__INTEL_COMPILER
 #define PACKED
+#define ALIGNED(x) alignas(x)
 #else
 #define PACKED __attribute__((packed))
+#define ALIGNED(x) __attribute__((aligned(x)))
 #endif
 
 #define NAME "cc3dsfs"

@@ -152,7 +152,7 @@ static int insert_device(std::vector<CaptureDevice> &devices_list, const usb_dev
 	if(usb_device_desc->is_3ds)
 		devices_list.emplace_back(serial_str, "3DS", CAPTURE_CONN_USB, (void*)usb_device_desc, true, capture_get_has_3d(handle, usb_device_desc), true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, O3DS_SAMPLES_IN, 90, 0, 0, TOP_WIDTH_3DS, 0, VIDEO_DATA_RGB);
 	else
-		devices_list.emplace_back(serial_str, "DS", CAPTURE_CONN_USB, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS, VIDEO_DATA_BGR16);
+		devices_list.emplace_back(serial_str, "DS", CAPTURE_CONN_USB, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS, VIDEO_DATA_RGB16);
 	libusb_close(handle);
 	return result;
 }
@@ -268,12 +268,12 @@ static inline void usb_oldDSconvertVideoToOutputHalfLine(USBOldDSCaptureReceived
 	//de-interleave pixels
 	uint16_t* out_ptr_top = (uint16_t*)p_out->screen_data;
 	uint16_t* out_ptr_bottom = out_ptr_top + (WIDTH_DS * HEIGHT_DS);
-	uint16_t* in_ptr = (uint16_t*)&p_in;
+	uint16_t* in_ptr = (uint16_t*)p_in->video_in.screen_data;
 	for(int i = 0; i < WIDTH_DS / 2 ; i++) {
 		uint32_t input_halfline_pixel = (input_halfline * (WIDTH_DS / 2)) + i;
 		uint32_t output_halfline_pixel = (output_halfline * (WIDTH_DS / 2)) + i;
-		out_ptr_top[output_halfline_pixel] = in_ptr[input_halfline_pixel * 2];
-		out_ptr_bottom[output_halfline_pixel] = in_ptr[(input_halfline_pixel * 2) + 1];
+		out_ptr_bottom[output_halfline_pixel] = in_ptr[input_halfline_pixel * 2];
+		out_ptr_top[output_halfline_pixel] = in_ptr[(input_halfline_pixel * 2) + 1];
 	}
 }
 
