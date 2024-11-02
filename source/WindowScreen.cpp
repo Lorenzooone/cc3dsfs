@@ -432,13 +432,30 @@ std::string WindowScreen::title_factory() {
 	return title;
 }
 
+// These values may be undefined under Windows...
+#ifndef GL_BGR
+#define GL_BGR 0x80e0
+#endif
+
+#ifndef GL_UNSIGNED_SHORT_5_6_5_REV
+#define GL_UNSIGNED_SHORT_5_6_5_REV 0x8364
+#endif
+
 void WindowScreen::update_texture() {
 	unsigned int m_texture = this->in_tex.getNativeHandle();
     if (this->saved_buf && m_texture)
     {
         // Copy pixels from the given array to the texture
         glBindTexture(GL_TEXTURE_2D, m_texture);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(0), static_cast<GLint>(0), static_cast<GLsizei>(this->capture_status->device.width), static_cast<GLsizei>(this->capture_status->device.height), GL_RGB, GL_UNSIGNED_BYTE, this->saved_buf);
+        GLenum format = GL_RGB;
+        GLenum type = GL_UNSIGNED_BYTE;
+        if(this->capture_status->device.video_data_type == VIDEO_DATA_BGR)
+        	format = GL_BGR;
+        if(this->capture_status->device.video_data_type == VIDEO_DATA_BGR16) {
+        	format = GL_RGB;
+        	type =  GL_UNSIGNED_SHORT_5_6_5_REV;
+    	}
+        glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(0), static_cast<GLint>(0), static_cast<GLsizei>(this->capture_status->device.width), static_cast<GLsizei>(this->capture_status->device.height), format, type, this->saved_buf);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
         // Force an OpenGL flush, so that the texture data will appear updated

@@ -150,9 +150,9 @@ static int insert_device(std::vector<CaptureDevice> &devices_list, const usb_dev
 		return result;
 	std::string serial_str = get_serial(handle, usb_descriptor, curr_serial_extra_id);
 	if(usb_device_desc->is_3ds)
-		devices_list.emplace_back(serial_str, "3DS", CAPTURE_CONN_USB, (void*)usb_device_desc, true, capture_get_has_3d(handle, usb_device_desc), true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, O3DS_SAMPLES_IN, 90, 0, 0, TOP_WIDTH_3DS, 0);
+		devices_list.emplace_back(serial_str, "3DS", CAPTURE_CONN_USB, (void*)usb_device_desc, true, capture_get_has_3d(handle, usb_device_desc), true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, O3DS_SAMPLES_IN, 90, 0, 0, TOP_WIDTH_3DS, 0, VIDEO_DATA_RGB);
 	else
-		devices_list.emplace_back(serial_str, "DS", CAPTURE_CONN_USB, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS);
+		devices_list.emplace_back(serial_str, "DS", CAPTURE_CONN_USB, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS, VIDEO_DATA_BGR16);
 	libusb_close(handle);
 	return result;
 }
@@ -264,37 +264,28 @@ static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, c
 	return USB_CAPTURE_SUCCESS;
 }
 
-static inline uint8_t xbits_to_8bits(uint8_t value, int num_bits) {
-	int left_shift = 8 - num_bits;
-	int right_shift = num_bits - left_shift;
-	return (value << left_shift) | (value >> right_shift);
-}
-
-static inline void usb_oldDSconvertVideoToOutputRGBA(USBOldDSPixelData data, uint8_t* target) {
-	target[0] = xbits_to_8bits(data.r, OLD_DS_PIXEL_R_BITS);
-	target[1] = xbits_to_8bits(data.g, OLD_DS_PIXEL_G_BITS);
-	target[2] = xbits_to_8bits(data.b, OLD_DS_PIXEL_B_BITS);
-}
-
 static inline void usb_oldDSconvertVideoToOutputHalfLine(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, int input_halfline, int output_halfline) {
 	//de-interleave pixels
+	uint16_t* out_ptr_top = (uint16_t*)p_out->screen_data;
+	uint16_t* out_ptr_bottom = out_ptr_top + (WIDTH_DS * HEIGHT_DS);
+	uint16_t* in_ptr = (uint16_t*)&p_in;
 	for(int i = 0; i < WIDTH_DS / 2 ; i++) {
 		uint32_t input_halfline_pixel = (input_halfline * (WIDTH_DS / 2)) + i;
 		uint32_t output_halfline_pixel = (output_halfline * (WIDTH_DS / 2)) + i;
-		usb_oldDSconvertVideoToOutputRGBA(p_in->video_in.screen_data[input_halfline_pixel * 2], p_out->screen_data[output_halfline_pixel + (WIDTH_DS * HEIGHT_DS)]);
-		usb_oldDSconvertVideoToOutputRGBA(p_in->video_in.screen_data[(input_halfline_pixel * 2) + 1], p_out->screen_data[output_halfline_pixel]);
+		out_ptr_top[output_halfline_pixel] = in_ptr[input_halfline_pixel * 2];
+		out_ptr_bottom[output_halfline_pixel] = in_ptr[(input_halfline_pixel * 2) + 1];
 	}
 }
 
 static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out) {
 	#ifndef SIMPLE_DS_FRAME_SKIP
 	if(!p_in->frameinfo.valid) { //LCD was off
-		memset(p_out->screen_data, 0, WIDTH_DS * (2 * HEIGHT_DS) * 3);
+		memset(p_out->screen_data, 0, WIDTH_DS * (2 * HEIGHT_DS) * sizeof(uint16_t));
 		return;
 	}
 
 	// Handle first line being off, if needed
-	memset(p_out->screen_data, 0, WIDTH_DS * 3);
+	memset(p_out->screen_data, 0, WIDTH_DS * sizeof(uint16_t));
 
 	int input_halfline = 0;
 	for(int i = 0; i < 2; i++) {
@@ -306,8 +297,10 @@ static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOu
 		if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
 			usb_oldDSconvertVideoToOutputHalfLine(p_in, p_out, input_halfline++, i);
 		else { // deal with missing half-line
-			memcpy(p_out->screen_data[i * (WIDTH_DS / 2)], p_out->screen_data[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * 3);
-			memcpy(p_out->screen_data[(i * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], p_out->screen_data[((i - 2) * (WIDTH_DS / 2)) + (WIDTH_DS * HEIGHT_DS)], (WIDTH_DS / 2) * 3);
+			uint16_t* out_ptr_top = (uint16_t*)&p_out->screen_data;
+			uint16_t* out_ptr_bottom = out_ptr_top + (WIDTH_DS * HEIGHT_DS);
+			memcpy(&out_ptr_top[i * (WIDTH_DS / 2)], &out_ptr_top[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * sizeof(uint16_t));
+			memcpy(&out_ptr_bottom[i * (WIDTH_DS / 2)], &out_ptr_bottom[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * sizeof(uint16_t));
 		}
 	}
 	#else

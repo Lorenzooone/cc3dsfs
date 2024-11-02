@@ -107,7 +107,7 @@ void list_devices_ftd3(std::vector<CaptureDevice> &devices_list, std::vector<no_
 				for(int j = 0; j < sizeof(valid_descriptions) / sizeof(*valid_descriptions); j++) {
 					if(Description == valid_descriptions[j]) {
 						for(int u = 0; u < debug_multiplier; u++)
-							devices_list.emplace_back(std::string(SerialNumber), "N3DSXL", CAPTURE_CONN_FTD3, (void*)NULL, true, true, true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, N3DSXL_SAMPLES_IN, 90, 0, 0, TOP_WIDTH_3DS, 0);
+							devices_list.emplace_back(std::string(SerialNumber), "N3DSXL", CAPTURE_CONN_FTD3, (void*)NULL, true, true, true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, N3DSXL_SAMPLES_IN, 90, 0, 0, TOP_WIDTH_3DS, 0, VIDEO_DATA_RGB);
 						break;
 					}
 				}

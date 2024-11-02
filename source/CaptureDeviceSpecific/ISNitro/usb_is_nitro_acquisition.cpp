@@ -60,11 +60,11 @@ std::string get_serial(const is_nitro_usb_device* usb_device_desc, is_nitro_devi
 }
 
 void is_nitro_insert_device(std::vector<CaptureDevice>& devices_list, is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc, int& curr_serial_extra_id_is_nitro, std::string path) {
-	devices_list.emplace_back(get_serial(usb_device_desc, handlers, curr_serial_extra_id_is_nitro), usb_device_desc->name, path, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS);
+	devices_list.emplace_back(get_serial(usb_device_desc, handlers, curr_serial_extra_id_is_nitro), usb_device_desc->name, path, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS, VIDEO_DATA_BGR);
 }
 
 void is_nitro_insert_device(std::vector<CaptureDevice>& devices_list, is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc, int& curr_serial_extra_id_is_nitro) {
-	devices_list.emplace_back(get_serial(usb_device_desc, handlers, curr_serial_extra_id_is_nitro), usb_device_desc->name, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS);
+	devices_list.emplace_back(get_serial(usb_device_desc, handlers, curr_serial_extra_id_is_nitro), usb_device_desc->name, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS, VIDEO_DATA_BGR);
 }
 
 static is_nitro_device_handlers* usb_find_by_serial_number(const is_nitro_usb_device* usb_device_desc, CaptureDevice* device) {
@@ -222,11 +222,7 @@ void usb_is_nitro_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p
 	}
 	if((capture_type == CAPTURE_SCREENS_BOTTOM) || (capture_type == CAPTURE_SCREENS_TOP))
 		memset(p_out->screen_data[out_clear_pos], 0, num_pixels * 3);
-	for(int i = 0; i < num_pixels; i++) {
-		p_out->screen_data[i + out_start_pos][0] = p_in->is_nitro_capture_received.video_in.screen_data[i][2];
-		p_out->screen_data[i + out_start_pos][1] = p_in->is_nitro_capture_received.video_in.screen_data[i][1];
-		p_out->screen_data[i + out_start_pos][2] = p_in->is_nitro_capture_received.video_in.screen_data[i][0];
-	}
+	memcpy(p_out->screen_data[out_start_pos], p_in->is_nitro_capture_received.video_in.screen_data, num_pixels * 3);
 }
 
 bool is_nitro_is_capture(CaptureDevice* device) {
