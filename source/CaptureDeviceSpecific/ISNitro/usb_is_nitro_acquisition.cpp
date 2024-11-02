@@ -137,13 +137,33 @@ uint64_t usb_is_nitro_get_video_in_size(CaptureData* capture_data) {
 	return _is_nitro_get_video_in_size(capture_data->status.capture_type);
 }
 
-int set_acquisition_mode(is_nitro_device_handlers* handlers, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc) {
+int set_acquisition_mode(is_nitro_device_handlers* handlers, CaptureScreensType capture_type, CaptureSpeedsType capture_speed, const is_nitro_usb_device* usb_device_desc) {
 	is_nitro_forward_config_values_screens capture_mode_flag = IS_NITRO_FORWARD_CONFIG_MODE_BOTH;
-	if(capture_type == CAPTURE_SCREENS_TOP)
-		capture_mode_flag = IS_NITRO_FORWARD_CONFIG_MODE_TOP;
-	if(capture_type == CAPTURE_SCREENS_BOTTOM)
-		capture_mode_flag = IS_NITRO_FORWARD_CONFIG_MODE_BOTTOM;
-	return UpdateFrameForwardConfig(handlers, IS_NITRO_FORWARD_CONFIG_COLOR_RGB24, capture_mode_flag, IS_NITRO_FORWARD_CONFIG_RATE_FULL, usb_device_desc);
+	switch(capture_type) {
+		case CAPTURE_SCREENS_TOP:
+			capture_mode_flag = IS_NITRO_FORWARD_CONFIG_MODE_TOP;
+			break;
+		case CAPTURE_SCREENS_BOTTOM:
+			capture_mode_flag = IS_NITRO_FORWARD_CONFIG_MODE_BOTTOM;
+			break;
+		default:
+			break;
+	}
+	is_nitro_forward_config_values_rate capture_rate_flag = IS_NITRO_FORWARD_CONFIG_RATE_FULL;
+	switch(capture_speed) {
+		case CAPTURE_SPEEDS_HALF:
+			capture_rate_flag = IS_NITRO_FORWARD_CONFIG_RATE_HALF;
+			break;
+		case CAPTURE_SPEEDS_THIRD:
+			capture_rate_flag = IS_NITRO_FORWARD_CONFIG_RATE_THIRD;
+			break;
+		case CAPTURE_SPEEDS_QUARTER:
+			capture_rate_flag = IS_NITRO_FORWARD_CONFIG_RATE_QUARTER;
+			break;
+		default:
+			break;
+	}
+	return UpdateFrameForwardConfig(handlers, IS_NITRO_FORWARD_CONFIG_COLOR_RGB24, capture_mode_flag, capture_rate_flag, usb_device_desc);
 }
 
 int EndAcquisition(is_nitro_device_handlers* handlers, bool do_drain_frames, int start_frames, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc) {

@@ -48,12 +48,14 @@ public:
 	bool timed_lock();
 	bool try_lock();
 	void unlock();
+	void update_time_multiplier(float time_multiplier);
 
 private:
 	std::mutex access_mutex;
 	std::condition_variable_any condition;
-	const std::chrono::duration<double>max_timed_wait = std::chrono::duration<double>(1.0 / 30);
+	const float base_time_fps = 30;
 	int count = 0;
+	float time_multiplier = 1.0;
 };
 
 #endif

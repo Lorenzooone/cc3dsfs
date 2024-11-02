@@ -212,7 +212,13 @@ std::string load_layout_name(int index, bool &success) {
 ConsumerMutex::ConsumerMutex() {
 	count = 0;
 }
-	
+
+void ConsumerMutex::update_time_multiplier(float time_multiplier) {
+	if(time_multiplier <= 0)
+		return;
+	this->time_multiplier = time_multiplier;
+}
+
 void ConsumerMutex::lock() {
 	access_mutex.lock();
 	bool success = false;
@@ -229,6 +235,7 @@ void ConsumerMutex::lock() {
 }
 	
 bool ConsumerMutex::timed_lock() {
+	std::chrono::duration<double>max_timed_wait = std::chrono::duration<double>(1.0 / ((base_time_fps) * (1.0 / this->time_multiplier)));
 	access_mutex.lock();
 	bool success = false;
 	while(!success) {

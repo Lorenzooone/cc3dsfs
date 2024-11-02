@@ -28,6 +28,12 @@ static const ISNitroMenuOptionInfo is_nitro_type_option = {
 .is_inc = true, .dec_str = "<", .inc_str = ">", .inc_out_action = ISN_MENU_TYPE_INC,
 .out_action = ISN_MENU_TYPE_DEC};
 
+static const ISNitroMenuOptionInfo is_nitro_speed_option = {
+.base_name = "Speed", .false_name = "", .is_selectable = true,
+.is_capture_valid = true, .is_emulator_valid = true,
+.is_inc = true, .dec_str = "<", .inc_str = ">", .inc_out_action = ISN_MENU_SPEED_INC,
+.out_action = ISN_MENU_SPEED_DEC};
+
 static const ISNitroMenuOptionInfo is_nitro_reset_option = {
 .base_name = "Reset Hardware", .false_name = "", .is_selectable = true,
 .is_capture_valid = true, .is_emulator_valid = false,
@@ -37,6 +43,7 @@ static const ISNitroMenuOptionInfo is_nitro_reset_option = {
 static const ISNitroMenuOptionInfo* pollable_options[] = {
 &is_nitro_delay_option,
 &is_nitro_type_option,
+&is_nitro_speed_option,
 &is_nitro_reset_option,
 };
 
@@ -132,6 +139,19 @@ static std::string get_capture_type_name(CaptureScreensType capture_type) {
 	}
 }
 
+static std::string get_capture_speed_name(CaptureSpeedsType capture_speed) {
+	switch(capture_speed) {
+		case CAPTURE_SPEEDS_HALF:
+			return "0.5x";
+		case CAPTURE_SPEEDS_THIRD:
+			return "0.33x";
+		case CAPTURE_SPEEDS_QUARTER:
+			return "0.25x";
+		default:
+			return "1.0x";
+	}
+}
+
 void ISNitroMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, CaptureStatus* capture_status) {
 	int num_pages = this->get_num_pages();
 	if(this->future_data.page >= num_pages)
@@ -149,6 +169,9 @@ void ISNitroMenu::prepare(float menu_scaling_factor, int view_size_x, int view_s
 				break;
 			case ISN_MENU_TYPE_DEC:
 				this->labels[index]->setText(this->setTextOptionString(real_index, get_capture_type_name(capture_status->capture_type)));
+				break;
+			case ISN_MENU_SPEED_DEC:
+				this->labels[index]->setText(this->setTextOptionString(real_index, get_capture_speed_name(capture_status->capture_speed)));
 				break;
 			default:
 				break;

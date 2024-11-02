@@ -16,6 +16,8 @@ enum ISNitroMenuOutAction{
 	ISN_MENU_TYPE_DEC,
 	ISN_MENU_TYPE_INC,
 	ISN_MENU_RESET,
+	ISN_MENU_SPEED_INC,
+	ISN_MENU_SPEED_DEC,
 };
 
 class ISNitroMenu : public OptionSelectionMenu {

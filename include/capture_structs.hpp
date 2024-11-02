@@ -20,6 +20,7 @@
 
 enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_FTD2, CAPTURE_CONN_IS_NITRO };
 enum CaptureScreensType { CAPTURE_SCREENS_BOTH, CAPTURE_SCREENS_TOP, CAPTURE_SCREENS_BOTTOM, CAPTURE_SCREENS_ENUM_END };
+enum CaptureSpeedsType { CAPTURE_SPEEDS_FULL, CAPTURE_SPEEDS_HALF, CAPTURE_SPEEDS_THIRD, CAPTURE_SPEEDS_QUARTER, CAPTURE_SPEEDS_ENUM_END };
 
 #pragma pack(push, 1)
 
@@ -138,6 +139,7 @@ struct CaptureStatus {
 	volatile bool reset_hardware = false;
 	bool enabled_3d = false;
 	CaptureScreensType capture_type;
+	CaptureSpeedsType capture_speed;
 	ConsumerMutex video_wait;
 	ConsumerMutex audio_wait;
 };

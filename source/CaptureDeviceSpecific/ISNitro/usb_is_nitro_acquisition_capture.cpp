@@ -12,14 +12,14 @@
 #define RESET_TIMEOUT 4.0
 #define SLEEP_CHECKS_TIME_MS 20
 
-static int StartAcquisitionCapture(is_nitro_device_handlers* handlers, CaptureScreensType capture_type, bool* is_acquisition_off, const is_nitro_usb_device* usb_device_desc) {
+static int StartAcquisitionCapture(is_nitro_device_handlers* handlers, CaptureScreensType capture_type, CaptureSpeedsType capture_speed, bool* is_acquisition_off, const is_nitro_usb_device* usb_device_desc) {
 	int ret = 0;
 	ret = ReadLidState(handlers, is_acquisition_off, usb_device_desc);
 	if(ret < 0)
 		return ret;
 	if(*is_acquisition_off)
 		return LIBUSB_SUCCESS;
-	ret = set_acquisition_mode(handlers, capture_type, usb_device_desc);
+	ret = set_acquisition_mode(handlers, capture_type, capture_speed, usb_device_desc);
 	if(ret < 0)
 		return ret;
 	ret = SetForwardFramePermanent(handlers, usb_device_desc);
@@ -31,11 +31,12 @@ static int StartAcquisitionCapture(is_nitro_device_handlers* handlers, CaptureSc
 	return StartUsbCaptureDma(handlers, usb_device_desc);
 }
 
-static int LidReopenCaptureCheck(CaptureData* capture_data, CaptureScreensType &curr_capture_type, bool* is_acquisition_off) {
+static int LidReopenCaptureCheck(CaptureData* capture_data, CaptureScreensType &curr_capture_type, CaptureSpeedsType &curr_capture_speed, bool* is_acquisition_off) {
 	is_nitro_device_handlers* handlers = (is_nitro_device_handlers*)capture_data->handle;
 	const is_nitro_usb_device* usb_device_desc = (const is_nitro_usb_device*)capture_data->status.device.descriptor;
 	curr_capture_type = capture_data->status.capture_type;
-	int ret = StartAcquisitionCapture(handlers, curr_capture_type, is_acquisition_off, usb_device_desc);
+	curr_capture_speed = capture_data->status.capture_speed;
+	int ret = StartAcquisitionCapture(handlers, curr_capture_type, curr_capture_speed, is_acquisition_off, usb_device_desc);
 	if(ret < 0)
 		return ret;
 	if(!(*is_acquisition_off))
@@ -43,7 +44,7 @@ static int LidReopenCaptureCheck(CaptureData* capture_data, CaptureScreensType &
 	return ret;
 }
 
-static int CaptureResetHardware(CaptureData* capture_data, CaptureScreensType &curr_capture_type, bool *is_acquisition_off, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_reset) {
+static int CaptureResetHardware(CaptureData* capture_data, CaptureScreensType &curr_capture_type, CaptureSpeedsType &curr_capture_speed, bool *is_acquisition_off, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_reset) {
 	is_nitro_device_handlers* handlers = (is_nitro_device_handlers*)capture_data->handle;
 	const is_nitro_usb_device* usb_device_desc = (const is_nitro_usb_device*)capture_data->status.device.descriptor;
 	bool reset_hardware = capture_data->status.reset_hardware;
@@ -70,7 +71,8 @@ static int CaptureResetHardware(CaptureData* capture_data, CaptureScreensType &c
 		return ret;
 	if(!(*is_acquisition_off)) {
 		curr_capture_type = capture_data->status.capture_type;
-		ret = StartAcquisitionCapture(handlers, curr_capture_type, is_acquisition_off, usb_device_desc);
+		curr_capture_speed = capture_data->status.capture_speed;
+		ret = StartAcquisitionCapture(handlers, curr_capture_type, curr_capture_speed, is_acquisition_off, usb_device_desc);
 	}
 	if(ret < 0)
 		return ret;
@@ -91,7 +93,8 @@ void is_nitro_acquisition_capture_main_loop(CaptureData* capture_data) {
 	const is_nitro_usb_device* usb_device_desc = (const is_nitro_usb_device*)capture_data->status.device.descriptor;
 	bool is_acquisition_off = true;
 	CaptureScreensType curr_capture_type = capture_data->status.capture_type;
-	int ret = StartAcquisitionCapture(handlers, curr_capture_type, &is_acquisition_off, usb_device_desc);
+	CaptureSpeedsType curr_capture_speed = capture_data->status.capture_speed;
+	int ret = StartAcquisitionCapture(handlers, curr_capture_type, curr_capture_speed, &is_acquisition_off, usb_device_desc);
 	if(ret < 0) {
 		capture_error_print(true, capture_data, "Capture Start: Failed");
 		return;
@@ -101,14 +104,14 @@ void is_nitro_acquisition_capture_main_loop(CaptureData* capture_data) {
 	auto clock_last_reset = std::chrono::high_resolution_clock::now();
 
 	while(capture_data->status.connected && capture_data->status.running) {
-		ret = CaptureResetHardware(capture_data, curr_capture_type, &is_acquisition_off, clock_last_reset);
+		ret = CaptureResetHardware(capture_data, curr_capture_type, curr_capture_speed, &is_acquisition_off, clock_last_reset);
 		if(ret < 0) {
 			capture_error_print(true, capture_data, "Hardware reset: Failed");
 			return;
 		}
 		if(is_acquisition_off) {
 			default_sleep(SLEEP_CHECKS_TIME_MS);
-			ret = LidReopenCaptureCheck(capture_data, curr_capture_type, &is_acquisition_off);
+			ret = LidReopenCaptureCheck(capture_data, curr_capture_type, curr_capture_speed, &is_acquisition_off);
 			if(ret < 0) {
 				capture_error_print(true, capture_data, "Lid Reopen: Failed");
 				return;
@@ -127,14 +130,15 @@ void is_nitro_acquisition_capture_main_loop(CaptureData* capture_data) {
 			continue;
 		}
 
-		if(curr_capture_type != capture_data->status.capture_type) {
+		if((curr_capture_type != capture_data->status.capture_type) || (curr_capture_speed != capture_data->status.capture_speed)) {
 			ret = EndAcquisition(handlers, true, 0, curr_capture_type, usb_device_desc);
 			if(ret < 0) {
 				capture_error_print(true, capture_data, "Capture End: Failed");
 				return;
 			}
 			curr_capture_type = capture_data->status.capture_type;
-			ret = StartAcquisitionCapture(handlers, curr_capture_type, &is_acquisition_off, usb_device_desc);
+			curr_capture_speed = capture_data->status.capture_speed;
+			ret = StartAcquisitionCapture(handlers, curr_capture_type, curr_capture_speed, &is_acquisition_off, usb_device_desc);
 			if(ret < 0) {
 				capture_error_print(true, capture_data, "Capture Restart: Failed");
 				return;

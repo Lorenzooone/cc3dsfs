@@ -112,6 +112,11 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 						continue;
 					}
 
+					if(key == "is_speed_capture") {
+						capture_status->capture_speed =  static_cast<CaptureSpeedsType>(std::stoi(value) % CaptureSpeedsType::CAPTURE_SPEEDS_ENUM_END);
+						continue;
+					}
+
 					if(audio_data->load_audio_data(key, value))
 						continue;
 				}
@@ -130,6 +135,7 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 static void defaults_reload(FrontendData *frontend_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts, CaptureStatus* capture_status) {
 	capture_status->enabled_3d = false;
 	capture_status->capture_type = CAPTURE_SCREENS_BOTH;
+	capture_status->capture_speed = CAPTURE_SPEEDS_FULL;
 	reset_screen_info(frontend_data->top_screen->m_info);
 	reset_screen_info(frontend_data->bot_screen->m_info);
 	reset_screen_info(frontend_data->joint_screen->m_info);
@@ -188,6 +194,7 @@ static bool save(const std::string path, const std::string name, const std::stri
 	file << "extra_button_enter_short=" << extra_button_shortcuts->enter_shortcut->cmd << std::endl;
 	file << "extra_button_page_up_short=" << extra_button_shortcuts->page_up_shortcut->cmd << std::endl;
 	file << "is_screen_capture_type=" << capture_status->capture_type << std::endl;
+	file << "is_speed_capture=" << capture_status->capture_speed << std::endl;
 	file << audio_data->save_audio_data();
 
 	file.close();
@@ -294,6 +301,23 @@ static void check_close_application(WindowScreen *screen, CaptureData* capture_d
 	}
 }
 
+static float get_time_multiplier(CaptureData* capture_data, bool should_ignore_data_rate) {
+	if(should_ignore_data_rate)
+		return 1.0;
+	if(capture_data->status.device.cc_type != CAPTURE_CONN_IS_NITRO)
+		return 1.0;
+	switch(capture_data->status.capture_speed) {
+		case CAPTURE_SPEEDS_HALF:
+			return 2.0;
+		case CAPTURE_SPEEDS_THIRD:
+			return 3.0;
+		case CAPTURE_SPEEDS_QUARTER:
+			return 4.0;
+		default:
+			return 1.0;
+	}
+}
+
 static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data, bool mono_app) {
 	VideoOutputData *out_buf;
 	double last_frame_time = 0.0;
@@ -340,6 +364,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	capture_data->status.connected = connect(true, capture_data, &frontend_data);
 	bool last_connected = capture_data->status.connected;
 	SuccessConnectionOutTextGenerator(out_text_data, capture_data);
+	int no_data_consecutive = 0;
 
 	while(capture_data->status.running) {
 
@@ -357,28 +382,36 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 			if(!last_connected)
 				update_connected_specific_settings(&frontend_data, capture_data->status.device);
 			last_connected = true;
+			if(no_data_consecutive > 60)
+				no_data_consecutive = 60;
+			capture_data->status.video_wait.update_time_multiplier(get_time_multiplier(capture_data, no_data_consecutive > 3));
 			bool timed_out = !capture_data->status.video_wait.timed_lock();
 			curr_out = (capture_data->status.curr_in - 1 + NUM_CONCURRENT_DATA_BUFFERS) % NUM_CONCURRENT_DATA_BUFFERS;
 
-			if((!capture_data->status.cooldown_curr_in) && (curr_out != prev_out)) {
+			if(curr_out != prev_out) {
 				last_frame_time = capture_data->time_in_buf[curr_out];
 				if(capture_data->read[curr_out] >= get_video_in_size(capture_data)) {
-					bool conversion_success = convertVideoToOutput(curr_out, out_buf, capture_data);
-					if(!conversion_success)
-						UpdateOutText(out_text_data, "", "Video conversion failed...", TEXT_KIND_NORMAL);
+					if(capture_data->status.cooldown_curr_in)
+						blank_out = true;
+					else {
+						bool conversion_success = convertVideoToOutput(curr_out, out_buf, capture_data);
+						if(!conversion_success)
+							UpdateOutText(out_text_data, "", "Video conversion failed...", TEXT_KIND_NORMAL);
+					}
 					num_allowed_blanks = MAX_ALLOWED_BLANKS;
+					no_data_consecutive = 0;
 				}
 				else {
-					if(num_allowed_blanks > 0) {
+					if(num_allowed_blanks > 0)
 						num_allowed_blanks--;
-					}
-					else {
-						memset(out_buf, 0, sizeof(VideoOutputData));
-					}
+					else 
+						blank_out = true;
 				}
 			}
-			else if((capture_data->status.cooldown_curr_in) || timed_out)
+			else if(timed_out) {
 				blank_out = true;
+				no_data_consecutive++;
+			}
 			prev_out = curr_out;
 		}
 		else {

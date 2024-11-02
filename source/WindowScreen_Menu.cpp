@@ -185,6 +185,15 @@ void WindowScreen::is_nitro_capture_type_change(bool positive) {
 	this->capture_status->capture_type = static_cast<CaptureScreensType>(new_value % CAPTURE_SCREENS_ENUM_END);
 }
 
+void WindowScreen::is_nitro_capture_speed_change(bool positive) {
+	int new_value = (int)(this->capture_status->capture_speed);
+	if(positive)
+		new_value += 1;
+	else
+		new_value += CAPTURE_SPEEDS_ENUM_END - 1;
+	this->capture_status->capture_speed = static_cast<CaptureSpeedsType>(new_value % CAPTURE_SPEEDS_ENUM_END);
+}
+
 void WindowScreen::is_nitro_capture_reset_hw() {
 	this->capture_status->reset_hardware = true;
 }
@@ -1818,6 +1827,12 @@ void WindowScreen::poll(bool do_everything) {
 							break;
 						case ISN_MENU_TYPE_INC:
 							this->is_nitro_capture_type_change(true);
+							break;
+						case ISN_MENU_SPEED_DEC:
+							this->is_nitro_capture_speed_change(false);
+							break;
+						case ISN_MENU_SPEED_INC:
+							this->is_nitro_capture_speed_change(true);
 							break;
 						case ISN_MENU_RESET:
 							this->is_nitro_capture_reset_hw();
