@@ -7,56 +7,56 @@
 
 #include <cstring>
 
-bool convertVideoToOutput(int index, VideoOutputData *p_out, CaptureData* capture_data) {
-	CaptureReceived *p_in = &capture_data->capture_buf[index];
+bool convertVideoToOutput(VideoOutputData *p_out, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status) {
+	CaptureReceived *p_in = &data_buffer->capture_buf;
 	bool converted = false;
 	#ifdef USE_FTD3
-	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3) {
-		ftd3_convertVideoToOutput(p_in, p_out, capture_data->status.enabled_3d);
+	if(status->device.cc_type == CAPTURE_CONN_FTD3) {
+		ftd3_convertVideoToOutput(p_in, p_out, status->enabled_3d);
 		converted = true;
 	}
 	#endif
 	#ifdef USE_FTD2
-	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD2) {
-		ftd2_convertVideoToOutput(p_in, p_out, capture_data->status.enabled_3d);
+	if(status->device.cc_type == CAPTURE_CONN_FTD2) {
+		ftd2_convertVideoToOutput(p_in, p_out, status->enabled_3d);
 		converted = true;
 	}
 	#endif
 	#ifdef USE_DS_3DS_USB
-	if(capture_data->status.device.cc_type == CAPTURE_CONN_USB) {
-		usb_convertVideoToOutput(p_in, p_out, &capture_data->status.device, capture_data->status.enabled_3d);
+	if(status->device.cc_type == CAPTURE_CONN_USB) {
+		usb_convertVideoToOutput(p_in, p_out, &status->device, status->enabled_3d);
 		converted = true;
 	}
 	#endif
 	#ifdef USE_IS_NITRO_USB
-	if(capture_data->status.device.cc_type == CAPTURE_CONN_IS_NITRO) {
-		usb_is_nitro_convertVideoToOutput(p_in, p_out, capture_data->capture_type[index]);
+	if(status->device.cc_type == CAPTURE_CONN_IS_NITRO) {
+		usb_is_nitro_convertVideoToOutput(p_in, p_out, data_buffer->capture_type);
 		converted = true;
 	}
 	#endif
 	return converted;
 }
 
-bool convertAudioToOutput(int index, std::int16_t *p_out, uint64_t n_samples, const bool is_big_endian, CaptureData* capture_data) {
-	if(!capture_data->status.device.has_audio)
+bool convertAudioToOutput(std::int16_t *p_out, uint64_t n_samples, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status) {
+	if(!status->device.has_audio)
 		return true;
-	CaptureReceived *p_in = &capture_data->capture_buf[index];
+	CaptureReceived *p_in = &data_buffer->capture_buf;
 	uint8_t* base_ptr = NULL;
 	#ifdef USE_FTD3
-	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3) {
-		if(!capture_data->status.enabled_3d)
+	if(status->device.cc_type == CAPTURE_CONN_FTD3) {
+		if(!status->enabled_3d)
 			base_ptr = (uint8_t*)p_in->ftd3_received.audio_data;
 		else
 			base_ptr = (uint8_t*)p_in->ftd3_received_3d.audio_data;
 	}
 	#endif
 	#ifdef USE_FTD2
-	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD2) {
+	if(status->device.cc_type == CAPTURE_CONN_FTD2) {
 	}
 	#endif
 	#ifdef USE_DS_3DS_USB
-	if(capture_data->status.device.cc_type == CAPTURE_CONN_USB) {
-		if(!capture_data->status.enabled_3d)
+	if(status->device.cc_type == CAPTURE_CONN_USB) {
+		if(!status->enabled_3d)
 			base_ptr = (uint8_t*)p_in->usb_received_3ds.audio_data;
 		else
 			base_ptr = (uint8_t*)p_in->usb_received_3ds_3d.audio_data;

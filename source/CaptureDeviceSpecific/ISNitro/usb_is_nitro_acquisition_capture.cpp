@@ -88,7 +88,7 @@ int EndAcquisitionCapture(is_nitro_device_handlers* handlers, const is_nitro_usb
 	return StopUsbCaptureDma(handlers, usb_device_desc);
 }
 
-void is_nitro_acquisition_capture_main_loop(CaptureData* capture_data) {
+void is_nitro_acquisition_capture_main_loop(CaptureData* capture_data, CaptureReceived* capture_buf) {
 	is_nitro_device_handlers* handlers = (is_nitro_device_handlers*)capture_data->handle;
 	const is_nitro_usb_device* usb_device_desc = (const is_nitro_usb_device*)capture_data->status.device.descriptor;
 	bool is_acquisition_off = true;
@@ -119,7 +119,7 @@ void is_nitro_acquisition_capture_main_loop(CaptureData* capture_data) {
 		}
 		if(is_acquisition_off)
 			continue;
-		ret = is_nitro_read_frame_and_output(capture_data, inner_curr_in, curr_capture_type, clock_start);
+		ret = is_nitro_read_frame_and_output(capture_data, capture_buf, curr_capture_type, clock_start);
 		if(ret < 0) {
 			ret = EndAcquisition(handlers, true, 0, curr_capture_type, usb_device_desc);
 			if(ret < 0) {

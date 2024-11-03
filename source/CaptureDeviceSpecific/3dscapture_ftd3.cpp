@@ -31,16 +31,22 @@
 #define REAL_SERIAL_NUMBER_SIZE 16
 #define SERIAL_NUMBER_SIZE (REAL_SERIAL_NUMBER_SIZE+1)
 
+#define FTD3XX_CONCURRENT_BUFFERS 4
+
+struct FTD3XXReceivedDataBuffer {
+	CaptureReceived capture_buf;
+	OVERLAPPED overlap;
+	ULONG read_buffer;
+};
+
 const uint16_t ftd3xx_valid_vids[] = {FTD3XX_VID};
 const uint16_t ftd3xx_valid_pids[] = {0x601e, 0x601f, 0x602a, 0x602b, 0x602c, 0x602d, 0x602f};
 
 static bool get_is_bad_ftd3xx();
 static bool get_skip_initial_pipe_abort();
 
-static OVERLAPPED overlap[NUM_CONCURRENT_DATA_BUFFERS];
-static bool is_bad_ftd3xx = get_is_bad_ftd3xx();
-static bool skip_initial_pipe_abort = get_skip_initial_pipe_abort();
-static ULONG read_buffers[NUM_CONCURRENT_DATA_BUFFERS];
+const bool is_bad_ftd3xx = get_is_bad_ftd3xx();
+const bool skip_initial_pipe_abort = get_skip_initial_pipe_abort();
 
 static bool get_is_bad_ftd3xx() {
 	#ifdef _WIN32
@@ -189,106 +195,115 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 	return true;
 }
 
-static inline void data_output_update(CaptureData* capture_data, int &inner_curr_in, std::chrono::time_point<std::chrono::high_resolution_clock> &base_time, bool inc_inner_curr_in) {
+static inline void data_output_update(FTD3XXReceivedDataBuffer* received_buffer, CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &base_time) {
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - base_time;
 	base_time = curr_time;
-	capture_data->time_in_buf[inner_curr_in] = diff.count();
-	capture_data->read[inner_curr_in] = read_buffers[inner_curr_in];
+	capture_data->data_buffers.WriteToBuffer(&received_buffer->capture_buf, received_buffer->read_buffer, diff.count(), &capture_data->status.device);
 
 	if(capture_data->status.cooldown_curr_in)
 		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
-	capture_data->status.curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
-	if(inc_inner_curr_in)
-		inner_curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
 	// Signal that there is data available
 	capture_data->status.video_wait.unlock();
 	capture_data->status.audio_wait.unlock();
 }
 
-static void fast_capture_call(CaptureData* capture_data, OVERLAPPED overlap[NUM_CONCURRENT_DATA_BUFFERS]) {
+static void fast_capture_call(FTD3XXReceivedDataBuffer* received_buffer, CaptureData* capture_data) {
 	int inner_curr_in = 0;
 	FT_STATUS ftStatus;
-	for (inner_curr_in = 0; inner_curr_in < NUM_CONCURRENT_DATA_BUFFERS; ++inner_curr_in) {
-		ftStatus = FT_InitializeOverlapped(capture_data->handle, &overlap[inner_curr_in]);
+	for (inner_curr_in = 0; inner_curr_in < FTD3XX_CONCURRENT_BUFFERS; ++inner_curr_in) {
+		ftStatus = FT_InitializeOverlapped(capture_data->handle, &received_buffer[inner_curr_in].overlap);
 		if (ftStatus) {
 			capture_error_print(true, capture_data, "Disconnected: Initialize failed");
 			return;
 		}
 	}
 
-	for (inner_curr_in = 0; inner_curr_in < NUM_CONCURRENT_DATA_BUFFERS - 1; ++inner_curr_in) {
-		ftStatus = FT_ASYNC_CALL(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&capture_data->capture_buf[inner_curr_in], get_capture_size(capture_data), &read_buffers[inner_curr_in], &overlap[inner_curr_in]);
+	for (inner_curr_in = 0; inner_curr_in < FTD3XX_CONCURRENT_BUFFERS - 1; ++inner_curr_in) {
+		ftStatus = FT_ASYNC_CALL(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&received_buffer[inner_curr_in].capture_buf, get_capture_size(capture_data), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
 		if (ftStatus != FT_IO_PENDING) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");
 			return;
 		}
 	}
 
-	inner_curr_in = NUM_CONCURRENT_DATA_BUFFERS - 1;
+	inner_curr_in = FTD3XX_CONCURRENT_BUFFERS - 1;
 
 	auto clock_start = std::chrono::high_resolution_clock::now();
 
 	while (capture_data->status.connected && capture_data->status.running) {
 
-		ftStatus = FT_ASYNC_CALL(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&capture_data->capture_buf[inner_curr_in], get_capture_size(capture_data), &read_buffers[inner_curr_in], &overlap[inner_curr_in]);
+		ftStatus = FT_ASYNC_CALL(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&received_buffer[inner_curr_in].capture_buf, get_capture_size(capture_data), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
 		if (ftStatus != FT_IO_PENDING) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");
 			return;
 		}
 
-		inner_curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
+		inner_curr_in = (inner_curr_in + 1) % FTD3XX_CONCURRENT_BUFFERS;
 
-		ftStatus = FT_GetOverlappedResult(capture_data->handle, &overlap[inner_curr_in], &read_buffers[inner_curr_in], true);
+		ftStatus = FT_GetOverlappedResult(capture_data->handle, &received_buffer[inner_curr_in].overlap, &received_buffer[inner_curr_in].read_buffer, true);
 		if(FT_FAILED(ftStatus)) {
 			capture_error_print(true, capture_data, "Disconnected: USB error");
 			return;
 		}
 
-		data_output_update(capture_data, inner_curr_in, clock_start, false);
+		data_output_update(&received_buffer[inner_curr_in], capture_data, clock_start);
 	}
 }
 
-static bool safe_capture_call(CaptureData* capture_data) {
-	int inner_curr_in = 0;
+static bool safe_capture_call(FTD3XXReceivedDataBuffer* received_buffer, CaptureData* capture_data) {
 	auto clock_start = std::chrono::high_resolution_clock::now();
 
 	while(capture_data->status.connected && capture_data->status.running) {
 
 		#ifdef _WIN32
-		FT_STATUS ftStatus = FT_ReadPipeEx(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&capture_data->capture_buf[inner_curr_in], get_capture_size(capture_data), &read_buffers[inner_curr_in], NULL);
+		FT_STATUS ftStatus = FT_ReadPipeEx(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&received_buffer->capture_buf, get_capture_size(capture_data), &received_buffer->read_buffer, NULL);
 		#else
-		FT_STATUS ftStatus = FT_ReadPipeEx(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&capture_data->capture_buf[inner_curr_in], get_capture_size(capture_data), &read_buffers[inner_curr_in], 1000);
+		FT_STATUS ftStatus = FT_ReadPipeEx(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&received_buffer->capture_buf, get_capture_size(capture_data), &received_buffer->read_buffer, 1000);
 		#endif
 		if(FT_FAILED(ftStatus)) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");
 			return true;
 		}
 
-		data_output_update(capture_data, inner_curr_in, clock_start, true);
+		data_output_update(received_buffer, capture_data, clock_start);
 	}
 
 	return false;
 }
 
+static FTD3XXReceivedDataBuffer* init_received_buffer() {
+	if(is_bad_ftd3xx)
+		return new FTD3XXReceivedDataBuffer;
+
+	return new FTD3XXReceivedDataBuffer[FTD3XX_CONCURRENT_BUFFERS];
+}
+
+static void close_received_buffer(FTD3XXReceivedDataBuffer* received_buffer, CaptureData* capture_data) {
+	if(is_bad_ftd3xx) {
+		delete received_buffer;
+		return;
+	}
+
+	for(int inner_curr_in = 0; inner_curr_in < FTD3XX_CONCURRENT_BUFFERS; ++inner_curr_in) {
+		FT_STATUS ftStatus = FT_GetOverlappedResult(capture_data->handle, &received_buffer[inner_curr_in].overlap, &received_buffer[inner_curr_in].read_buffer, true);
+		if(FT_ReleaseOverlapped(capture_data->handle, &received_buffer[inner_curr_in].overlap)) {
+			capture_error_print(true, capture_data, "Disconnected: Release failed");
+		}
+	}
+	delete []received_buffer;
+}
+
 void ftd3_capture_main_loop(CaptureData* capture_data) {
+	FTD3XXReceivedDataBuffer* received_buffer = init_received_buffer();
 	if(!is_bad_ftd3xx)
-		fast_capture_call(capture_data, overlap);
+		fast_capture_call(received_buffer, capture_data);
 	else
-		safe_capture_call(capture_data);
+		safe_capture_call(received_buffer, capture_data);
+	close_received_buffer(received_buffer, capture_data);
 }
 
 void ftd3_capture_cleanup(CaptureData* capture_data) {
-	FT_STATUS ftStatus;
-	if(!is_bad_ftd3xx) {
-		for(int inner_curr_in = 0; inner_curr_in < NUM_CONCURRENT_DATA_BUFFERS; ++inner_curr_in) {
-			ftStatus = FT_GetOverlappedResult(capture_data->handle, &overlap[inner_curr_in], &read_buffers[inner_curr_in], true);
-			if(FT_ReleaseOverlapped(capture_data->handle, &overlap[inner_curr_in])) {
-				capture_error_print(true, capture_data, "Disconnected: Release failed");
-			}
-		}
-	}
-
 	if(FT_AbortPipe(capture_data->handle, BULK_IN)) {
 		capture_error_print(true, capture_data, "Disconnected: Abort failed");
 	}

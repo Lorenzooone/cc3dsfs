@@ -140,8 +140,6 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 }
 
 void captureCall(CaptureData* capture_data) {
-	int inner_curr_in = 0;
-	capture_data->status.curr_in = inner_curr_in;
 	capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
 
 	while(capture_data->status.running) {

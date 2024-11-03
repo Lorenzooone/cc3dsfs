@@ -212,7 +212,10 @@ static uint64_t get_capture_size(const usb_device* usb_device_desc, bool enabled
 	return sizeof(USB3DSCaptureReceived) - EXTRA_DATA_BUFFER_USB_SIZE;
 }
 
-static usb_capture_status capture_read_oldds_3ds(libusb_device_handle *handle, const usb_device* usb_device_desc, CaptureReceived* data_buffer, int &bytesIn, bool enabled_3d) {
+static usb_capture_status capture_read_oldds_3ds(CaptureData* capture_data, CaptureReceived* data_buffer, int &bytesIn) {
+	libusb_device_handle* handle = (libusb_device_handle*)capture_data->handle;
+	const usb_device* usb_device_desc = get_usb_device_desc(capture_data);
+	const bool enabled_3d = capture_data->status.enabled_3d;
 	bytesIn = 0;
 	int transferred = 0;
 	int result = 0;
@@ -386,15 +389,14 @@ uint64_t usb_get_video_in_size(CaptureData* capture_data) {
 void usb_capture_main_loop(CaptureData* capture_data) {
 	if(!usb_is_initialized())
 		return;
-	const usb_device* usb_device_desc = get_usb_device_desc(capture_data);
-	int inner_curr_in = 0;
+	CaptureReceived* capture_buf = new CaptureReceived;
 	auto clock_start = std::chrono::high_resolution_clock::now();
 	bool done = false;
 
 	while((!done) && capture_data->status.connected && capture_data->status.running) {
 
 		int read_amount = 0;
-		usb_capture_status result = capture_read_oldds_3ds((libusb_device_handle*)capture_data->handle, usb_device_desc, &capture_data->capture_buf[inner_curr_in], read_amount, capture_data->status.enabled_3d);
+		usb_capture_status result = capture_read_oldds_3ds(capture_data, capture_buf, read_amount);
 
 		const auto curr_time = std::chrono::high_resolution_clock::now();
 		const std::chrono::duration<double> diff = curr_time - clock_start;
@@ -416,13 +418,9 @@ void usb_capture_main_loop(CaptureData* capture_data) {
 				break;
 			case USB_CAPTURE_SUCCESS:
 				clock_start = curr_time;
-				capture_data->time_in_buf[inner_curr_in] = diff.count();
-				capture_data->read[inner_curr_in] = read_amount;
-
-				inner_curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
+				capture_data->data_buffers.WriteToBuffer(capture_buf, read_amount, diff.count(), &capture_data->status.device);
 				if(capture_data->status.cooldown_curr_in)
 					capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
-				capture_data->status.curr_in = inner_curr_in;
 				capture_data->status.video_wait.unlock();
 				capture_data->status.audio_wait.unlock();
 				break;
@@ -432,6 +430,7 @@ void usb_capture_main_loop(CaptureData* capture_data) {
 				break;
 		}
 	}
+	delete capture_buf;
 }
 
 void usb_capture_cleanup(CaptureData* capture_data) {

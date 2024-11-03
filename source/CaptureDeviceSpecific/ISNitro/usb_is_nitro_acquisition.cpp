@@ -172,22 +172,18 @@ int EndAcquisition(is_nitro_device_handlers* handlers, bool do_drain_frames, int
 	return EndAcquisitionEmulator(handlers, do_drain_frames, start_frames, capture_type, usb_device_desc);
 }
 
-int is_nitro_read_frame_and_output(CaptureData* capture_data, int &inner_curr_in, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_start) {
-	int ret = ReadFrame((is_nitro_device_handlers*)capture_data->handle, (uint8_t*)&capture_data->capture_buf[inner_curr_in], _is_nitro_get_video_in_size(curr_capture_type), (const is_nitro_usb_device*)capture_data->status.device.descriptor);
+int is_nitro_read_frame_and_output(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_start) {
+	int ret = ReadFrame((is_nitro_device_handlers*)capture_data->handle, (uint8_t*)capture_buf, _is_nitro_get_video_in_size(curr_capture_type), (const is_nitro_usb_device*)capture_data->status.device.descriptor);
 	if (ret < 0)
 		return ret;
 	// Output to the other threads...
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - clock_start;
 	clock_start = curr_time;
-	capture_data->time_in_buf[inner_curr_in] = diff.count();
-	capture_data->read[inner_curr_in] = _is_nitro_get_video_in_size(curr_capture_type);
-	capture_data->capture_type[inner_curr_in] = curr_capture_type;
+	capture_data->data_buffers.WriteToBuffer(capture_buf, _is_nitro_get_video_in_size(curr_capture_type), diff.count(), &capture_data->status.device, curr_capture_type);
 
-	inner_curr_in = (inner_curr_in + 1) % NUM_CONCURRENT_DATA_BUFFERS;
 	if (capture_data->status.cooldown_curr_in)
 		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
-	capture_data->status.curr_in = inner_curr_in;
 	capture_data->status.video_wait.unlock();
 	capture_data->status.audio_wait.unlock();
 	return ret;
@@ -196,11 +192,13 @@ int is_nitro_read_frame_and_output(CaptureData* capture_data, int &inner_curr_in
 void is_nitro_acquisition_main_loop(CaptureData* capture_data) {
 	if(!usb_is_initialized())
 		return;
+	CaptureReceived* capture_buf = new CaptureReceived;
 	capture_data->status.reset_hardware = false;
 	if(((const is_nitro_usb_device*)(capture_data->status.device.descriptor))->is_capture)
-		is_nitro_acquisition_capture_main_loop(capture_data);
+		is_nitro_acquisition_capture_main_loop(capture_data, capture_buf);
 	else
-		is_nitro_acquisition_emulator_main_loop(capture_data);
+		is_nitro_acquisition_emulator_main_loop(capture_data, capture_buf);
+	delete capture_buf;
 }
 
 void usb_is_nitro_acquisition_cleanup(CaptureData* capture_data) {

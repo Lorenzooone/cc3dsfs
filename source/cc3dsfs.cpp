@@ -25,6 +25,9 @@
 // Threshold to keep the audio latency limited in "amount of frames".
 #define NUM_CONCURRENT_AUDIO_BUFFERS ((MAX_MAX_AUDIO_LATENCY * 2) + 1)
 
+#define LOW_POLL_DIVISOR 6
+#define NO_DATA_CONSECUTIVE_THRESHOLD 4
+
 struct OutTextData {
 	std::string full_text;
 	std::string small_text;
@@ -231,31 +234,32 @@ static void executeSoundRestart(Audio &audio, AudioData* audio_data, bool do_res
 static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 	std::int16_t (*out_buf)[MAX_SAMPLES_IN] = new std::int16_t[NUM_CONCURRENT_AUDIO_BUFFERS][MAX_SAMPLES_IN];
 	Audio audio(audio_data);
-	int curr_out, prev_out = NUM_CONCURRENT_DATA_BUFFERS - 1, audio_buf_counter = 0;
+	int audio_buf_counter = 0;
 	const bool endianness = is_big_endian();
 	volatile int loaded_samples;
 
 	while(capture_data->status.running) {
 		if(capture_data->status.connected && capture_data->status.device.has_audio) {
 			bool timed_out = !capture_data->status.audio_wait.timed_lock();
-			curr_out = (capture_data->status.curr_in - 1 + NUM_CONCURRENT_DATA_BUFFERS) % NUM_CONCURRENT_DATA_BUFFERS;
 
-			if((!capture_data->status.cooldown_curr_in) && (curr_out != prev_out)) {
-				loaded_samples = audio.samples.size();
-				if((capture_data->read[curr_out] > get_video_in_size(capture_data)) && (loaded_samples < MAX_MAX_AUDIO_LATENCY)) {
-					int n_samples = get_audio_n_samples(capture_data, capture_data->read[curr_out]);
-					double out_time = capture_data->time_in_buf[curr_out];
-					bool conversion_success = convertAudioToOutput(curr_out, out_buf[audio_buf_counter], n_samples, endianness, capture_data);
-					if(!conversion_success)
-						audio_data->signal_conversion_error();
-					audio.samples.emplace(out_buf[audio_buf_counter], n_samples, out_time);
-					if(++audio_buf_counter == NUM_CONCURRENT_AUDIO_BUFFERS) {
-						audio_buf_counter = 0;
+			if(!capture_data->status.cooldown_curr_in) {
+				CaptureDataSingleBuffer* data_buffer = capture_data->data_buffers.GetReaderBuffer(CAPTURE_READER_AUDIO);
+				if(data_buffer != NULL) {
+					loaded_samples = audio.samples.size();
+					if((data_buffer->read > get_video_in_size(capture_data)) && (loaded_samples < MAX_MAX_AUDIO_LATENCY)) {
+						int n_samples = get_audio_n_samples(capture_data, data_buffer->read);
+						double out_time = data_buffer->time_in_buf;
+						bool conversion_success = convertAudioToOutput(out_buf[audio_buf_counter], n_samples, endianness, data_buffer, &capture_data->status);
+						if(!conversion_success)
+							audio_data->signal_conversion_error();
+						audio.samples.emplace(out_buf[audio_buf_counter], n_samples, out_time);
+						if(++audio_buf_counter >= NUM_CONCURRENT_AUDIO_BUFFERS)
+							audio_buf_counter = 0;
+						audio.samples_wait.unlock();
 					}
-					audio.samples_wait.unlock();
+					capture_data->data_buffers.ReleaseReaderBuffer(CAPTURE_READER_AUDIO);
 				}
 			}
-			prev_out = curr_out;
 
 			loaded_samples = audio.samples.size();
 			if(audio.getStatus() != sf::SoundStream::Status::Playing) {
@@ -322,7 +326,6 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	VideoOutputData *out_buf;
 	double last_frame_time = 0.0;
 	int num_elements_fps_array = 0;
-	int curr_out, prev_out = NUM_CONCURRENT_DATA_BUFFERS - 1;
 	FrontendData frontend_data;
 	ConsumerMutex draw_lock;
 	reset_display_data(&frontend_data.display_data);
@@ -375,26 +378,26 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 			poll_timeout--;
 		}
 		else if(frontend_data.display_data.fast_poll)
-			poll_timeout = 6;
+			poll_timeout = LOW_POLL_DIVISOR;
 		VideoOutputData *chosen_buf = out_buf;
 		bool blank_out = false;
 		if(capture_data->status.connected) {
 			if(!last_connected)
 				update_connected_specific_settings(&frontend_data, capture_data->status.device);
 			last_connected = true;
-			if(no_data_consecutive > 60)
-				no_data_consecutive = 60;
-			capture_data->status.video_wait.update_time_multiplier(get_time_multiplier(capture_data, no_data_consecutive > 3));
+			if(no_data_consecutive > NO_DATA_CONSECUTIVE_THRESHOLD)
+				no_data_consecutive = NO_DATA_CONSECUTIVE_THRESHOLD;
+			capture_data->status.video_wait.update_time_multiplier(get_time_multiplier(capture_data, no_data_consecutive >= NO_DATA_CONSECUTIVE_THRESHOLD));
 			bool timed_out = !capture_data->status.video_wait.timed_lock();
-			curr_out = (capture_data->status.curr_in - 1 + NUM_CONCURRENT_DATA_BUFFERS) % NUM_CONCURRENT_DATA_BUFFERS;
+			CaptureDataSingleBuffer* data_buffer = capture_data->data_buffers.GetReaderBuffer(CAPTURE_READER_VIDEO);
 
-			if(curr_out != prev_out) {
-				last_frame_time = capture_data->time_in_buf[curr_out];
-				if(capture_data->read[curr_out] >= get_video_in_size(capture_data)) {
+			if(data_buffer != NULL) {
+				last_frame_time = data_buffer->time_in_buf;
+				if(data_buffer->read >= get_video_in_size(capture_data)) {
 					if(capture_data->status.cooldown_curr_in)
 						blank_out = true;
 					else {
-						bool conversion_success = convertVideoToOutput(curr_out, out_buf, capture_data);
+						bool conversion_success = convertVideoToOutput(out_buf, data_buffer, &capture_data->status);
 						if(!conversion_success)
 							UpdateOutText(out_text_data, "", "Video conversion failed...", TEXT_KIND_NORMAL);
 					}
@@ -407,12 +410,12 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 					else 
 						blank_out = true;
 				}
+				capture_data->data_buffers.ReleaseReaderBuffer(CAPTURE_READER_VIDEO);
 			}
 			else if(timed_out) {
 				blank_out = true;
 				no_data_consecutive++;
 			}
-			prev_out = curr_out;
 		}
 		else {
 			if(last_connected)

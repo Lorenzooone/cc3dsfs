@@ -294,7 +294,7 @@ int EndAcquisitionEmulator(is_nitro_device_handlers* handlers, bool do_drain_fra
 	return UpdateFrameForwardEnable(handlers, false, false, usb_device_desc);
 }
 
-void is_nitro_acquisition_emulator_main_loop(CaptureData* capture_data) {
+void is_nitro_acquisition_emulator_main_loop(CaptureData* capture_data, CaptureReceived* capture_buf) {
 	is_nitro_device_handlers* handlers = (is_nitro_device_handlers*)capture_data->handle;
 	const is_nitro_usb_device* usb_device_desc = (const is_nitro_usb_device*)capture_data->status.device.descriptor;
 	uint16_t last_frame_counter = 0;
@@ -307,7 +307,6 @@ void is_nitro_acquisition_emulator_main_loop(CaptureData* capture_data) {
 		capture_error_print(true, capture_data, "Capture Start: Failed");
 		return;
 	}
-	int inner_curr_in = 0;
 	auto clock_start = std::chrono::high_resolution_clock::now();
 	auto clock_last_reset = std::chrono::high_resolution_clock::now();
 
@@ -315,7 +314,7 @@ void is_nitro_acquisition_emulator_main_loop(CaptureData* capture_data) {
 		frame_wait(single_frame_time, clock_last_reset, curr_capture_type, curr_capture_speed, curr_frame_counter, last_frame_counter);
 
 		if (single_frame_time > 0) {
-			ret = is_nitro_read_frame_and_output(capture_data, inner_curr_in, curr_capture_type, clock_start);
+			ret = is_nitro_read_frame_and_output(capture_data, capture_buf, curr_capture_type, clock_start);
 			if (ret < 0) {
 				capture_error_print(true, capture_data, "Disconnected: Read error");
 				return;

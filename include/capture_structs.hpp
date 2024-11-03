@@ -3,10 +3,8 @@
 
 #include "utils.hpp"
 #include "hw_defs.hpp"
+#include <mutex>
 #include <string>
-
-// Max value (Due to support of old FTD3XX versions...)
-#define NUM_CONCURRENT_DATA_BUFFERS 8
 
 // It may happen that a frame is lost.
 // This value prevents showing a black frame for that.
@@ -22,6 +20,14 @@ enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_F
 enum InputVideoDataType { VIDEO_DATA_RGB, VIDEO_DATA_BGR, VIDEO_DATA_RGB16 };
 enum CaptureScreensType { CAPTURE_SCREENS_BOTH, CAPTURE_SCREENS_TOP, CAPTURE_SCREENS_BOTTOM, CAPTURE_SCREENS_ENUM_END };
 enum CaptureSpeedsType { CAPTURE_SPEEDS_FULL, CAPTURE_SPEEDS_HALF, CAPTURE_SPEEDS_THIRD, CAPTURE_SPEEDS_QUARTER, CAPTURE_SPEEDS_ENUM_END };
+
+// Readers are Audio and Video. So 2.
+// Use 2 extra buffers. One for writing in case the other 2 are busy,
+// and the other for writing without overwriting the latest stuff in
+// a worst case scenario...
+enum CaptureReaderType { CAPTURE_READER_VIDEO, CAPTURE_READER_AUDIO, CAPTURE_READER_ENUM_END };
+#define NUM_CONCURRENT_DATA_BUFFER_READERS ((int)CAPTURE_READER_ENUM_END)
+#define NUM_CONCURRENT_DATA_BUFFERS (NUM_CONCURRENT_DATA_BUFFER_READERS + 2)
 
 #pragma pack(push, 1)
 
@@ -132,7 +138,6 @@ struct CaptureStatus {
 	std::string graphical_error_text;
 	std::string detailed_error_text;
 	bool new_error_text;
-	volatile int curr_in = 0;
 	volatile int cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
 	volatile bool connected = false;
 	volatile bool running = true;
@@ -146,12 +151,35 @@ struct CaptureStatus {
 	ConsumerMutex audio_wait;
 };
 
+struct CaptureDataSingleBuffer {
+	CaptureScreensType capture_type;
+	uint64_t read;
+	CaptureReceived capture_buf;
+	double time_in_buf;
+};
+
+class CaptureDataBuffers {
+public:
+	CaptureDataBuffers();
+	CaptureDataSingleBuffer* GetReaderBuffer(CaptureReaderType reader_type);
+	void ReleaseReaderBuffer(CaptureReaderType reader_type);
+	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type = CAPTURE_SCREENS_BOTH);
+private:
+	std::mutex access_mutex;
+	int last_curr_in;
+	int curr_writer_pos;
+	int curr_reader_pos[NUM_CONCURRENT_DATA_BUFFER_READERS];
+	int num_readers[NUM_CONCURRENT_DATA_BUFFERS];
+	bool has_read_data[NUM_CONCURRENT_DATA_BUFFERS][NUM_CONCURRENT_DATA_BUFFER_READERS];
+	CaptureDataSingleBuffer buffers[NUM_CONCURRENT_DATA_BUFFERS];
+
+	CaptureDataSingleBuffer* GetWriterBuffer();
+	void ReleaseWriterBuffer();
+};
+
 struct CaptureData {
 	void* handle;
-	CaptureScreensType capture_type[NUM_CONCURRENT_DATA_BUFFERS];
-	uint64_t read[NUM_CONCURRENT_DATA_BUFFERS];
-	CaptureReceived capture_buf[NUM_CONCURRENT_DATA_BUFFERS];
-	double time_in_buf[NUM_CONCURRENT_DATA_BUFFERS];
+	CaptureDataBuffers data_buffers;
 	CaptureStatus status;
 };
 #endif

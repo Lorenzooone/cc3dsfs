@@ -6,6 +6,6 @@
 
 int initial_cleanup_capture(const is_nitro_usb_device* usb_device_desc, is_nitro_device_handlers* handlers);
 int EndAcquisitionCapture(is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc);
-void is_nitro_acquisition_capture_main_loop(CaptureData* capture_data);
+void is_nitro_acquisition_capture_main_loop(CaptureData* capture_data, CaptureReceived* capture_buf);
 
 #endif
