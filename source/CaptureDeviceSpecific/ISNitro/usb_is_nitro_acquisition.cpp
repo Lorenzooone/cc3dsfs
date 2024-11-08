@@ -256,21 +256,21 @@ void wait_all_is_nitro_transfers_done(CaptureData* capture_data, ISNitroCaptureR
 			transfer_data = is_nitro_capture_recv_data[i].cb_data.transfer_data;
 			is_nitro_capture_recv_data[i].cb_data.transfer_data_access.unlock();
 			if(transfer_data)
-				SleepUntilFree((is_nitro_device_handlers*)capture_data->handle, is_nitro_capture_recv_data[i].cb_data.is_transfer_done_mutex, i);
+				is_nitro_capture_recv_data[i].cb_data.is_transfer_done_mutex->specific_lock(i);
 		} while(transfer_data);
 	}
 }
 
 void wait_all_is_nitro_buffers_free(CaptureData* capture_data, ISNitroCaptureReceivedData* is_nitro_capture_recv_data) {
-	if (is_nitro_capture_recv_data == NULL)
+	if(is_nitro_capture_recv_data == NULL)
 		return;
-	if (*is_nitro_capture_recv_data[0].status < 0) {
-		for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
+	if(*is_nitro_capture_recv_data[0].status < 0) {
+		for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
 			CloseAsyncRead((is_nitro_device_handlers*)capture_data->handle, &is_nitro_capture_recv_data[i].cb_data);
 	}
-	for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
-		while (is_nitro_capture_recv_data[i].in_use)
-			SleepUntilFree((is_nitro_device_handlers*)capture_data->handle, is_nitro_capture_recv_data[i].is_buffer_free_shared_mutex, i);
+	for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
+		while(is_nitro_capture_recv_data[i].in_use)
+			is_nitro_capture_recv_data[i].is_buffer_free_shared_mutex->specific_lock(i);
 }
 
 void wait_one_is_nitro_buffer_free(CaptureData* capture_data, ISNitroCaptureReceivedData* is_nitro_capture_recv_data) {
@@ -283,7 +283,8 @@ void wait_one_is_nitro_buffer_free(CaptureData* capture_data, ISNitroCaptureRece
 		if(!done) {
 			if(*is_nitro_capture_recv_data[0].status < 0)
 				return;
-			SleepUntilOneFree((is_nitro_device_handlers*)capture_data->handle, is_nitro_capture_recv_data[0].is_buffer_free_shared_mutex);
+			int dummy = 0;
+			is_nitro_capture_recv_data[0].is_buffer_free_shared_mutex->general_timed_lock(&dummy);
 		}
 	}
 }
@@ -344,9 +345,6 @@ void is_nitro_acquisition_main_loop(CaptureData* capture_data) {
 		is_nitro_capture_recv_data[i].cb_data.internal_index = i;
 		is_nitro_capture_recv_data[i].cb_data.is_transfer_data_ready_mutex = &is_transfer_data_ready_shared_mutex;
 		is_nitro_capture_recv_data[i].cb_data.is_data_ready = false;
-		is_nitro_capture_recv_data[i].cb_data.cb_queue = cb_queue;
-		is_nitro_capture_recv_data[i].cb_data.queue_elems = &queue_elems;
-		is_nitro_capture_recv_data[i].cb_data.one_transfer_active = &one_transfer_active;
 	}
 	SetupISNitroAsyncThread((is_nitro_device_handlers*)capture_data->handle, is_nitro_capture_recv_data, &async_processing_thread, &is_done_thread, &has_data_been_processed);
 	capture_data->status.reset_hardware = false;

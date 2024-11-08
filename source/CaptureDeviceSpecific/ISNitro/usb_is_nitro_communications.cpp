@@ -554,21 +554,3 @@ void EndISNitroAsyncThread(is_nitro_device_handlers* handlers, void* user_data, 
 		return is_nitro_libusb_close_thread(thread_ptr, keep_going);
 	return is_nitro_is_driver_close_thread(thread_ptr, keep_going, (ISNitroCaptureReceivedData*)user_data);
 }
-
-void SleepBetweenTransfers(is_nitro_device_handlers* handlers, float ms) {
-	if (handlers->usb_handle)
-		return is_nitro_libusb_sleep_between_transfers(ms);
-	return is_nitro_is_driver_sleep_between_transfers(ms);
-}
-
-void SleepUntilOneFree(is_nitro_device_handlers* handlers, SharedConsumerMutex* mutex) {
-	if (handlers->usb_handle)
-		return is_nitro_libusb_sleep_until_one_free(mutex);
-	return is_nitro_is_driver_sleep_until_one_free(mutex);
-}
-
-void SleepUntilFree(is_nitro_device_handlers* handlers, SharedConsumerMutex* mutex, int index) {
-	if (handlers->usb_handle)
-		return is_nitro_libusb_sleep_until_free(mutex, index);
-	return is_nitro_is_driver_sleep_until_free(mutex, index);
-}

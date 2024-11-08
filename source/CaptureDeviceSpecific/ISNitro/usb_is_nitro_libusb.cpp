@@ -191,16 +191,3 @@ void is_nitro_libusb_async_in_start(is_nitro_device_handlers* handlers, const is
 	libusb_submit_transfer(transfer_in);
 	cb_data->transfer_data_access.unlock();
 }
-
-void is_nitro_libusb_sleep_between_transfers(float ms) {
-	default_sleep(ms);
-}
-
-void is_nitro_libusb_sleep_until_one_free(SharedConsumerMutex* mutex) {
-	int dummy = 0;
-	mutex->general_timed_lock(&dummy);
-}
-
-void is_nitro_libusb_sleep_until_free(SharedConsumerMutex* mutex, int index) {
-	mutex->specific_lock(index);
-}

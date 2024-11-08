@@ -166,13 +166,13 @@ static bool do_sleep(float single_frame_time, std::chrono::time_point<std::chron
 	return result;
 }
 
-static void frame_wait(is_nitro_device_handlers* handlers, float single_frame_time, std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_reset, CaptureScreensType capture_type, CaptureSpeedsType capture_speed, int curr_frame_counter, int last_frame_counter) {
+static void frame_wait(float single_frame_time, std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_reset, CaptureScreensType capture_type, CaptureSpeedsType capture_speed, int curr_frame_counter, int last_frame_counter) {
 	if(curr_frame_counter == FRAME_BUFFER_SIZE)
 		return;
 	float sleep_time = 0;
 	int sleep_counter = 0;
 	while(do_sleep(single_frame_time, clock_last_reset, capture_type, capture_speed, curr_frame_counter, last_frame_counter, &sleep_time)) {
-		SleepBetweenTransfers(handlers, sleep_time * 1000.0 / SLEEP_TIME_DIVISOR);
+		default_sleep(sleep_time * 1000.0 / SLEEP_TIME_DIVISOR);
 		sleep_counter++;
 	}
 }
@@ -185,7 +185,7 @@ static int reset_acquisition_frames(CaptureData* capture_data, uint16_t &curr_fr
 
 	is_nitro_device_handlers* handlers = (is_nitro_device_handlers*)capture_data->handle;
 	const is_nitro_usb_device* usb_device_desc = (const is_nitro_usb_device*)capture_data->status.device.descriptor;
-	wait_all_is_nitro_buffers_free(capture_data, is_nitro_capture_recv_data);
+	wait_all_is_nitro_transfers_done(capture_data, is_nitro_capture_recv_data);
 	int ret = get_is_nitro_status(is_nitro_capture_recv_data);
 	if (ret < 0)
 		return ret;
@@ -228,7 +228,7 @@ static int reset_acquisition_frames(CaptureData* capture_data, uint16_t &curr_fr
 		if((frame_diff > 0) && (((internalFrameCount & (FRAME_BUFFER_SIZE - 1)) < (FRAME_BUFFER_SIZE - 1)))) {
 			float expected_time = single_frame_time * FRAME_BUFFER_SIZE;
 			if(diff.count() < expected_time)
-				SleepBetweenTransfers(handlers, single_frame_time * 1000.0 / SLEEP_TIME_DIVISOR);
+				default_sleep(single_frame_time * 1000.0 / SLEEP_TIME_DIVISOR);
 		}
 		// Check how many frames have passed...
 		ret = GetFrameCounter(handlers, &internalFrameCount, usb_device_desc);
@@ -300,7 +300,7 @@ int initial_cleanup_emulator(const is_nitro_usb_device* usb_device_desc, is_nitr
 }
 
 int EndAcquisitionEmulator(CaptureData* capture_data, ISNitroCaptureReceivedData* is_nitro_capture_recv_data, bool do_drain_frames, int start_frames, CaptureScreensType capture_type) {
-	wait_all_is_nitro_buffers_free(capture_data, is_nitro_capture_recv_data);
+	wait_all_is_nitro_transfers_done(capture_data, is_nitro_capture_recv_data);
 	return EndAcquisitionEmulator((const is_nitro_usb_device*)capture_data->status.device.descriptor, (is_nitro_device_handlers*)capture_data->handle, do_drain_frames, start_frames, capture_type);
 }
 
@@ -340,12 +340,12 @@ void is_nitro_acquisition_emulator_main_loop(CaptureData* capture_data, ISNitroC
 		}
 		if(single_frame_time > 0) {
 			is_nitro_read_frame_request(capture_data, is_nitro_get_free_buffer(capture_data, is_nitro_capture_recv_data), curr_capture_type, index++);
-			frame_wait(handlers, single_frame_time, clock_last_reset, curr_capture_type, curr_capture_speed, curr_frame_counter + 1, last_frame_counter);
+			frame_wait(single_frame_time, clock_last_reset, curr_capture_type, curr_capture_speed, curr_frame_counter + 1, last_frame_counter);
 		}
 		else {
 			capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
 			clock_last_reset = std::chrono::high_resolution_clock::now();
-			SleepBetweenTransfers(handlers, SLEEP_CHECKS_TIME_MS);
+			default_sleep(SLEEP_CHECKS_TIME_MS);
 		}
 		capture_data->status.curr_delay = last_frame_counter % FRAME_BUFFER_SIZE;
 		ret = reset_acquisition_frames(capture_data, curr_frame_counter, last_frame_counter, single_frame_time, clock_last_reset, curr_capture_type, capture_data->status.capture_type, curr_capture_speed, capture_data->status.capture_speed, is_nitro_capture_recv_data);

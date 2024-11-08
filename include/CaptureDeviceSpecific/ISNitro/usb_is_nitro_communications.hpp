@@ -42,10 +42,6 @@ struct isn_async_callback_data {
 	int status_value;
 	bool is_data_ready;
 	int internal_index;
-	isn_async_callback_data** cb_queue;
-	int* queue_elems;
-	bool* one_transfer_active;
-	isn_async_callback_data* cb_active_transfer;
 };
 
 struct is_nitro_usb_device {
@@ -92,8 +88,5 @@ void CloseAsyncRead(is_nitro_device_handlers* handlers, isn_async_callback_data*
 
 void SetupISNitroAsyncThread(is_nitro_device_handlers* handlers, void* user_data, std::thread* thread_ptr, bool* keep_going, ConsumerMutex* is_data_ready);
 void EndISNitroAsyncThread(is_nitro_device_handlers* handlers, void* user_data, std::thread* thread_ptr, bool* keep_going, ConsumerMutex* is_data_ready);
-void SleepBetweenTransfers(is_nitro_device_handlers* handlers, float ms);
-void SleepUntilOneFree(is_nitro_device_handlers* handlers, SharedConsumerMutex* mutex);
-void SleepUntilFree(is_nitro_device_handlers* handlers, SharedConsumerMutex* mutex, int index);
 
 #endif

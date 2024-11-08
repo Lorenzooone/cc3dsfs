@@ -29,10 +29,6 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-//#define USE_QUEUED_TRANSFERS
-
-static int SubmitRead(isn_async_callback_data* cb_data);
-
 const GUID is_nitro_driver_guid = { .Data1 = 0xB78D7ADA, .Data2 = 0xDDF4, .Data3 = 0x418F, .Data4 = {0x8C, 0x7C, 0x4A, 0xC8, 0x80, 0x30, 0xF5, 0x42} };
 
 static void is_nitro_is_driver_function(bool* usb_thread_run, ISNitroCaptureReceivedData* is_nitro_capture_recv_data, is_nitro_device_handlers* handlers) {
@@ -150,34 +146,10 @@ static int wait_result_io_operation(HANDLE handle, OVERLAPPED* overlapped_var, i
 	return LIBUSB_SUCCESS;
 }
 
-static void ClearAllQueueElements(isn_async_callback_data* cb_data) {
-	int queue_elems_curr = *cb_data->queue_elems;
-	for (int i = 0; i < queue_elems_curr; i++) {
-		cb_data->cb_queue[i]->transfer_data = NULL;
-		ISNitroCaptureReceivedData* user_data = (ISNitroCaptureReceivedData*)cb_data->cb_queue[i]->actual_user_data;
-		user_data->in_use = false;
-	}
-	*cb_data->queue_elems = 0;
-}
-
 static void BasicCompletionOutputRoutine(isn_async_callback_data* cb_data, int num_bytes, int error) {
 	cb_data->transfer_data_access.lock();
 	if ((error == LIBUSB_SUCCESS) && (num_bytes != cb_data->requested_length))
 		error = LIBUSB_ERROR_INTERRUPTED;
-	if (error == LIBUSB_SUCCESS) {
-		if (*cb_data->queue_elems) {
-			isn_async_callback_data* cb_data_next = (isn_async_callback_data*)cb_data->cb_queue[--(*cb_data->queue_elems)];
-			int retval = SubmitRead(cb_data_next);
-			if (retval == 0)
-				error = LIBUSB_ERROR_BUSY;
-		}
-		else
-			*cb_data->one_transfer_active = false;
-	}
-	if (error != LIBUSB_SUCCESS) {
-		ClearAllQueueElements(cb_data);
-		*cb_data->one_transfer_active = false;
-	}
 	cb_data->transfer_data = NULL;
 	cb_data->actual_length = num_bytes;
 	cb_data->status_value = error;
@@ -191,30 +163,6 @@ static void OverlappedCompletionNothingRoutine(DWORD dwErrorCode, DWORD dwNumber
 	return;
 }
 
-static void OverlappedCompletionOutputRoutine(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, OVERLAPPED* overlapped_var) {
-	isn_async_callback_data* cb_data = (isn_async_callback_data*)overlapped_var->hEvent;
-	DWORD num_bytes = 0;
-	bool retval = false;
-	int error = LIBUSB_ERROR_OTHER;
-	if (!dwErrorCode) {
-		retval = GetOverlappedResult(cb_data->handle, overlapped_var, &num_bytes, false);
-		error = GetLastError();
-	}
-
-	error = retval ? LIBUSB_SUCCESS : LIBUSB_ERROR_OTHER;
-	BasicCompletionOutputRoutine(cb_data, num_bytes, error);
-}
-
-static int SubmitRead(isn_async_callback_data* cb_data) {
-	#ifdef USE_QUEUED_TRANSFERS
-	int retval = ReadFileEx(cb_data->handle, cb_data->buffer, cb_data->requested_length, (OVERLAPPED*)cb_data->transfer_data, OverlappedCompletionOutputRoutine);
-	#else
-	int retval = ReadFileEx(cb_data->handle, cb_data->buffer, cb_data->requested_length, (OVERLAPPED*)cb_data->transfer_data, OverlappedCompletionNothingRoutine);
-	#endif
-	if (retval)
-		cb_data->cb_active_transfer = cb_data;
-	return retval;
-}
 #endif
 
 is_nitro_device_handlers* is_driver_serial_reconnection(CaptureDevice* device) {
@@ -325,26 +273,15 @@ int is_drive_async_in_start(is_nitro_device_handlers* handlers, const is_nitro_u
 	cb_data->buffer = buf;
 	OVERLAPPED* overlap_data = (OVERLAPPED*)cb_data->transfer_data;
 	memset(overlap_data, 0, sizeof(OVERLAPPED));
-	#ifdef USE_QUEUED_TRANSFERS
-	overlap_data->hEvent = cb_data;
-	#endif
 	cb_data->is_transfer_done_mutex->specific_try_lock(cb_data->internal_index);
 	cb_data->is_transfer_data_ready_mutex->specific_try_lock(cb_data->internal_index);
-	int retval = 1;
-	if (!(*cb_data->one_transfer_active))
-		retval = SubmitRead(cb_data);
-	else
-		cb_data->cb_queue[(*cb_data->queue_elems)++] = cb_data;
-	if(retval == 1)
-		*cb_data->one_transfer_active = true;
+	int retval = ReadFileEx(cb_data->handle, cb_data->buffer, cb_data->requested_length, (OVERLAPPED*)cb_data->transfer_data, OverlappedCompletionNothingRoutine);
 	cb_data->transfer_data_access.unlock();
 	if (retval == 0)
 		return LIBUSB_ERROR_BUSY;
-	#ifndef USE_QUEUED_TRANSFERS
 	int num_bytes = 0;
 	int error = wait_result_io_operation(handlers->read_handle, (OVERLAPPED*)overlap_data, &num_bytes, usb_device_desc);
 	BasicCompletionOutputRoutine(cb_data, num_bytes, error);
-	#endif
 	#endif
 	return LIBUSB_SUCCESS;
 }
@@ -370,45 +307,6 @@ void is_nitro_is_driver_close_thread(std::thread* thread_ptr, bool* usb_thread_r
 
 void is_nitro_is_driver_cancel_callback(isn_async_callback_data* cb_data) {
 	#ifdef _WIN32
-	cb_data->transfer_data_access.lock();
-	ClearAllQueueElements(cb_data);
-	if(*cb_data->one_transfer_active) {
-		CancelIoEx(cb_data->cb_active_transfer->handle, (OVERLAPPED*)cb_data->cb_active_transfer->transfer_data);
-		*cb_data->one_transfer_active = false;
-	}
-	cb_data->transfer_data_access.unlock();
-	#endif
-}
-
-void is_nitro_is_driver_sleep_between_transfers(float ms) {
-	#ifdef _WIN32
-	#ifdef USE_QUEUED_TRANSFERS
-	SleepEx(ms, true);
-	#else
-	default_sleep(ms);
-	#endif
-	#endif
-}
-
-void is_nitro_is_driver_sleep_until_one_free(SharedConsumerMutex* mutex) {
-	#ifdef _WIN32
-	int dummy = 0;
-	#ifdef USE_QUEUED_TRANSFERS
-	SleepEx(mutex->get_time_s() * 100, true);
-	mutex->general_try_lock(&dummy);
-	#else
-	mutex->general_timed_lock(&dummy);
-	#endif
-	#endif
-}
-
-void is_nitro_is_driver_sleep_until_free(SharedConsumerMutex* mutex, int index) {
-	#ifdef _WIN32
-	#ifdef USE_QUEUED_TRANSFERS
-	while (!(mutex->specific_try_lock(index)))
-		SleepEx(mutex->get_time_s() * 100, true);
-	#else
-	mutex->specific_lock(index);
-	#endif
+	// Nothing
 	#endif
 }

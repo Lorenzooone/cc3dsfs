@@ -17,8 +17,5 @@ void is_nitro_is_driver_cancel_callback(isn_async_callback_data* cb_data);
 
 void is_nitro_is_driver_start_thread(std::thread* thread_ptr, bool* usb_thread_run, ISNitroCaptureReceivedData* is_nitro_capture_recv_data, is_nitro_device_handlers* handlers, ConsumerMutex* AsyncMutexPtr);
 void is_nitro_is_driver_close_thread(std::thread* thread_ptr, bool* usb_thread_run, ISNitroCaptureReceivedData* is_nitro_capture_recv_data);
-void is_nitro_is_driver_sleep_between_transfers(float ms);
-void is_nitro_is_driver_sleep_until_one_free(SharedConsumerMutex* mutex);
-void is_nitro_is_driver_sleep_until_free(SharedConsumerMutex* mutex, int index);
 
 #endif

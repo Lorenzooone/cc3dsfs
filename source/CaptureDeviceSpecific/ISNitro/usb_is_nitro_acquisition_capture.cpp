@@ -11,6 +11,7 @@
 #define CAPTURE_SKIP_LID_REOPEN_FRAMES 32
 #define RESET_TIMEOUT 4.0
 #define SLEEP_CHECKS_TIME_MS 20
+#define SLEEP_RESET_TIME_MS 2000
 
 static int StartAcquisitionCapture(CaptureData* capture_data, ISNitroCaptureReceivedData* is_nitro_capture_recv_data, CaptureScreensType capture_type, CaptureSpeedsType capture_speed, bool* is_acquisition_off, uint32_t &index) {
 	is_nitro_device_handlers* handlers = (is_nitro_device_handlers*)capture_data->handle;
@@ -76,6 +77,7 @@ static int CaptureResetHardware(CaptureData* capture_data, ISNitroCaptureReceive
 	if(ret < 0)
 		return ret;
 	if(!(*is_acquisition_off)) {
+		default_sleep(SLEEP_RESET_TIME_MS);
 		curr_capture_type = capture_data->status.capture_type;
 		curr_capture_speed = capture_data->status.capture_speed;
 		ret = StartAcquisitionCapture(capture_data, is_nitro_capture_recv_data, curr_capture_type, curr_capture_speed, is_acquisition_off, index);
@@ -91,7 +93,7 @@ int initial_cleanup_capture(const is_nitro_usb_device* usb_device_desc, is_nitro
 }
 
 int EndAcquisitionCapture(CaptureData* capture_data, ISNitroCaptureReceivedData* is_nitro_capture_recv_data) {
-	wait_all_is_nitro_buffers_free(capture_data, is_nitro_capture_recv_data);
+	wait_all_is_nitro_transfers_done(capture_data, is_nitro_capture_recv_data);
 	return EndAcquisitionCapture((const is_nitro_usb_device*)capture_data->status.device.descriptor, (is_nitro_device_handlers*)capture_data->handle);
 }
 
@@ -120,7 +122,7 @@ void is_nitro_acquisition_capture_main_loop(CaptureData* capture_data, ISNitroCa
 			return;
 		}
 		if(is_acquisition_off) {
-			SleepBetweenTransfers(handlers, SLEEP_CHECKS_TIME_MS);
+			default_sleep(SLEEP_CHECKS_TIME_MS);
 			ret = LidReopenCaptureCheck(capture_data, is_nitro_capture_recv_data, curr_capture_type, curr_capture_speed, &is_acquisition_off, index);
 			if(ret < 0) {
 				capture_error_print(true, capture_data, "Lid Reopen: Failed");
