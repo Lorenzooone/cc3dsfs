@@ -214,16 +214,20 @@ ConsumerMutex::ConsumerMutex() {
 }
 
 void ConsumerMutex::update_time_multiplier(float time_multiplier) {
-	if(time_multiplier <= 0)
+	if (time_multiplier <= 0)
 		return;
 	this->time_multiplier = time_multiplier;
+}
+
+double ConsumerMutex::get_time_s() {
+	return 1.0 / ((base_time_fps) * (1.0 / this->time_multiplier));
 }
 
 void ConsumerMutex::lock() {
 	access_mutex.lock();
 	bool success = false;
-	while(!success) {
-		if(count) {
+	while (!success) {
+		if (count) {
 			count--;
 			success = true;
 		}
@@ -233,41 +237,192 @@ void ConsumerMutex::lock() {
 	}
 	access_mutex.unlock();
 }
-	
+
 bool ConsumerMutex::timed_lock() {
-	std::chrono::duration<double>max_timed_wait = std::chrono::duration<double>(1.0 / ((base_time_fps) * (1.0 / this->time_multiplier)));
+	std::chrono::duration<double>max_timed_wait = std::chrono::duration<double>(this->get_time_s());
 	access_mutex.lock();
 	bool success = false;
-	while(!success) {
-		if(count) {
+	while (!success) {
+		if (count) {
 			count--;
 			success = true;
 		}
 		else {
 			auto result = condition.wait_for(access_mutex, max_timed_wait);
-			if((result == std::cv_status::timeout) && (!count))
+			if ((result == std::cv_status::timeout) && (!count))
 				break;
 		}
 	}
 	access_mutex.unlock();
 	return success;
 }
-	
+
 bool ConsumerMutex::try_lock() {
 	access_mutex.lock();
 	bool success = false;
-	if(count) {
+	if (count) {
 		count--;
 		success = true;
 	}
 	access_mutex.unlock();
 	return success;
 }
-	
+
 void ConsumerMutex::unlock() {
 	access_mutex.lock();
 	// Enforce 1 max
 	count = 1;
-	condition.notify_one();
+	condition.notify_all();
 	access_mutex.unlock();
+}
+
+//============================================================================
+
+SharedConsumerMutex::SharedConsumerMutex(int num_elements) {
+	this->num_elements = num_elements;
+	if(this->num_elements <= 0)
+		this->num_elements = 1;
+	this->counts = new int[this->num_elements];
+	for(int i = 0; i < this->num_elements; i++)
+		this->counts[i] = 0;
+}
+
+SharedConsumerMutex::~SharedConsumerMutex() {
+	delete []this->counts;
+}
+
+void SharedConsumerMutex::update_time_multiplier(float time_multiplier) {
+	if (time_multiplier <= 0)
+		return;
+	this->time_multiplier = time_multiplier;
+}
+
+double SharedConsumerMutex::get_time_s() {
+	return 1.0 / ((base_time_fps) * (1.0 / this->time_multiplier));
+}
+
+void SharedConsumerMutex::general_lock(int* index) {
+	access_mutex.lock();
+	bool success = false;
+	while (!success) {
+		for (int i = 0; i < num_elements; i++)
+			if (counts[i]) {
+				counts[i]--;
+				success = true;
+				*index = i;
+				break;
+			}
+		if (!success)
+			condition.wait(access_mutex);
+	}
+	access_mutex.unlock();
+}
+
+bool SharedConsumerMutex::general_timed_lock(int* index) {
+	std::chrono::time_point<std::chrono::high_resolution_clock> clock_start = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> clock_end = clock_start + std::chrono::nanoseconds((int)(this->get_time_s() * 1000 * 1000));
+	access_mutex.lock();
+	bool success = false;
+	auto result = std::cv_status::no_timeout;
+	while (!success) {
+		for (int i = 0; i < num_elements; i++)
+			if (counts[i]) {
+				counts[i]--;
+				success = true;
+				*index = i;
+				break;
+			}
+		if(!success) {
+			const auto curr_time = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double>timed_wait = clock_end - curr_time;
+			if (curr_time >= clock_end)
+				result = std::cv_status::timeout;
+			if (result == std::cv_status::timeout)
+				break;
+			result = condition.wait_for(access_mutex, timed_wait);
+		}
+	}
+	access_mutex.unlock();
+	return success;
+}
+
+bool SharedConsumerMutex::general_try_lock(int* index) {
+	access_mutex.lock();
+	bool success = false;
+	for (int i = 0; i < num_elements; i++)
+		if (counts[i]) {
+			counts[i]--;
+			success = true;
+			*index = i;
+			break;
+		}
+	access_mutex.unlock();
+	return success;
+}
+
+void SharedConsumerMutex::specific_unlock(int index) {
+	if ((index < 0) || (index >= num_elements))
+		return;
+	access_mutex.lock();
+	// Enforce 1 max
+	counts[index] = 1;
+	condition.notify_all();
+	access_mutex.unlock();
+}
+
+void SharedConsumerMutex::specific_lock(int index) {
+	if ((index < 0) || (index >= num_elements))
+		return;
+	access_mutex.lock();
+	bool success = false;
+	while (!success) {
+		if(counts[index]) {
+			counts[index]--;
+			success = true;
+		}
+		else
+			condition.wait(access_mutex);
+	}
+	access_mutex.unlock();
+}
+
+bool SharedConsumerMutex::specific_timed_lock(int index) {
+	if ((index < 0) || (index >= num_elements))
+		return false;
+	std::chrono::time_point<std::chrono::high_resolution_clock> clock_start = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> clock_end = clock_start + std::chrono::nanoseconds((int)(this->get_time_s() * 1000 * 1000));
+	access_mutex.lock();
+	bool success = false;
+	auto result = std::cv_status::no_timeout;
+	while (!success) {
+		if (counts[index]) {
+			counts[index]--;
+			success = true;
+			break;
+		}
+		if (!success) {
+			const auto curr_time = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double>timed_wait = clock_end - curr_time;
+			if (curr_time >= clock_end)
+				result = std::cv_status::timeout;
+			if (result == std::cv_status::timeout)
+				break;
+			result = condition.wait_for(access_mutex, timed_wait);
+		}
+	}
+	access_mutex.unlock();
+	return success;
+}
+
+bool SharedConsumerMutex::specific_try_lock(int index) {
+	if((index < 0) || (index >= num_elements))
+		return false;
+	access_mutex.lock();
+	bool success = false;
+	if (counts[index]) {
+		counts[index]--;
+		success = true;
+	}
+	access_mutex.unlock();
+	return success;
 }

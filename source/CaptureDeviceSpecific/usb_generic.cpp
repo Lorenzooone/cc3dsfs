@@ -1,5 +1,7 @@
 #include "usb_generic.hpp"
+#include <thread>
 
+static bool usb_thread_run = false;
 static bool usb_initialized = false;
 static libusb_context* usb_ctx = NULL; // libusb session context
 
@@ -13,13 +15,11 @@ void usb_init() {
 		return;
 	}
 	usb_initialized = true;
-	return;
 }
 
 void usb_close() {
-	if(usb_initialized) {
+	if(usb_initialized)
 		libusb_exit(usb_ctx);
-	}
 	usb_ctx = NULL;
 	usb_initialized = false;
 }

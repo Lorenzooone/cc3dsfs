@@ -25,6 +25,29 @@ enum is_nitro_forward_config_values_rate {
 	IS_NITRO_FORWARD_CONFIG_RATE_QUARTER = 3,
 };
 
+typedef void (*isn_async_callback_function)(void* user_data, int transfer_length, int transfer_status);
+
+struct isn_async_callback_data {
+	isn_async_callback_function function;
+	void* actual_user_data;
+	void* transfer_data;
+	void* handle;
+	void* base_transfer_data;
+	std::mutex transfer_data_access;
+	SharedConsumerMutex* is_transfer_done_mutex;
+	SharedConsumerMutex* is_transfer_data_ready_mutex;
+	size_t requested_length;
+	uint8_t* buffer;
+	size_t actual_length;
+	int status_value;
+	bool is_data_ready;
+	int internal_index;
+	isn_async_callback_data** cb_queue;
+	int* queue_elems;
+	bool* one_transfer_active;
+	isn_async_callback_data* cb_active_transfer;
+};
+
 struct is_nitro_usb_device {
 	std::string name;
 	int vid;
@@ -64,5 +87,13 @@ int ResetCPUStart(is_nitro_device_handlers* handlers, const is_nitro_usb_device*
 int ResetCPUEnd(is_nitro_device_handlers* handlers, const is_nitro_usb_device* device_desc);
 int ResetFullHardware(is_nitro_device_handlers* handlers, const is_nitro_usb_device* device_desc);
 int ReadFrame(is_nitro_device_handlers* handlers, uint8_t* buf, int length, const is_nitro_usb_device* device_desc);
+void ReadFrameAsync(is_nitro_device_handlers* handlers, uint8_t* buf, int length, const is_nitro_usb_device* device_desc, isn_async_callback_data* cb_data);
+void CloseAsyncRead(is_nitro_device_handlers* handlers, isn_async_callback_data* cb_data);
+
+void SetupISNitroAsyncThread(is_nitro_device_handlers* handlers, void* user_data, std::thread* thread_ptr, bool* keep_going, ConsumerMutex* is_data_ready);
+void EndISNitroAsyncThread(is_nitro_device_handlers* handlers, void* user_data, std::thread* thread_ptr, bool* keep_going, ConsumerMutex* is_data_ready);
+void SleepBetweenTransfers(is_nitro_device_handlers* handlers, float ms);
+void SleepUntilOneFree(is_nitro_device_handlers* handlers, SharedConsumerMutex* mutex);
+void SleepUntilFree(is_nitro_device_handlers* handlers, SharedConsumerMutex* mutex, int index);
 
 #endif

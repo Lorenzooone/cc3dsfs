@@ -5,7 +5,8 @@
 #include "capture_structs.hpp"
 
 int initial_cleanup_capture(const is_nitro_usb_device* usb_device_desc, is_nitro_device_handlers* handlers);
-int EndAcquisitionCapture(is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc);
-void is_nitro_acquisition_capture_main_loop(CaptureData* capture_data, CaptureReceived* capture_buf);
+int EndAcquisitionCapture(CaptureData* capture_data, ISNitroCaptureReceivedData* is_nitro_capture_recv_data);
+int EndAcquisitionCapture(const is_nitro_usb_device* usb_device_desc, is_nitro_device_handlers* handlers);
+void is_nitro_acquisition_capture_main_loop(CaptureData* capture_data, ISNitroCaptureReceivedData* is_nitro_capture_recv_data);
 
 #endif

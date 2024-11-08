@@ -51,12 +51,36 @@ public:
 	bool try_lock();
 	void unlock();
 	void update_time_multiplier(float time_multiplier);
+	double get_time_s();
 
 private:
 	std::mutex access_mutex;
 	std::condition_variable_any condition;
 	const float base_time_fps = 30;
 	int count = 0;
+	float time_multiplier = 1.0;
+};
+
+class SharedConsumerMutex {
+public:
+	SharedConsumerMutex(int num_elements);
+	~SharedConsumerMutex();
+	void general_lock(int* index);
+	bool general_timed_lock(int* index);
+	bool general_try_lock(int* index);
+	void specific_lock(int index);
+	bool specific_timed_lock(int index);
+	bool specific_try_lock(int index);
+	void specific_unlock(int index);
+	void update_time_multiplier(float time_multiplier);
+	double get_time_s();
+
+private:
+	std::mutex access_mutex;
+	std::condition_variable_any condition;
+	const float base_time_fps = 30;
+	int* counts;
+	int num_elements;
 	float time_multiplier = 1.0;
 };
 

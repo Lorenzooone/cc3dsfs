@@ -5,7 +5,8 @@
 #include "capture_structs.hpp"
 
 int initial_cleanup_emulator(const is_nitro_usb_device* usb_device_desc, is_nitro_device_handlers* handlers);
-int EndAcquisitionEmulator(is_nitro_device_handlers* handlers, bool do_drain_frames, int start_frames, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc);
-void is_nitro_acquisition_emulator_main_loop(CaptureData* capture_data, CaptureReceived* capture_buf);
+int EndAcquisitionEmulator(CaptureData* capture_data, ISNitroCaptureReceivedData* is_nitro_capture_recv_data, bool do_drain_frames, int start_frames, CaptureScreensType capture_type);
+int EndAcquisitionEmulator(const is_nitro_usb_device* usb_device_desc, is_nitro_device_handlers* handlers, bool do_drain_frames, int start_frames, CaptureScreensType capture_type);
+void is_nitro_acquisition_emulator_main_loop(CaptureData* capture_data, ISNitroCaptureReceivedData* is_nitro_capture_recv_data);
 
 #endif

@@ -163,14 +163,21 @@ static void fix_endianness_header(is_nitro_nec_packet_header* header) {
 static int bulk_out(is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc, uint8_t *buf, int length, int *transferred) {
 	if(handlers->usb_handle)
 		return is_nitro_libusb_bulk_out(handlers, usb_device_desc, buf, length, transferred);
-	return is_driver_bulk_out(handlers, buf, length, transferred);
+	return is_driver_bulk_out(handlers, usb_device_desc, buf, length, transferred);
 }
 
 // Read from bulk endpoint.  Returns libusb error code
 static int bulk_in(is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc, uint8_t *buf, int length, int *transferred) {
 	if(handlers->usb_handle)
 		return is_nitro_libusb_bulk_in(handlers, usb_device_desc, buf, length, transferred);
-	return is_driver_bulk_in(handlers, buf, length, transferred);
+	return is_driver_bulk_in(handlers, usb_device_desc, buf, length, transferred);
+}
+
+// Read from bulk endpoint.  Returns libusb error code
+static void bulk_in_async(is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc, uint8_t *buf, int length, isn_async_callback_data* cb_data) {
+	if(handlers->usb_handle)
+		return is_nitro_libusb_async_in_start(handlers, usb_device_desc, buf, length, cb_data);
+	is_drive_async_in_start(handlers, usb_device_desc, buf, length, cb_data);
 }
 
 static int SendWritePacket(is_nitro_device_handlers* handlers, uint16_t command, is_nitro_packet_type type, uint32_t address, uint8_t* buf, int length, const is_nitro_usb_device* device_desc, bool expect_result = true) {
@@ -385,7 +392,7 @@ int DisableLca2(is_nitro_device_handlers* handlers, const is_nitro_usb_device* d
 	ret = WriteNecMemU16(handlers, 0x0F84000A, 1, device_desc);
 	if(ret < 0)
 		return ret;
-	//default_sleep(2000);
+	//SleepBetweenTransfers(handlers, 2000);
 	return WriteNecMemU16(handlers, 0x0F84000A, 0, device_desc);
 }
 
@@ -526,3 +533,42 @@ int ReadFrame(is_nitro_device_handlers* handlers, uint8_t* buf, int length, cons
 	return ret;
 }
 
+void ReadFrameAsync(is_nitro_device_handlers* handlers, uint8_t* buf, int length, const is_nitro_usb_device* device_desc, isn_async_callback_data* cb_data) {
+	return bulk_in_async(handlers, device_desc, buf, length, cb_data);
+}
+
+void CloseAsyncRead(is_nitro_device_handlers* handlers, isn_async_callback_data* cb_data) {
+	if(handlers->usb_handle)
+		return is_nitro_libusb_cancell_callback(cb_data);
+	return is_nitro_is_driver_cancel_callback(cb_data);
+}
+
+void SetupISNitroAsyncThread(is_nitro_device_handlers* handlers, void* user_data, std::thread* thread_ptr, bool* keep_going, ConsumerMutex* is_data_ready) {
+	if(handlers->usb_handle)
+		return is_nitro_libusb_start_thread(thread_ptr, keep_going);
+	return is_nitro_is_driver_start_thread(thread_ptr, keep_going, (ISNitroCaptureReceivedData*)user_data, handlers, is_data_ready);
+}
+
+void EndISNitroAsyncThread(is_nitro_device_handlers* handlers, void* user_data, std::thread* thread_ptr, bool* keep_going, ConsumerMutex* is_data_ready) {
+	if(handlers->usb_handle)
+		return is_nitro_libusb_close_thread(thread_ptr, keep_going);
+	return is_nitro_is_driver_close_thread(thread_ptr, keep_going, (ISNitroCaptureReceivedData*)user_data);
+}
+
+void SleepBetweenTransfers(is_nitro_device_handlers* handlers, float ms) {
+	if (handlers->usb_handle)
+		return is_nitro_libusb_sleep_between_transfers(ms);
+	return is_nitro_is_driver_sleep_between_transfers(ms);
+}
+
+void SleepUntilOneFree(is_nitro_device_handlers* handlers, SharedConsumerMutex* mutex) {
+	if (handlers->usb_handle)
+		return is_nitro_libusb_sleep_until_one_free(mutex);
+	return is_nitro_is_driver_sleep_until_one_free(mutex);
+}
+
+void SleepUntilFree(is_nitro_device_handlers* handlers, SharedConsumerMutex* mutex, int index) {
+	if (handlers->usb_handle)
+		return is_nitro_libusb_sleep_until_free(mutex, index);
+	return is_nitro_is_driver_sleep_until_free(mutex, index);
+}

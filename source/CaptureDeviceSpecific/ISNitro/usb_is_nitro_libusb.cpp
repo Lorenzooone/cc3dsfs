@@ -4,6 +4,7 @@
 #include "usb_generic.hpp"
 
 #include <libusb.h>
+#include <frontend.hpp>
 
 // Code based off of Gericom's sample code. Distributed under the MIT License. Copyright (c) 2024 Gericom
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,6 +24,30 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
+
+static void is_nitro_usb_thread_function(bool* usb_thread_run) {
+	if(!usb_is_initialized())
+		return;
+	struct timeval tv;
+	tv.tv_sec = 0;
+	tv.tv_usec = 300000;
+	while(*usb_thread_run)
+		libusb_handle_events_timeout_completed(get_usb_ctx(), &tv, NULL);
+}
+
+void is_nitro_libusb_start_thread(std::thread* thread_ptr, bool* usb_thread_run) {
+	if(!usb_is_initialized())
+		return;
+	*usb_thread_run = true;
+	*thread_ptr = std::thread(is_nitro_usb_thread_function, usb_thread_run);
+}
+
+void is_nitro_libusb_close_thread(std::thread* thread_ptr, bool* usb_thread_run) {
+	if(!usb_is_initialized())
+		return;
+	*usb_thread_run = false;
+	thread_ptr->join();
+}
 
 static bool is_nitro_libusb_setup_connection(libusb_device_handle* handle, const is_nitro_usb_device* usb_device_desc) {
 	if (libusb_set_configuration(handle, usb_device_desc->default_config) != LIBUSB_SUCCESS)
@@ -135,4 +160,47 @@ int is_nitro_libusb_bulk_out(is_nitro_device_handlers* handlers, const is_nitro_
 // Read from bulk
 int is_nitro_libusb_bulk_in(is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
 	return libusb_bulk_transfer(handlers->usb_handle, usb_device_desc->ep2_in, buf, length, transferred, usb_device_desc->bulk_timeout);
+}
+
+void is_nitro_libusb_cancell_callback(isn_async_callback_data* cb_data) {
+	cb_data->transfer_data_access.lock();
+	if(cb_data->transfer_data)
+		libusb_cancel_transfer((libusb_transfer*)cb_data->transfer_data);
+	cb_data->transfer_data_access.unlock();
+}
+
+void is_nitro_libusb_async_callback(libusb_transfer* transfer) {
+	isn_async_callback_data* cb_data = (isn_async_callback_data*)transfer->user_data;
+	cb_data->transfer_data_access.lock();
+	cb_data->transfer_data = NULL;
+	cb_data->is_transfer_done_mutex->specific_unlock(cb_data->internal_index);
+	cb_data->transfer_data_access.unlock();
+	cb_data->function(cb_data->actual_user_data, transfer->actual_length, transfer->status);
+}
+
+// Read from bulk
+void is_nitro_libusb_async_in_start(is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc, uint8_t* buf, int length, isn_async_callback_data* cb_data) {
+	libusb_transfer *transfer_in = libusb_alloc_transfer(0);
+	if(!transfer_in)
+		return;
+	cb_data->transfer_data_access.lock();
+	cb_data->transfer_data = transfer_in;
+	cb_data->is_transfer_done_mutex->specific_try_lock(cb_data->internal_index);
+	libusb_fill_bulk_transfer(transfer_in, handlers->usb_handle, usb_device_desc->ep2_in, buf, length, is_nitro_libusb_async_callback, cb_data, usb_device_desc->bulk_timeout);
+	transfer_in->flags |= LIBUSB_TRANSFER_FREE_TRANSFER;
+	libusb_submit_transfer(transfer_in);
+	cb_data->transfer_data_access.unlock();
+}
+
+void is_nitro_libusb_sleep_between_transfers(float ms) {
+	default_sleep(ms);
+}
+
+void is_nitro_libusb_sleep_until_one_free(SharedConsumerMutex* mutex) {
+	int dummy = 0;
+	mutex->general_timed_lock(&dummy);
+}
+
+void is_nitro_libusb_sleep_until_free(SharedConsumerMutex* mutex, int index) {
+	mutex->specific_lock(index);
 }
