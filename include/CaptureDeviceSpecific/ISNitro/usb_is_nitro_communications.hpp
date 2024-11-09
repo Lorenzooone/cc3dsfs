@@ -4,6 +4,7 @@
 #include <libusb.h>
 #include <vector>
 #include <fstream>
+#include <thread>
 #include "utils.hpp"
 
 #define IS_NITRO_REAL_SERIAL_NUMBER_SIZE 10

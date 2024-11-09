@@ -169,7 +169,7 @@ void is_nitro_libusb_cancell_callback(isn_async_callback_data* cb_data) {
 	cb_data->transfer_data_access.unlock();
 }
 
-void is_nitro_libusb_async_callback(libusb_transfer* transfer) {
+void STDCALL is_nitro_libusb_async_callback(libusb_transfer* transfer) {
 	isn_async_callback_data* cb_data = (isn_async_callback_data*)transfer->user_data;
 	cb_data->transfer_data_access.lock();
 	cb_data->transfer_data = NULL;

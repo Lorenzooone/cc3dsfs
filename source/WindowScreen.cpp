@@ -441,6 +441,10 @@ std::string WindowScreen::title_factory() {
 #define GL_UNSIGNED_SHORT_5_6_5 0x8363
 #endif
 
+#ifndef GL_UNSIGNED_SHORT_5_6_5_REV
+#define GL_UNSIGNED_SHORT_5_6_5_REV 0x8364
+#endif
+
 void WindowScreen::update_texture() {
 	unsigned int m_texture = this->in_tex.getNativeHandle();
     if (this->saved_buf && m_texture)
@@ -453,6 +457,8 @@ void WindowScreen::update_texture() {
         	format = GL_BGR;
         if(this->capture_status->device.video_data_type == VIDEO_DATA_RGB16)
         	type =  GL_UNSIGNED_SHORT_5_6_5;
+        if(this->capture_status->device.video_data_type == VIDEO_DATA_BGR16)
+        	type =  GL_UNSIGNED_SHORT_5_6_5_REV;
         glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(0), static_cast<GLint>(0), static_cast<GLsizei>(this->capture_status->device.width), static_cast<GLsizei>(this->capture_status->device.height), format, type, this->saved_buf);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 

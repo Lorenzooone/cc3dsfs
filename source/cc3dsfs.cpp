@@ -381,14 +381,19 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 			poll_timeout = LOW_POLL_DIVISOR;
 		VideoOutputData *chosen_buf = out_buf;
 		bool blank_out = false;
-		if(capture_data->status.connected) {
-			if(!last_connected)
-				update_connected_specific_settings(&frontend_data, capture_data->status.device);
-			last_connected = true;
+		bool is_connected = capture_data->status.connected;
+		if(is_connected != last_connected) {
+			update_connected_specific_settings(&frontend_data, capture_data->status.device);
+			no_data_consecutive = 0;
+			num_allowed_blanks = MAX_ALLOWED_BLANKS;
+		}
+		last_connected = is_connected;
+		if(is_connected) {
 			if(no_data_consecutive > NO_DATA_CONSECUTIVE_THRESHOLD)
 				no_data_consecutive = NO_DATA_CONSECUTIVE_THRESHOLD;
 			capture_data->status.video_wait.update_time_multiplier(get_time_multiplier(capture_data, no_data_consecutive >= NO_DATA_CONSECUTIVE_THRESHOLD));
 			bool timed_out = !capture_data->status.video_wait.timed_lock();
+			bool data_processed = false;
 			CaptureDataSingleBuffer* data_buffer = capture_data->data_buffers.GetReaderBuffer(CAPTURE_READER_VIDEO);
 
 			if(data_buffer != NULL) {
@@ -403,24 +408,19 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 					}
 					num_allowed_blanks = MAX_ALLOWED_BLANKS;
 					no_data_consecutive = 0;
-				}
-				else {
-					if(num_allowed_blanks > 0)
-						num_allowed_blanks--;
-					else 
-						blank_out = true;
+					data_processed = true;
 				}
 				capture_data->data_buffers.ReleaseReaderBuffer(CAPTURE_READER_VIDEO);
 			}
-			else if(timed_out) {
-				blank_out = true;
+			if(!data_processed) {
+				if(num_allowed_blanks > 0)
+					num_allowed_blanks--;
+				else 
+					blank_out = true;
 				no_data_consecutive++;
 			}
 		}
 		else {
-			if(last_connected)
-				update_connected_specific_settings(&frontend_data, capture_data->status.device);
-			last_connected = false;
 			default_sleep();
 			blank_out = true;
 		}

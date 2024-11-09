@@ -143,6 +143,8 @@ static bool do_sleep(float single_frame_time, std::chrono::time_point<std::chron
 		case CAPTURE_SPEEDS_QUARTER:
 			adding_single_frame_time_divisor = 3;
 			break;
+		default:
+			break;
 	}
 	if((capture_type == CAPTURE_SCREENS_TOP) || (capture_type == CAPTURE_SCREENS_BOTTOM))
 		adding_single_frame_time_divisor *= 2;
@@ -200,6 +202,8 @@ static int reset_acquisition_frames(CaptureData* capture_data, uint16_t &curr_fr
 			break;
 		case CAPTURE_SPEEDS_QUARTER:
 			multiplier = 4;
+			break;
+		default:
 			break;
 	}
 

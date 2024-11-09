@@ -7,11 +7,11 @@
 #include "utils.hpp"
 
 struct Sample {
-	Sample(std::int16_t *bytes, std::size_t size, float time);
+	Sample(std::int16_t *bytes, std::size_t size, double time) : bytes(bytes), size(size), time(time) {}
 
 	std::int16_t *bytes;
 	std::size_t size;
-	float time;
+	double time;
 };
 
 class Audio : public sf::SoundStream {

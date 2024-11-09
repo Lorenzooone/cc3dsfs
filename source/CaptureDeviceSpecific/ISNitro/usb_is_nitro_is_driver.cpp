@@ -146,7 +146,7 @@ static int wait_result_io_operation(HANDLE handle, OVERLAPPED* overlapped_var, i
 	return LIBUSB_SUCCESS;
 }
 
-static void BasicCompletionOutputRoutine(isn_async_callback_data* cb_data, int num_bytes, int error) {
+static void STDCALL BasicCompletionOutputRoutine(isn_async_callback_data* cb_data, int num_bytes, int error) {
 	cb_data->transfer_data_access.lock();
 	if ((error == LIBUSB_SUCCESS) && (num_bytes != cb_data->requested_length))
 		error = LIBUSB_ERROR_INTERRUPTED;
@@ -159,7 +159,7 @@ static void BasicCompletionOutputRoutine(isn_async_callback_data* cb_data, int n
 	cb_data->transfer_data_access.unlock();
 }
 
-static void OverlappedCompletionNothingRoutine(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, OVERLAPPED* overlapped_var) {
+static void STDCALL OverlappedCompletionNothingRoutine(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, OVERLAPPED* overlapped_var) {
 	return;
 }
 

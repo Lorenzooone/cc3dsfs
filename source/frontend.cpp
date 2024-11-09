@@ -1,5 +1,6 @@
 #include "frontend.hpp"
 #include <iostream>
+#include <thread>
 
 const CropData default_3ds_crop = {
 .top_width = TOP_WIDTH_3DS, .top_height = HEIGHT_3DS,
@@ -796,9 +797,8 @@ void update_connected_specific_settings(FrontendData* frontend_data, const Captu
 
 void default_sleep(float wanted_ms) {
 	if(wanted_ms < 0)
-		sf::sleep(sf::milliseconds(1000.0/USB_CHECKS_PER_SECOND));
-	else
-		sf::sleep(sf::milliseconds(wanted_ms));
+		wanted_ms = 1000.0/USB_CHECKS_PER_SECOND;
+	std::this_thread::sleep_for(std::chrono::microseconds((int)(wanted_ms * 1000)));
 }
 
 void screen_display_thread(WindowScreen *screen) {

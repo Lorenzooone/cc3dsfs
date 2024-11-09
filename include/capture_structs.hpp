@@ -17,7 +17,7 @@
 #define EXTRA_DATA_BUFFER_FTD3XX_SIZE (1 << 10)
 
 enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_FTD2, CAPTURE_CONN_IS_NITRO };
-enum InputVideoDataType { VIDEO_DATA_RGB, VIDEO_DATA_BGR, VIDEO_DATA_RGB16 };
+enum InputVideoDataType { VIDEO_DATA_RGB, VIDEO_DATA_BGR, VIDEO_DATA_RGB16, VIDEO_DATA_BGR16 };
 enum CaptureScreensType { CAPTURE_SCREENS_BOTH, CAPTURE_SCREENS_TOP, CAPTURE_SCREENS_BOTTOM, CAPTURE_SCREENS_ENUM_END };
 enum CaptureSpeedsType { CAPTURE_SPEEDS_FULL, CAPTURE_SPEEDS_HALF, CAPTURE_SPEEDS_THIRD, CAPTURE_SPEEDS_QUARTER, CAPTURE_SPEEDS_ENUM_END };
 
@@ -57,25 +57,25 @@ struct PACKED ISNitroEmulatorVideoInputData {
 	uint8_t screen_data[IN_VIDEO_SIZE_DS][3];
 };
 
-struct ALIGNED(4) PACKED FTD3_3DSCaptureReceived {
+struct ALIGNED(16) PACKED FTD3_3DSCaptureReceived {
 	RGB83DSVideoInputData video_in;
 	uint16_t audio_data[N3DSXL_SAMPLES_IN];
 	uint8_t unused_buffer[EXTRA_DATA_BUFFER_FTD3XX_SIZE];
 };
 
-struct ALIGNED(4) PACKED FTD3_3DSCaptureReceived_3D {
+struct ALIGNED(16) PACKED FTD3_3DSCaptureReceived_3D {
 	RGB83DSVideoInputData_3D video_in;
 	uint16_t audio_data[N3DSXL_SAMPLES_IN];
 	uint8_t unused_buffer[EXTRA_DATA_BUFFER_FTD3XX_SIZE];
 };
 
-struct ALIGNED(4) PACKED USB3DSCaptureReceived {
+struct ALIGNED(16) PACKED USB3DSCaptureReceived {
 	RGB83DSVideoInputData video_in;
 	uint16_t audio_data[O3DS_SAMPLES_IN];
 	uint8_t unused_buffer[EXTRA_DATA_BUFFER_USB_SIZE];
 };
 
-struct ALIGNED(4) PACKED USB3DSCaptureReceived_3D {
+struct ALIGNED(16) PACKED USB3DSCaptureReceived_3D {
 	RGB83DSVideoInputData_3D video_in;
 	uint16_t audio_data[O3DS_SAMPLES_IN];
 	uint8_t unused_buffer[EXTRA_DATA_BUFFER_USB_SIZE];
@@ -88,13 +88,13 @@ struct PACKED USBOldDSFrameInfo {
 	uint8_t unused[11];
 };
 
-struct ALIGNED(4) PACKED USBOldDSCaptureReceived {
+struct ALIGNED(16) PACKED USBOldDSCaptureReceived {
 	USBOldDSVideoInputData video_in;
 	uint8_t unused_buffer[EXTRA_DATA_BUFFER_USB_SIZE];
 	USBOldDSFrameInfo frameinfo;
 };
 
-struct ALIGNED(4) PACKED ISNitroCaptureReceived {
+struct ALIGNED(16) PACKED ISNitroCaptureReceived {
 	ISNitroEmulatorVideoInputData video_in;
 };
 

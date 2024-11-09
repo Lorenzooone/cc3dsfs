@@ -16,20 +16,20 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-        - { name: Windows VS2022 x64,    os: windows-2022, flags: -A x64}
-        - { name: Windows VS2022 ARM,    os: windows-2022, flags: -A ARM64}
-        - { name: Windows VS2022 Win32,  os: windows-2022, flags: -A Win32}
-        - { name: Linux GCC x64,         os: ubuntu-latest, flags: 64}
-        - { name: Linux GCC 32,          os: ubuntu-latest, flags: 32}
-        - { name: Linux GCC ARM 64,      os: ubuntu-latest, flags: arm64}
-        - { name: Linux GCC ARM 32,      os: ubuntu-latest, flags: arm32}
-        - { name: macOS Apple Silicon,   os: macos-14  }
+        - { name: Windows VS2022 x64,    os: windows-2022, flags: -A x64, artifact_name: win64}
+        - { name: Windows VS2022 ARM,    os: windows-2022, flags: -A ARM64, artifact_name: winarm64}
+        - { name: Windows VS2022 Win32,  os: windows-2022, flags: -A Win32, artifact_name: win32}
+        - { name: Linux GCC x64,         os: ubuntu-latest, flags: 64, artifact_name: linux64}
+        - { name: Linux GCC 32,          os: ubuntu-latest, flags: 32, artifact_name: linux32}
+        - { name: Linux GCC ARM 64,      os: ubuntu-latest, flags: arm64, artifact_name: linuxarm64}
+        - { name: Linux GCC ARM 32,      os: ubuntu-latest, flags: arm32, artifact_name: linuxarm32}
+        - { name: macOS Apple Silicon,   os: macos-14, artifact_name: macos  }
         config:
         - { name: Static, flags: -DBUILD_SHARED_LIBS=FALSE }
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Configure
       if: runner.os != 'Linux'
@@ -61,9 +61,9 @@ jobs:
       run: setup_scripts/macos_bundle_signature.sh cc3dsfs_macos
 
     - name: Archive resulting artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: cc3dsfs_zip
+        name: cc3dsfs-single-${{matrix.platform.artifact_name}}
         path: build/cc3dsfs*.zip
 
   create_pi_setup:
@@ -72,21 +72,22 @@ jobs:
     needs: build
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    - name: Download a single artifact
-      uses: actions/download-artifact@v3
+    - name: Download all Linux ARM artifacts
+      uses: actions/download-artifact@v4
       with:
-        name: cc3dsfs_zip
+        pattern: cc3dsfs-single-linuxarm*
+        merge-multiple: true
 
     - name: Execute pi_setup
       shell: bash
       run: setup_scripts/rpi_mono_setup_setup.sh
 
     - name: Archive resulting artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: cc3dsfs_zip
+        name: cc3dsfs-single-rpi-mono
         path: cc3dsfs_rpi_mono_setup.zip
 
   publish:
@@ -96,13 +97,14 @@ jobs:
     permissions:
       contents: write
     steps:
-    - name: Download a single artifact
-      uses: actions/download-artifact@v3
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
       with:
-        name: cc3dsfs_zip
+        pattern: cc3dsfs-single-*
+        merge-multiple: true
 
     - name: Auto-Release the zips
-      uses: IsaacShelton/update-existing-release@v1.3.2
+      uses: IsaacShelton/update-existing-release@v1.3.4
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         release: "Automatic Build"

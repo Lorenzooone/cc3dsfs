@@ -18,8 +18,6 @@
 static int greatest_diff = 0;
 #endif
 
-Sample::Sample(std::int16_t *bytes, std::size_t size, float time) : bytes(bytes), size(size), time(time) {}
-
 //============================================================================
 
 Audio::Audio(AudioData *audio_data) {

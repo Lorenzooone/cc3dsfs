@@ -18,6 +18,9 @@
 
 #define SIMPLE_DS_FRAME_SKIP
 
+#define NUM_DS_3DS_CONCURRENT_DATA_BUFFERS 4
+#define NUM_DS_3DS_CONCURRENT_REQUESTS 4
+
 enum usb_capture_status {
 	USB_CAPTURE_SUCCESS = 0,
 	USB_CAPTURE_SKIP,
@@ -51,6 +54,19 @@ struct usb_ds_status {
 	uint8_t capture_in_progress;
 };
 
+struct usb_ds_3ds_general_data {
+	SharedConsumerMutex* is_there_ready_buffer;
+	SharedConsumerMutex* is_buffer_usage_done;
+	uint32_t index;
+	uint32_t* last_index;
+	int real_index;
+	bool in_use;
+	CaptureData* capture_data;
+	CaptureReceived capture_buf;
+	size_t read_amount;
+	double time_in;
+};
+
 static const usb_device usb_3ds_desc = {
 .is_3ds = true,
 .vid = 0x16D0, .pid = 0x06A3,
@@ -79,6 +95,51 @@ static const usb_device* usb_devices_desc_list[] = {
 	&usb_3ds_desc,
 	&usb_old_ds_desc,
 };
+
+static void unlock_buffer(usb_ds_3ds_general_data* buffer_data) {
+	buffer_data->in_use = false;
+	buffer_data->is_buffer_usage_done->specific_unlock(buffer_data->real_index);
+}
+
+static void ds_3ds_usb_thread_function(bool* usb_thread_run, usb_ds_3ds_general_data* buffer_data) {
+	if(!usb_is_initialized())
+		return;
+	while(*usb_thread_run) {
+		int processing_index = *buffer_data[0].last_index;
+		int dummy = 0;
+		for(int i = 0; i < NUM_DS_3DS_CONCURRENT_DATA_BUFFERS; i++) {
+			if(!buffer_data[i].in_use)
+				continue;
+			int diff = (int)(processing_index - buffer_data[i].index);
+			if(diff < 0)
+				unlock_buffer(&buffer_data[i]);
+			else if(diff == 0) {
+				buffer_data[i].capture_data->data_buffers.WriteToBuffer(&buffer_data[i].capture_buf, buffer_data[i].read_amount, buffer_data[i].time_in, &buffer_data[i].capture_data->status.device);
+				if(buffer_data[i].capture_data->status.cooldown_curr_in)
+					buffer_data[i].capture_data->status.cooldown_curr_in = buffer_data[i].capture_data->status.cooldown_curr_in - 1;
+				buffer_data[i].capture_data->status.video_wait.unlock();
+				buffer_data[i].capture_data->status.audio_wait.unlock();
+				unlock_buffer(&buffer_data[i]);
+			}
+		}
+		buffer_data[0].is_there_ready_buffer->general_timed_lock(&dummy);
+	}
+}
+
+static void ds_3ds_start_thread(std::thread* thread_ptr, bool* usb_thread_run, usb_ds_3ds_general_data* buffer_data) {
+	if(!usb_is_initialized())
+		return;
+	*usb_thread_run = true;
+	*thread_ptr = std::thread(ds_3ds_usb_thread_function, usb_thread_run, buffer_data);
+}
+
+static void ds_3ds_close_thread(std::thread* thread_ptr, bool* usb_thread_run, usb_ds_3ds_general_data* buffer_data) {
+	if(!usb_is_initialized())
+		return;
+	*usb_thread_run = false;
+	buffer_data[0].is_there_ready_buffer->specific_unlock(0);
+	thread_ptr->join();
+}
 
 // Read vendor request from control endpoint.  Returns bytes transferred (<0 = libusb error)
 static int vend_in(libusb_device_handle *handle, const usb_device* usb_device_desc, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint16_t wLength, uint8_t *buf) {
@@ -212,11 +273,13 @@ static uint64_t get_capture_size(const usb_device* usb_device_desc, bool enabled
 	return sizeof(USB3DSCaptureReceived) - EXTRA_DATA_BUFFER_USB_SIZE;
 }
 
-static usb_capture_status capture_read_oldds_3ds(CaptureData* capture_data, CaptureReceived* data_buffer, int &bytesIn) {
+static usb_capture_status capture_read_oldds_3ds(usb_ds_3ds_general_data* chosen_buffer) {
+	CaptureData* capture_data = chosen_buffer->capture_data;
+	CaptureReceived* data_buffer = &chosen_buffer->capture_buf;
 	libusb_device_handle* handle = (libusb_device_handle*)capture_data->handle;
 	const usb_device* usb_device_desc = get_usb_device_desc(capture_data);
 	const bool enabled_3d = capture_data->status.enabled_3d;
-	bytesIn = 0;
+	int bytesIn = 0;
 	int transferred = 0;
 	int result = 0;
 	uint64_t video_size = _usb_get_video_in_size(usb_device_desc, enabled_3d);
@@ -264,6 +327,7 @@ static usb_capture_status capture_read_oldds_3ds(CaptureData* capture_data, Capt
 		#endif
 	}
 
+	chosen_buffer->read_amount = bytesIn;
 	return USB_CAPTURE_SUCCESS;
 }
 
@@ -314,6 +378,70 @@ static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOu
 
 static void usb_3DSconvertVideoToOutput(USB3DSCaptureReceived *p_in, VideoOutputData *p_out) {
 	memcpy(p_out->screen_data, p_in->video_in.screen_data, IN_VIDEO_HEIGHT_3DS * IN_VIDEO_WIDTH_3DS * 3);
+}
+
+static void process_usb_capture_result(usb_capture_status result, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, bool* done, usb_ds_3ds_general_data* chosen_buffer) {
+	const auto curr_time = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> diff = curr_time - (*clock_start);
+
+	switch(result) {
+		case USB_CAPTURE_SKIP:
+			/*
+			if(diff.count() >= CAPTURE_SKIP_TIMEOUT_SECONDS) {
+				capture_error_print(true, chosen_buffer->capture_data, "Disconnected: Too long since last read");
+				done = true;
+			}
+			*/
+			break;
+		case USB_CAPTURE_PIPE_ERROR:
+			capture_error_print(true, chosen_buffer->capture_data, "Disconnected: Pipe error");
+			*done = true;
+			break;
+		case USB_CAPTURE_FRAMEINFO_ERROR:
+			capture_error_print(true, chosen_buffer->capture_data, "Disconnected: Frameinfo error");
+			*done = true;
+			break;
+		case USB_CAPTURE_SUCCESS:
+			*clock_start = curr_time;
+			chosen_buffer->time_in = diff.count();
+			chosen_buffer->index = (*chosen_buffer->last_index) + 1;
+			chosen_buffer->in_use = true;
+			(*chosen_buffer->last_index) += 1;
+			chosen_buffer->is_there_ready_buffer->specific_unlock(chosen_buffer->real_index);
+			break;
+		default:
+			capture_error_print(true, chosen_buffer->capture_data, "Disconnected: Error");
+			*done = true;
+			break;
+	}
+}
+
+static usb_ds_3ds_general_data* get_free_buffer(usb_ds_3ds_general_data* buffer_data) {
+	usb_ds_3ds_general_data* out_data = NULL;
+	int dummy = 0;
+	while(!out_data) {
+		for(int i = 0; i < NUM_DS_3DS_CONCURRENT_DATA_BUFFERS; i++) {
+			if(!buffer_data[i].in_use) {
+				buffer_data[i].is_there_ready_buffer->specific_try_lock(i);
+				out_data = &buffer_data[i];
+				break;
+			}
+		}
+		if(!out_data)
+			buffer_data[0].is_there_ready_buffer->general_timed_lock(&dummy);
+	}
+	return out_data;
+}
+
+static void wait_all_free_buffer(usb_ds_3ds_general_data* buffer_data) {
+	for(int i = 0; i < NUM_DS_3DS_CONCURRENT_DATA_BUFFERS; i++)
+		buffer_data[i].index = (*buffer_data[i].last_index) - 1;
+	for(int i = 0; i < NUM_DS_3DS_CONCURRENT_DATA_BUFFERS; i++) {
+		while(buffer_data[i].in_use) {
+			buffer_data[i].is_there_ready_buffer->specific_unlock(i);
+			buffer_data[i].is_there_ready_buffer->specific_lock(i);
+		}
+	}
 }
 
 void list_devices_usb_ds_3ds(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list) {
@@ -389,48 +517,36 @@ uint64_t usb_get_video_in_size(CaptureData* capture_data) {
 void usb_capture_main_loop(CaptureData* capture_data) {
 	if(!usb_is_initialized())
 		return;
-	CaptureReceived* capture_buf = new CaptureReceived;
-	auto clock_start = std::chrono::high_resolution_clock::now();
+
+	std::chrono::time_point<std::chrono::high_resolution_clock> clock_start = std::chrono::high_resolution_clock::now();
 	bool done = false;
-
-	while((!done) && capture_data->status.connected && capture_data->status.running) {
-
-		int read_amount = 0;
-		usb_capture_status result = capture_read_oldds_3ds(capture_data, capture_buf, read_amount);
-
-		const auto curr_time = std::chrono::high_resolution_clock::now();
-		const std::chrono::duration<double> diff = curr_time - clock_start;
-
-		switch(result) {
-			case USB_CAPTURE_SKIP:
-				if(diff.count() >= CAPTURE_SKIP_TIMEOUT_SECONDS) {
-					capture_error_print(true, capture_data, "Disconnected: Too long since last read");
-					done = true;
-				}
-				break;
-			case USB_CAPTURE_PIPE_ERROR:
-				capture_error_print(true, capture_data, "Disconnected: Pipe error");
-				done = true;
-				break;
-			case USB_CAPTURE_FRAMEINFO_ERROR:
-				capture_error_print(true, capture_data, "Disconnected: Frameinfo error");
-				done = true;
-				break;
-			case USB_CAPTURE_SUCCESS:
-				clock_start = curr_time;
-				capture_data->data_buffers.WriteToBuffer(capture_buf, read_amount, diff.count(), &capture_data->status.device);
-				if(capture_data->status.cooldown_curr_in)
-					capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
-				capture_data->status.video_wait.unlock();
-				capture_data->status.audio_wait.unlock();
-				break;
-			default:
-				capture_error_print(true, capture_data, "Disconnected: Error");
-				done = true;
-				break;
-		}
+	usb_ds_3ds_general_data* general_data = new usb_ds_3ds_general_data[NUM_DS_3DS_CONCURRENT_DATA_BUFFERS];
+	SharedConsumerMutex is_there_ready_buffer(NUM_DS_3DS_CONCURRENT_DATA_BUFFERS);
+	SharedConsumerMutex is_buffer_usage_done(NUM_DS_3DS_CONCURRENT_DATA_BUFFERS);
+	uint32_t last_index = -1;
+	for(int i = 0; i < NUM_DS_3DS_CONCURRENT_DATA_BUFFERS; i++) {
+		general_data[i].is_there_ready_buffer = &is_there_ready_buffer;
+		general_data[i].is_buffer_usage_done = &is_buffer_usage_done;
+		general_data[i].last_index = &last_index;
+		general_data[i].capture_data = capture_data;
+		general_data[i].in_use = false;
+		general_data[i].real_index = i;
 	}
-	delete capture_buf;
+	bool usb_thread_run;
+	std::thread processing_thread;
+	ds_3ds_start_thread(&processing_thread, &usb_thread_run, general_data);
+
+	usb_ds_3ds_general_data* chosen_buffer = get_free_buffer(general_data);
+	while((!done) && capture_data->status.connected && capture_data->status.running) {
+		usb_capture_status result = capture_read_oldds_3ds(chosen_buffer);
+
+		process_usb_capture_result(result, &clock_start, &done, chosen_buffer);
+		if(!done)
+			chosen_buffer = get_free_buffer(general_data);
+	}
+	wait_all_free_buffer(general_data);
+	ds_3ds_close_thread(&processing_thread, &usb_thread_run, general_data);
+	delete []general_data;
 }
 
 void usb_capture_cleanup(CaptureData* capture_data) {

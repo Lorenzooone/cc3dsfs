@@ -48,7 +48,7 @@ struct DisplayData {
 	bool last_connected_ds;
 };
 
-struct VideoOutputData {
+struct ALIGNED(8) VideoOutputData {
 	uint8_t screen_data[MAX_IN_VIDEO_SIZE][3];
 };
 
