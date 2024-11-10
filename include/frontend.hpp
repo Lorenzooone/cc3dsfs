@@ -54,7 +54,7 @@ class WindowScreen {
 public:
 	ScreenInfo m_info;
 
-	WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts, ConsumerMutex *draw_lock);
+	WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts, ConsumerMutex *draw_lock, bool created_proper_folder);
 	~WindowScreen();
 
 	void build();
@@ -98,6 +98,7 @@ private:
 		int rotation;
 		const PARData *par;
 	};
+	bool created_proper_folder;
 	CaptureStatus* capture_status;
 	std::string win_title;
 	sf::RenderWindow m_win;

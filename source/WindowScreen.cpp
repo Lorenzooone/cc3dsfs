@@ -24,9 +24,9 @@ const std::string no_effect_fragment_shader = \
 
 static bool loaded_shaders = false;
 static int n_shader_refs = 0;
-static sf::Shader *base_shader;
+static sf::Shader *base_shader = NULL;
 
-WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts, ConsumerMutex *draw_lock) {
+WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts, ConsumerMutex *draw_lock, bool created_proper_folder) {
 	this->draw_lock = draw_lock;
 	this->m_stype = stype;
 	insert_basic_crops(this->possible_crops, this->m_stype, false, false);
@@ -70,7 +70,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->capture_status = capture_status;
 	if(this->display_data->mono_app_mode && this->m_stype == ScreenType::JOINT)
 		this->m_info.is_fullscreen = true;
-	if(!loaded_shaders) {
+	if(sf::Shader::isAvailable() && (!loaded_shaders)) {
 		base_shader = new sf::Shader();
 		if(base_shader->loadFromMemory(no_effect_fragment_shader, sf::Shader::Type::Fragment))
 			loaded_shaders = true;
@@ -80,6 +80,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->in_bot_shader = base_shader;
 	this->top_shader = base_shader;
 	this->bot_shader = base_shader;
+	this->created_proper_folder = created_proper_folder;
 }
 
 WindowScreen::~WindowScreen() {
@@ -91,7 +92,7 @@ WindowScreen::~WindowScreen() {
 	FPSArrayDestroy(&this->in_fps);
 	FPSArrayDestroy(&this->draw_fps);
 	FPSArrayDestroy(&this->poll_fps);
-	if(n_shader_refs == 1) {
+	if(sf::Shader::isAvailable() && (n_shader_refs == 1)) {
 		delete base_shader;
 		loaded_shaders = false;
 	}
@@ -494,11 +495,12 @@ void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, 
 	else {
 		rect_data.out_tex.clear();
 		if(this->capture_status->connected && actually_draw) {
-			sf::Shader* chosen_shader = this->in_top_shader;
-			if(!is_top)
-				chosen_shader = this->in_bot_shader;
-			if(sf::Shader::isAvailable())
+			if(sf::Shader::isAvailable()) {
+				sf::Shader* chosen_shader = this->in_top_shader;
+				if(!is_top)
+					chosen_shader = this->in_bot_shader;
 				rect_data.out_tex.draw(in_rect, chosen_shader);
+			}
 			else
 				rect_data.out_tex.draw(in_rect);
 			//Place postprocessing effects here

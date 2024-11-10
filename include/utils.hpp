@@ -30,8 +30,8 @@
 
 std::string get_version_string(bool get_letter = true);
 std::string LayoutNameGenerator(int index);
-std::string LayoutPathGenerator(int index);
-std::string load_layout_name(int index, bool &success);
+std::string LayoutPathGenerator(int index, bool created_proper_folder);
+std::string load_layout_name(int index, bool created_proper_folder, bool &success);
 bool is_big_endian(void);
 uint32_t to_le(uint32_t value);
 uint32_t to_be(uint32_t value);

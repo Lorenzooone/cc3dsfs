@@ -150,11 +150,12 @@ std::string LayoutNameGenerator(int index) {
 	return "layout" + std::to_string(index) + ".cfg";
 }
 
-std::string LayoutPathGenerator(int index) {
+std::string LayoutPathGenerator(int index, bool created_proper_folder) {
 	bool success = false;
 	std::string cfg_dir;
 	#if !(defined(_WIN32) || defined(_WIN64))
-	if(const char* env_p = std::getenv("HOME")) {
+	const char* env_p = std::getenv("HOME");
+	if(created_proper_folder && env_p) {
 		cfg_dir = std::string(env_p) + "/.config/" + std::string(NAME);
 		success = true;
 	}
@@ -166,13 +167,13 @@ std::string LayoutPathGenerator(int index) {
 	return cfg_dir + "/presets/";
 }
 
-std::string load_layout_name(int index, bool &success) {
+std::string load_layout_name(int index, bool created_proper_folder, bool &success) {
 	if(index == STARTUP_FILE_INDEX) {
 		success = true;
 		return "Initial";
 	}
 	std::string name = LayoutNameGenerator(index);
-	std::string path = LayoutPathGenerator(index);
+	std::string path = LayoutPathGenerator(index, created_proper_folder);
 
 	std::ifstream file(path + name);
 	std::string line;
