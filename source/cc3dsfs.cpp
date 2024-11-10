@@ -333,6 +333,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	out_text_data.consumed = true;
 	int ret_val = 0;
 	int poll_timeout = 0;
+	const bool endianness = is_big_endian();
 
 	out_buf = new VideoOutputData;
 	memset(out_buf, 0, sizeof(VideoOutputData));
@@ -397,7 +398,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 					if(capture_data->status.cooldown_curr_in)
 						blank_out = true;
 					else {
-						bool conversion_success = convertVideoToOutput(out_buf, data_buffer, &capture_data->status);
+						bool conversion_success = convertVideoToOutput(out_buf, endianness, data_buffer, &capture_data->status);
 						if(!conversion_success)
 							UpdateOutText(out_text_data, "", "Video conversion failed...", TEXT_KIND_NORMAL);
 					}

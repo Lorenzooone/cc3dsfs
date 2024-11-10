@@ -18,11 +18,11 @@ struct interleaved_ds_pixels {
 	uint16_t top_fourth;
 };
 
-struct deinterleaved_ds_pixels {
-	uint32_t first : 16;
-	uint32_t second : 16;
-	uint32_t third : 16;
-	uint32_t fourth : 16;
+struct deinterleaved_ds_pixels_le {
+	uint64_t first : 16;
+	uint64_t second : 16;
+	uint64_t third : 16;
+	uint64_t fourth : 16;
 };
 
 #ifdef USE_FTD3
@@ -64,10 +64,10 @@ static void ftd2_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_
 #endif
 
 #ifdef USE_DS_3DS_USB
-static inline void usb_oldDSconvertVideoToOutputHalfLineDirectOpt(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, int input_halfline, int output_halfline) {
+static inline void usb_oldDSconvertVideoToOutputHalfLineDirectOptLE(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, int input_halfline, int output_halfline) {
 	//de-interleave pixels
-	deinterleaved_ds_pixels* out_ptr_top = (deinterleaved_ds_pixels*)p_out->screen_data;
-	deinterleaved_ds_pixels* out_ptr_bottom = out_ptr_top + (WIDTH_DS * HEIGHT_DS / (sizeof(deinterleaved_ds_pixels) / 2));
+	deinterleaved_ds_pixels_le* out_ptr_top = (deinterleaved_ds_pixels_le*)p_out->screen_data;
+	deinterleaved_ds_pixels_le* out_ptr_bottom = out_ptr_top + (WIDTH_DS * HEIGHT_DS / (sizeof(deinterleaved_ds_pixels_le) / 2));
 	interleaved_ds_pixels* in_ptr = (interleaved_ds_pixels*)p_in->video_in.screen_data;
 	const uint32_t halfline_iters = WIDTH_DS / (sizeof(interleaved_ds_pixels) / 2);
 	for(int i = 0; i < halfline_iters; i++) {
@@ -84,7 +84,23 @@ static inline void usb_oldDSconvertVideoToOutputHalfLineDirectOpt(USBOldDSCaptur
 	}
 }
 
-static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out) {
+static inline void usb_oldDSconvertVideoToOutputHalfLineDirectOptBE(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, int input_halfline, int output_halfline) {
+	//de-interleave pixels
+	uint16_t* out_ptr_top = (uint16_t*)p_out->screen_data;
+	uint16_t* out_ptr_bottom = out_ptr_top + (WIDTH_DS * HEIGHT_DS / (sizeof(uint16_t) / 2));
+	uint32_t* in_ptr = (uint32_t*)p_in->video_in.screen_data;
+	const uint32_t halfline_iters = WIDTH_DS / (sizeof(uint32_t) / 2);
+	for(int i = 0; i < halfline_iters; i++) {
+		uint32_t input_halfline_pixel = (input_halfline * halfline_iters) + i;
+		uint32_t output_halfline_pixel = (output_halfline * halfline_iters) + i;
+		uint16_t bottom_pixel_rev = in_ptr[input_halfline_pixel] >> 16;
+		uint16_t top_pixel_rev = in_ptr[input_halfline_pixel] & 0xFFFF;
+		out_ptr_bottom[output_halfline_pixel] = (bottom_pixel_rev >> 8) | ((bottom_pixel_rev << 8) & 0xFF00);
+		out_ptr_top[output_halfline_pixel] = (top_pixel_rev >> 8) | ((top_pixel_rev << 8) & 0xFF00);
+	}
+}
+
+static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, const bool is_big_endian) {
 	#ifndef SIMPLE_DS_FRAME_SKIP
 	if(!p_in->frameinfo.valid) { //LCD was off
 		memset(p_out->screen_data, 0, WIDTH_DS * (2 * HEIGHT_DS) * sizeof(uint16_t));
@@ -94,25 +110,49 @@ static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOu
 	// Handle first line being off, if needed
 	memset(p_out->screen_data, 0, WIDTH_DS * sizeof(uint16_t));
 
-	int input_halfline = 0;
-	for(int i = 0; i < 2; i++) {
-		if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
-			usb_oldDSconvertVideoToOutputHalfLineDirectOpt(p_in, p_out, input_halfline++, i);
-	}
+	if(!is_big_endian) {
+		int input_halfline = 0;
+		for(int i = 0; i < 2; i++) {
+			if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
+				usb_oldDSconvertVideoToOutputHalfLineDirectOptLE(p_in, p_out, input_halfline++, i);
+		}
 
-	for(int i = 2; i < HEIGHT_DS * 2; i++) {
-		if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
-			usb_oldDSconvertVideoToOutputHalfLineDirectOpt(p_in, p_out, input_halfline++, i);
-		else { // deal with missing half-line
-			uint16_t* out_ptr_top = (uint16_t*)&p_out->screen_data;
-			uint16_t* out_ptr_bottom = out_ptr_top + (WIDTH_DS * HEIGHT_DS);
-			memcpy(&out_ptr_top[i * (WIDTH_DS / 2)], &out_ptr_top[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * sizeof(uint16_t));
-			memcpy(&out_ptr_bottom[i * (WIDTH_DS / 2)], &out_ptr_bottom[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * sizeof(uint16_t));
+		for(int i = 2; i < HEIGHT_DS * 2; i++) {
+			if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
+				usb_oldDSconvertVideoToOutputHalfLineDirectOptLE(p_in, p_out, input_halfline++, i);
+			else { // deal with missing half-line
+				uint16_t* out_ptr_top = (uint16_t*)&p_out->screen_data;
+				uint16_t* out_ptr_bottom = out_ptr_top + (WIDTH_DS * HEIGHT_DS);
+				memcpy(&out_ptr_top[i * (WIDTH_DS / 2)], &out_ptr_top[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * sizeof(uint16_t));
+				memcpy(&out_ptr_bottom[i * (WIDTH_DS / 2)], &out_ptr_bottom[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * sizeof(uint16_t));
+			}
+		}
+	}
+	else {
+		int input_halfline = 0;
+		for(int i = 0; i < 2; i++) {
+			if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
+				usb_oldDSconvertVideoToOutputHalfLineDirectOptBE(p_in, p_out, input_halfline++, i);
+		}
+
+		for(int i = 2; i < HEIGHT_DS * 2; i++) {
+			if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
+				usb_oldDSconvertVideoToOutputHalfLineDirectOptBE(p_in, p_out, input_halfline++, i);
+			else { // deal with missing half-line
+				uint16_t* out_ptr_top = (uint16_t*)&p_out->screen_data;
+				uint16_t* out_ptr_bottom = out_ptr_top + (WIDTH_DS * HEIGHT_DS);
+				memcpy(&out_ptr_top[i * (WIDTH_DS / 2)], &out_ptr_top[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * sizeof(uint16_t));
+				memcpy(&out_ptr_bottom[i * (WIDTH_DS / 2)], &out_ptr_bottom[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * sizeof(uint16_t));
+			}
 		}
 	}
 	#else
-	for(int i = 0; i < HEIGHT_DS * 2; i++)
-		usb_oldDSconvertVideoToOutputHalfLineDirectOpt(p_in, p_out, i, i);
+	if(!is_big_endian)
+		for(int i = 0; i < HEIGHT_DS * 2; i++)
+			usb_oldDSconvertVideoToOutputHalfLineDirectOptLE(p_in, p_out, i, i);
+	else
+		for(int i = 0; i < HEIGHT_DS * 2; i++)
+			usb_oldDSconvertVideoToOutputHalfLineDirectOptBE(p_in, p_out, i, i);
 	#endif
 }
 
@@ -120,13 +160,13 @@ static void usb_3DSconvertVideoToOutput(USB3DSCaptureReceived *p_in, VideoOutput
 	memcpy(p_out->screen_data, p_in->video_in.screen_data, IN_VIDEO_HEIGHT_3DS * IN_VIDEO_WIDTH_3DS * 3);
 }
 
-static void usb_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureDevice* capture_device, bool enabled_3d) {
+static void usb_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureDevice* capture_device, bool enabled_3d, const bool is_big_endian) {
 	if(capture_device->is_3ds) {
 		if(!enabled_3d)
 			usb_3DSconvertVideoToOutput(&p_in->usb_received_3ds, p_out);
 	}
 	else
-		usb_oldDSconvertVideoToOutput(&p_in->usb_received_old_ds, p_out);
+		usb_oldDSconvertVideoToOutput(&p_in->usb_received_old_ds, p_out, is_big_endian);
 }
 #endif
 
@@ -145,7 +185,7 @@ static void usb_is_nitro_convertVideoToOutput(CaptureReceived *p_in, VideoOutput
 }
 #endif
 
-bool convertVideoToOutput(VideoOutputData *p_out, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status) {
+bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status) {
 	CaptureReceived *p_in = &data_buffer->capture_buf;
 	bool converted = false;
 	CaptureDevice* chosen_device = &status->device;
@@ -163,7 +203,7 @@ bool convertVideoToOutput(VideoOutputData *p_out, CaptureDataSingleBuffer* data_
 	#endif
 	#ifdef USE_DS_3DS_USB
 	if(chosen_device->cc_type == CAPTURE_CONN_USB) {
-		usb_convertVideoToOutput(p_in, p_out, chosen_device, status->enabled_3d);
+		usb_convertVideoToOutput(p_in, p_out, chosen_device, status->enabled_3d, is_big_endian);
 		converted = true;
 	}
 	#endif
@@ -206,7 +246,7 @@ bool convertAudioToOutput(std::int16_t *p_out, uint64_t n_samples, const bool is
 	if(!is_big_endian)
 		memcpy(p_out, base_ptr, n_samples * 2);
 	else
-		for(int i = 0; i < n_samples; i += 2)
-			p_out[i] = (base_ptr[i + 1] << 8) | base_ptr[i];
+		for(int i = 0; i < n_samples; i++)
+			p_out[i] = (base_ptr[(i * 2) + 1] << 8) | base_ptr[i * 2];
 	return true;
 }
