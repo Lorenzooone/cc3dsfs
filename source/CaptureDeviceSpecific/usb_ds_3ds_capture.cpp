@@ -16,8 +16,6 @@
 #define FIRST_3D_VERSION 6
 #define CAPTURE_SKIP_TIMEOUT_SECONDS 1.0
 
-#define SIMPLE_DS_FRAME_SKIP
-
 #define NUM_DS_3DS_CONCURRENT_DATA_BUFFERS 4
 #define NUM_DS_3DS_CONCURRENT_REQUESTS 4
 
@@ -331,55 +329,6 @@ static usb_capture_status capture_read_oldds_3ds(usb_ds_3ds_general_data* chosen
 	return USB_CAPTURE_SUCCESS;
 }
 
-static inline void usb_oldDSconvertVideoToOutputHalfLine(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, int input_halfline, int output_halfline) {
-	//de-interleave pixels
-	uint16_t* out_ptr_top = (uint16_t*)p_out->screen_data;
-	uint16_t* out_ptr_bottom = out_ptr_top + (WIDTH_DS * HEIGHT_DS);
-	uint16_t* in_ptr = (uint16_t*)p_in->video_in.screen_data;
-	for(int i = 0; i < WIDTH_DS / 2 ; i++) {
-		uint32_t input_halfline_pixel = (input_halfline * (WIDTH_DS / 2)) + i;
-		uint32_t output_halfline_pixel = (output_halfline * (WIDTH_DS / 2)) + i;
-		out_ptr_bottom[output_halfline_pixel] = in_ptr[input_halfline_pixel * 2];
-		out_ptr_top[output_halfline_pixel] = in_ptr[(input_halfline_pixel * 2) + 1];
-	}
-}
-
-static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out) {
-	#ifndef SIMPLE_DS_FRAME_SKIP
-	if(!p_in->frameinfo.valid) { //LCD was off
-		memset(p_out->screen_data, 0, WIDTH_DS * (2 * HEIGHT_DS) * sizeof(uint16_t));
-		return;
-	}
-
-	// Handle first line being off, if needed
-	memset(p_out->screen_data, 0, WIDTH_DS * sizeof(uint16_t));
-
-	int input_halfline = 0;
-	for(int i = 0; i < 2; i++) {
-		if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
-			usb_oldDSconvertVideoToOutputHalfLine(p_in, p_out, input_halfline++, i);
-	}
-
-	for(int i = 2; i < HEIGHT_DS * 2; i++) {
-		if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
-			usb_oldDSconvertVideoToOutputHalfLine(p_in, p_out, input_halfline++, i);
-		else { // deal with missing half-line
-			uint16_t* out_ptr_top = (uint16_t*)&p_out->screen_data;
-			uint16_t* out_ptr_bottom = out_ptr_top + (WIDTH_DS * HEIGHT_DS);
-			memcpy(&out_ptr_top[i * (WIDTH_DS / 2)], &out_ptr_top[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * sizeof(uint16_t));
-			memcpy(&out_ptr_bottom[i * (WIDTH_DS / 2)], &out_ptr_bottom[(i - 2) * (WIDTH_DS / 2)], (WIDTH_DS / 2) * sizeof(uint16_t));
-		}
-	}
-	#else
-	for(int i = 0; i < HEIGHT_DS * 2; i++)
-		usb_oldDSconvertVideoToOutputHalfLine(p_in, p_out, i, i);
-	#endif
-}
-
-static void usb_3DSconvertVideoToOutput(USB3DSCaptureReceived *p_in, VideoOutputData *p_out) {
-	memcpy(p_out->screen_data, p_in->video_in.screen_data, IN_VIDEO_HEIGHT_3DS * IN_VIDEO_WIDTH_3DS * 3);
-}
-
 static void process_usb_capture_result(usb_capture_status result, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, bool* done, usb_ds_3ds_general_data* chosen_buffer) {
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - (*clock_start);
@@ -554,17 +503,6 @@ void usb_capture_cleanup(CaptureData* capture_data) {
 		return;
 	const usb_device* usb_device_desc = get_usb_device_desc(capture_data);
 	capture_end((libusb_device_handle*)capture_data->handle, usb_device_desc);
-}
-
-void usb_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureDevice* capture_device, bool enabled_3d) {
-	if(!usb_is_initialized())
-		return;
-	if(capture_device->is_3ds) {
-		if(!enabled_3d)
-			usb_3DSconvertVideoToOutput(&p_in->usb_received_3ds, p_out);
-	}
-	else
-		usb_oldDSconvertVideoToOutput(&p_in->usb_received_old_ds, p_out);
 }
 
 void usb_ds_3ds_init() {

@@ -29,7 +29,3 @@ void ftd2_capture_main_loop(CaptureData* capture_data) {
 
 void ftd2_capture_cleanup(CaptureData* capture_data) {
 }
-
-void ftd2_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, bool enabled_3d) {
-}
-

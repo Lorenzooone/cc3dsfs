@@ -1,5 +1,6 @@
 #include "devicecapture.hpp"
 #include "usb_is_nitro_communications.hpp"
+#include "usb_is_nitro_acquisition.hpp"
 #include "usb_is_nitro_acquisition_general.hpp"
 #include "usb_is_nitro_acquisition_emulator.hpp"
 
@@ -35,7 +36,7 @@
 static int drain_frames(is_nitro_device_handlers* handlers, int num_frames, int start_frames, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc) {
 	ISNitroEmulatorVideoInputData* video_in_buffer = new ISNitroEmulatorVideoInputData;
 	for (int i = start_frames; i < num_frames; i++) {
-		int ret = ReadFrame(handlers, (uint8_t*)video_in_buffer, _is_nitro_get_video_in_size(capture_type), usb_device_desc);
+		int ret = ReadFrame(handlers, (uint8_t*)video_in_buffer, usb_is_nitro_get_video_in_size(capture_type), usb_device_desc);
 		if(ret < 0) {
 			delete video_in_buffer;
 			return ret;

@@ -312,23 +312,3 @@ void ftd3_capture_cleanup(CaptureData* capture_data) {
 		capture_error_print(true, capture_data, "Disconnected: Close failed");
 	}
 }
-
-static inline void convertVideoToOutputChunk(RGB83DSVideoInputData *p_in, VideoOutputData *p_out, int iters, int start_in, int start_out) {
-	memcpy(&p_out->screen_data[start_out], &p_in->screen_data[start_in], iters * 3);
-}
-
-static inline void convertVideoToOutputChunk_3D(RGB83DSVideoInputData_3D *p_in, VideoOutputData *p_out, int iters, int start_in, int start_out) {
-	memcpy(&p_out->screen_data[start_out], &p_in->screen_data[start_in], iters * 3);
-}
-
-void ftd3_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, bool enabled_3d) {
-	if(!enabled_3d) {
-		convertVideoToOutputChunk(&p_in->ftd3_received.video_in, p_out, IN_VIDEO_NO_BOTTOM_SIZE_3DS, 0, 0);
-
-		for(int i = 0; i < ((IN_VIDEO_SIZE_3DS - IN_VIDEO_NO_BOTTOM_SIZE_3DS) / (IN_VIDEO_WIDTH_3DS * 2)); i++) {
-			convertVideoToOutputChunk(&p_in->ftd3_received.video_in, p_out, IN_VIDEO_WIDTH_3DS, ((i * 2) * IN_VIDEO_WIDTH_3DS) + IN_VIDEO_NO_BOTTOM_SIZE_3DS, TOP_SIZE_3DS + (i * IN_VIDEO_WIDTH_3DS));
-			convertVideoToOutputChunk(&p_in->ftd3_received.video_in, p_out, IN_VIDEO_WIDTH_3DS, (((i * 2) + 1) * IN_VIDEO_WIDTH_3DS) + IN_VIDEO_NO_BOTTOM_SIZE_3DS, IN_VIDEO_NO_BOTTOM_SIZE_3DS + (i * IN_VIDEO_WIDTH_3DS));
-		}
-	}
-}
-

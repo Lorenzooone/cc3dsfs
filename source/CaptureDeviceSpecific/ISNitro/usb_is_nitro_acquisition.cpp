@@ -129,14 +129,15 @@ bool is_nitro_connect_usb(bool print_failed, CaptureData* capture_data, CaptureD
 	return true;
 }
 
-uint64_t _is_nitro_get_video_in_size(CaptureScreensType capture_type) {
+uint64_t usb_is_nitro_get_video_in_size(CaptureScreensType capture_type) {
 	if((capture_type == CAPTURE_SCREENS_TOP) || (capture_type == CAPTURE_SCREENS_BOTTOM))
 		return sizeof(ISNitroEmulatorVideoInputData) / 2;
 	return sizeof(ISNitroEmulatorVideoInputData);
 }
 
+
 uint64_t usb_is_nitro_get_video_in_size(CaptureData* capture_data) {
-	return _is_nitro_get_video_in_size(capture_data->status.capture_type);
+	return usb_is_nitro_get_video_in_size(capture_data->status.capture_type);
 }
 
 int set_acquisition_mode(is_nitro_device_handlers* handlers, CaptureScreensType capture_type, CaptureSpeedsType capture_speed, const is_nitro_usb_device* usb_device_desc) {
@@ -185,7 +186,7 @@ static void output_to_thread(CaptureData* capture_data, CaptureReceived* capture
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - (*clock_start);
 	*clock_start = curr_time;
-	capture_data->data_buffers.WriteToBuffer(capture_buf, _is_nitro_get_video_in_size(curr_capture_type), diff.count(), &capture_data->status.device, curr_capture_type);
+	capture_data->data_buffers.WriteToBuffer(capture_buf, usb_is_nitro_get_video_in_size(curr_capture_type), diff.count(), &capture_data->status.device, curr_capture_type);
 
 	if (capture_data->status.cooldown_curr_in)
 		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
@@ -194,7 +195,7 @@ static void output_to_thread(CaptureData* capture_data, CaptureReceived* capture
 }
 
 int is_nitro_read_frame_and_output(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_start) {
-	int ret = ReadFrame((is_nitro_device_handlers*)capture_data->handle, (uint8_t*)capture_buf, _is_nitro_get_video_in_size(curr_capture_type), (const is_nitro_usb_device*)capture_data->status.device.descriptor);
+	int ret = ReadFrame((is_nitro_device_handlers*)capture_data->handle, (uint8_t*)capture_buf, usb_is_nitro_get_video_in_size(curr_capture_type), (const is_nitro_usb_device*)capture_data->status.device.descriptor);
 	if (ret < 0)
 		return ret;
 	output_to_thread(capture_data, capture_buf, curr_capture_type, &clock_start);
@@ -207,7 +208,7 @@ void is_nitro_read_frame_request(CaptureData* capture_data, ISNitroCaptureReceiv
 	is_nitro_capture_recv_data->index = index;
 	is_nitro_capture_recv_data->curr_capture_type = curr_capture_type;
 	is_nitro_capture_recv_data->cb_data.function = is_nitro_read_frame_cb;
-	ReadFrameAsync((is_nitro_device_handlers*)capture_data->handle, (uint8_t*)&is_nitro_capture_recv_data->buffer, _is_nitro_get_video_in_size(curr_capture_type), (const is_nitro_usb_device*)capture_data->status.device.descriptor, &is_nitro_capture_recv_data->cb_data);
+	ReadFrameAsync((is_nitro_device_handlers*)capture_data->handle, (uint8_t*)&is_nitro_capture_recv_data->buffer, usb_is_nitro_get_video_in_size(curr_capture_type), (const is_nitro_usb_device*)capture_data->status.device.descriptor, &is_nitro_capture_recv_data->cb_data);
 }
 
 static void end_is_nitro_read_frame_cb(ISNitroCaptureReceivedData* is_nitro_capture_recv_data) {
@@ -362,21 +363,6 @@ void usb_is_nitro_acquisition_cleanup(CaptureData* capture_data) {
 		return;
 	is_nitro_connection_end((is_nitro_device_handlers*)capture_data->handle, (const is_nitro_usb_device*)capture_data->status.device.descriptor);
 	capture_data->handle = NULL;
-}
-
-void usb_is_nitro_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureScreensType capture_type) {
-	if(!usb_is_initialized())
-		return;
-	int num_pixels = _is_nitro_get_video_in_size(capture_type) / 3;
-	int out_start_pos = 0;
-	int out_clear_pos = num_pixels;
-	if(capture_type == CAPTURE_SCREENS_BOTTOM) {
-		out_start_pos = num_pixels;
-		out_clear_pos = 0;
-	}
-	if((capture_type == CAPTURE_SCREENS_BOTTOM) || (capture_type == CAPTURE_SCREENS_TOP))
-		memset(p_out->screen_data[out_clear_pos], 0, num_pixels * 3);
-	memcpy(p_out->screen_data[out_start_pos], p_in->is_nitro_capture_received.video_in.screen_data, num_pixels * 3);
 }
 
 bool is_nitro_is_capture(CaptureDevice* device) {

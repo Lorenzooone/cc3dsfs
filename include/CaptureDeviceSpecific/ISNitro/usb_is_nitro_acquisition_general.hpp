@@ -21,7 +21,6 @@ struct ISNitroCaptureReceivedData {
 	isn_async_callback_data cb_data;
 };
 
-uint64_t _is_nitro_get_video_in_size(CaptureScreensType capture_type);
 int set_acquisition_mode(is_nitro_device_handlers* handlers, CaptureScreensType capture_type, CaptureSpeedsType capture_speed, const is_nitro_usb_device* usb_device_desc);
 int EndAcquisition(CaptureData* capture_data, ISNitroCaptureReceivedData* is_nitro_capture_recv_data, bool do_drain_frames, int start_frames, CaptureScreensType capture_type);
 int EndAcquisition(const is_nitro_usb_device* usb_device_desc, is_nitro_device_handlers* handlers, bool do_drain_frames, int start_frames, CaptureScreensType capture_type);
