@@ -257,7 +257,7 @@ void wait_all_is_nitro_transfers_done(CaptureData* capture_data, ISNitroCaptureR
 			transfer_data = is_nitro_capture_recv_data[i].cb_data.transfer_data;
 			is_nitro_capture_recv_data[i].cb_data.transfer_data_access.unlock();
 			if(transfer_data)
-				is_nitro_capture_recv_data[i].cb_data.is_transfer_done_mutex->specific_lock(i);
+				is_nitro_capture_recv_data[i].cb_data.is_transfer_done_mutex->specific_timed_lock(i);
 		} while(transfer_data);
 	}
 }
@@ -271,7 +271,7 @@ void wait_all_is_nitro_buffers_free(CaptureData* capture_data, ISNitroCaptureRec
 	}
 	for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
 		while(is_nitro_capture_recv_data[i].in_use)
-			is_nitro_capture_recv_data[i].is_buffer_free_shared_mutex->specific_lock(i);
+			is_nitro_capture_recv_data[i].is_buffer_free_shared_mutex->specific_timed_lock(i);
 }
 
 void wait_one_is_nitro_buffer_free(CaptureData* capture_data, ISNitroCaptureReceivedData* is_nitro_capture_recv_data) {

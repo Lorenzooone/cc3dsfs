@@ -354,6 +354,7 @@ static void process_usb_capture_result(usb_capture_status result, std::chrono::t
 			*clock_start = curr_time;
 			chosen_buffer->time_in = diff.count();
 			chosen_buffer->index = (*chosen_buffer->last_index) + 1;
+			chosen_buffer->is_buffer_usage_done->specific_try_lock(chosen_buffer->real_index);
 			chosen_buffer->in_use = true;
 			(*chosen_buffer->last_index) += 1;
 			chosen_buffer->is_there_ready_buffer->specific_unlock(chosen_buffer->real_index);
@@ -377,18 +378,18 @@ static usb_ds_3ds_general_data* get_free_buffer(usb_ds_3ds_general_data* buffer_
 			}
 		}
 		if(!out_data)
-			buffer_data[0].is_there_ready_buffer->general_timed_lock(&dummy);
+			buffer_data[0].is_buffer_usage_done->general_timed_lock(&dummy);
 	}
 	return out_data;
 }
 
 static void wait_all_free_buffer(usb_ds_3ds_general_data* buffer_data) {
 	for(int i = 0; i < NUM_DS_3DS_CONCURRENT_DATA_BUFFERS; i++)
-		buffer_data[i].index = (*buffer_data[i].last_index) - 1;
+		buffer_data[i].index = (*buffer_data[0].last_index) - 1;
 	for(int i = 0; i < NUM_DS_3DS_CONCURRENT_DATA_BUFFERS; i++) {
 		while(buffer_data[i].in_use) {
 			buffer_data[i].is_there_ready_buffer->specific_unlock(i);
-			buffer_data[i].is_there_ready_buffer->specific_lock(i);
+			buffer_data[i].is_buffer_usage_done->specific_timed_lock(i);
 		}
 	}
 }
