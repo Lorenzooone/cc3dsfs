@@ -321,7 +321,7 @@ void SharedConsumerMutex::general_lock(int* index) {
 
 bool SharedConsumerMutex::general_timed_lock(int* index) {
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_start = std::chrono::high_resolution_clock::now();
-	std::chrono::time_point<std::chrono::high_resolution_clock> clock_end = clock_start + std::chrono::nanoseconds((int)(this->get_time_s() * 1000 * 1000));
+	std::chrono::time_point<std::chrono::high_resolution_clock> clock_end = clock_start + std::chrono::microseconds((int)(this->get_time_s() * 1000 * 1000));
 	access_mutex.lock();
 	bool success = false;
 	auto result = std::cv_status::no_timeout;
@@ -391,7 +391,7 @@ bool SharedConsumerMutex::specific_timed_lock(int index) {
 	if ((index < 0) || (index >= num_elements))
 		return false;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_start = std::chrono::high_resolution_clock::now();
-	std::chrono::time_point<std::chrono::high_resolution_clock> clock_end = clock_start + std::chrono::nanoseconds((int)(this->get_time_s() * 1000 * 1000));
+	std::chrono::time_point<std::chrono::high_resolution_clock> clock_end = clock_start + std::chrono::microseconds((int)(this->get_time_s() * 1000 * 1000));
 	access_mutex.lock();
 	bool success = false;
 	auto result = std::cv_status::no_timeout;
