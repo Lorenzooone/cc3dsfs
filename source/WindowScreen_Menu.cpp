@@ -110,6 +110,7 @@ void WindowScreen::init_menus() {
 	this->action_selection_menu = new ActionSelectionMenu(this->font_load_success, this->text_font);
 	this->scaling_ratio_menu = new ScalingRatioMenu(this->font_load_success, this->text_font);
 	this->is_nitro_menu = new ISNitroMenu(this->font_load_success, this->text_font);
+	this->video_effects_menu = new VideoEffectsMenu(this->font_load_success, this->text_font);
 }
 
 void WindowScreen::destroy_menus() {
@@ -132,6 +133,7 @@ void WindowScreen::destroy_menus() {
 	delete this->action_selection_menu;
 	delete this->scaling_ratio_menu;
 	delete this->is_nitro_menu;
+	delete this->video_effects_menu;
 }
 
 void WindowScreen::set_close(int ret_val) {
@@ -369,6 +371,22 @@ void WindowScreen::titlebar_change() {
 	this->m_info.have_titlebar = !this->m_info.have_titlebar;
 	this->create_window(true, false);
 	this->future_operations.call_titlebar = true;
+}
+
+void WindowScreen::input_colorspace_mode_change(bool positive) {
+	int change = 1;
+	if(!positive)
+		change = INPUT_COLORSPACE_END - 1;
+	this->m_info.in_colorspace_top = static_cast<InputColorspaceMode>((this->m_info.in_colorspace_top + change) % INPUT_COLORSPACE_END);
+	this->m_info.in_colorspace_bot = this->m_info.in_colorspace_top;
+}
+
+void WindowScreen::frame_blending_mode_change(bool positive) {
+	int change = 1;
+	if(!positive)
+		change = FRAME_BLENDING_END - 1;
+	this->m_info.frame_blending_top = static_cast<FrameBlendingMode>((this->m_info.frame_blending_top + change) % FRAME_BLENDING_END);
+	this->m_info.frame_blending_bot = this->m_info.frame_blending_top;
 }
 
 bool WindowScreen::can_execute_cmd(const WindowCommand* window_cmd, bool is_extra, bool is_always) {
@@ -936,6 +954,18 @@ void WindowScreen::setup_is_nitro_menu(bool reset_data) {
 	}
 }
 
+void WindowScreen::setup_video_effects_menu(bool reset_data) {
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != VIDEO_EFFECTS_MENU_TYPE) {
+		this->curr_menu = VIDEO_EFFECTS_MENU_TYPE;
+		if(reset_data)
+			this->video_effects_menu->reset_data();
+		this->video_effects_menu->insert_data();
+		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
+	}
+}
+
 void WindowScreen::update_save_menu() {
 	if(this->curr_menu == SAVE_MENU_TYPE) {
 		this->curr_menu = DEFAULT_MENU_TYPE;
@@ -1466,6 +1496,9 @@ void WindowScreen::poll(bool do_everything) {
 						case VIDEO_MENU_CHANGE_TITLEBAR:
 							this->titlebar_change();
 							break;
+						case VIDEO_MENU_VIDEO_EFFECTS_SETTINGS:
+							this->setup_video_effects_menu();
+							break;
 						default:
 							break;
 					}
@@ -1844,6 +1877,34 @@ void WindowScreen::poll(bool do_everything) {
 					continue;
 				}
 				break;
+			case VIDEO_EFFECTS_MENU_TYPE:
+				if(this->video_effects_menu->poll(event_data)) {
+					switch(this->video_effects_menu->selected_index) {
+						case VIDEO_EFFECTS_MENU_BACK:
+							this->setup_video_menu(false);
+							done = true;
+							break;
+						case VIDEO_EFFECTS_MENU_NO_ACTION:
+							break;
+						case VIDEO_EFFECTS_MENU_INPUT_COLORSPACE_INC:
+							this->input_colorspace_mode_change(true);
+							break;
+						case VIDEO_EFFECTS_MENU_INPUT_COLORSPACE_DEC:
+							this->input_colorspace_mode_change(false);
+							break;
+						case VIDEO_EFFECTS_MENU_FRAME_BLENDING_INC:
+							this->frame_blending_mode_change(true);
+							break;
+						case VIDEO_EFFECTS_MENU_FRAME_BLENDING_DEC:
+							this->frame_blending_mode_change(false);
+							break;
+						default:
+							break;
+					}
+					this->video_effects_menu->reset_output_option();
+					continue;
+				}
+				break;
 			default:
 				break;
 		}
@@ -2077,6 +2138,9 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 		case ISN_MENU_TYPE:
 			this->is_nitro_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->capture_status);
 			break;
+		case VIDEO_EFFECTS_MENU_TYPE:
+			this->video_effects_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+			break;
 		default:
 			break;
 	}
@@ -2146,6 +2210,9 @@ void WindowScreen::execute_menu_draws() {
 			break;
 		case ISN_MENU_TYPE:
 			this->is_nitro_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case VIDEO_EFFECTS_MENU_TYPE:
+			this->video_effects_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

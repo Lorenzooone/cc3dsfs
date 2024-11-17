@@ -179,6 +179,13 @@ static const VideoMenuOptionInfo titlebar_change_option = {
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_CHANGE_TITLEBAR};
 
+static const VideoMenuOptionInfo video_effects_settings_option = {
+.base_name = "Video Effects Settings", .false_name = "",
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
+.out_action = VIDEO_MENU_VIDEO_EFFECTS_SETTINGS};
+
 static const VideoMenuOptionInfo* pollable_options[] = {
 &crop_option,
 &window_scaling_option,
@@ -195,6 +202,7 @@ static const VideoMenuOptionInfo* pollable_options[] = {
 &rotation_settings_option,
 &top_one_rotation_option,
 &bottom_one_rotation_option,
+&video_effects_settings_option,
 &top_par_option,
 &bot_par_option,
 &one_par_option,

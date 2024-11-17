@@ -4,6 +4,7 @@
 #include <SFML/OpenGL.hpp>
 #include <cstring>
 #include "font_ttf.h"
+#include "shaders_list.hpp"
 #include "devicecapture.hpp"
 
 #define LEFT_ROUNDED_PADDING 5
@@ -15,16 +16,20 @@
 #define FALLBACK_FS_RESOLUTION_HEIGHT 1080
 #define FALLBACK_FS_RESOLUTION_BPP 32
 
-const std::string no_effect_fragment_shader = \
-"uniform sampler2D Texture0;" \
-"" \
-"void main() {" \
-"	gl_FragColor = texture2D(Texture0, gl_TexCoord[0].xy);" \
-"}";
+#define NUM_FRAMES_BLENDED 2
 
 static bool loaded_shaders = false;
 static int n_shader_refs = 0;
-static sf::Shader *base_shader = NULL;
+
+struct shader_and_data {
+	shader_and_data(shader_list_enum value) : shader(sf::Shader()), is_valid(false), shader_enum(value) {}
+
+	sf::Shader shader;
+	bool is_valid;
+	shader_list_enum shader_enum;
+};
+
+static std::vector<shader_and_data> usable_shaders;
 
 WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts, ConsumerMutex *draw_lock, bool created_proper_folder) {
 	this->draw_lock = draw_lock;
@@ -46,7 +51,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	FPSArrayInit(&this->in_fps);
 	FPSArrayInit(&this->draw_fps);
 	FPSArrayInit(&this->poll_fps);
-	(void)this->in_tex.resize({MAX_IN_VIDEO_WIDTH, MAX_IN_VIDEO_HEIGHT});
+	(void)this->in_tex.resize({MAX_IN_VIDEO_WIDTH, MAX_IN_VIDEO_HEIGHT * NUM_FRAMES_BLENDED});
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
 	this->display_data = display_data;
@@ -71,15 +76,23 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	if(this->display_data->mono_app_mode && this->m_stype == ScreenType::JOINT)
 		this->m_info.is_fullscreen = true;
 	if(sf::Shader::isAvailable() && (!loaded_shaders)) {
-		base_shader = new sf::Shader();
-		if(base_shader->loadFromMemory(no_effect_fragment_shader, sf::Shader::Type::Fragment))
-			loaded_shaders = true;
+		shader_strings_init();
+		for(int i = 0; i < TOTAL_NUM_SHADERS; i++) {
+			usable_shaders.emplace_back(static_cast<shader_list_enum>(i));
+			shader_and_data* current_shader = &usable_shaders[usable_shaders.size()-1];
+			if(current_shader->shader.loadFromMemory(get_shader_string(current_shader->shader_enum), sf::Shader::Type::Fragment)) {
+				current_shader->is_valid = true;
+				auto* const defaultStreamBuffer = sf::err().rdbuf();
+		        sf::err().rdbuf(nullptr);
+				sf::Glsl::Vec2 old_pos = {0.0, 0.0};
+				current_shader->shader.setUniform("old_frame_offset", old_pos);
+		        sf::err().rdbuf(defaultStreamBuffer);
+	        }
+		}
+		loaded_shaders = true;
 	}
 	n_shader_refs += 1;
-	this->in_top_shader = base_shader;
-	this->in_bot_shader = base_shader;
-	this->top_shader = base_shader;
-	this->bot_shader = base_shader;
+	this->was_last_frame_null = true;
 	this->created_proper_folder = created_proper_folder;
 }
 
@@ -93,7 +106,8 @@ WindowScreen::~WindowScreen() {
 	FPSArrayDestroy(&this->draw_fps);
 	FPSArrayDestroy(&this->poll_fps);
 	if(sf::Shader::isAvailable() && (n_shader_refs == 1)) {
-		delete base_shader;
+		while(!usable_shaders.empty())
+			usable_shaders.pop_back();
 		loaded_shaders = false;
 	}
 	n_shader_refs -= 1;
@@ -212,6 +226,7 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 		this->last_poll_time = std::chrono::high_resolution_clock::now();
 	}
 	if(this->m_win.isOpen() || this->loaded_operations.call_create) {
+		this->curr_frame_texture_pos = (this->curr_frame_texture_pos + 1) % NUM_FRAMES_BLENDED;
 		auto curr_time = std::chrono::high_resolution_clock::now();
 		const std::chrono::duration<double> diff = curr_time - this->last_draw_time;
 		FPSArrayInsertElement(&draw_fps, diff.count());
@@ -219,8 +234,10 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 		WindowScreen::reset_operations(future_operations);
 		if(out_buf != NULL)
 			memcpy(this->saved_buf, out_buf, sizeof(VideoOutputData));
-		else
+		else {
 			memset(this->saved_buf, 0, sizeof(VideoOutputData));
+			this->was_last_frame_null = true;
+		}
 		loaded_info = m_info;
 		this->notification->setTextFactor(this->loaded_info.menu_scaling_factor);
 		this->notification->prepareRenderText();
@@ -244,6 +261,8 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 		if(!this->loaded_info.async)
 			this->display_call(true);
 	}
+	else
+		this->was_last_frame_null = true;
 }
 
 void WindowScreen::update_connection() {
@@ -460,7 +479,7 @@ void WindowScreen::update_texture() {
         	type =  GL_UNSIGNED_SHORT_5_6_5;
         if(this->capture_status->device.video_data_type == VIDEO_DATA_BGR16)
         	type =  GL_UNSIGNED_SHORT_5_6_5_REV;
-        glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(0), static_cast<GLint>(0), static_cast<GLsizei>(this->capture_status->device.width), static_cast<GLsizei>(this->capture_status->device.height), format, type, this->saved_buf);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(0), static_cast<GLint>(this->curr_frame_texture_pos * MAX_IN_VIDEO_HEIGHT), static_cast<GLsizei>(this->capture_status->device.width), static_cast<GLsizei>(this->capture_status->device.height), format, type, this->saved_buf);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
         // Force an OpenGL flush, so that the texture data will appear updated
@@ -480,6 +499,61 @@ void WindowScreen::pre_texture_conversion_processing() {
 	this->draw_lock->unlock();
 }
 
+int WindowScreen::_choose_shader(bool is_input, bool is_top) {
+	if(!is_input)
+		return NO_EFFECT_FRAGMENT_SHADER;
+	if(this->was_last_frame_null) {
+		this->was_last_frame_null = false;
+		return NO_EFFECT_FRAGMENT_SHADER;
+	}
+	InputColorspaceMode *in_colorspace = &this->loaded_info.in_colorspace_top;
+	FrameBlendingMode *frame_blending = &this->loaded_info.frame_blending_top;
+	if(!is_top) {
+		in_colorspace = &this->loaded_info.in_colorspace_bot;
+		frame_blending = &this->loaded_info.frame_blending_bot;
+	}
+
+	switch(*frame_blending) {
+		case FULL_FRAME_BLENDING:
+			switch(*in_colorspace) {
+				case DS_COLORSPACE:
+					return FRAME_BLENDING_BIT_CRUSHER_FRAGMENT_SHADER_2;
+				case GBA_COLORSPACE:
+					return FRAME_BLENDING_BIT_CRUSHER_FRAGMENT_SHADER_3;
+				default:
+					return FRAME_BLENDING_FRAGMENT_SHADER;
+			}
+			break;
+		case DS_3D_BOTH_SCREENS_FRAME_BLENDING:
+			switch(*in_colorspace) {
+				case DS_COLORSPACE:
+					return BIT_MERGER_CRUSHER_FRAGMENT_SHADER_2;
+				case GBA_COLORSPACE:
+					return BIT_CRUSHER_FRAGMENT_SHADER_3;
+				default:
+					return BIT_MERGER_FRAGMENT_SHADER_2;
+			}
+			break;
+		default:
+			switch(*in_colorspace) {
+				case DS_COLORSPACE:
+					return BIT_CRUSHER_FRAGMENT_SHADER_2;
+				case GBA_COLORSPACE:
+					return BIT_CRUSHER_FRAGMENT_SHADER_3;
+				default:
+					return NO_EFFECT_FRAGMENT_SHADER;
+			}
+			break;
+	}
+}
+
+int WindowScreen::choose_shader(bool is_input, bool is_top) {
+	int chosen_shader = _choose_shader(is_input, is_top);
+	if((chosen_shader >= 0) && (chosen_shader < usable_shaders.size()) && usable_shaders[chosen_shader].is_valid)
+		return chosen_shader;
+	return -1;
+}
+
 void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug) {
 	if((is_top && this->m_stype == ScreenType::BOTTOM) || ((!is_top) && this->m_stype == ScreenType::TOP))
 		return;
@@ -494,19 +568,48 @@ void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, 
 	}
 	else {
 		rect_data.out_tex.clear();
+		sf::RectangleShape final_in_rect = in_rect;
+		sf::IntRect text_coords_rect = final_in_rect.getTextureRect();
+		text_coords_rect.position.y += this->curr_frame_texture_pos * MAX_IN_VIDEO_HEIGHT;
+		final_in_rect.setTextureRect(text_coords_rect);
 		if(this->capture_status->connected && actually_draw) {
+			bool use_default_shader = true;
 			if(sf::Shader::isAvailable()) {
-				sf::Shader* chosen_shader = this->in_top_shader;
-				if(!is_top)
-					chosen_shader = this->in_bot_shader;
-				rect_data.out_tex.draw(in_rect, chosen_shader);
+				int chosen_shader = choose_shader(true, is_top);
+				if(chosen_shader >= 0) {
+					float old_frame_pos_y = 1.0 / NUM_FRAMES_BLENDED;
+					if(this->curr_frame_texture_pos == 1)
+						old_frame_pos_y = -1.0 / NUM_FRAMES_BLENDED;
+					sf::Glsl::Vec2 old_pos = {0.0, old_frame_pos_y};
+					usable_shaders[chosen_shader].shader.setUniform("old_frame_offset", old_pos);
+					rect_data.out_tex.draw(final_in_rect, &usable_shaders[chosen_shader].shader);
+					use_default_shader = false;
+				}
 			}
-			else
-				rect_data.out_tex.draw(in_rect);
+			if(use_default_shader)
+				rect_data.out_tex.draw(final_in_rect);
 			//Place postprocessing effects here
 		}
 	}
 	rect_data.out_tex.display();
+}
+
+void WindowScreen::draw_rect_to_window(const sf::RectangleShape &out_rect, bool is_top) {
+	if((is_top && this->m_stype == ScreenType::BOTTOM) || ((!is_top) && this->m_stype == ScreenType::TOP))
+		return;
+	if(this->loaded_menu == CONNECT_MENU_TYPE)
+		return;
+
+	bool use_default_shader = true;
+	if(sf::Shader::isAvailable()) {
+		int chosen_shader = choose_shader(false, is_top);
+		if(chosen_shader >= 0) {
+			this->m_win.draw(out_rect, &usable_shaders[chosen_shader].shader);
+			use_default_shader = false;
+		}
+	}
+	if(use_default_shader)
+		this->m_win.draw(out_rect);
 }
 
 void WindowScreen::window_bg_processing() {
@@ -523,20 +626,8 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 	else
 		this->m_win.clear();
 	this->window_bg_processing();
-	if(this->loaded_menu != CONNECT_MENU_TYPE) {
-		if (this->m_stype != ScreenType::BOTTOM) {
-			if (sf::Shader::isAvailable())
-				this->m_win.draw(this->m_out_rect_top.out_rect, this->top_shader);
-			else
-				this->m_win.draw(this->m_out_rect_top.out_rect);
-		}
-		if (this->m_stype != ScreenType::TOP) {
-			if (sf::Shader::isAvailable())
-				this->m_win.draw(this->m_out_rect_bot.out_rect, this->bot_shader);
-			else
-				this->m_win.draw(this->m_out_rect_bot.out_rect);
-		}
-	}
+	this->draw_rect_to_window(this->m_out_rect_top.out_rect, true);
+	this->draw_rect_to_window(this->m_out_rect_bot.out_rect, false);
 	this->execute_menu_draws();
 	this->notification->draw(this->m_win);
 	this->m_win.display();

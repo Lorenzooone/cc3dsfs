@@ -437,6 +437,22 @@ void reset_screen_info(ScreenInfo &info) {
 	info.use_non_integer_scaling_bottom = false;
 	info.failed_fullscreen = false;
 	info.have_titlebar = true;
+	info.in_colorspace_top = FULL_COLORSPACE;
+	info.in_colorspace_bot = FULL_COLORSPACE;
+	info.frame_blending_top = NO_FRAME_BLENDING;
+	info.frame_blending_bot = NO_FRAME_BLENDING;
+}
+
+static InputColorspaceMode input_colorspace_sanitization(int value) {
+	if((value < 0) || (value >= INPUT_COLORSPACE_END))
+		return FULL_COLORSPACE;
+	return static_cast<InputColorspaceMode>(value);
+}
+
+static FrameBlendingMode frame_blending_sanitization(int value) {
+	if((value < 0) || (value >= FRAME_BLENDING_END))
+		return NO_FRAME_BLENDING;
+	return static_cast<FrameBlendingMode>(value);
 }
 
 static float offset_sanitization(float value) {
@@ -599,6 +615,22 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		info.have_titlebar = std::stoi(value);
 		return true;
 	}
+	if(key == (base + "in_colorspace_top")) {
+		info.in_colorspace_top = input_colorspace_sanitization(std::stoi(value));
+		return true;
+	}
+	if(key == (base + "in_colorspace_bot")) {
+		info.in_colorspace_bot = input_colorspace_sanitization(std::stoi(value));
+		return true;
+	}
+	if(key == (base + "frame_blending_top")) {
+		info.frame_blending_top = frame_blending_sanitization(std::stoi(value));
+		return true;
+	}
+	if(key == (base + "frame_blending_bot")) {
+		info.frame_blending_bot = frame_blending_sanitization(std::stoi(value));
+		return true;
+	}
 	return false;
 }
 
@@ -635,6 +667,10 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "use_non_integer_scaling_top=" + std::to_string(info.use_non_integer_scaling_top) + "\n";
 	out += base + "use_non_integer_scaling_bottom=" + std::to_string(info.use_non_integer_scaling_bottom) + "\n";
 	out += base + "have_titlebar=" + std::to_string(info.have_titlebar) + "\n";
+	out += base + "in_colorspace_top=" + std::to_string(info.in_colorspace_top) + "\n";
+	out += base + "in_colorspace_bot=" + std::to_string(info.in_colorspace_bot) + "\n";
+	out += base + "frame_blending_top=" + std::to_string(info.frame_blending_top) + "\n";
+	out += base + "frame_blending_bot=" + std::to_string(info.frame_blending_bot) + "\n";
 	return out;
 }
 
@@ -822,6 +858,42 @@ std::string get_name_non_int_mode(NonIntegerScalingModes input) {
 			break;
 		case BIGGER_PRIORITY:
 			output = "Bigger Priority";
+			break;
+		default:
+			break;
+	}
+	return output;
+}
+
+std::string get_name_frame_blending_mode(FrameBlendingMode input) {
+	std::string output = "";
+	switch(input) {
+		case NO_FRAME_BLENDING:
+			output = "Off";
+			break;
+		case FULL_FRAME_BLENDING:
+			output = "On";
+			break;
+		case DS_3D_BOTH_SCREENS_FRAME_BLENDING:
+			output = "3D on DS";
+			break;
+		default:
+			break;
+	}
+	return output;
+}
+
+std::string get_name_input_colorspace_mode(InputColorspaceMode input) {
+	std::string output = "";
+	switch(input) {
+		case FULL_COLORSPACE:
+			output = "Full";
+			break;
+		case DS_COLORSPACE:
+			output = "DS";
+			break;
+		case GBA_COLORSPACE:
+			output = "GBA";
 			break;
 		default:
 			break;

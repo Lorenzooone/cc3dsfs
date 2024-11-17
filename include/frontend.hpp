@@ -31,9 +31,11 @@
 #include "ActionSelectionMenu.hpp"
 #include "ScalingRatioMenu.hpp"
 #include "ISNitroMenu.hpp"
+#include "VideoEffectsMenu.hpp"
 #include "display_structs.hpp"
 #include "WindowCommands.hpp"
 #include "event_structs.hpp"
+#include "shaders_list.hpp"
 
 struct HeldTime {
 	std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
@@ -152,6 +154,7 @@ private:
 	ActionSelectionMenu *action_selection_menu;
 	ISNitroMenu *is_nitro_menu;
 	ScalingRatioMenu *scaling_ratio_menu;
+	VideoEffectsMenu *video_effects_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const CropData*> possible_crops_ds;
 	std::vector<const CropData*> possible_crops_with_games;
@@ -170,6 +173,7 @@ private:
 	FPSArray poll_fps;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_poll_time;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_menu_change_time;
+	int curr_frame_texture_pos = 0;
 
 	sf::Texture in_tex;
 
@@ -180,7 +184,7 @@ private:
 	volatile bool scheduled_work_on_window;
 	volatile bool is_thread_done;
 
-	sf::Shader *in_top_shader, *in_bot_shader, *top_shader, *bot_shader;
+	bool was_last_frame_null;
 	sf::RectangleShape m_in_rect_top, m_in_rect_bot;
 	out_rect_data m_out_rect_top, m_out_rect_bot;
 	ScreenType m_stype;
@@ -239,6 +243,8 @@ private:
 	void non_int_scaling_change(bool target_top);
 	void non_int_mode_change(bool positive);
 	void titlebar_change();
+	void input_colorspace_mode_change(bool positive);
+	void frame_blending_mode_change(bool positive);
 	bool query_reset_request();
 	void reset_held_times();
 	void poll_window(bool do_everything);
@@ -249,8 +255,11 @@ private:
 	bool window_needs_work();
 	void window_factory(bool is_main_thread);
 	void update_texture();
+	int _choose_shader(bool is_input, bool is_top);
+	int choose_shader(bool is_input, bool is_top);
 	void pre_texture_conversion_processing();
 	void post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug);
+	void draw_rect_to_window(const sf::RectangleShape &out_rect, bool is_top);
 	void window_bg_processing();
 	void display_data_to_window(bool actually_draw, bool is_debug = false);
 	void window_render_call();
@@ -299,6 +308,7 @@ private:
 	void setup_relative_pos_menu(bool reset_data = true);
 	void setup_scaling_ratio_menu(bool reset_data = true);
 	void setup_is_nitro_menu(bool reset_data = true);
+	void setup_video_effects_menu(bool reset_data = true);
 	void update_connection();
 };
 
@@ -327,5 +337,7 @@ void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &o
 void update_connected_specific_settings(FrontendData* frontend_data, const CaptureDevice &cc_device);
 void screen_display_thread(WindowScreen *screen);
 std::string get_name_non_int_mode(NonIntegerScalingModes input);
+std::string get_name_frame_blending_mode(FrameBlendingMode input);
+std::string get_name_input_colorspace_mode(InputColorspaceMode input);
 void default_sleep(float wanted_ms = -1);
 #endif

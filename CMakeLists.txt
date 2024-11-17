@@ -399,7 +399,7 @@ if(MSVC)
 else()
 	set_source_files_properties(source/conversions.cpp PROPERTIES COMPILE_OPTIONS "-O3")
 endif()
-add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp source/Menus/ScalingRatioMenu.cpp source/Menus/ISNitroMenu.cpp source/CaptureDataBuffers.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp ${SOURCE_CPP_EXTRA_FILES})
+add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp source/Menus/ScalingRatioMenu.cpp source/Menus/ISNitroMenu.cpp source/Menus/VideoEffectsMenu.cpp source/CaptureDataBuffers.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp ${TOOLS_DATA_DIR}/shaders_list.cpp ${SOURCE_CPP_EXTRA_FILES})
 
 
 if(NOT ("${EXTRA_DEPENDENCIES}" STREQUAL ""))
@@ -424,6 +424,16 @@ add_custom_command(
     COMMENT "Convert font to binary"
     COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/data/font.ttf ${TOOLS_DATA_DIR} font_ttf font_ttf
     DEPENDS ${CMAKE_SOURCE_DIR}/data/font.ttf ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
+)
+
+set(SHADERS_LIST "")
+list(APPEND SHADERS_LIST ${CMAKE_SOURCE_DIR}/shaders/bit_crusher_fragment_shader.2_to_x_1_7.frag ${CMAKE_SOURCE_DIR}/shaders/bit_merger_crusher_fragment_shader.2_to_x_1_6.frag ${CMAKE_SOURCE_DIR}/shaders/bit_merger_crusher_fragment_shader_7.frag ${CMAKE_SOURCE_DIR}/shaders/bit_merger_fragment_shader.2_to_x_0_6.frag ${CMAKE_SOURCE_DIR}/shaders/bit_merger_fragment_shader_7.frag ${CMAKE_SOURCE_DIR}/shaders/frame_blending_bit_crusher_fragment_shader.2_to_x_1_7.frag ${CMAKE_SOURCE_DIR}/shaders/frame_blending_fragment_shader.frag ${CMAKE_SOURCE_DIR}/shaders/no_effect_fragment_shader.frag)
+
+add_custom_command(
+	OUTPUT ${TOOLS_DATA_DIR}/shaders_list.cpp
+    COMMENT "Prepare shaders list"
+    COMMAND ${TOOLS_DATA_DIR}/CMakeShader2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/shaders ${CMAKE_SOURCE_DIR}/source/shaders_list_template.cpp ${TOOLS_DATA_DIR}/shaders_list.cpp
+    DEPENDS ${CMAKE_SOURCE_DIR}/source/shaders_list_template.cpp ${SHADERS_LIST} ${TOOLS_DATA_DIR}/CMakeShader2C${HOST_FINAL_EXTENSION}
 )
 
 if(WIN32)
