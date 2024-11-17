@@ -258,6 +258,9 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 		if((!this->main_thread_owns_window) && ((this->scheduled_work_on_window) || (!this->loaded_info.async)))
 			while(!this->is_thread_done);
 		this->window_factory(true);
+		// This must be done in the main thread for it to work on Windows... :/
+		this->m_win.setMouseCursorVisible(this->loaded_info.show_mouse);
+		this->is_window_factory_done = true;
 		if(!this->loaded_info.async)
 			this->display_call(true);
 	}
@@ -442,7 +445,6 @@ void WindowScreen::window_factory(bool is_main_thread) {
 		this->draw_lock->unlock();
 	}
 	this->update_connection();
-	this->is_window_factory_done = true;
 }
 
 std::string WindowScreen::title_factory() {
@@ -641,7 +643,6 @@ void WindowScreen::window_render_call() {
 		this->m_win.setVerticalSyncEnabled(this->loaded_info.v_sync_enabled);
 	else
 		this->m_win.setVerticalSyncEnabled(false);
-	this->m_win.setMouseCursorVisible(this->loaded_info.show_mouse);
 	this->pre_texture_conversion_processing();
 
 	this->display_data_to_window(true);
