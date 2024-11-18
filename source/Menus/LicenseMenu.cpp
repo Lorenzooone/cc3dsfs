@@ -91,6 +91,21 @@ static const LicenseMenuOptionInfo font_license_3_option = {
 static const LicenseMenuOptionInfo font_license_4_option = {
 .base_name = "open-font-license-official-text/"};
 
+static const LicenseMenuOptionInfo isng_license_0_option = {
+.base_name = "Portions of this software are"};
+
+static const LicenseMenuOptionInfo isng_license_1_option = {
+.base_name = "based off Gericom's sample"};
+
+static const LicenseMenuOptionInfo isng_license_2_option = {
+.base_name = "IS Nitro Emulator code."};
+
+static const LicenseMenuOptionInfo isng_license_3_option = {
+.base_name = "MIT License."};
+
+static const LicenseMenuOptionInfo isng_license_4_option = {
+.base_name = "Copyright (c) 2024 Gericom"};
+
 static const LicenseMenuOptionInfo cc3dsfs_license_0_option = {
 .base_name = NAME " is distributed under"};
 
@@ -125,6 +140,13 @@ static const LicenseMenuOptionInfo* pollable_options[] = {
 &libusb_license_2_option,
 &libusb_license_3_option,
 &libusb_license_4_option,
+#endif
+#if defined(USE_IS_NITRO_USB)
+&isng_license_0_option,
+&isng_license_1_option,
+&isng_license_2_option,
+&isng_license_3_option,
+&isng_license_4_option,
 #endif
 &freetype_license_0_option,
 &freetype_license_1_option,
