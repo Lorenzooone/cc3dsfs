@@ -27,6 +27,8 @@
 #endif
 
 #define FTD3XX_VID 0x0403
+#define N3DS_CFG_WAIT_MS 120
+#define CFG_3DS_3D_SCREEN_POS 3
 
 #define REAL_SERIAL_NUMBER_SIZE 16
 #define SERIAL_NUMBER_SIZE (REAL_SERIAL_NUMBER_SIZE+1)
@@ -113,7 +115,7 @@ void list_devices_ftd3(std::vector<CaptureDevice> &devices_list, std::vector<no_
 				for(int j = 0; j < sizeof(valid_descriptions) / sizeof(*valid_descriptions); j++) {
 					if(Description == valid_descriptions[j]) {
 						for(int u = 0; u < debug_multiplier; u++)
-							devices_list.emplace_back(std::string(SerialNumber), "N3DSXL", CAPTURE_CONN_FTD3, (void*)NULL, true, true, true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, N3DSXL_SAMPLES_IN, 90, 0, 0, TOP_WIDTH_3DS, 0, VIDEO_DATA_RGB);
+							devices_list.emplace_back(std::string(SerialNumber), "N3DSXL", CAPTURE_CONN_FTD3, (void*)NULL, true, Flags & FT_FLAGS_SUPERSPEED, true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, N3DSXL_SAMPLES_IN, 90, 0, 0, TOP_WIDTH_3DS, 0, VIDEO_DATA_RGB);
 						break;
 					}
 				}
@@ -145,6 +147,100 @@ static void preemptive_close_connection(CaptureData* capture_data) {
 	FT_Close(capture_data->handle);
 }
 
+static bool reset_3ds_state(bool print_failed, CaptureData* capture_data) {
+	UCHAR buf[4] = {0x80, 0x01, 0xAB, 0x00};
+	ULONG written = 0;
+
+	if (FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
+		capture_error_print(print_failed, capture_data, "Write failed");
+		preemptive_close_connection(capture_data);
+		return false;
+	}
+
+	buf[0] = 0x43;
+	buf[1] = 0;
+	buf[2] = 0;
+
+	if (FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
+		capture_error_print(print_failed, capture_data, "Write failed");
+		preemptive_close_connection(capture_data);
+		return false;
+	}
+	default_sleep(N3DS_CFG_WAIT_MS);
+
+	return true;
+}
+
+static bool read_3ds_config_3d(bool print_failed, CaptureData* capture_data, CaptureDevice* device) {
+	UCHAR buf[4] = {0x40, 0x80, 0x00, 0x00};
+	UCHAR in_buf[0x10];
+	ULONG written = 0;
+
+	if (FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
+		capture_error_print(print_failed, capture_data, "Write failed");
+		preemptive_close_connection(capture_data);
+		return false;
+	}
+
+	buf[0] = 0x98;
+	buf[1] = 0x05;
+	buf[2] = 0x9F;
+
+	if (FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
+		capture_error_print(print_failed, capture_data, "Write failed");
+		preemptive_close_connection(capture_data);
+		return false;
+	}
+
+	if (FT_ReadPipe(capture_data->handle, BULK_IN, in_buf, 0x10, &written, 0)) {
+		capture_error_print(print_failed, capture_data, "Read failed");
+		preemptive_close_connection(capture_data);
+		return false;
+	}
+	default_sleep(N3DS_CFG_WAIT_MS);
+
+	if(written >= CFG_3DS_3D_SCREEN_POS) {
+		if(in_buf[CFG_3DS_3D_SCREEN_POS] != 0xc1)
+			device->has_3d = false;
+	}
+
+	buf[0] = 0x40;
+	buf[1] = 0;
+
+	if (FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
+		capture_error_print(print_failed, capture_data, "Write failed");
+		preemptive_close_connection(capture_data);
+		return false;
+	}
+	default_sleep(N3DS_CFG_WAIT_MS);
+
+	return true;
+}
+
+static bool set_3ds_state(bool print_failed, CaptureData* capture_data, uint8_t cfg_value) {
+	UCHAR buf[4] = {0x40, 0x80, 0x00, 0x00};
+	UCHAR in_buf[0x10];
+	ULONG written = 0;
+
+	if (FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
+		capture_error_print(print_failed, capture_data, "Write failed");
+		preemptive_close_connection(capture_data);
+		return false;
+	}
+
+	buf[0] = cfg_value;
+	buf[1] = 0x00;
+
+	if (FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
+		capture_error_print(print_failed, capture_data, "Write failed");
+		preemptive_close_connection(capture_data);
+		return false;
+	}
+	default_sleep(N3DS_CFG_WAIT_MS);
+
+	return true;
+}
+
 bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* device) {
 
 	char SerialNumber[SERIAL_NUMBER_SIZE] = { 0 };
@@ -154,22 +250,38 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 		capture_error_print(print_failed, capture_data, "Create failed");
 		return false;
 	}
-
-	UCHAR buf[4] = {0x40, 0x80, 0x00, 0x00};
-	ULONG written = 0;
-
-	if (FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
-		capture_error_print(print_failed, capture_data, "Write failed");
-		preemptive_close_connection(capture_data);
+	preemptive_close_connection(capture_data);
+	if (FT_Create(SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, &capture_data->handle)) {
+		capture_error_print(print_failed, capture_data, "Create failed");
 		return false;
 	}
 
-	buf[1] = 0x00;
+	if(device->has_3d) {
+		if(!reset_3ds_state(print_failed, capture_data))
+			return false;
 
-	if (FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
-		capture_error_print(print_failed, capture_data, "Write failed");
-		preemptive_close_connection(capture_data);
-		return false;
+		if(!set_3ds_state(print_failed, capture_data, 0x42))
+			return false;
+
+		if(!set_3ds_state(print_failed, capture_data, 0x40))
+			return false;
+
+		if(!set_3ds_state(print_failed, capture_data, 0x43))
+			return false;
+
+		if(!set_3ds_state(print_failed, capture_data, 0x40))
+			return false;
+
+		if(!read_3ds_config_3d(print_failed, capture_data, device))
+			return false;
+
+		if((!capture_data->status.enabled_3d) || (!device->has_3d)) {
+			if(!set_3ds_state(print_failed, capture_data, 0x42))
+				return false;
+
+			if(!set_3ds_state(print_failed, capture_data, 0x40))
+				return false;
+		}
 	}
 
 	if (FT_SetStreamPipe(capture_data->handle, false, false, BULK_IN, get_capture_size(capture_data))) {
