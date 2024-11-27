@@ -25,7 +25,6 @@ struct deinterleaved_ds_pixels_le {
 	uint64_t fourth : 16;
 };
 
-#ifdef USE_FTD3
 static inline void convertVideoToOutputChunk(RGB83DSVideoInputData *p_in, VideoOutputData *p_out, int iters, int start_in, int start_out) {
 	memcpy(&p_out->screen_data[start_out], &p_in->screen_data[start_in], iters * 3);
 }
@@ -62,14 +61,7 @@ static void ftd3_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_
 		convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, (((i * 3) + 1) * IN_VIDEO_WIDTH_3DS_3D) + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, TOP_SIZE_3DS + (i * IN_VIDEO_WIDTH_3DS_3D));
 	}
 }
-#endif
 
-#ifdef USE_FTD2
-static void ftd2_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out) {
-}
-#endif
-
-#ifdef USE_DS_3DS_USB
 static inline void usb_oldDSconvertVideoToOutputHalfLineDirectOptLE(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, int input_halfline, int output_halfline) {
 	//de-interleave pixels
 	deinterleaved_ds_pixels_le* out_ptr_top = (deinterleaved_ds_pixels_le*)p_out->screen_data;
@@ -162,6 +154,10 @@ static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOu
 	#endif
 }
 
+static void ftd2_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, const bool is_big_endian) {
+	usb_oldDSconvertVideoToOutput(&p_in->usb_received_old_ds, p_out, is_big_endian);
+}
+
 static void usb_3DSconvertVideoToOutput(USB3DSCaptureReceived *p_in, VideoOutputData *p_out) {
 	memcpy(p_out->screen_data, p_in->video_in.screen_data, IN_VIDEO_HEIGHT_3DS * IN_VIDEO_WIDTH_3DS * 3);
 }
@@ -174,9 +170,7 @@ static void usb_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_o
 	else
 		usb_oldDSconvertVideoToOutput(&p_in->usb_received_old_ds, p_out, is_big_endian);
 }
-#endif
 
-#ifdef USE_IS_NITRO_USB
 static void usb_is_nitro_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureScreensType capture_type) {
 	int num_pixels = usb_is_nitro_get_video_in_size(capture_type) / 3;
 	int out_start_pos = 0;
@@ -189,7 +183,6 @@ static void usb_is_nitro_convertVideoToOutput(CaptureReceived *p_in, VideoOutput
 		memset(p_out->screen_data[out_clear_pos], 0, num_pixels * 3);
 	memcpy(p_out->screen_data[out_start_pos], p_in->is_nitro_capture_received.video_in.screen_data, num_pixels * 3);
 }
-#endif
 
 bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status) {
 	CaptureReceived *p_in = &data_buffer->capture_buf;
@@ -203,7 +196,7 @@ bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, Capt
 	#endif
 	#ifdef USE_FTD2
 	if(chosen_device->cc_type == CAPTURE_CONN_FTD2) {
-		ftd2_convertVideoToOutput(p_in, p_out);
+		ftd2_convertVideoToOutput(p_in, p_out, is_big_endian);
 		converted = true;
 	}
 	#endif
@@ -237,6 +230,11 @@ bool convertAudioToOutput(std::int16_t *p_out, uint64_t n_samples, const bool is
 	#endif
 	#ifdef USE_FTD2
 	if(status->device.cc_type == CAPTURE_CONN_FTD2) {
+		base_ptr = (uint8_t*)p_in->ftd2_received_old_ds.audio_data;
+		int real_samples = 0;
+		while((real_samples < n_samples) && (((uint32_t*)base_ptr)[real_samples] != (FTD2_OLDDS_SYNCH_VALUES | (FTD2_OLDDS_SYNCH_VALUES << 16))))
+			real_samples++;
+		n_samples = real_samples;
 	}
 	#endif
 	#ifdef USE_DS_3DS_USB

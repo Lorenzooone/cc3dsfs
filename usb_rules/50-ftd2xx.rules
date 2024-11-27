@@ -1,0 +1,4 @@
+ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6014", PROGRAM="/bin/sh -c '\
+    echo -n $id:1.0 > /sys/bus/usb/drivers/ftdi_sio/unbind;\
+    echo -n $id:1.1 > /sys/bus/usb/drivers/ftdi_sio/unbind\
+'"

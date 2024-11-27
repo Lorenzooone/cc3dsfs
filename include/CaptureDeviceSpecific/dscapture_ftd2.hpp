@@ -8,6 +8,8 @@
 #include "display_structs.hpp"
 #include "devicecapture.hpp"
 
+#define FTD2_OLDDS_SYNCH_VALUES 0x4321
+
 void list_devices_ftd2(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list);
 bool connect_ftd2(bool print_failed, CaptureData* capture_data, CaptureDevice* device);
 void ftd2_capture_main_loop(CaptureData* capture_data);

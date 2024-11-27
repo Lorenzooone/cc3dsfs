@@ -71,7 +71,7 @@
 // In general, it should be less than * 2, but you never know. For now, go for safety at x16...
 #define O3DS_SAMPLES_IN (1096 * 16)
 #define N3DSXL_SAMPLES_IN (1096 * 16)
-#define DS_SAMPLES_IN (1096 * 16)
+#define DS_SAMPLES_IN (1096)
 #define MAX_SAMPLES_IN O3DS_SAMPLES_IN
 
 #endif

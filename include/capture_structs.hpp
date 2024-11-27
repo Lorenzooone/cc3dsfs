@@ -94,6 +94,12 @@ struct ALIGNED(16) PACKED USBOldDSCaptureReceived {
 	USBOldDSFrameInfo frameinfo;
 };
 
+struct ALIGNED(16) PACKED FTD2OldDSCaptureReceived {
+	USBOldDSVideoInputData video_in;
+	uint16_t audio_data[DS_SAMPLES_IN];
+	uint8_t unused_buffer[EXTRA_DATA_BUFFER_USB_SIZE];
+};
+
 struct ALIGNED(16) PACKED ISNitroCaptureReceived {
 	ISNitroEmulatorVideoInputData video_in;
 };
@@ -106,13 +112,15 @@ union CaptureReceived {
 	USB3DSCaptureReceived usb_received_3ds;
 	USB3DSCaptureReceived_3D usb_received_3ds_3d;
 	USBOldDSCaptureReceived usb_received_old_ds;
+	FTD2OldDSCaptureReceived ftd2_received_old_ds;
 	ISNitroCaptureReceived is_nitro_capture_received;
 };
 
 struct CaptureDevice {
-	CaptureDevice(std::string serial_number, std::string name, CaptureConnectionType cc_type, const void* descriptor, bool is_3ds, bool has_3d, bool has_audio, int width, int height, int max_samples_in, int base_rotation, int top_screen_x, int top_screen_y, int bot_screen_x, int bot_screen_y, InputVideoDataType video_data_type) : serial_number(serial_number), name(name), cc_type(cc_type), descriptor(descriptor), is_3ds(is_3ds), has_3d(has_3d), has_audio(has_audio), width(width), height(height), max_samples_in(max_samples_in), base_rotation(base_rotation), top_screen_x(top_screen_x), top_screen_y(top_screen_y), bot_screen_x(bot_screen_x), bot_screen_y(bot_screen_y), path(""), video_data_type(video_data_type) {}
-	CaptureDevice(std::string serial_number, std::string name, std::string path, CaptureConnectionType cc_type, const void* descriptor, bool is_3ds, bool has_3d, bool has_audio, int width, int height, int max_samples_in, int base_rotation, int top_screen_x, int top_screen_y, int bot_screen_x, int bot_screen_y, InputVideoDataType video_data_type) : serial_number(serial_number), name(name), cc_type(cc_type), descriptor(descriptor), is_3ds(is_3ds), has_3d(has_3d), has_audio(has_audio), width(width), height(height), max_samples_in(max_samples_in), base_rotation(base_rotation), top_screen_x(top_screen_x), top_screen_y(top_screen_y), bot_screen_x(bot_screen_x), bot_screen_y(bot_screen_y), path(path), video_data_type(video_data_type) {}
-	CaptureDevice(): serial_number(""), name(""), cc_type(CAPTURE_CONN_USB), descriptor(NULL), is_3ds(false), has_3d(false), has_audio(false), width(0), height(0), max_samples_in(0), base_rotation(0), top_screen_x(0), top_screen_y(0), bot_screen_x(0), bot_screen_y(0), path(""), video_data_type(VIDEO_DATA_RGB) {}
+	CaptureDevice(std::string serial_number, std::string name, CaptureConnectionType cc_type, const void* descriptor, bool is_3ds, bool has_3d, bool has_audio, int width, int height, int max_samples_in, int base_rotation, int top_screen_x, int top_screen_y, int bot_screen_x, int bot_screen_y, InputVideoDataType video_data_type) : serial_number(serial_number), name(name), cc_type(cc_type), descriptor(descriptor), is_3ds(is_3ds), has_3d(has_3d), has_audio(has_audio), width(width), height(height), max_samples_in(max_samples_in), base_rotation(base_rotation), top_screen_x(top_screen_x), top_screen_y(top_screen_y), bot_screen_x(bot_screen_x), bot_screen_y(bot_screen_y), path(""), video_data_type(video_data_type), firmware_id(0), is_rgb_888(false) {}
+	CaptureDevice(std::string serial_number, std::string name, CaptureConnectionType cc_type, const void* descriptor, bool is_3ds, bool has_3d, bool has_audio, int width, int height, int max_samples_in, int base_rotation, int top_screen_x, int top_screen_y, int bot_screen_x, int bot_screen_y, InputVideoDataType video_data_type, int firmware_id, bool is_rgb_888) : serial_number(serial_number), name(name), cc_type(cc_type), descriptor(descriptor), is_3ds(is_3ds), has_3d(has_3d), has_audio(has_audio), width(width), height(height), max_samples_in(max_samples_in), base_rotation(base_rotation), top_screen_x(top_screen_x), top_screen_y(top_screen_y), bot_screen_x(bot_screen_x), bot_screen_y(bot_screen_y), path(""), video_data_type(video_data_type), firmware_id(firmware_id), is_rgb_888(is_rgb_888) {}
+	CaptureDevice(std::string serial_number, std::string name, std::string path, CaptureConnectionType cc_type, const void* descriptor, bool is_3ds, bool has_3d, bool has_audio, int width, int height, int max_samples_in, int base_rotation, int top_screen_x, int top_screen_y, int bot_screen_x, int bot_screen_y, InputVideoDataType video_data_type) : serial_number(serial_number), name(name), cc_type(cc_type), descriptor(descriptor), is_3ds(is_3ds), has_3d(has_3d), has_audio(has_audio), width(width), height(height), max_samples_in(max_samples_in), base_rotation(base_rotation), top_screen_x(top_screen_x), top_screen_y(top_screen_y), bot_screen_x(bot_screen_x), bot_screen_y(bot_screen_y), path(path), video_data_type(video_data_type), firmware_id(0), is_rgb_888(false) {}
+	CaptureDevice(): serial_number(""), name(""), cc_type(CAPTURE_CONN_USB), descriptor(NULL), is_3ds(false), has_3d(false), has_audio(false), width(0), height(0), max_samples_in(0), base_rotation(0), top_screen_x(0), top_screen_y(0), bot_screen_x(0), bot_screen_y(0), path(""), firmware_id(0), video_data_type(VIDEO_DATA_RGB), is_rgb_888(false) {}
 
 	std::string serial_number;
 	std::string name;
@@ -131,6 +139,8 @@ struct CaptureDevice {
 	int top_screen_y;
 	int bot_screen_x;
 	int bot_screen_y;
+	int firmware_id;
+	bool is_rgb_888;
 };
 
 struct CaptureStatus {

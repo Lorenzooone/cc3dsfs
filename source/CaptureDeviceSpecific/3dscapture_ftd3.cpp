@@ -1,5 +1,6 @@
 #include "3dscapture_ftd3.hpp"
 #include "devicecapture.hpp"
+//#include "ftd3xx_symbols_renames.h"
 
 #ifdef _WIN32
 #define FTD3XX_STATIC
@@ -103,7 +104,7 @@ void list_devices_ftd3(std::vector<CaptureDevice> &devices_list, std::vector<no_
 		DWORD Type = 0;
 		DWORD ID = 0;
 		char SerialNumber[SERIAL_NUMBER_SIZE] = { 0 };
-		char Description[33] = { 0 };
+		char Description[65] = { 0 };
 		for (DWORD i = 0; i < numDevs; i++)
 		{
 			ftStatus = FT_GetDeviceInfoDetail(i, &Flags, &Type, &ID, NULL,
