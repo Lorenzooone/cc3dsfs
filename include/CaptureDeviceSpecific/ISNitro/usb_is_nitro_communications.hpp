@@ -47,6 +47,7 @@ struct isn_async_callback_data {
 
 struct is_nitro_usb_device {
 	std::string name;
+	std::string long_name;
 	int vid;
 	int pid;
 	int default_config;

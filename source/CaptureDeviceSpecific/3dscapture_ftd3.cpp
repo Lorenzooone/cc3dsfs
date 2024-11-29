@@ -9,7 +9,7 @@
 #define FT_ASYNC_CALL FT_ReadPipeAsync
 #endif
 #include <ftd3xx.h>
-#if defined(USE_IS_NITRO_USB) || defined(USE_DS_3DS_USB)
+#ifdef USE_LIBUSB
 #include "usb_generic.hpp"
 #endif
 
@@ -122,7 +122,7 @@ void list_devices_ftd3(std::vector<CaptureDevice> &devices_list, std::vector<no_
 		}
 	}
 	if(num_inserted == 0) {
-		#if defined(USE_IS_NITRO_USB) || defined(USE_DS_3DS_USB)
+		#ifdef USE_LIBUSB
 		if(get_usb_total_filtered_devices(ftd3xx_valid_vids, sizeof(ftd3xx_valid_vids) / sizeof(ftd3xx_valid_vids[0]), ftd3xx_valid_pids, sizeof(ftd3xx_valid_pids) / sizeof(ftd3xx_valid_pids[0])) != numDevs)
 			no_access_list.emplace_back("FTD3XX");
 		#endif

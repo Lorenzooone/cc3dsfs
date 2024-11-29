@@ -1,0 +1,15 @@
+?AddDevice@@YAPAUft_private_vars@@XZ
+?CreateDeviceInfoList@@YAKPAK@Z
+?FT_GetPacketSize@@YAKPAXPAG@Z
+?FindDevice@@YAPAUft_private_vars@@K@Z
+?IsDeviceValid@@YAEPAUft_private_vars@@@Z
+?RemoveDevice@@YAKPAUft_private_vars@@@Z
+?ghFtOpenLock@@3PAXA
+?ghFtDevListLock@@3PAXA
+?pgDeviceList@@3PAUft_private_vars@@A
+?ResetAttachedList@@YAKXZ
+?dwNumberOfAttachedDevices@@3KA
+?gCS@@3U_RTL_CRITICAL_SECTION@@A
+?gInitialised@@3HA
+?Set1Ioctls@@3PAKA
+?Set2Ioctls@@3PAKA

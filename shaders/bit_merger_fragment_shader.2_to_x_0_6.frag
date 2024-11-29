@@ -16,4 +16,4 @@ void main() {
 	vec4 actual_nth_bit_component = get_nth_bit_component(gl_FragColor);
 	vec4 old_nth_bit_component = get_nth_bit_component(OldFragColor);
 	gl_FragColor = clamp((floor(gl_FragColor * 255.0) - actual_nth_bit_component + ((actual_nth_bit_component + old_nth_bit_component) / 2.0)) / 255.0, 0.0, 1.0);
-};
+}

@@ -11,4 +11,4 @@ void main() {
 	vec4 OldFragColor = texture2D(Texture0, gl_TexCoord[0].xy + old_frame_offset);
 	OldFragColor = clamp(floor(OldFragColor * bit_crusher) * normalizer, 0.0, 1.0);
 	gl_FragColor = (gl_FragColor + OldFragColor) / 2.0;
-};
+}

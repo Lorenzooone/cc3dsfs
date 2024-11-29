@@ -71,6 +71,7 @@ void CaptureDataBuffers::ReleaseReaderBuffer(CaptureReaderType reader_type) {
 void CaptureDataBuffers::ReleaseWriterBuffer() {
 	access_mutex.lock();
 	if(curr_writer_pos != -1) {
+		buffers[curr_writer_pos].inner_index = inner_index++;
 		last_curr_in = curr_writer_pos;
 		curr_writer_pos = -1;
 	}

@@ -62,11 +62,11 @@ std::string get_serial(const is_nitro_usb_device* usb_device_desc, is_nitro_devi
 }
 
 void is_nitro_insert_device(std::vector<CaptureDevice>& devices_list, is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc, int& curr_serial_extra_id_is_nitro, std::string path) {
-	devices_list.emplace_back(get_serial(usb_device_desc, handlers, curr_serial_extra_id_is_nitro), usb_device_desc->name, path, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS, VIDEO_DATA_BGR);
+	devices_list.emplace_back(get_serial(usb_device_desc, handlers, curr_serial_extra_id_is_nitro), usb_device_desc->name, usb_device_desc->long_name, path, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS, VIDEO_DATA_BGR);
 }
 
 void is_nitro_insert_device(std::vector<CaptureDevice>& devices_list, is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc, int& curr_serial_extra_id_is_nitro) {
-	devices_list.emplace_back(get_serial(usb_device_desc, handlers, curr_serial_extra_id_is_nitro), usb_device_desc->name, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS, VIDEO_DATA_BGR);
+	devices_list.emplace_back(get_serial(usb_device_desc, handlers, curr_serial_extra_id_is_nitro), usb_device_desc->name, usb_device_desc->long_name, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS, VIDEO_DATA_BGR);
 }
 
 static is_nitro_device_handlers* usb_find_by_serial_number(const is_nitro_usb_device* usb_device_desc, CaptureDevice* device) {

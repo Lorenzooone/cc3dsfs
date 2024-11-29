@@ -23,5 +23,5 @@ void capture_error_print(bool print_failed, CaptureData* capture_data, std::stri
 void capture_error_print(bool print_failed, CaptureData* capture_data, std::string graphical_string, std::string detailed_string);
 uint64_t get_audio_n_samples(CaptureData* capture_data, uint64_t read);
 uint64_t get_video_in_size(CaptureData* capture_data);
-std::string get_name_of_device(CaptureStatus* capture_status);
+std::string get_name_of_device(CaptureStatus* capture_status, bool use_long = false);
 #endif

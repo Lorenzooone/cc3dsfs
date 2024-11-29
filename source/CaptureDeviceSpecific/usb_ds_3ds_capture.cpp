@@ -207,6 +207,13 @@ static int insert_device(std::vector<CaptureDevice> &devices_list, const usb_dev
 	int result = libusb_open(usb_device, &handle);
 	if(result || (handle == NULL))
 		return result;
+	result = libusb_claim_interface(handle, usb_device_desc->capture_interface);
+	if(result == LIBUSB_SUCCESS)
+		libusb_release_interface(handle, usb_device_desc->capture_interface);
+	if(result < 0) {
+		libusb_close(handle);
+		return result;
+	}
 	std::string serial_str = get_serial(handle, usb_descriptor, curr_serial_extra_id);
 	if(usb_device_desc->is_3ds)
 		devices_list.emplace_back(serial_str, "3DS", CAPTURE_CONN_USB, (void*)usb_device_desc, true, capture_get_has_3d(handle, usb_device_desc), true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, O3DS_SAMPLES_IN, 90, 0, 0, TOP_WIDTH_3DS, 0, VIDEO_DATA_RGB);

@@ -106,7 +106,7 @@ struct PACKED is_nitro_packet_header {
 #pragma pack(pop)
 
 static const is_nitro_usb_device usb_is_nitro_emu_rare_desc = {
-.name = "IS Nitro Emulator(R)",
+.name = "ISNEr", .long_name = "IS Nitro Emulator(R)",
 .vid = 0x0f6e, .pid = 0x0400,
 .default_config = 1, .default_interface = 0,
 .bulk_timeout = 500,
@@ -115,7 +115,7 @@ static const is_nitro_usb_device usb_is_nitro_emu_rare_desc = {
 };
 
 static const is_nitro_usb_device usb_is_nitro_emu_common_desc = {
-.name = "IS Nitro Emulator",
+.name = "ISNE", .long_name = "IS Nitro Emulator",
 .vid = 0x0f6e, .pid = 0x0404,
 .default_config = 1, .default_interface = 0,
 .bulk_timeout = 500,
@@ -124,7 +124,7 @@ static const is_nitro_usb_device usb_is_nitro_emu_common_desc = {
 };
 
 static const is_nitro_usb_device usb_is_nitro_cap_desc = {
-.name = "IS Nitro Capture",
+.name = "ISNC", .long_name = "IS Nitro Capture",
 .vid = 0x0f6e, .pid = 0x0403,
 .default_config = 1, .default_interface = 0,
 .bulk_timeout = 500,
@@ -298,16 +298,16 @@ static int SendReadPacket(is_nitro_device_handlers* handlers, uint16_t command, 
 }
 
 int SendReadCommand(is_nitro_device_handlers* handlers, uint16_t command, uint8_t* buf, int length, const is_nitro_usb_device* device_desc) {
-    return SendReadPacket(handlers, command, IS_NITRO_PACKET_TYPE_COMMAND, 0, buf, length, device_desc);
+	return SendReadPacket(handlers, command, IS_NITRO_PACKET_TYPE_COMMAND, 0, buf, length, device_desc);
 }
 
 int SendWriteCommand(is_nitro_device_handlers* handlers, uint16_t command, uint8_t* buf, int length, const is_nitro_usb_device* device_desc) {
-    return SendWritePacket(handlers, command, IS_NITRO_PACKET_TYPE_COMMAND, 0, buf, length, device_desc);
+	return SendWritePacket(handlers, command, IS_NITRO_PACKET_TYPE_COMMAND, 0, buf, length, device_desc);
 }
 
 int SendReadCommandU32(is_nitro_device_handlers* handlers, uint16_t command, uint32_t* out, const is_nitro_usb_device* device_desc) {
 	uint32_t buffer;
-    int ret = SendReadCommand(handlers, command, (uint8_t*)&buffer, sizeof(uint32_t), device_desc);
+	int ret = SendReadCommand(handlers, command, (uint8_t*)&buffer, sizeof(uint32_t), device_desc);
 	if(ret < 0)
 		return ret;
 	*out = from_le(buffer);
@@ -316,13 +316,13 @@ int SendReadCommandU32(is_nitro_device_handlers* handlers, uint16_t command, uin
 
 int SendWriteCommandU32(is_nitro_device_handlers* handlers, uint16_t command, uint32_t value, const is_nitro_usb_device* device_desc) {
 	uint32_t buffer = to_le(value);
-    return SendWriteCommand(handlers, command, (uint8_t*)&buffer, sizeof(uint32_t), device_desc);
+	return SendWriteCommand(handlers, command, (uint8_t*)&buffer, sizeof(uint32_t), device_desc);
 }
 
 int GetDeviceSerial(is_nitro_device_handlers* handlers, uint8_t* buf, const is_nitro_usb_device* device_desc) {
 	if(device_desc->is_capture)
-	    return SendReadCommand(handlers, IS_NITRO_CAP_CMD_GET_SERIAL, buf, IS_NITRO_REAL_SERIAL_NUMBER_SIZE, device_desc);
-    return SendReadCommand(handlers, IS_NITRO_EMU_CMD_GET_SERIAL, buf, IS_NITRO_REAL_SERIAL_NUMBER_SIZE, device_desc);
+		return SendReadCommand(handlers, IS_NITRO_CAP_CMD_GET_SERIAL, buf, IS_NITRO_REAL_SERIAL_NUMBER_SIZE, device_desc);
+	return SendReadCommand(handlers, IS_NITRO_EMU_CMD_GET_SERIAL, buf, IS_NITRO_REAL_SERIAL_NUMBER_SIZE, device_desc);
 }
 
 int ReadNecMem(is_nitro_device_handlers* handlers, uint32_t address, uint8_t unit_size, uint8_t* buf, int count, const is_nitro_usb_device* device_desc) {
@@ -375,12 +375,12 @@ int WriteNecMem(is_nitro_device_handlers* handlers, uint32_t address, uint8_t un
 
 int WriteNecMemU16(is_nitro_device_handlers* handlers, uint32_t address, uint16_t value, const is_nitro_usb_device* device_desc) {
 	uint16_t buffer = to_le(value);
-    return WriteNecMem(handlers, address, 2, (uint8_t*)&buffer, 1, device_desc);
+	return WriteNecMem(handlers, address, 2, (uint8_t*)&buffer, 1, device_desc);
 }
 
 int WriteNecMemU32(is_nitro_device_handlers* handlers, uint32_t address, uint32_t value, const is_nitro_usb_device* device_desc) {
 	uint32_t buffer = to_le(value);
-    return WriteNecMem(handlers, address, 2, (uint8_t*)&buffer, 2, device_desc);
+	return WriteNecMem(handlers, address, 2, (uint8_t*)&buffer, 2, device_desc);
 }
 
 int DisableLca2(is_nitro_device_handlers* handlers, const is_nitro_usb_device* device_desc) {
@@ -403,7 +403,7 @@ int StartUsbCaptureDma(is_nitro_device_handlers* handlers, const is_nitro_usb_de
 			return ret;
 		return WriteNecMemU16(handlers, REG_USB_BIU_CONTROL_2, 1, device_desc);
 	}
-    return SendReadPacket(handlers, IS_NITRO_CAP_CMD_ENABLE_CAP, IS_NITRO_CAPTURE_PACKET_TYPE_DMA_CONTROL, 0, NULL, 1, device_desc, false);
+	return SendReadPacket(handlers, IS_NITRO_CAP_CMD_ENABLE_CAP, IS_NITRO_CAPTURE_PACKET_TYPE_DMA_CONTROL, 0, NULL, 1, device_desc, false);
 }
 
 int StopUsbCaptureDma(is_nitro_device_handlers* handlers, const is_nitro_usb_device* device_desc) {
@@ -413,7 +413,7 @@ int StopUsbCaptureDma(is_nitro_device_handlers* handlers, const is_nitro_usb_dev
 			return ret;
 		return WriteNecMemU16(handlers, REG_USB_BIU_CONTROL_2, 0, device_desc);
 	}
-    return SendReadPacket(handlers, IS_NITRO_CAP_CMD_ENABLE_CAP, IS_NITRO_CAPTURE_PACKET_TYPE_DMA_CONTROL, 0, NULL, 0, device_desc);
+	return SendReadPacket(handlers, IS_NITRO_CAP_CMD_ENABLE_CAP, IS_NITRO_CAPTURE_PACKET_TYPE_DMA_CONTROL, 0, NULL, 0, device_desc);
 }
 
 int SetForwardFrameCount(is_nitro_device_handlers* handlers, uint16_t count, const is_nitro_usb_device* device_desc) {
@@ -434,12 +434,12 @@ int GetFrameCounter(is_nitro_device_handlers* handlers, uint16_t* out, const is_
 		*out = 0;
 		return LIBUSB_SUCCESS;
 	}
-    uint32_t counter = 0;
-    int ret = ReadNecMemU32(handlers, 0x08000028, &counter, device_desc);
-    if(ret < 0)
-    	return ret;
-    *out = (counter & 0xFF) | ((counter & 0xFF0000) >> 8);
-    return ret;
+	uint32_t counter = 0;
+	int ret = ReadNecMemU32(handlers, 0x08000028, &counter, device_desc);
+	if(ret < 0)
+		return ret;
+	*out = (counter & 0xFF) | ((counter & 0xFF0000) >> 8);
+	return ret;
 }
 
 int UpdateFrameForwardConfig(is_nitro_device_handlers* handlers, is_nitro_forward_config_values_colors colors, is_nitro_forward_config_values_screens screens, is_nitro_forward_config_values_rate rate, const is_nitro_usb_device* device_desc) {
@@ -469,31 +469,31 @@ int UpdateFrameForwardEnable(is_nitro_device_handlers* handlers, bool enable, bo
 }
 
 int ReadLidState(is_nitro_device_handlers* handlers, bool* out, const is_nitro_usb_device* device_desc) {
-    uint32_t flags = 0;
+	uint32_t flags = 0;
 	if(device_desc->is_capture) {
 		int ret = SendReadCommandU32(handlers, IS_NITRO_CAP_CMD_GET_LID_STATE, &flags, device_desc);
 		*out = (flags & 1) ? true : false;
 		return ret;
 	}
-    int ret = ReadNecMemU32(handlers, 0x08000000, &flags, device_desc);
-    if(ret < 0)
-    	return ret;
-    *out = (flags & 2) ? true : false;
-    return ret;
+	int ret = ReadNecMemU32(handlers, 0x08000000, &flags, device_desc);
+	if(ret < 0)
+		return ret;
+	*out = (flags & 2) ? true : false;
+	return ret;
 }
 
 int ReadDebugButtonState(is_nitro_device_handlers* handlers, bool* out, const is_nitro_usb_device* device_desc) {
-    uint32_t flags = 0;
+	uint32_t flags = 0;
 	if(device_desc->is_capture) {
 		int ret = SendReadCommandU32(handlers, IS_NITRO_CAP_CMD_GET_DEBUG_STATE, &flags, device_desc);
 		*out = (flags & 1) ? true : false;
 		return ret;
 	}
-    int ret = ReadNecMemU32(handlers, 0x08000000, &flags, device_desc);
-    if(ret < 0)
-    	return ret;
-    *out = (flags & 1) ? true : false;
-    return ret;
+	int ret = ReadNecMemU32(handlers, 0x08000000, &flags, device_desc);
+	if(ret < 0)
+		return ret;
+	*out = (flags & 1) ? true : false;
+	return ret;
 }
 
 int ReadPowerButtonState(is_nitro_device_handlers* handlers, bool* out, const is_nitro_usb_device* device_desc) {

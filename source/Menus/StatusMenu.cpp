@@ -143,7 +143,7 @@ void StatusMenu::prepare(float menu_scaling_factor, int view_size_x, int view_si
 					this->labels[index]->setText(this->get_string_option(real_index, DEFAULT_ACTION) + " - V." + get_version_string());
 					break;
 				case STATUS_MENU_CONNECTION:
-					this->labels[index]->setText(get_name_of_device(capture_status));
+					this->labels[index]->setText(get_name_of_device(capture_status, true));
 					break;
 				case STATUS_MENU_FPS_IN:
 					this->labels[index + INC_ACTION]->setText(get_float_str_decimals(in_fps, 2));

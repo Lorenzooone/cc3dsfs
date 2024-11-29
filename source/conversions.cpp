@@ -1,7 +1,7 @@
 #include "conversions.hpp"
 #include "devicecapture.hpp"
 #include "3dscapture_ftd3.hpp"
-#include "dscapture_ftd2.hpp"
+#include "dscapture_ftd2_shared.hpp"
 #include "usb_ds_3ds_capture.hpp"
 #include "usb_is_nitro_acquisition.hpp"
 
@@ -215,7 +215,7 @@ bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, Capt
 	return converted;
 }
 
-bool convertAudioToOutput(std::int16_t *p_out, uint64_t n_samples, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status) {
+bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status) {
 	if(!status->device.has_audio)
 		return true;
 	CaptureReceived *p_in = &data_buffer->capture_buf;
@@ -229,13 +229,8 @@ bool convertAudioToOutput(std::int16_t *p_out, uint64_t n_samples, const bool is
 	}
 	#endif
 	#ifdef USE_FTD2
-	if(status->device.cc_type == CAPTURE_CONN_FTD2) {
+	if(status->device.cc_type == CAPTURE_CONN_FTD2)
 		base_ptr = (uint8_t*)p_in->ftd2_received_old_ds.audio_data;
-		int real_samples = 0;
-		while((real_samples < n_samples) && (((uint32_t*)base_ptr)[real_samples] != (FTD2_OLDDS_SYNCH_VALUES | (FTD2_OLDDS_SYNCH_VALUES << 16))))
-			real_samples++;
-		n_samples = real_samples;
-	}
 	#endif
 	#ifdef USE_DS_3DS_USB
 	if(status->device.cc_type == CAPTURE_CONN_USB) {

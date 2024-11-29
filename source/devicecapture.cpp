@@ -1,6 +1,6 @@
 #include "devicecapture.hpp"
 #include "3dscapture_ftd3.hpp"
-#include "dscapture_ftd2.hpp"
+#include "dscapture_ftd2_shared.hpp"
 #include "usb_ds_3ds_capture.hpp"
 #include "usb_is_nitro_acquisition.hpp"
 
@@ -80,7 +80,7 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	list_devices_ftd3(devices_list, no_access_list);
 	#endif
 	#ifdef USE_FTD2
-	list_devices_ftd2(devices_list, no_access_list);
+	list_devices_ftd2_shared(devices_list, no_access_list);
 	#endif
 	#ifdef USE_DS_3DS_USB
 	list_devices_usb_ds_3ds(devices_list, no_access_list);
@@ -118,7 +118,7 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 		return false;
 	#endif
 	#ifdef USE_FTD2
-	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_FTD2) && (!connect_ftd2(print_failed, capture_data, &devices_list[chosen_device])))
+	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_FTD2) && (!connect_ftd2_shared(print_failed, capture_data, &devices_list[chosen_device])))
 		return false;
 	#endif
 	#ifdef USE_DS_3DS_USB
@@ -155,7 +155,7 @@ void captureCall(CaptureData* capture_data) {
 		#endif
 		#ifdef USE_FTD2
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD2)
-			ftd2_capture_main_loop(capture_data);
+			ftd2_capture_main_loop_shared(capture_data);
 		#endif
 		#ifdef USE_DS_3DS_USB
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_USB)
@@ -181,7 +181,7 @@ void captureCall(CaptureData* capture_data) {
 		#endif
 		#ifdef USE_FTD2
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD2)
-			ftd2_capture_cleanup(capture_data);
+			ftd2_capture_cleanup_shared(capture_data);
 		#endif
 		#ifdef USE_DS_3DS_USB
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_USB)
@@ -228,10 +228,12 @@ uint64_t get_video_in_size(CaptureData* capture_data) {
 	return 0;
 }
 
-std::string get_name_of_device(CaptureStatus* capture_status) {
+std::string get_name_of_device(CaptureStatus* capture_status, bool use_long) {
 	if(!capture_status->connected)
 		return "Not connected";
-	return capture_status->device.name + " - " + capture_status->device.serial_number;
+	if(!use_long)
+		return capture_status->device.name + " - " + capture_status->device.serial_number;
+	return capture_status->device.long_name + " - " + capture_status->device.serial_number;
 }
 
 void capture_init() {
@@ -241,6 +243,9 @@ void capture_init() {
 	#ifdef USE_IS_NITRO_USB
 	usb_is_nitro_init();
 	#endif
+	#ifdef USE_FTD2
+	ftd2_init_shared();
+	#endif
 }
 
 void capture_close() {
@@ -249,5 +254,8 @@ void capture_close() {
 	#endif
 	#ifdef USE_IS_NITRO_USB
 	usb_is_nitro_close();
+	#endif
+	#ifdef USE_FTD2
+	ftd2_end_shared();
 	#endif
 }

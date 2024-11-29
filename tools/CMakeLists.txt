@@ -39,3 +39,29 @@ add_custom_command(
     POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${OUTPUT_NAME}> ${CMAKE_BINARY_DIR}
     VERBATIM
 )
+
+set(OUTPUT_NAME CMakeRenameLibFunctions)
+project(${OUTPUT_NAME} VERSION 1.0.0 LANGUAGES CXX)
+
+add_executable(${OUTPUT_NAME} rename_lib_functions.cpp)
+target_compile_features(${OUTPUT_NAME} PRIVATE cxx_std_17)
+
+add_custom_command(
+    TARGET ${OUTPUT_NAME}
+    COMMENT "Copy Output"
+    POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${OUTPUT_NAME}> ${CMAKE_BINARY_DIR}
+    VERBATIM
+)
+
+set(OUTPUT_NAME CMakeRenameSymbols)
+project(${OUTPUT_NAME} VERSION 1.0.0 LANGUAGES CXX)
+
+add_executable(${OUTPUT_NAME} rename_symbols_list.cpp)
+target_compile_features(${OUTPUT_NAME} PRIVATE cxx_std_17)
+
+add_custom_command(
+    TARGET ${OUTPUT_NAME}
+    COMMENT "Copy Output"
+    POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${OUTPUT_NAME}> ${CMAKE_BINARY_DIR}
+    VERBATIM
+)

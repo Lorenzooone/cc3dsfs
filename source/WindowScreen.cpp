@@ -51,7 +51,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	FPSArrayInit(&this->in_fps);
 	FPSArrayInit(&this->draw_fps);
 	FPSArrayInit(&this->poll_fps);
-	(void)this->in_tex.resize({MAX_IN_VIDEO_WIDTH, MAX_IN_VIDEO_HEIGHT * NUM_FRAMES_BLENDED});
+	(void)this->in_tex.resize({MAX_IN_VIDEO_WIDTH * NUM_FRAMES_BLENDED, MAX_IN_VIDEO_HEIGHT});
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
 	this->display_data = display_data;
@@ -83,11 +83,11 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 			if(current_shader->shader.loadFromMemory(get_shader_string(current_shader->shader_enum), sf::Shader::Type::Fragment)) {
 				current_shader->is_valid = true;
 				auto* const defaultStreamBuffer = sf::err().rdbuf();
-		        sf::err().rdbuf(nullptr);
+				sf::err().rdbuf(nullptr);
 				sf::Glsl::Vec2 old_pos = {0.0, 0.0};
 				current_shader->shader.setUniform("old_frame_offset", old_pos);
-		        sf::err().rdbuf(defaultStreamBuffer);
-	        }
+				sf::err().rdbuf(defaultStreamBuffer);
+			}
 		}
 		loaded_shaders = true;
 	}
@@ -469,25 +469,25 @@ std::string WindowScreen::title_factory() {
 
 void WindowScreen::update_texture() {
 	unsigned int m_texture = this->in_tex.getNativeHandle();
-    if (this->saved_buf && m_texture)
-    {
-        // Copy pixels from the given array to the texture
-        glBindTexture(GL_TEXTURE_2D, m_texture);
-        GLenum format = GL_RGB;
-        GLenum type = GL_UNSIGNED_BYTE;
-        if(this->capture_status->device.video_data_type == VIDEO_DATA_BGR)
-        	format = GL_BGR;
-        if(this->capture_status->device.video_data_type == VIDEO_DATA_RGB16)
-        	type =  GL_UNSIGNED_SHORT_5_6_5;
-        if(this->capture_status->device.video_data_type == VIDEO_DATA_BGR16)
-        	type =  GL_UNSIGNED_SHORT_5_6_5_REV;
-        glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(0), static_cast<GLint>(this->curr_frame_texture_pos * MAX_IN_VIDEO_HEIGHT), static_cast<GLsizei>(this->capture_status->device.width), static_cast<GLsizei>(this->capture_status->device.height), format, type, this->saved_buf);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	if (this->saved_buf && m_texture)
+	{
+		// Copy pixels from the given array to the texture
+		glBindTexture(GL_TEXTURE_2D, m_texture);
+		GLenum format = GL_RGB;
+		GLenum type = GL_UNSIGNED_BYTE;
+		if(this->capture_status->device.video_data_type == VIDEO_DATA_BGR)
+			format = GL_BGR;
+		if(this->capture_status->device.video_data_type == VIDEO_DATA_RGB16)
+			type =  GL_UNSIGNED_SHORT_5_6_5;
+		if(this->capture_status->device.video_data_type == VIDEO_DATA_BGR16)
+			type =  GL_UNSIGNED_SHORT_5_6_5_REV;
+		glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(this->curr_frame_texture_pos * MAX_IN_VIDEO_WIDTH), static_cast<GLint>(0), static_cast<GLsizei>(this->capture_status->device.width), static_cast<GLsizei>(this->capture_status->device.height), format, type, this->saved_buf);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-        // Force an OpenGL flush, so that the texture data will appear updated
-        // in all contexts immediately (solves problems in multi-threaded apps)
-        glFlush();
-    }
+		// Force an OpenGL flush, so that the texture data will appear updated
+		// in all contexts immediately (solves problems in multi-threaded apps)
+		glFlush();
+	}
 }
 
 void WindowScreen::pre_texture_conversion_processing() {
@@ -572,17 +572,17 @@ void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, 
 		rect_data.out_tex.clear();
 		sf::RectangleShape final_in_rect = in_rect;
 		sf::IntRect text_coords_rect = final_in_rect.getTextureRect();
-		text_coords_rect.position.y += this->curr_frame_texture_pos * MAX_IN_VIDEO_HEIGHT;
+		text_coords_rect.position.x += this->curr_frame_texture_pos * MAX_IN_VIDEO_WIDTH;
 		final_in_rect.setTextureRect(text_coords_rect);
 		if(this->capture_status->connected && actually_draw) {
 			bool use_default_shader = true;
 			if(sf::Shader::isAvailable()) {
 				int chosen_shader = choose_shader(true, is_top);
 				if(chosen_shader >= 0) {
-					float old_frame_pos_y = 1.0 / NUM_FRAMES_BLENDED;
-					if(this->curr_frame_texture_pos == 1)
-						old_frame_pos_y = -1.0 / NUM_FRAMES_BLENDED;
-					sf::Glsl::Vec2 old_pos = {0.0, old_frame_pos_y};
+					float old_frame_pos_x = ((float)(NUM_FRAMES_BLENDED - 1)) / NUM_FRAMES_BLENDED;
+					if(this->curr_frame_texture_pos > 0)
+						old_frame_pos_x = -1.0 / NUM_FRAMES_BLENDED;
+					sf::Glsl::Vec2 old_pos = {old_frame_pos_x, 0.0};
 					usable_shaders[chosen_shader].shader.setUniform("old_frame_offset", old_pos);
 					rect_data.out_tex.draw(final_in_rect, &usable_shaders[chosen_shader].shader);
 					use_default_shader = false;

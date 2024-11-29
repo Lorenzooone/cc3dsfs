@@ -12,6 +12,7 @@ IS Nitro Emulator (newer revisions) and IS Nitro Capture support is also present
 - Make your game run in fullscreen mode. If you own multiple displays, you can even use one per-window.
 - Many builtin crop options for the screens.
 - Many other settings, explained in [Controls](#Controls).
+- Prebuilt executables available in the [Releases](https://github.com/Lorenzooone/cc3dsfs/releases/latest) page for ease of use.
 
 _Note: On 3DS, DS, GBA, GBC and GB games boot in scaled resolution mode by default. Holding START or SELECT while launching these games will boot in native resolution mode._
 
@@ -23,10 +24,10 @@ cc3dsfs has three build dependencies: CMake, g++ and git.
 Make sure all are installed.
 On MacOS, [Homebrew](https://brew.sh/) can be used to install both CMake and git. An automatic popup should appear to install g++ at Compile time.
 
-cc3dsfs has four library dependencies: [FTDI's D3XX driver](https://ftdichip.com/drivers/d3xx-drivers/), [FTDI's D2XX driver](https://ftdichip.com/drivers/d2xx-drivers/), [libusb](https://libusb.info/) and [SFML](https://www.sfml-dev.org/).
+cc3dsfs has five library dependencies: [FTDI's D3XX driver](https://ftdichip.com/drivers/d3xx-drivers/), [FTDI's D2XX driver](https://ftdichip.com/drivers/d2xx-drivers/) (on Windows), [libusb](https://libusb.info/), [libftdi](https://www.intra2net.com/en/developer/libftdi/) and [SFML](https://www.sfml-dev.org/).
 All of them should get downloaded automatically via CMake during the building process.
 
-Linux users will also need to install the SFML dependencies. Different distributions will require slightly different processes.
+Linux users who wish to compile this, will also need to install the SFML dependencies. Different distributions will require slightly different processes.
 Below, the command for Debian-based distributions, which also lists the required libraries.
 
 ```
@@ -135,7 +136,7 @@ On Linux and MacOS, the profiles can be found at the "${HOME}/.config/cc3dsfs" f
 On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the directory in which the program runs from.
 
 ## Notes
-- On Linux, you may need to include the udev USB access rules. You can use the .rules files available in the repository's usb\_rules directory, or define your own. For ease of use, releases come bundled with a script to do it named install\_usb\_rules.sh. It may require elevated permissions to execute properly.
+- On Linux, you may need to include the udev USB access rules. You can use the .rules files available in the repository's usb\_rules directory, or define your own. For ease of use, releases come bundled with a script to do it named install\_usb\_rules.sh. It may require elevated permissions to execute properly. You may get a permission error if the rules are not installed.
 - At startup, the audio may be unstable. It should fix itself, if you give it enough time.
 - If, at first, the connection to the 3DS/DS fails, reconnect the 3DS/DS and then try again. If that also doesn't work, try restarting the program. If that also doesn't work, try restarting the computer.
 - USB Hubs can be the cause of connection issues. If you're having problems, try checking whether the 3DS/DS connects fine or not without any other devices connected.

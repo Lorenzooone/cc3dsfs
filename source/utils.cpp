@@ -30,14 +30,14 @@ static bool _is_be = false;
 bool is_big_endian(void) {
 	if(checked_be_once)
 		return _is_be;
-    union {
-        uint32_t i;
-        char c[4];
-    } value = {0x01020304};
+	union {
+		uint32_t i;
+		char c[4];
+	} value = {0x01020304};
 
 	checked_be_once = true;
 	_is_be = value.c[0] == 1;
-    return _is_be;
+	return _is_be;
 }
 
 static uint32_t reverse_endianness(uint32_t value) {
