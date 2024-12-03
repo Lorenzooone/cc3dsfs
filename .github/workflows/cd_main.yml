@@ -88,7 +88,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: cc3dsfs-single-rpi-mono
-        path: cc3dsfs_rpi_mono_setup.zip
+        path: cc3dsfs_rpi_kiosk_setup.zip
 
   publish:
     name: Publishing
@@ -122,4 +122,4 @@ jobs:
           cc3dsfs_linux_pi32.zip
           cc3dsfs_linux_pi64.zip
           cc3dsfs_macos.zip
-          cc3dsfs_rpi_mono_setup.zip
+          cc3dsfs_rpi_kiosk_setup.zip

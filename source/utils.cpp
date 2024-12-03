@@ -16,8 +16,8 @@
 #define str(a) #a
 
 #define APP_VERSION_MAJOR 1
-#define APP_VERSION_MINOR 1
-#define APP_VERSION_REVISION 1
+#define APP_VERSION_MINOR 2
+#define APP_VERSION_REVISION 0
 #ifdef RASPI
 #define APP_VERSION_LETTER R
 #else

@@ -1,3 +1,19 @@
+1.2.0
+- Added support for the new Loopy DS (2024) Capture Card.
+- Added support for IS Nitro Capture.
+- Added support for IS Nitro Emulator (limited, shuts down the cartridge FPGA). Thanks Gericom.
+- Added Video Effects Settings Menu.
+- Further improved performance on capture data conversion.
+- Improved consistency of drawing capture data.
+- Switched to SFML 3.
+- Added Windows for ARM binary.
+- Fixed mouse cursor visibility while fullscreen in Windows.
+- Improved permission error report on Linux. Also added automatic script for USB rules setting.
+- Improved MacOS fullscreen setup.
+- Switched to universal MacOS binary.
+- Fixed issue with concurrent draws on MacOS.
+- Fixed issue with keyboard permissions on MacOS.
+-----------------------------------------
 1.1.1
 - Improved performance on both capture data conversion, and pixel drawing.
 - Switched back to previous MacOS fullscreen setup. Seems compatible with more hardware.
