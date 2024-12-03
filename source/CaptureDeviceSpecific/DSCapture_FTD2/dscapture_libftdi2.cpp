@@ -690,7 +690,7 @@ void ftd2_capture_main_loop_libftdi(CaptureData* capture_data) {
 
 	while(capture_data->status.connected && capture_data->status.running) {
 		if(get_libftdi_status(received_data_buffers) != 0) {
-			capture_error_print(true, capture_data, "Disconnected: Read error" + std::to_string(get_libftdi_status(received_data_buffers)));
+			capture_error_print(true, capture_data, "Disconnected: Read error");
 			is_done = true;
 		}
 		if(is_done)

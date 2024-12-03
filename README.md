@@ -1,6 +1,6 @@
 # cc3dsfs
 
-cc3dsfs is a multi-platform capture and display program for [3dscapture's](https://3dscapture.com/) N3DSXL, 3DS and DS (old) capture boards written in C++.
+cc3dsfs is a multi-platform capture and display program for [3dscapture's](https://3dscapture.com/) N3DSXL, 3DS and DS capture boards written in C++.
 The main goal is to offer the ability to use the Capture Card with a TV, via fullscreen mode.
 
 IS Nitro Emulator (newer revisions) and IS Nitro Capture support is also present. Though results may vary (and the amount of video delay may be significantly higher based on the cable used).
@@ -131,7 +131,7 @@ The current configuration can be saved to various extra profiles, creating the g
 
 The name of profiles can be changed by altering the __name__ field in its file.
 
-On Linux and MacOS, the profiles can be found at the "${HOME}/.config/cc3dsfs" folder. By default, "/home/<nome_utente>/.config/cc3dsfs".
+On Linux and MacOS, the profiles can be found at the "${HOME}/.config/cc3dsfs" folder. By default, "/home/<user_name>/.config/cc3dsfs".
 
 On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the directory in which the program runs from.
 
