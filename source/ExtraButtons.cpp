@@ -112,6 +112,10 @@ void init_extra_buttons_poll(int page_up_id, int page_down_id, int enter_id, int
 	pi_power.initialize(power_id, sf::Keyboard::Key::Escape, true, 30.0, 30.0, use_pud_up, "Power");
 }
 
+bool are_extra_buttons_usable() {
+	return (pi_enter.get_name() != "") && (pi_page_down.get_name() != "");
+}
+
 void end_extra_buttons_poll() {
 	for(int i = 0; i < sizeof(pi_buttons) / sizeof(pi_buttons[0]); i++)
 		pi_buttons[i]->end();

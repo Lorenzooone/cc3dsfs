@@ -32,8 +32,8 @@
 #include "ScalingRatioMenu.hpp"
 #include "ISNitroMenu.hpp"
 #include "VideoEffectsMenu.hpp"
+#include "InputMenu.hpp"
 #include "display_structs.hpp"
-#include "WindowCommands.hpp"
 #include "event_structs.hpp"
 #include "shaders_list.hpp"
 
@@ -47,16 +47,11 @@ struct FPSArray {
 	int index;
 };
 
-struct ExtraButtonShortcuts {
-	const WindowCommand *enter_shortcut;
-	const WindowCommand *page_up_shortcut;
-};
-
 class WindowScreen {
 public:
 	ScreenInfo m_info;
 
-	WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts, ConsumerMutex *draw_lock, bool created_proper_folder);
+	WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, SharedData* shared_data, AudioData* audio_data, ConsumerMutex *draw_lock, bool created_proper_folder);
 	~WindowScreen();
 
 	void build();
@@ -115,8 +110,8 @@ private:
 	bool font_load_success;
 	double frame_time;
 	DisplayData* display_data;
+	SharedData* shared_data;
 	AudioData* audio_data;
-	ExtraButtonShortcuts* extra_button_shortcuts;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_mouse_action_time;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_window_creation_time;
 	HeldTime touch_right_click_action;
@@ -155,6 +150,7 @@ private:
 	ISNitroMenu *is_nitro_menu;
 	ScalingRatioMenu *scaling_ratio_menu;
 	VideoEffectsMenu *video_effects_menu;
+	InputMenu *input_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const CropData*> possible_crops_ds;
 	std::vector<const CropData*> possible_crops_with_games;
@@ -239,6 +235,7 @@ private:
 	void rotation_change(int &value, bool right);
 	void ratio_change(bool top_priority, bool cycle = false);
 	void bfi_change();
+	void input_toggle_change(bool &target);
 	void bottom_pos_change(int new_bottom_pos);
 	void non_int_scaling_change(bool target_top);
 	void non_int_mode_change(bool positive);
@@ -246,7 +243,7 @@ private:
 	void input_colorspace_mode_change(bool positive);
 	void frame_blending_mode_change(bool positive);
 	bool query_reset_request();
-	void reset_held_times();
+	void reset_held_times(bool force = true);
 	void poll_window(bool do_everything);
 	bool common_poll(SFEvent &event_data);
 	bool main_poll(SFEvent &event_data);
@@ -309,6 +306,7 @@ private:
 	void setup_scaling_ratio_menu(bool reset_data = true);
 	void setup_is_nitro_menu(bool reset_data = true);
 	void setup_video_effects_menu(bool reset_data = true);
+	void setup_input_menu(bool reset_data = true);
 	void update_connection();
 };
 
@@ -317,6 +315,7 @@ struct FrontendData {
 	WindowScreen *bot_screen;
 	WindowScreen *joint_screen;
 	DisplayData display_data;
+	SharedData shared_data;
 	bool reload;
 };
 
@@ -326,6 +325,8 @@ void FPSArrayInsertElement(FPSArray *array, double frame_time);
 void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type, bool is_ds, bool allow_game_specific);
 void insert_basic_pars(std::vector<const PARData*> &par_vector);
 void reset_display_data(DisplayData *display_data);
+void reset_input_data(InputData* input_data);
+void reset_shared_data(SharedData* shared_data);
 void reset_fullscreen_info(ScreenInfo &info);
 void reset_screen_info(ScreenInfo &info);
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
@@ -339,5 +340,6 @@ void screen_display_thread(WindowScreen *screen);
 std::string get_name_non_int_mode(NonIntegerScalingModes input);
 std::string get_name_frame_blending_mode(FrameBlendingMode input);
 std::string get_name_input_colorspace_mode(InputColorspaceMode input);
+bool is_input_data_valid(InputData* input_data, bool consider_buttons);
 void default_sleep(float wanted_ms = -1);
 #endif

@@ -391,10 +391,23 @@ void insert_basic_pars(std::vector<const PARData*> &par_vector) {
 	}
 }
 
-void reset_display_data(DisplayData *display_data) {
+void reset_display_data(DisplayData* display_data) {
 	display_data->split = false;
-	display_data->fast_poll = false;
 	display_data->last_connected_ds = false;
+}
+
+void reset_input_data(InputData* input_data) {
+	input_data->fast_poll = false;
+	input_data->enable_controller_input = true;
+	input_data->enable_keyboard_input = true;
+	input_data->enable_mouse_input = true;
+	input_data->enable_buttons_input = true;
+	input_data->extra_button_shortcuts.enter_shortcut = get_window_command(WINDOW_COMMAND_RATIO_CYCLE);
+	input_data->extra_button_shortcuts.page_up_shortcut = get_window_command(WINDOW_COMMAND_CROP);
+}
+
+void reset_shared_data(SharedData* shared_data) {
+	reset_input_data(&shared_data->input_data);
 }
 
 void reset_fullscreen_info(ScreenInfo &info) {
@@ -839,6 +852,15 @@ void default_sleep(float wanted_ms) {
 
 void screen_display_thread(WindowScreen *screen) {
 	screen->display_thread();
+}
+
+bool is_input_data_valid(InputData* input_data, bool consider_buttons) {
+	bool valid_input_mode_found = false;
+	valid_input_mode_found = valid_input_mode_found || input_data->enable_controller_input;
+	valid_input_mode_found = valid_input_mode_found || input_data->enable_keyboard_input;
+	valid_input_mode_found = valid_input_mode_found || input_data->enable_mouse_input;
+	valid_input_mode_found = valid_input_mode_found || (consider_buttons && input_data->enable_buttons_input);
+	return valid_input_mode_found;
 }
 
 std::string get_name_non_int_mode(NonIntegerScalingModes input) {

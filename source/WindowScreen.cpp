@@ -31,7 +31,7 @@ struct shader_and_data {
 
 static std::vector<shader_and_data> usable_shaders;
 
-WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, AudioData* audio_data, ExtraButtonShortcuts* extra_button_shortcuts, ConsumerMutex *draw_lock, bool created_proper_folder) {
+WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, SharedData* shared_data, AudioData* audio_data, ConsumerMutex *draw_lock, bool created_proper_folder) {
 	this->draw_lock = draw_lock;
 	this->m_stype = stype;
 	insert_basic_crops(this->possible_crops, this->m_stype, false, false);
@@ -55,8 +55,8 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->m_in_rect_top.setTexture(&this->in_tex);
 	this->m_in_rect_bot.setTexture(&this->in_tex);
 	this->display_data = display_data;
+	this->shared_data = shared_data;
 	this->audio_data = audio_data;
-	this->extra_button_shortcuts = extra_button_shortcuts;
 	this->last_window_creation_time = std::chrono::high_resolution_clock::now();
 	this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
 	this->last_draw_time = std::chrono::high_resolution_clock::now();

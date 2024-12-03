@@ -53,7 +53,7 @@ static float check_held_diff(std::chrono::time_point<std::chrono::high_resolutio
 }
 
 static bool is_shortcut_valid() {
-	return (get_extra_button_name(sf::Keyboard::Key::Enter) != "") || (get_extra_button_name(sf::Keyboard::Key::PageUp) != "");
+	return ((get_extra_button_name(sf::Keyboard::Key::Enter) != "") || (get_extra_button_name(sf::Keyboard::Key::PageUp) != ""));
 }
 
 void FPSArrayInit(FPSArray *array) {
@@ -111,6 +111,7 @@ void WindowScreen::init_menus() {
 	this->scaling_ratio_menu = new ScalingRatioMenu(this->font_load_success, this->text_font);
 	this->is_nitro_menu = new ISNitroMenu(this->font_load_success, this->text_font);
 	this->video_effects_menu = new VideoEffectsMenu(this->font_load_success, this->text_font);
+	this->input_menu = new InputMenu(this->font_load_success, this->text_font);
 }
 
 void WindowScreen::destroy_menus() {
@@ -134,6 +135,7 @@ void WindowScreen::destroy_menus() {
 	delete this->scaling_ratio_menu;
 	delete this->is_nitro_menu;
 	delete this->video_effects_menu;
+	delete this->input_menu;
 }
 
 void WindowScreen::set_close(int ret_val) {
@@ -174,8 +176,8 @@ void WindowScreen::blur_change() {
 }
 
 void WindowScreen::fast_poll_change() {
-	this->display_data->fast_poll = !this->display_data->fast_poll;
-	this->print_notification_on_off("Slow Poll", this->display_data->fast_poll);
+	this->shared_data->input_data.fast_poll = !this->shared_data->input_data.fast_poll;
+	this->print_notification_on_off("Slow Poll", this->shared_data->input_data.fast_poll);
 }
 
 void WindowScreen::is_nitro_capture_type_change(bool positive) {
@@ -334,6 +336,14 @@ void WindowScreen::ratio_change(bool top_priority, bool cycle) {
 void WindowScreen::bfi_change() {
 	this->m_info.bfi = !this->m_info.bfi;
 	this->print_notification_on_off("BFI", this->m_info.bfi);
+}
+
+void WindowScreen::input_toggle_change(bool &target) {
+	target = !target;
+	if(!is_input_data_valid(&this->shared_data->input_data, are_extra_buttons_usable()))
+		target = !target;
+	if(!is_input_data_valid(&this->shared_data->input_data, are_extra_buttons_usable()))
+		this->shared_data->input_data.enable_keyboard_input = true;
 }
 
 void WindowScreen::bottom_pos_change(int new_bottom_pos) {
@@ -664,7 +674,19 @@ void WindowScreen::setup_main_menu(bool reset_data, bool skip_setup_check) {
 		this->curr_menu = MAIN_MENU_TYPE;
 		if(reset_data)
 			this->main_menu->reset_data();
-		this->main_menu->insert_data(this->m_stype, this->m_info.is_fullscreen, this->display_data->mono_app_mode, is_shortcut_valid(), this->capture_status->device.cc_type, this->capture_status->connected);
+		this->main_menu->insert_data(this->m_stype, this->m_info.is_fullscreen, this->display_data->mono_app_mode, this->capture_status->device.cc_type, this->capture_status->connected);
+		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
+	}
+}
+
+void WindowScreen::setup_input_menu(bool reset_data) {
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != INPUT_MENU_TYPE) {
+		this->curr_menu = INPUT_MENU_TYPE;
+		if(reset_data)
+			this->input_menu->reset_data();
+		this->input_menu->insert_data(is_shortcut_valid(), are_extra_buttons_usable());
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
 }
@@ -880,13 +902,13 @@ void WindowScreen::setup_shortcuts_menu(bool reset_data) {
 		this->possible_buttons_ptrs.clear();
 		this->possible_buttons_extras.clear();
 		if(get_extra_button_name(sf::Keyboard::Key::Enter) != "") {
-			this->possible_buttons_ptrs.push_back(&extra_button_shortcuts->enter_shortcut);
-			this->possible_buttons_names.push_back(get_extra_button_name(sf::Keyboard::Key::Enter) + " Button: " + extra_button_shortcuts->enter_shortcut->name);
+			this->possible_buttons_ptrs.push_back(&this->shared_data->input_data.extra_button_shortcuts.enter_shortcut);
+			this->possible_buttons_names.push_back(get_extra_button_name(sf::Keyboard::Key::Enter) + " Button: " + this->shared_data->input_data.extra_button_shortcuts.enter_shortcut->name);
 			this->possible_buttons_extras.push_back(true);
 		}
 		if(get_extra_button_name(sf::Keyboard::Key::PageUp) != "") {
-			this->possible_buttons_ptrs.push_back(&extra_button_shortcuts->page_up_shortcut);
-			this->possible_buttons_names.push_back(get_extra_button_name(sf::Keyboard::Key::PageUp) + " Button: " + extra_button_shortcuts->page_up_shortcut->name);
+			this->possible_buttons_ptrs.push_back(&this->shared_data->input_data.extra_button_shortcuts.page_up_shortcut);
+			this->possible_buttons_names.push_back(get_extra_button_name(sf::Keyboard::Key::PageUp) + " Button: " + this->shared_data->input_data.extra_button_shortcuts.page_up_shortcut->name);
 			this->possible_buttons_extras.push_back(true);
 		}
 		this->shortcut_menu->insert_data(this->possible_buttons_names);
@@ -987,9 +1009,9 @@ bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 			switch(event_data.code) {
 				case sf::Keyboard::Key::Enter:
 					if(event_data.is_extra) {
-						consumed = this->can_execute_cmd(extra_button_shortcuts->enter_shortcut, true, false);
+						consumed = this->can_execute_cmd(this->shared_data->input_data.extra_button_shortcuts.enter_shortcut, true, false);
 						if(consumed)
-							this->execute_cmd(extra_button_shortcuts->enter_shortcut->cmd);
+							this->execute_cmd(this->shared_data->input_data.extra_button_shortcuts.enter_shortcut->cmd);
 					}
 					else
 						this->setup_main_menu();
@@ -1002,9 +1024,9 @@ bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 					break;
 				case sf::Keyboard::Key::PageUp:
 					if(event_data.is_extra){
-						consumed = this->can_execute_cmd(extra_button_shortcuts->page_up_shortcut, true, false);
+						consumed = this->can_execute_cmd(this->shared_data->input_data.extra_button_shortcuts.page_up_shortcut, true, false);
 						if(consumed)
-							this->execute_cmd(extra_button_shortcuts->page_up_shortcut->cmd);
+							this->execute_cmd(this->shared_data->input_data.extra_button_shortcuts.page_up_shortcut->cmd);
 					}
 					else
 						consumed = false;
@@ -1296,8 +1318,8 @@ void WindowScreen::poll(bool do_everything) {
 							this->setup_extra_menu();
 							done = true;
 							break;
-						case MAIN_MENU_SHORTCUT_SETTINGS:
-							this->setup_shortcuts_menu();
+						case MAIN_MENU_INPUT_SETTINGS:
+							this->setup_input_menu();
 							done = true;
 							break;
 						case MAIN_MENU_ISN_SETTINGS:
@@ -1412,9 +1434,9 @@ void WindowScreen::poll(bool do_everything) {
 						case VIDEO_MENU_BLUR:
 							this->blur_change();
 							break;
-						case VIDEO_MENU_FAST_POLL:
-							this->fast_poll_change();
-							break;
+						//case VIDEO_MENU_FAST_POLL:
+						//	this->fast_poll_change();
+						//	break;
 						case VIDEO_MENU_PADDING:
 							this->padding_change();
 							break;
@@ -1746,7 +1768,7 @@ void WindowScreen::poll(bool do_everything) {
 				if(this->shortcut_menu->poll(event_data)) {
 					switch(this->shortcut_menu->selected_index) {
 						case SHORTCUT_MENU_BACK:
-							this->setup_main_menu(false);
+							this->setup_input_menu(false);
 							done = true;
 							break;
 						case SHORTCUT_MENU_NO_ACTION:
@@ -1905,6 +1927,41 @@ void WindowScreen::poll(bool do_everything) {
 					continue;
 				}
 				break;
+			case INPUT_MENU_TYPE:
+				if(this->input_menu->poll(event_data)) {
+					switch(this->input_menu->selected_index) {
+						case INPUT_MENU_BACK:
+							this->setup_main_menu(false);
+							done = true;
+							break;
+						case INPUT_MENU_NO_ACTION:
+							break;
+						case INPUT_MENU_SHORTCUT_SETTINGS:
+							this->setup_shortcuts_menu();
+							done = true;
+							break;
+						case INPUT_MENU_TOGGLE_BUTTONS:
+							this->input_toggle_change(this->shared_data->input_data.enable_buttons_input);
+							break;
+						case INPUT_MENU_TOGGLE_JOYSTICK:
+							this->input_toggle_change(this->shared_data->input_data.enable_controller_input);
+							break;
+						case INPUT_MENU_TOGGLE_KEYBOARD:
+							this->input_toggle_change(this->shared_data->input_data.enable_keyboard_input);
+							break;
+						case INPUT_MENU_TOGGLE_MOUSE:
+							this->input_toggle_change(this->shared_data->input_data.enable_mouse_input);
+							break;
+						case INPUT_MENU_TOGGLE_FAST_POLL:
+							this->fast_poll_change();
+							break;
+						default:
+							break;
+					}
+					this->input_menu->reset_output_option();
+					continue;
+				}
+				break;
 			default:
 				break;
 		}
@@ -1972,6 +2029,7 @@ int WindowScreen::get_ret_val() {
 }
 
 bool WindowScreen::query_reset_request() {
+	this->reset_held_times(false);
 	std::chrono::time_point<std::chrono::high_resolution_clock> curr_time = std::chrono::high_resolution_clock::now();
 	if(check_held_diff(curr_time, this->right_click_action) > this->bad_resolution_timeout)
 		return true;
@@ -1990,14 +2048,21 @@ bool WindowScreen::query_reset_request() {
 	return false;
 }
 
-void WindowScreen::reset_held_times() {
-	check_held_reset(false, this->right_click_action);
-	check_held_reset(false, this->enter_action);
-	check_held_reset(false, this->pgdown_action);
-	check_held_reset(false, this->extra_enter_action);
-	check_held_reset(false, this->extra_pgdown_action);
-	check_held_reset(false, this->controller_button_action);
-	check_held_reset(false, this->touch_action);
+void WindowScreen::reset_held_times(bool force) {
+	if(force || (!this->shared_data->input_data.enable_mouse_input))
+		check_held_reset(false, this->right_click_action);
+	if(force || (!this->shared_data->input_data.enable_keyboard_input))
+		check_held_reset(false, this->enter_action);
+	if(force || (!this->shared_data->input_data.enable_keyboard_input))
+		check_held_reset(false, this->pgdown_action);
+	if(force || (!this->shared_data->input_data.enable_buttons_input))
+		check_held_reset(false, this->extra_enter_action);
+	if(force || (!this->shared_data->input_data.enable_buttons_input))
+		check_held_reset(false, this->extra_pgdown_action);
+	if(force || (!this->shared_data->input_data.enable_controller_input))
+		check_held_reset(false, this->controller_button_action);
+	if(force)
+		check_held_reset(false, this->touch_action);
 }
 
 void WindowScreen::poll_window(bool do_everything) {
@@ -2010,24 +2075,42 @@ void WindowScreen::poll_window(bool do_everything) {
 			while(const std::optional event = this->m_win.pollEvent()) {
 				if(event->is<sf::Event::Closed>())
 					events_queue.emplace(EVENT_CLOSED);
-				else if(const auto* keyPressed = event->getIf<sf::Event::KeyPressed>())
-					events_queue.emplace(true, keyPressed->code);
-				else if(const auto* keyReleased = event->getIf<sf::Event::KeyReleased>())
-					events_queue.emplace(false, keyReleased->code);
-				else if(const auto* textEntered = event->getIf<sf::Event::TextEntered>())
-					events_queue.emplace(textEntered->unicode);
-				else if(const auto* joystick_press = event->getIf<sf::Event::JoystickButtonPressed>())
-					events_queue.emplace(true, joystick_press->joystickId, joystick_press->button);
-				else if(const auto* joystick_release = event->getIf<sf::Event::JoystickButtonReleased>())
-					events_queue.emplace(false, joystick_release->joystickId, joystick_release->button);
-				else if(const auto* joystick_movement = event->getIf<sf::Event::JoystickMoved>())
-					events_queue.emplace(joystick_movement->joystickId, joystick_movement->axis, joystick_movement->position);
-				else if(const auto* mouse_pressed = event->getIf<sf::Event::MouseButtonPressed>())
-					events_queue.emplace(true, mouse_pressed->button, mouse_pressed->position);
-				else if(const auto* mouse_released = event->getIf<sf::Event::MouseButtonReleased>())
-					events_queue.emplace(false, mouse_released->button, mouse_released->position);
-				else if(const auto* mouse_movement = event->getIf<sf::Event::MouseMoved>())
-					events_queue.emplace(mouse_movement->position);
+				else if(const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
+					if(this->shared_data->input_data.enable_keyboard_input)
+						events_queue.emplace(true, keyPressed->code);
+				}
+				else if(const auto* keyReleased = event->getIf<sf::Event::KeyReleased>()) {
+					if(this->shared_data->input_data.enable_keyboard_input)
+						events_queue.emplace(false, keyReleased->code);
+				}
+				else if(const auto* textEntered = event->getIf<sf::Event::TextEntered>()) {
+					if(this->shared_data->input_data.enable_keyboard_input)
+						events_queue.emplace(textEntered->unicode);
+				}
+				else if(const auto* joystick_press = event->getIf<sf::Event::JoystickButtonPressed>()) {
+					if(this->shared_data->input_data.enable_controller_input)
+						events_queue.emplace(true, joystick_press->joystickId, joystick_press->button);
+				}
+				else if(const auto* joystick_release = event->getIf<sf::Event::JoystickButtonReleased>()) {
+					if(this->shared_data->input_data.enable_controller_input)
+						events_queue.emplace(false, joystick_release->joystickId, joystick_release->button);
+				}
+				else if(const auto* joystick_movement = event->getIf<sf::Event::JoystickMoved>()) {
+					if(this->shared_data->input_data.enable_controller_input)
+						events_queue.emplace(joystick_movement->joystickId, joystick_movement->axis, joystick_movement->position);
+				}
+				else if(const auto* mouse_pressed = event->getIf<sf::Event::MouseButtonPressed>()) {
+					if(this->shared_data->input_data.enable_mouse_input)
+						events_queue.emplace(true, mouse_pressed->button, mouse_pressed->position);
+				}
+				else if(const auto* mouse_released = event->getIf<sf::Event::MouseButtonReleased>()) {
+					if(this->shared_data->input_data.enable_mouse_input)
+						events_queue.emplace(false, mouse_released->button, mouse_released->position);
+				}
+				else if(const auto* mouse_movement = event->getIf<sf::Event::MouseMoved>()) {
+					if(this->shared_data->input_data.enable_mouse_input)
+						events_queue.emplace(mouse_movement->position);
+				}
 			}
 		}
 		if(this->m_win.hasFocus()) {
@@ -2058,9 +2141,11 @@ void WindowScreen::poll_window(bool do_everything) {
 					}
 					events_queue.emplace(true, sf::Mouse::Button::Left, touch_pos);
 				}
-				joystick_axis_poll(this->events_queue);
+				if(this->shared_data->input_data.enable_controller_input)
+					joystick_axis_poll(this->events_queue);
 			}
-			extra_buttons_poll(this->events_queue);
+			if(this->shared_data->input_data.enable_buttons_input)
+				extra_buttons_poll(this->events_queue);
 		}
 		else {
 			this->reset_held_times();
@@ -2082,7 +2167,7 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			this->main_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->capture_status->connected);
 			break;
 		case VIDEO_MENU_TYPE:
-			this->video_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info, this->display_data->fast_poll, this->m_stype);
+			this->video_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info, this->m_stype);
 			break;
 		case CROP_MENU_TYPE:
 			this->crop_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, *this->get_crop_index_ptr(&this->loaded_info));
@@ -2140,6 +2225,9 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			break;
 		case VIDEO_EFFECTS_MENU_TYPE:
 			this->video_effects_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+			break;
+		case INPUT_MENU_TYPE:
+			this->input_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->shared_data->input_data);
 			break;
 		default:
 			break;
@@ -2213,6 +2301,9 @@ void WindowScreen::execute_menu_draws() {
 			break;
 		case VIDEO_EFFECTS_MENU_TYPE:
 			this->video_effects_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case INPUT_MENU_TYPE:
+			this->input_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

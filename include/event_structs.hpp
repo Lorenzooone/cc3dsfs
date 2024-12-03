@@ -39,5 +39,6 @@ void init_extra_buttons_poll(int page_up_id, int page_down_id, int enter_id, int
 void end_extra_buttons_poll();
 void extra_buttons_poll(std::queue<SFEvent> &events_queue);
 std::string get_extra_button_name(sf::Keyboard::Key corresponding_key);
+bool are_extra_buttons_usable();
 
 #endif

@@ -4,11 +4,12 @@
 #include "utils.hpp"
 #include "hw_defs.hpp"
 #include "shaders_list.hpp"
+#include "WindowCommands.hpp"
 
 enum ScreenType { TOP, BOTTOM, JOINT };
 enum BottomRelativePosition { UNDER_TOP, LEFT_TOP, ABOVE_TOP, RIGHT_TOP, BOT_REL_POS_END };
 enum NonIntegerScalingModes { SMALLER_PRIORITY, INVERSE_PROPORTIONAL_PRIORITY, EQUAL_PRIORITY, PROPORTIONAL_PRIORITY, BIGGER_PRIORITY, END_NONINT_SCALE_MODES };
-enum CurrMenuType { DEFAULT_MENU_TYPE, CONNECT_MENU_TYPE, MAIN_MENU_TYPE, VIDEO_MENU_TYPE, AUDIO_MENU_TYPE, CROP_MENU_TYPE, TOP_PAR_MENU_TYPE, BOTTOM_PAR_MENU_TYPE, ROTATION_MENU_TYPE, OFFSET_MENU_TYPE, BFI_MENU_TYPE, LOAD_MENU_TYPE, SAVE_MENU_TYPE, RESOLUTION_MENU_TYPE, EXTRA_MENU_TYPE, STATUS_MENU_TYPE, LICENSES_MENU_TYPE, RELATIVE_POS_MENU_TYPE, SHORTCUTS_MENU_TYPE, ACTION_SELECTION_MENU_TYPE, SCALING_RATIO_MENU_TYPE, ISN_MENU_TYPE, VIDEO_EFFECTS_MENU_TYPE };
+enum CurrMenuType { DEFAULT_MENU_TYPE, CONNECT_MENU_TYPE, MAIN_MENU_TYPE, VIDEO_MENU_TYPE, AUDIO_MENU_TYPE, CROP_MENU_TYPE, TOP_PAR_MENU_TYPE, BOTTOM_PAR_MENU_TYPE, ROTATION_MENU_TYPE, OFFSET_MENU_TYPE, BFI_MENU_TYPE, LOAD_MENU_TYPE, SAVE_MENU_TYPE, RESOLUTION_MENU_TYPE, EXTRA_MENU_TYPE, STATUS_MENU_TYPE, LICENSES_MENU_TYPE, RELATIVE_POS_MENU_TYPE, SHORTCUTS_MENU_TYPE, ACTION_SELECTION_MENU_TYPE, SCALING_RATIO_MENU_TYPE, ISN_MENU_TYPE, VIDEO_EFFECTS_MENU_TYPE, INPUT_MENU_TYPE };
 enum InputColorspaceMode { FULL_COLORSPACE, DS_COLORSPACE, GBA_COLORSPACE, INPUT_COLORSPACE_END };
 enum FrameBlendingMode { NO_FRAME_BLENDING, FULL_FRAME_BLENDING, DS_3D_BOTH_SCREENS_FRAME_BLENDING, FRAME_BLENDING_END };
 
@@ -51,8 +52,25 @@ struct ScreenInfo {
 struct DisplayData {
 	bool split;
 	bool mono_app_mode;
-	bool fast_poll;
 	bool last_connected_ds;
+};
+
+struct ExtraButtonShortcuts {
+	const WindowCommand *enter_shortcut;
+	const WindowCommand *page_up_shortcut;
+};
+
+struct InputData {
+	bool fast_poll;
+	bool enable_controller_input;
+	bool enable_keyboard_input;
+	bool enable_mouse_input;
+	bool enable_buttons_input;
+	ExtraButtonShortcuts extra_button_shortcuts;
+};
+
+struct SharedData {
+	InputData input_data;
 };
 
 struct ALIGNED(8) VideoOutputData {
