@@ -109,7 +109,7 @@ static void ds_3ds_usb_thread_function(bool* usb_thread_run, usb_ds_3ds_general_
 			if(!buffer_data[i].in_use)
 				continue;
 			int diff = (int)(processing_index - buffer_data[i].index);
-			if(diff < 0)
+			if(diff > 0)
 				unlock_buffer(&buffer_data[i]);
 			else if(diff == 0) {
 				buffer_data[i].capture_data->data_buffers.WriteToBuffer(&buffer_data[i].capture_buf, buffer_data[i].read_amount, buffer_data[i].time_in, &buffer_data[i].capture_data->status.device);
