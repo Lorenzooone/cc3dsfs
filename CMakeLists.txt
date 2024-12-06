@@ -76,7 +76,8 @@ endif()
 include(FetchContent)
 FetchContent_Declare(SFML
 	GIT_REPOSITORY https://github.com/SFML/SFML.git
-	GIT_TAG master)
+	GIT_TAG master
+	GIT_SHALLOW ON)
 
 if(USE_LIBUSB_SUPPORT)
 	FetchContent_Declare(LibUSB
@@ -575,8 +576,6 @@ if(WIN32)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-	set(FW_APP ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME}.app)
-	set(FW_DIRS ${sfml_SOURCE_DIR}/extlibs/libs-macos/Frameworks)
 	set_target_properties(${OUTPUT_NAME} PROPERTIES
 						  MACOSX_BUNDLE TRUE
 						  MACOSX_BUNDLE_BUNDLE_NAME ${OUTPUT_NAME}
@@ -584,12 +583,6 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 						  MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/data/MacOSXBundleInfo.plist.in)
 	set(CMAKE_MACOSX_RPATH TRUE)
 
-	add_custom_command(
-		TARGET ${OUTPUT_NAME}
-		COMMENT "Prepare bundle"
-		POST_BUILD COMMAND ${SETUP_SCRIPTS_DIR}/macos_bundle_setup${SCRIPT_EXTENSION} ${FW_APP}/Contents/MacOS/${OUTPUT_NAME} ${FW_DIRS} ${FW_APP}/Contents/Frameworks
-		VERBATIM
-	)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 else()
 	install(FILES ${USB_RULES_DIR}/51-ftd3xx.rules DESTINATION .)
