@@ -205,6 +205,9 @@ uint64_t get_audio_n_samples(CaptureData* capture_data, uint64_t read) {
 	uint64_t n_samples = (read - get_video_in_size(capture_data)) / 2;
 	if(n_samples > capture_data->status.device.max_samples_in)
 		n_samples = capture_data->status.device.max_samples_in;
+	// Avoid entering a glitched state due to a partial packet or something
+	if((n_samples % 2) != 0)
+		n_samples -= 1;
 	return n_samples;
 }
 
