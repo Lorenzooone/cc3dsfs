@@ -163,7 +163,7 @@ static const LicenseMenuOptionInfo* pollable_options[] = {
 &libusb_license_3_option,
 &libusb_license_4_option,
 #endif
-#if defined(USE_IS_NITRO_USB)
+#if defined(USE_IS_DEVICES_USB)
 &isng_license_0_option,
 &isng_license_1_option,
 &isng_license_2_option,

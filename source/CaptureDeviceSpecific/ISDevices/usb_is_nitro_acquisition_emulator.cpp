@@ -1,7 +1,6 @@
 #include "devicecapture.hpp"
-#include "usb_is_nitro_communications.hpp"
-#include "usb_is_nitro_acquisition.hpp"
-#include "usb_is_nitro_acquisition_general.hpp"
+#include "usb_is_device_communications.hpp"
+#include "usb_is_device_acquisition_general.hpp"
 #include "usb_is_nitro_acquisition_emulator.hpp"
 
 #include <chrono>
@@ -33,10 +32,10 @@
 
 #define SLEEP_TIME_DIVISOR 8
 
-static int drain_frames(is_nitro_device_handlers* handlers, int num_frames, int start_frames, CaptureScreensType capture_type, const is_nitro_usb_device* usb_device_desc) {
+static int drain_frames(is_device_device_handlers* handlers, int num_frames, int start_frames, CaptureScreensType capture_type, const is_device_usb_device* usb_device_desc) {
 	ISNitroEmulatorVideoInputData* video_in_buffer = new ISNitroEmulatorVideoInputData;
 	for (int i = start_frames; i < num_frames; i++) {
-		int ret = ReadFrame(handlers, (uint8_t*)video_in_buffer, usb_is_nitro_get_video_in_size(capture_type), usb_device_desc);
+		int ret = ReadFrame(handlers, (uint8_t*)video_in_buffer, usb_is_device_get_video_in_size(capture_type, usb_device_desc->device_type), usb_device_desc);
 		if(ret < 0) {
 			delete video_in_buffer;
 			return ret;
@@ -46,7 +45,7 @@ static int drain_frames(is_nitro_device_handlers* handlers, int num_frames, int 
 	return LIBUSB_SUCCESS;
 }
 
-static int StartAcquisitionEmulator(is_nitro_device_handlers* handlers, uint16_t &out_frame_count, float &single_frame_time, CaptureScreensType capture_type, CaptureSpeedsType capture_speed, const is_nitro_usb_device* usb_device_desc) {
+static int StartAcquisitionEmulator(is_device_device_handlers* handlers, uint16_t &out_frame_count, float &single_frame_time, CaptureScreensType capture_type, CaptureSpeedsType capture_speed, const is_device_usb_device* usb_device_desc) {
 	int ret = 0;
 	ret = DisableLca2(handlers, usb_device_desc);
 	if(ret < 0)
@@ -180,16 +179,16 @@ static void frame_wait(float single_frame_time, std::chrono::time_point<std::chr
 	}
 }
 
-static int reset_acquisition_frames(CaptureData* capture_data, uint16_t &curr_frame_counter, uint16_t &last_frame_counter, float &single_frame_time, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_reset, CaptureScreensType &curr_capture_type, CaptureScreensType wanted_capture_type, CaptureSpeedsType &curr_capture_speed, CaptureSpeedsType wanted_capture_speed, ISNitroCaptureReceivedData* is_nitro_capture_recv_data) {
+static int reset_acquisition_frames(CaptureData* capture_data, uint16_t &curr_frame_counter, uint16_t &last_frame_counter, float &single_frame_time, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_reset, CaptureScreensType &curr_capture_type, CaptureScreensType wanted_capture_type, CaptureSpeedsType &curr_capture_speed, CaptureSpeedsType wanted_capture_speed, ISDeviceCaptureReceivedData* is_device_capture_recv_data) {
 	curr_frame_counter += 1;
 
 	if(curr_frame_counter < FRAME_BUFFER_SIZE)
 		return LIBUSB_SUCCESS;
 
-	is_nitro_device_handlers* handlers = (is_nitro_device_handlers*)capture_data->handle;
-	const is_nitro_usb_device* usb_device_desc = (const is_nitro_usb_device*)capture_data->status.device.descriptor;
-	wait_all_is_nitro_transfers_done(capture_data, is_nitro_capture_recv_data);
-	int ret = get_is_nitro_status(is_nitro_capture_recv_data);
+	is_device_device_handlers* handlers = (is_device_device_handlers*)capture_data->handle;
+	const is_device_usb_device* usb_device_desc = (const is_device_usb_device*)capture_data->status.device.descriptor;
+	wait_all_is_device_transfers_done(capture_data, is_device_capture_recv_data);
+	int ret = get_is_device_status(is_device_capture_recv_data);
 	if (ret < 0)
 		return ret;
 
@@ -300,16 +299,16 @@ static int reset_acquisition_frames(CaptureData* capture_data, uint16_t &curr_fr
 	return LIBUSB_SUCCESS;
 }
 
-int initial_cleanup_emulator(const is_nitro_usb_device* usb_device_desc, is_nitro_device_handlers* handlers) {
+int initial_cleanup_emulator(const is_device_usb_device* usb_device_desc, is_device_device_handlers* handlers) {
 	return EndAcquisition(usb_device_desc, handlers, false, 0, CAPTURE_SCREENS_BOTH);
 }
 
-int EndAcquisitionEmulator(CaptureData* capture_data, ISNitroCaptureReceivedData* is_nitro_capture_recv_data, bool do_drain_frames, int start_frames, CaptureScreensType capture_type) {
-	wait_all_is_nitro_transfers_done(capture_data, is_nitro_capture_recv_data);
-	return EndAcquisitionEmulator((const is_nitro_usb_device*)capture_data->status.device.descriptor, (is_nitro_device_handlers*)capture_data->handle, do_drain_frames, start_frames, capture_type);
+int EndAcquisitionEmulator(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data, bool do_drain_frames, int start_frames, CaptureScreensType capture_type) {
+	wait_all_is_device_transfers_done(capture_data, is_device_capture_recv_data);
+	return EndAcquisitionEmulator((const is_device_usb_device*)capture_data->status.device.descriptor, (is_device_device_handlers*)capture_data->handle, do_drain_frames, start_frames, capture_type);
 }
 
-int EndAcquisitionEmulator(const is_nitro_usb_device* usb_device_desc, is_nitro_device_handlers* handlers, bool do_drain_frames, int start_frames, CaptureScreensType capture_type) {
+int EndAcquisitionEmulator(const is_device_usb_device* usb_device_desc, is_device_device_handlers* handlers, bool do_drain_frames, int start_frames, CaptureScreensType capture_type) {
 	int ret = 0;
 	if (do_drain_frames)
 		ret = drain_frames(handlers, FRAME_BUFFER_SIZE, start_frames, capture_type, usb_device_desc);
@@ -321,9 +320,9 @@ int EndAcquisitionEmulator(const is_nitro_usb_device* usb_device_desc, is_nitro_
 	return UpdateFrameForwardEnable(handlers, false, false, usb_device_desc);
 }
 
-void is_nitro_acquisition_emulator_main_loop(CaptureData* capture_data, ISNitroCaptureReceivedData* is_nitro_capture_recv_data) {
-	is_nitro_device_handlers* handlers = (is_nitro_device_handlers*)capture_data->handle;
-	const is_nitro_usb_device* usb_device_desc = (const is_nitro_usb_device*)capture_data->status.device.descriptor;
+void is_nitro_acquisition_emulator_main_loop(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data) {
+	is_device_device_handlers* handlers = (is_device_device_handlers*)capture_data->handle;
+	const is_device_usb_device* usb_device_desc = (const is_device_usb_device*)capture_data->status.device.descriptor;
 	uint32_t index = 0;
 	uint16_t last_frame_counter = 0;
 	float single_frame_time = 0;
@@ -338,13 +337,13 @@ void is_nitro_acquisition_emulator_main_loop(CaptureData* capture_data, ISNitroC
 	auto clock_last_reset = std::chrono::high_resolution_clock::now();
 
 	while (capture_data->status.connected && capture_data->status.running) {
-		ret = get_is_nitro_status(is_nitro_capture_recv_data);
+		ret = get_is_device_status(is_device_capture_recv_data);
 		if(ret < 0) {
 			capture_error_print(true, capture_data, "Disconnected: Read error");
 			return;
 		}
 		if(single_frame_time > 0) {
-			is_nitro_read_frame_request(capture_data, is_nitro_get_free_buffer(capture_data, is_nitro_capture_recv_data), curr_capture_type, index++);
+			is_device_read_frame_request(capture_data, is_device_get_free_buffer(capture_data, is_device_capture_recv_data), curr_capture_type, index++);
 			frame_wait(single_frame_time, clock_last_reset, curr_capture_type, curr_capture_speed, curr_frame_counter + 1, last_frame_counter);
 		}
 		else {
@@ -353,11 +352,11 @@ void is_nitro_acquisition_emulator_main_loop(CaptureData* capture_data, ISNitroC
 			default_sleep(SLEEP_CHECKS_TIME_MS);
 		}
 		capture_data->status.curr_delay = last_frame_counter % FRAME_BUFFER_SIZE;
-		ret = reset_acquisition_frames(capture_data, curr_frame_counter, last_frame_counter, single_frame_time, clock_last_reset, curr_capture_type, capture_data->status.capture_type, curr_capture_speed, capture_data->status.capture_speed, is_nitro_capture_recv_data);
+		ret = reset_acquisition_frames(capture_data, curr_frame_counter, last_frame_counter, single_frame_time, clock_last_reset, curr_capture_type, capture_data->status.capture_type, curr_capture_speed, capture_data->status.capture_speed, is_device_capture_recv_data);
 		if(ret < 0) {
 			capture_error_print(true, capture_data, "Disconnected: Frame counter reset error");
 			break;
 		}
 	}
-	EndAcquisition(capture_data, is_nitro_capture_recv_data, true, curr_frame_counter, curr_capture_type);
+	EndAcquisition(capture_data, is_device_capture_recv_data, true, curr_frame_counter, curr_capture_type);
 }

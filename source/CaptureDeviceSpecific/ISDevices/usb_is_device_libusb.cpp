@@ -1,6 +1,6 @@
-#include "usb_is_nitro_communications.hpp"
-#include "usb_is_nitro_setup_general.hpp"
-#include "usb_is_nitro_libusb.hpp"
+#include "usb_is_device_communications.hpp"
+#include "usb_is_device_setup_general.hpp"
+#include "usb_is_device_libusb.hpp"
 #include "usb_generic.hpp"
 
 #include <libusb.h>
@@ -25,7 +25,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-static void is_nitro_usb_thread_function(bool* usb_thread_run) {
+static void is_device_usb_thread_function(bool* usb_thread_run) {
 	if(!usb_is_initialized())
 		return;
 	struct timeval tv;
@@ -35,21 +35,21 @@ static void is_nitro_usb_thread_function(bool* usb_thread_run) {
 		libusb_handle_events_timeout_completed(get_usb_ctx(), &tv, NULL);
 }
 
-void is_nitro_libusb_start_thread(std::thread* thread_ptr, bool* usb_thread_run) {
+void is_device_libusb_start_thread(std::thread* thread_ptr, bool* usb_thread_run) {
 	if(!usb_is_initialized())
 		return;
 	*usb_thread_run = true;
-	*thread_ptr = std::thread(is_nitro_usb_thread_function, usb_thread_run);
+	*thread_ptr = std::thread(is_device_usb_thread_function, usb_thread_run);
 }
 
-void is_nitro_libusb_close_thread(std::thread* thread_ptr, bool* usb_thread_run) {
+void is_device_libusb_close_thread(std::thread* thread_ptr, bool* usb_thread_run) {
 	if(!usb_is_initialized())
 		return;
 	*usb_thread_run = false;
 	thread_ptr->join();
 }
 
-static bool is_nitro_libusb_setup_connection(libusb_device_handle* handle, const is_nitro_usb_device* usb_device_desc) {
+static bool is_device_libusb_setup_connection(libusb_device_handle* handle, const is_device_usb_device* usb_device_desc) {
 	if (libusb_set_configuration(handle, usb_device_desc->default_config) != LIBUSB_SUCCESS)
 		return false;
 	if(libusb_claim_interface(handle, usb_device_desc->default_interface) != LIBUSB_SUCCESS)
@@ -61,7 +61,7 @@ static bool is_nitro_libusb_setup_connection(libusb_device_handle* handle, const
 	return true;
 }
 
-static int is_nitro_libusb_insert_device(std::vector<CaptureDevice> &devices_list, const is_nitro_usb_device* usb_device_desc, libusb_device *usb_device, libusb_device_descriptor *usb_descriptor, int &curr_serial_extra_id) {
+static int is_device_libusb_insert_device(std::vector<CaptureDevice> &devices_list, const is_device_usb_device* usb_device_desc, libusb_device *usb_device, libusb_device_descriptor *usb_descriptor, int &curr_serial_extra_id) {
 	libusb_device_handle *handle = NULL;
 	if((usb_descriptor->idVendor != usb_device_desc->vid) || (usb_descriptor->idProduct != usb_device_desc->pid))
 		return LIBUSB_ERROR_NOT_FOUND;
@@ -70,26 +70,26 @@ static int is_nitro_libusb_insert_device(std::vector<CaptureDevice> &devices_lis
 	int result = libusb_open(usb_device, &handle);
 	if((result < 0) || (handle == NULL))
 		return result;
-	if(is_nitro_libusb_setup_connection(handle, usb_device_desc)) {
-		is_nitro_device_handlers handlers;
+	if(is_device_libusb_setup_connection(handle, usb_device_desc)) {
+		is_device_device_handlers handlers;
 		handlers.usb_handle = handle;
-		is_nitro_insert_device(devices_list, &handlers, usb_device_desc, curr_serial_extra_id);
+		is_device_insert_device(devices_list, &handlers, usb_device_desc, curr_serial_extra_id);
 		libusb_release_interface(handle, usb_device_desc->default_interface);
 	}
 	libusb_close(handle);
 	return result;
 }
 
-is_nitro_device_handlers* is_nitro_libusb_serial_reconnection(const is_nitro_usb_device* usb_device_desc, CaptureDevice* device, int &curr_serial_extra_id) {
+is_device_device_handlers* is_device_libusb_serial_reconnection(const is_device_usb_device* usb_device_desc, CaptureDevice* device, int &curr_serial_extra_id) {
 	if(!usb_is_initialized())
 		return NULL;
 	libusb_device **usb_devices;
 	int num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	libusb_device_descriptor usb_descriptor{};
-	is_nitro_device_handlers* final_handlers = NULL;
+	is_device_device_handlers* final_handlers = NULL;
 
 	for(int i = 0; i < num_devices; i++) {
-		is_nitro_device_handlers handlers;
+		is_device_device_handlers handlers;
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
 		if(result < 0)
 			continue;
@@ -100,10 +100,10 @@ is_nitro_device_handlers* is_nitro_libusb_serial_reconnection(const is_nitro_usb
 		result = libusb_open(usb_devices[i], &handlers.usb_handle);
 		if(result || (handlers.usb_handle == NULL))
 			continue;
-		if (is_nitro_libusb_setup_connection(handlers.usb_handle, usb_device_desc)) {
+		if (is_device_libusb_setup_connection(handlers.usb_handle, usb_device_desc)) {
 			std::string device_serial_number = get_serial(usb_device_desc, &handlers, curr_serial_extra_id);
 			if (device->serial_number == device_serial_number) {
-				final_handlers = new is_nitro_device_handlers;
+				final_handlers = new is_device_device_handlers;
 				final_handlers->usb_handle = handlers.usb_handle;
 				break;
 			}
@@ -118,14 +118,14 @@ is_nitro_device_handlers* is_nitro_libusb_serial_reconnection(const is_nitro_usb
 	return final_handlers;
 }
 
-void is_nitro_libusb_end_connection(is_nitro_device_handlers* handlers, const is_nitro_usb_device* device_desc, bool interface_claimed) {
+void is_device_libusb_end_connection(is_device_device_handlers* handlers, const is_device_usb_device* device_desc, bool interface_claimed) {
 	if (interface_claimed)
 		libusb_release_interface(handlers->usb_handle, device_desc->default_interface);
 	libusb_close(handlers->usb_handle);
 	handlers->usb_handle = NULL;
 }
 
-void is_nitro_libusb_list_devices(std::vector<CaptureDevice> &devices_list, bool* no_access_elems, bool* not_supported_elems, int* curr_serial_extra_id_is_nitro, const size_t num_is_nitro_desc) {
+void is_device_libusb_list_devices(std::vector<CaptureDevice> &devices_list, bool* no_access_elems, bool* not_supported_elems, int* curr_serial_extra_id_is_device, const size_t num_is_device_desc) {
 	if(!usb_is_initialized())
 		return;
 	libusb_device **usb_devices;
@@ -136,8 +136,8 @@ void is_nitro_libusb_list_devices(std::vector<CaptureDevice> &devices_list, bool
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
 		if(result < 0)
 			continue;
-		for (int j = 0; j < num_is_nitro_desc; j++) {
-			result = is_nitro_libusb_insert_device(devices_list, GetISNitroDesc(j), usb_devices[i], &usb_descriptor, curr_serial_extra_id_is_nitro[j]);
+		for (int j = 0; j < num_is_device_desc; j++) {
+			result = is_device_libusb_insert_device(devices_list, GetISDeviceDesc(j), usb_devices[i], &usb_descriptor, curr_serial_extra_id_is_device[j]);
 			if (result != LIBUSB_ERROR_NOT_FOUND) {
 				if (result == LIBUSB_ERROR_ACCESS)
 					no_access_elems[j] = true;
@@ -153,24 +153,28 @@ void is_nitro_libusb_list_devices(std::vector<CaptureDevice> &devices_list, bool
 }
 
 // Write to bulk
-int is_nitro_libusb_bulk_out(is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
+int is_device_libusb_bulk_out(is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
 	return libusb_bulk_transfer(handlers->usb_handle, usb_device_desc->ep1_out, buf, length, transferred, usb_device_desc->bulk_timeout);
 }
 
 // Read from bulk
-int is_nitro_libusb_bulk_in(is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
+int is_device_libusb_bulk_in(is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
 	return libusb_bulk_transfer(handlers->usb_handle, usb_device_desc->ep2_in, buf, length, transferred, usb_device_desc->bulk_timeout);
 }
 
-void is_nitro_libusb_cancell_callback(isn_async_callback_data* cb_data) {
+void is_device_libusb_cancell_callback(isd_async_callback_data* cb_data) {
 	cb_data->transfer_data_access.lock();
 	if(cb_data->transfer_data)
 		libusb_cancel_transfer((libusb_transfer*)cb_data->transfer_data);
 	cb_data->transfer_data_access.unlock();
 }
 
-void STDCALL is_nitro_libusb_async_callback(libusb_transfer* transfer) {
-	isn_async_callback_data* cb_data = (isn_async_callback_data*)transfer->user_data;
+int is_device_libusb_reset_device(is_device_device_handlers* handlers) {
+	return libusb_reset_device(handlers->usb_handle);
+}
+
+void STDCALL is_device_libusb_async_callback(libusb_transfer* transfer) {
+	isd_async_callback_data* cb_data = (isd_async_callback_data*)transfer->user_data;
 	cb_data->transfer_data_access.lock();
 	cb_data->transfer_data = NULL;
 	cb_data->is_transfer_done_mutex->specific_unlock(cb_data->internal_index);
@@ -179,14 +183,14 @@ void STDCALL is_nitro_libusb_async_callback(libusb_transfer* transfer) {
 }
 
 // Read from bulk
-void is_nitro_libusb_async_in_start(is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc, uint8_t* buf, int length, isn_async_callback_data* cb_data) {
+void is_device_libusb_async_in_start(is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, uint8_t* buf, int length, isd_async_callback_data* cb_data) {
 	libusb_transfer *transfer_in = libusb_alloc_transfer(0);
 	if(!transfer_in)
 		return;
 	cb_data->transfer_data_access.lock();
 	cb_data->transfer_data = transfer_in;
 	cb_data->is_transfer_done_mutex->specific_try_lock(cb_data->internal_index);
-	libusb_fill_bulk_transfer(transfer_in, handlers->usb_handle, usb_device_desc->ep2_in, buf, length, is_nitro_libusb_async_callback, cb_data, usb_device_desc->bulk_timeout);
+	libusb_fill_bulk_transfer(transfer_in, handlers->usb_handle, usb_device_desc->ep2_in, buf, length, is_device_libusb_async_callback, cb_data, usb_device_desc->bulk_timeout);
 	transfer_in->flags |= LIBUSB_TRANSFER_FREE_TRANSFER;
 	libusb_submit_transfer(transfer_in);
 	cb_data->transfer_data_access.unlock();

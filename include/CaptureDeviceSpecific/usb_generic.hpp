@@ -1,7 +1,7 @@
 #ifndef __USB_GENERIC_HPP
 #define __USB_GENERIC_HPP
 
-#if defined(USE_IS_NITRO_USB) || defined(USE_DS_3DS_USB)
+#ifdef USE_LIBUSB
 #include <libusb.h>
 libusb_context* get_usb_ctx();
 #endif

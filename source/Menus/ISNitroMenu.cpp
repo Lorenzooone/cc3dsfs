@@ -1,5 +1,5 @@
 #include "ISNitroMenu.hpp"
-#include "usb_is_nitro_acquisition.hpp"
+#include "usb_is_device_acquisition.hpp"
 
 #define NUM_TOTAL_MENU_OPTIONS (sizeof(pollable_options)/sizeof(pollable_options[0]))
 
@@ -75,8 +75,8 @@ void ISNitroMenu::class_setup() {
 
 void ISNitroMenu::insert_data(CaptureDevice* device) {
 	bool is_capture = false;
-	#ifdef USE_IS_NITRO_USB
-	is_capture = is_nitro_is_capture(device);
+	#ifdef USE_IS_DEVICES_USB
+	is_capture = is_device_is_capture(device);
 	#endif
 	this->num_enabled_options = 0;
 	for(int i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {

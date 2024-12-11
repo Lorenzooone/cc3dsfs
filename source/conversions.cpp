@@ -3,7 +3,7 @@
 #include "3dscapture_ftd3.hpp"
 #include "dscapture_ftd2_shared.hpp"
 #include "usb_ds_3ds_capture.hpp"
-#include "usb_is_nitro_acquisition.hpp"
+#include "usb_is_device_acquisition.hpp"
 
 #include <cstring>
 
@@ -171,8 +171,8 @@ static void usb_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_o
 		usb_oldDSconvertVideoToOutput(&p_in->usb_received_old_ds, p_out, is_big_endian);
 }
 
-static void usb_is_nitro_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureScreensType capture_type) {
-	int num_pixels = usb_is_nitro_get_video_in_size(capture_type) / 3;
+static void usb_is_device_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureStatus* status, CaptureScreensType capture_type) {
+	int num_pixels = usb_is_device_get_video_in_size(status) / 3;
 	int out_start_pos = 0;
 	int out_clear_pos = num_pixels;
 	if(capture_type == CAPTURE_SCREENS_BOTTOM) {
@@ -206,9 +206,9 @@ bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, Capt
 		converted = true;
 	}
 	#endif
-	#ifdef USE_IS_NITRO_USB
+	#ifdef USE_IS_DEVICES_USB
 	if(chosen_device->cc_type == CAPTURE_CONN_IS_NITRO) {
-		usb_is_nitro_convertVideoToOutput(p_in, p_out, data_buffer->capture_type);
+		usb_is_device_convertVideoToOutput(p_in, p_out, status, data_buffer->capture_type);
 		converted = true;
 	}
 	#endif

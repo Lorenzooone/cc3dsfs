@@ -1,7 +1,6 @@
-#include "usb_is_nitro_communications.hpp"
-#include "usb_is_nitro_setup_general.hpp"
-#include "usb_is_nitro_is_driver.hpp"
-#include "usb_is_nitro_acquisition_general.hpp"
+#include "usb_is_device_communications.hpp"
+#include "usb_is_device_setup_general.hpp"
+#include "usb_is_device_is_driver.hpp"
 #include "frontend.hpp"
 #include "utils.hpp"
 
@@ -29,22 +28,22 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-const GUID is_nitro_driver_guid = { .Data1 = 0xB78D7ADA, .Data2 = 0xDDF4, .Data3 = 0x418F, .Data4 = {0x8C, 0x7C, 0x4A, 0xC8, 0x80, 0x30, 0xF5, 0x42} };
+const GUID is_device_driver_guid = { .Data1 = 0xB78D7ADA, .Data2 = 0xDDF4, .Data3 = 0x418F, .Data4 = {0x8C, 0x7C, 0x4A, 0xC8, 0x80, 0x30, 0xF5, 0x42} };
 
-static void is_nitro_is_driver_function(bool* usb_thread_run, ISNitroCaptureReceivedData* is_nitro_capture_recv_data, is_nitro_device_handlers* handlers) {
+static void is_device_is_driver_function(bool* usb_thread_run, ISDeviceCaptureReceivedData* is_device_capture_recv_data, is_device_device_handlers* handlers) {
 	while(*usb_thread_run) {
 		for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++) {
-			isn_async_callback_data* cb_data = (isn_async_callback_data*)&is_nitro_capture_recv_data[i].cb_data;
+			isd_async_callback_data* cb_data = (isd_async_callback_data*)&is_device_capture_recv_data[i].cb_data;
 			bool read_data_ready = false;
 			cb_data->transfer_data_access.lock();
 			read_data_ready = cb_data->is_data_ready;
 			cb_data->is_data_ready = false;
 			cb_data->transfer_data_access.unlock();
-			if(is_nitro_capture_recv_data[i].in_use && read_data_ready)
-				cb_data->function(&is_nitro_capture_recv_data[i], cb_data->actual_length, cb_data->status_value);
+			if(is_device_capture_recv_data[i].in_use && read_data_ready)
+				cb_data->function(&is_device_capture_recv_data[i], cb_data->actual_length, cb_data->status_value);
 		}
 		int dummy = 0;
-		is_nitro_capture_recv_data[0].cb_data.is_transfer_data_ready_mutex->general_timed_lock(&dummy);
+		is_device_capture_recv_data[0].cb_data.is_transfer_data_ready_mutex->general_timed_lock(&dummy);
 	}
 }
 
@@ -100,7 +99,7 @@ static bool is_driver_get_device_pid_vid(std::string path, uint16_t& out_vid, ui
 	return true;
 }
 
-static bool is_driver_setup_connection(is_nitro_device_handlers* handlers, std::string path) {
+static bool is_driver_setup_connection(is_device_device_handlers* handlers, std::string path) {
 	handlers->usb_handle = NULL;
 	handlers->mutex = NULL;
 	handlers->write_handle = INVALID_HANDLE_VALUE;
@@ -127,7 +126,7 @@ static bool is_driver_setup_connection(is_nitro_device_handlers* handlers, std::
 	return true;
 }
 
-static int wait_result_io_operation(HANDLE handle, OVERLAPPED* overlapped_var, int* transferred, const is_nitro_usb_device* usb_device_desc) {
+static int wait_result_io_operation(HANDLE handle, OVERLAPPED* overlapped_var, int* transferred, const is_device_usb_device* usb_device_desc) {
 	DWORD num_bytes = 0;
 	int retval = 0;
 	int error = 0;
@@ -146,7 +145,7 @@ static int wait_result_io_operation(HANDLE handle, OVERLAPPED* overlapped_var, i
 	return LIBUSB_SUCCESS;
 }
 
-static void STDCALL BasicCompletionOutputRoutine(isn_async_callback_data* cb_data, int num_bytes, int error) {
+static void STDCALL BasicCompletionOutputRoutine(isd_async_callback_data* cb_data, int num_bytes, int error) {
 	cb_data->transfer_data_access.lock();
 	if ((error == LIBUSB_SUCCESS) && (num_bytes != cb_data->requested_length))
 		error = LIBUSB_ERROR_INTERRUPTED;
@@ -165,13 +164,13 @@ static void STDCALL OverlappedCompletionNothingRoutine(DWORD dwErrorCode, DWORD 
 
 #endif
 
-is_nitro_device_handlers* is_driver_serial_reconnection(CaptureDevice* device) {
-	is_nitro_device_handlers* final_handlers = NULL;
+is_device_device_handlers* is_driver_serial_reconnection(CaptureDevice* device) {
+	is_device_device_handlers* final_handlers = NULL;
 	#ifdef _WIN32
 	if (device->path != "") {
-		is_nitro_device_handlers handlers;
+		is_device_device_handlers handlers;
 		if (is_driver_setup_connection(&handlers, device->path)) {
-			final_handlers = new is_nitro_device_handlers;
+			final_handlers = new is_device_device_handlers;
 			final_handlers->usb_handle = NULL;
 			final_handlers->mutex = handlers.mutex;
 			final_handlers->read_handle = handlers.read_handle;
@@ -184,7 +183,7 @@ is_nitro_device_handlers* is_driver_serial_reconnection(CaptureDevice* device) {
 	return final_handlers;
 }
 
-void is_driver_end_connection(is_nitro_device_handlers* handlers) {
+void is_driver_end_connection(is_device_device_handlers* handlers) {
 	#ifdef _WIN32
 	if (handlers->write_handle != INVALID_HANDLE_VALUE)
 		CloseHandle(handlers->write_handle);
@@ -198,10 +197,10 @@ void is_driver_end_connection(is_nitro_device_handlers* handlers) {
 	#endif
 }
 
-void is_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool* not_supported_elems, int *curr_serial_extra_id_is_nitro, const size_t num_is_nitro_desc) {
+void is_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool* not_supported_elems, int *curr_serial_extra_id_is_device, const size_t num_is_device_desc) {
 	#ifdef _WIN32
 	HDEVINFO DeviceInfoSet = SetupDiGetClassDevs(
-		&is_nitro_driver_guid,
+		&is_device_driver_guid,
 		NULL,
 		NULL,
 		DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
@@ -210,7 +209,7 @@ void is_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool* not_
 	ZeroMemory(&DeviceInterfaceData, sizeof(SP_DEVICE_INTERFACE_DATA));
 	DeviceInterfaceData.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
 	uint32_t i = 0;
-	while (SetupDiEnumDeviceInterfaces(DeviceInfoSet, NULL, &is_nitro_driver_guid, i++, &DeviceInterfaceData)) {
+	while (SetupDiEnumDeviceInterfaces(DeviceInfoSet, NULL, &is_device_driver_guid, i++, &DeviceInterfaceData)) {
 		std::string path = is_driver_get_device_path(DeviceInfoSet, &DeviceInterfaceData);
 		if (path == "")
 			continue;
@@ -218,12 +217,12 @@ void is_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool* not_
 		uint16_t pid = 0;
 		if(!is_driver_get_device_pid_vid(path, vid, pid))
 			continue;
-		for (int j = 0; j < num_is_nitro_desc; j++) {
-			const is_nitro_usb_device* usb_device_desc = GetISNitroDesc(j);
+		for (int j = 0; j < num_is_device_desc; j++) {
+			const is_device_usb_device* usb_device_desc = GetISDeviceDesc(j);
 			if(not_supported_elems[j] && (usb_device_desc->vid == vid) && (usb_device_desc->pid == pid)) {
-				is_nitro_device_handlers handlers;
+				is_device_device_handlers handlers;
 				if(is_driver_setup_connection(&handlers, path))
-					is_nitro_insert_device(devices_list, &handlers, usb_device_desc, curr_serial_extra_id_is_nitro[j], path);
+					is_device_insert_device(devices_list, &handlers, usb_device_desc, curr_serial_extra_id_is_device[j], path);
 				is_driver_end_connection(&handlers);
 				break;
 			}
@@ -237,7 +236,7 @@ void is_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool* not_
 }
 
 // Write to bulk
-int is_driver_bulk_out(is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
+int is_driver_bulk_out(is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
 	#ifdef _WIN32
 	OVERLAPPED overlapped_var;
 	memset(&overlapped_var, 0, sizeof(OVERLAPPED));
@@ -251,7 +250,7 @@ int is_driver_bulk_out(is_nitro_device_handlers* handlers, const is_nitro_usb_de
 }
 
 // Read from bulk
-int is_driver_bulk_in(is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
+int is_driver_bulk_in(is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
 	#ifdef _WIN32
 	OVERLAPPED overlapped_var;
 	memset(&overlapped_var, 0, sizeof(OVERLAPPED));
@@ -263,7 +262,7 @@ int is_driver_bulk_in(is_nitro_device_handlers* handlers, const is_nitro_usb_dev
 	return LIBUSB_SUCCESS;
 }
 
-int is_drive_async_in_start(is_nitro_device_handlers* handlers, const is_nitro_usb_device* usb_device_desc, uint8_t* buf, int length, isn_async_callback_data* cb_data) {
+int is_drive_async_in_start(is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, uint8_t* buf, int length, isd_async_callback_data* cb_data) {
 	#ifdef _WIN32
 	cb_data->transfer_data_access.lock();
 	cb_data->is_data_ready = false;
@@ -286,26 +285,30 @@ int is_drive_async_in_start(is_nitro_device_handlers* handlers, const is_nitro_u
 	return LIBUSB_SUCCESS;
 }
 
-void is_nitro_is_driver_start_thread(std::thread* thread_ptr, bool* usb_thread_run, ISNitroCaptureReceivedData* is_nitro_capture_recv_data, is_nitro_device_handlers* handlers, ConsumerMutex* AsyncMutexPtr) {
+void is_device_is_driver_start_thread(std::thread* thread_ptr, bool* usb_thread_run, ISDeviceCaptureReceivedData* is_device_capture_recv_data, is_device_device_handlers* handlers, ConsumerMutex* AsyncMutexPtr) {
 	#ifdef _WIN32
 	*usb_thread_run = true;
 	for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
-		is_nitro_capture_recv_data[i].cb_data.base_transfer_data = new OVERLAPPED;
-	*thread_ptr = std::thread(is_nitro_is_driver_function, usb_thread_run, is_nitro_capture_recv_data, handlers);
+		is_device_capture_recv_data[i].cb_data.base_transfer_data = new OVERLAPPED;
+	*thread_ptr = std::thread(is_device_is_driver_function, usb_thread_run, is_device_capture_recv_data, handlers);
 	#endif
 }
 
-void is_nitro_is_driver_close_thread(std::thread* thread_ptr, bool* usb_thread_run, ISNitroCaptureReceivedData* is_nitro_capture_recv_data) {
+void is_device_is_driver_close_thread(std::thread* thread_ptr, bool* usb_thread_run, ISDeviceCaptureReceivedData* is_device_capture_recv_data) {
 	#ifdef _WIN32
 	*usb_thread_run = false;
-	is_nitro_capture_recv_data[0].cb_data.is_transfer_data_ready_mutex->specific_unlock(0);
+	is_device_capture_recv_data[0].cb_data.is_transfer_data_ready_mutex->specific_unlock(0);
 	thread_ptr->join();
 	for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
-		delete is_nitro_capture_recv_data[i].cb_data.base_transfer_data;
+		delete is_device_capture_recv_data[i].cb_data.base_transfer_data;
 	#endif
 }
 
-void is_nitro_is_driver_cancel_callback(isn_async_callback_data* cb_data) {
+int is_device_is_driver_reset_device(is_device_device_handlers* handlers) {
+	return 0;
+}
+
+void is_device_is_driver_cancel_callback(isd_async_callback_data* cb_data) {
 	#ifdef _WIN32
 	// Nothing
 	#endif
