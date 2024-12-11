@@ -28,7 +28,10 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#define USB_PACKET_LIMIT 0x2000
+#define IS_TWL_SERIAL_NUMBER_SIZE 8
+
+#define IS_NITRO_USB_PACKET_LIMIT 0x2000
+#define IS_TWL_USB_PACKET_LIMIT 0x200000
 
 #define REG_USB_DMA_CONTROL_2 0x0C000028
 #define REG_USB_BIU_CONTROL_2 0x0C0000A4
@@ -41,6 +44,12 @@ enum is_nitro_packet_emulator_dir {
 enum is_nitro_packet_capture_dir {
 	IS_NITRO_PACKET_CAP_DIR_WRITE = 0x00,
 	IS_NITRO_PACKET_CAP_DIR_READ  = 0x01
+};
+
+enum is_twl_packet_capture_dir {
+	IS_TWL_PACKET_CAP_DIR_WRITE = 0x00,
+	IS_TWL_PACKET_CAP_DIR_READ  = 0x01,
+	IS_TWL_PACKET_CAP_DIR_WRITE_READ  = 0x02
 };
 
 enum is_device_packet_type {
@@ -78,6 +87,11 @@ enum is_nitro_capture_command {
 	IS_NITRO_CAP_CMD_SET_RESET_CPU_OFF = 0x22,
 };
 
+enum is_twl_capture_command {
+	IS_TWL_CAP_CMD_GET_SERIAL = 0x13,
+	IS_TWL_CAP_CMD_UNLOCK_COMMS = 0x1C,
+};
+
 enum is_nitro_emulator_forward_bits {
 	IS_NITRO_EMULATOR_FORWARD_ENABLE_BIT = 0,
 	IS_NITRO_EMULATOR_FORWARD_COUNTER_RESTART_BIT = 1,
@@ -103,6 +117,15 @@ struct PACKED is_device_packet_header {
 	uint32_t length;
 	uint32_t padding;
 };
+
+struct PACKED is_device_rw_packet_header {
+	uint16_t command;
+	uint8_t direction;
+	uint8_t type;
+	uint32_t address;
+	uint32_t length_w;
+	uint32_t length_r;
+};
 #pragma pack(pop)
 
 static const is_device_usb_device usb_is_nitro_emu_rare_desc = {
@@ -110,9 +133,11 @@ static const is_device_usb_device usb_is_nitro_emu_rare_desc = {
 .vid = 0x0f6e, .pid = 0x0400,
 .default_config = 1, .default_interface = 0,
 .bulk_timeout = 500,
-.ep2_in = 2 | LIBUSB_ENDPOINT_IN, .ep1_out = 1 | LIBUSB_ENDPOINT_OUT,
+.ep_in = 2 | LIBUSB_ENDPOINT_IN, .ep_out = 1 | LIBUSB_ENDPOINT_OUT,
+.write_pipe = "Pipe00", .read_pipe = "Pipe01",
 .product_id = 2, .manufacturer_id = 1, .device_type = IS_NITRO_EMULATOR_DEVICE,
-.video_data_type = VIDEO_DATA_BGR
+.video_data_type = VIDEO_DATA_BGR, .max_usb_packet_size = IS_NITRO_USB_PACKET_LIMIT,
+.do_pipe_clear_reset = true
 };
 
 static const is_device_usb_device usb_is_nitro_emu_common_desc = {
@@ -120,9 +145,11 @@ static const is_device_usb_device usb_is_nitro_emu_common_desc = {
 .vid = 0x0f6e, .pid = 0x0404,
 .default_config = 1, .default_interface = 0,
 .bulk_timeout = 500,
-.ep2_in = 2 | LIBUSB_ENDPOINT_IN, .ep1_out = 1 | LIBUSB_ENDPOINT_OUT,
+.ep_in = 2 | LIBUSB_ENDPOINT_IN, .ep_out = 1 | LIBUSB_ENDPOINT_OUT,
+.write_pipe = "Pipe00", .read_pipe = "Pipe01",
 .product_id = 2, .manufacturer_id = 1, .device_type = IS_NITRO_EMULATOR_DEVICE,
-.video_data_type = VIDEO_DATA_BGR
+.video_data_type = VIDEO_DATA_BGR, .max_usb_packet_size = IS_NITRO_USB_PACKET_LIMIT,
+.do_pipe_clear_reset = true
 };
 
 static const is_device_usb_device usb_is_nitro_cap_desc = {
@@ -130,15 +157,43 @@ static const is_device_usb_device usb_is_nitro_cap_desc = {
 .vid = 0x0f6e, .pid = 0x0403,
 .default_config = 1, .default_interface = 0,
 .bulk_timeout = 500,
-.ep2_in = 2 | LIBUSB_ENDPOINT_IN, .ep1_out = 1 | LIBUSB_ENDPOINT_OUT,
+.ep_in = 2 | LIBUSB_ENDPOINT_IN, .ep_out = 1 | LIBUSB_ENDPOINT_OUT,
+.write_pipe = "Pipe00", .read_pipe = "Pipe01",
 .product_id = 2, .manufacturer_id = 1, .device_type = IS_NITRO_CAPTURE_DEVICE,
-.video_data_type = VIDEO_DATA_BGR
+.video_data_type = VIDEO_DATA_BGR, .max_usb_packet_size = IS_NITRO_USB_PACKET_LIMIT,
+.do_pipe_clear_reset = true
+};
+
+static const is_device_usb_device usb_is_twl_cap_desc = {
+.name = "ISTC", .long_name = "IS TWL Capture",
+.vid = 0x0f6e, .pid = 0x0501,
+.default_config = 1, .default_interface = 0,
+.bulk_timeout = 500,
+.ep_in = 6 | LIBUSB_ENDPOINT_IN, .ep_out = 2 | LIBUSB_ENDPOINT_OUT,
+.write_pipe = "Pipe01", .read_pipe = "Pipe03",
+.product_id = 2, .manufacturer_id = 1, .device_type = IS_TWL_CAPTURE_DEVICE,
+.video_data_type = VIDEO_DATA_RGB, .max_usb_packet_size = IS_TWL_USB_PACKET_LIMIT,
+.do_pipe_clear_reset = false
+};
+
+static const is_device_usb_device usb_is_twl_cap_desc_2 = {
+.name = "ISTC", .long_name = "IS TWL Capture",
+.vid = 0x0f6e, .pid = 0x0502,
+.default_config = 1, .default_interface = 0,
+.bulk_timeout = 500,
+.ep_in = 6 | LIBUSB_ENDPOINT_IN, .ep_out = 2 | LIBUSB_ENDPOINT_OUT,
+.write_pipe = "Pipe01", .read_pipe = "Pipe03",
+.product_id = 2, .manufacturer_id = 1, .device_type = IS_TWL_CAPTURE_DEVICE,
+.video_data_type = VIDEO_DATA_RGB, .max_usb_packet_size = IS_TWL_USB_PACKET_LIMIT,
+.do_pipe_clear_reset = false
 };
 
 static const is_device_usb_device* all_usb_is_device_devices_desc[] = {
 	&usb_is_nitro_emu_rare_desc,
 	&usb_is_nitro_emu_common_desc,
 	&usb_is_nitro_cap_desc,
+	&usb_is_twl_cap_desc,
+	&usb_is_twl_cap_desc_2,
 };
 
 int GetNumISDeviceDesc() {
@@ -155,6 +210,13 @@ static void fix_endianness_header(is_device_packet_header* header) {
 	header->command = to_le(header->command);
 	header->address = to_le(header->address);
 	header->length = to_le(header->length);
+}
+
+static void fix_endianness_header(is_device_rw_packet_header* header) {
+	header->command = to_le(header->command);
+	header->address = to_le(header->address);
+	header->length_w = to_le(header->length_w);
+	header->length_r = to_le(header->length_r);
 }
 
 static void fix_endianness_header(is_nitro_nec_packet_header* header) {
@@ -183,35 +245,93 @@ static void bulk_in_async(is_device_device_handlers* handlers, const is_device_u
 	is_drive_async_in_start(handlers, usb_device_desc, buf, length, cb_data);
 }
 
+static int return_and_delete(uint8_t* ptr, int value) {
+	delete []ptr;
+	return value;
+}
+
+static uint8_t get_packet_direction(is_device_type device_type, size_t transfer_size_r, size_t transfer_size_w) {
+	if((transfer_size_r != 0) && (transfer_size_w != 0)) {
+		switch(device_type) {
+			case IS_TWL_CAPTURE_DEVICE:
+				return IS_TWL_PACKET_CAP_DIR_WRITE_READ;
+			default:
+				return 0;
+		}
+	}
+	else if(transfer_size_r != 0) {
+		switch(device_type) {
+			case IS_NITRO_EMULATOR_DEVICE:
+				return IS_NITRO_PACKET_EMU_DIR_READ;
+			case IS_NITRO_CAPTURE_DEVICE:
+				return IS_NITRO_PACKET_CAP_DIR_READ;
+			case IS_TWL_CAPTURE_DEVICE:
+				return IS_TWL_PACKET_CAP_DIR_READ;
+			default:
+				return 0;
+		}
+	}
+	else {
+		switch(device_type) {
+			case IS_NITRO_EMULATOR_DEVICE:
+				return IS_NITRO_PACKET_EMU_DIR_WRITE;
+			case IS_NITRO_CAPTURE_DEVICE:
+				return IS_NITRO_PACKET_CAP_DIR_WRITE;
+			case IS_TWL_CAPTURE_DEVICE:
+				return IS_TWL_PACKET_CAP_DIR_WRITE;
+			default:
+				return 0;
+		}
+	}
+}
+
+static uint8_t is_packet_direction_read(is_device_type device_type, uint8_t packet_direction) {
+	switch(device_type) {
+		case IS_NITRO_EMULATOR_DEVICE:
+			return packet_direction == IS_NITRO_PACKET_EMU_DIR_READ;
+		case IS_NITRO_CAPTURE_DEVICE:
+			return packet_direction == IS_NITRO_PACKET_CAP_DIR_READ;
+		case IS_TWL_CAPTURE_DEVICE:
+			return (packet_direction == IS_TWL_PACKET_CAP_DIR_WRITE_READ) || (packet_direction == IS_TWL_PACKET_CAP_DIR_READ);
+		default:
+			return false;
+	}
+}
+
+static uint8_t is_packet_direction_write(is_device_type device_type, uint8_t packet_direction) {
+	switch(device_type) {
+		case IS_NITRO_EMULATOR_DEVICE:
+			return packet_direction == IS_NITRO_PACKET_EMU_DIR_WRITE;
+		case IS_NITRO_CAPTURE_DEVICE:
+			return packet_direction == IS_NITRO_PACKET_CAP_DIR_WRITE;
+		case IS_TWL_CAPTURE_DEVICE:
+			return (packet_direction == IS_TWL_PACKET_CAP_DIR_WRITE_READ) || (packet_direction == IS_TWL_PACKET_CAP_DIR_WRITE);
+		default:
+			return false;
+	}
+}
+
 static int SendWritePacket(is_device_device_handlers* handlers, uint16_t command, is_device_packet_type type, uint32_t address, uint8_t* buf, int length, const is_device_usb_device* device_desc, bool expect_result = true) {
 	is_device_packet_header header;
 	bool append_mode = true;
 	if(device_desc->device_type == IS_NITRO_CAPTURE_DEVICE)
 		append_mode = false;
-	uint8_t single_usb_packet[USB_PACKET_LIMIT];
-	int single_packet_covered_size = USB_PACKET_LIMIT - sizeof(header);
+	int single_packet_covered_size = device_desc->max_usb_packet_size - sizeof(header);
 	if(!append_mode)
-		single_packet_covered_size = USB_PACKET_LIMIT;
+		single_packet_covered_size = device_desc->max_usb_packet_size;
 	int num_iters = (length + single_packet_covered_size - 1) / single_packet_covered_size;
 	if(!num_iters)
 		num_iters = 1;
+	size_t max_size_packet = length;
+	if(length > single_packet_covered_size)
+		max_size_packet = single_packet_covered_size;
+	uint8_t* single_usb_packet = new uint8_t[max_size_packet + sizeof(header)];
 	for(int i = 0; i < num_iters; i++) {
 		int transfer_size = length - (i * single_packet_covered_size);
 		if(transfer_size > single_packet_covered_size)
 			transfer_size = single_packet_covered_size;
 
-		uint8_t packet_direction = 0;
-		switch(device_desc->device_type) {
-			case IS_NITRO_EMULATOR_DEVICE:
-				packet_direction = IS_NITRO_PACKET_EMU_DIR_WRITE;
-				break;
-			case IS_NITRO_CAPTURE_DEVICE:
-				packet_direction = IS_NITRO_PACKET_CAP_DIR_WRITE;
-				break;
-			default:
-				break;
-		}
-			
+		uint8_t packet_direction = get_packet_direction(device_desc->device_type, 0, transfer_size);
 		header.command = command;
 		header.direction = packet_direction;
 		header.type = type;
@@ -232,35 +352,35 @@ static int SendWritePacket(is_device_device_handlers* handlers, uint16_t command
 			int header_bytes = 0;
 			ret = bulk_out(handlers, device_desc, single_usb_packet, sizeof(is_device_packet_header), &header_bytes);
 			if(ret < 0)
-				return ret;
+				return return_and_delete(single_usb_packet, ret);
 			if(header_bytes != sizeof(is_device_packet_header))
-				return LIBUSB_ERROR_INTERRUPTED;
+				return return_and_delete(single_usb_packet, LIBUSB_ERROR_INTERRUPTED);
 			if((buf != NULL) && (transfer_size > 0))
 				ret = bulk_out(handlers, device_desc, &buf[(i * single_packet_covered_size)], transfer_size, &num_bytes);
 			num_bytes += header_bytes;
 		}
 		if(ret < 0)
-			return ret;
+			return return_and_delete(single_usb_packet, ret);
 		if(num_bytes != (transfer_size + sizeof(is_device_packet_header)))
-			return LIBUSB_ERROR_INTERRUPTED;
+			return return_and_delete(single_usb_packet, LIBUSB_ERROR_INTERRUPTED);
 	}
 	if((device_desc->device_type == IS_NITRO_CAPTURE_DEVICE) && expect_result) {
 		uint8_t status[16];
 		int status_bytes = 0;
 		int ret = bulk_in(handlers, device_desc, status, sizeof(status), &status_bytes);
 		if(ret < 0)
-			return ret;
+			return return_and_delete(single_usb_packet, ret);
 		if(status_bytes != sizeof(status))
-			return LIBUSB_ERROR_INTERRUPTED;
+			return return_and_delete(single_usb_packet, LIBUSB_ERROR_INTERRUPTED);
 		if(status[0] != 1)
-			return LIBUSB_ERROR_OTHER;
+			return return_and_delete(single_usb_packet, LIBUSB_ERROR_OTHER);
 	}
-	return LIBUSB_SUCCESS;
+	return return_and_delete(single_usb_packet, LIBUSB_SUCCESS);
 }
 
 static int SendReadPacket(is_device_device_handlers* handlers, uint16_t command, is_device_packet_type type, uint32_t address, uint8_t* buf, int length, const is_device_usb_device* device_desc, bool expect_result = true) {
 	is_device_packet_header header;
-	int single_packet_covered_size = USB_PACKET_LIMIT;
+	int single_packet_covered_size = device_desc->max_usb_packet_size;
 	int num_iters = (length + single_packet_covered_size - 1) / single_packet_covered_size;
 	if(num_iters == 0)
 		num_iters = 1;
@@ -269,18 +389,7 @@ static int SendReadPacket(is_device_device_handlers* handlers, uint16_t command,
 		if(transfer_size > single_packet_covered_size)
 			transfer_size = single_packet_covered_size;
 
-		uint8_t packet_direction = 0;
-		switch(device_desc->device_type) {
-			case IS_NITRO_EMULATOR_DEVICE:
-				packet_direction = IS_NITRO_PACKET_EMU_DIR_READ;
-				break;
-			case IS_NITRO_CAPTURE_DEVICE:
-				packet_direction = IS_NITRO_PACKET_CAP_DIR_READ;
-				break;
-			default:
-				break;
-		}
-
+		uint8_t packet_direction = get_packet_direction(device_desc->device_type, transfer_size, 0);
 		header.command = command;
 		header.direction = packet_direction;
 		header.type = type;
@@ -316,6 +425,83 @@ static int SendReadPacket(is_device_device_handlers* handlers, uint16_t command,
 	return LIBUSB_SUCCESS;
 }
 
+static int SendReadWritePacket(is_device_device_handlers* handlers, uint16_t command, is_device_packet_type type, uint32_t address, uint8_t* buf_w, int length_w, uint8_t* buf_r, int length_r, const is_device_usb_device* device_desc) {
+	if((device_desc->device_type == IS_NITRO_EMULATOR_DEVICE) || (device_desc->device_type == IS_NITRO_CAPTURE_DEVICE))
+		return LIBUSB_SUCCESS;
+	is_device_rw_packet_header header;
+	int single_packet_covered_size_w = device_desc->max_usb_packet_size - sizeof(header);
+	int num_iters_w = (length_w + single_packet_covered_size_w - 1) / single_packet_covered_size_w;
+	if(!num_iters_w)
+		num_iters_w = 1;
+	int single_packet_covered_size_r = device_desc->max_usb_packet_size;
+	int num_iters_r = (length_r + single_packet_covered_size_r - 1) / single_packet_covered_size_r;
+	if(!num_iters_r)
+		num_iters_r = 1;
+	int num_iters = num_iters_w;
+	if(num_iters_r > num_iters)
+		num_iters = num_iters_r;
+	size_t max_size_packet_w = length_w;
+	if(length_w > single_packet_covered_size_w)
+		max_size_packet_w = single_packet_covered_size_w;
+	uint8_t* single_usb_packet = new uint8_t[max_size_packet_w + sizeof(header)];
+	for(int i = 0; i < num_iters; i++) {
+		int transfer_size_w = length_w - (i * single_packet_covered_size_w);
+		if(transfer_size_w > single_packet_covered_size_w)
+			transfer_size_w = single_packet_covered_size_w;
+		int transfer_size_r = length_r - (i * single_packet_covered_size_r);
+		if(transfer_size_r > single_packet_covered_size_r)
+			transfer_size_r = single_packet_covered_size_r;
+
+		uint8_t packet_direction = get_packet_direction(device_desc->device_type, transfer_size_r, transfer_size_w);
+		header.command = command;
+		header.direction = packet_direction;
+		header.type = type;
+		header.address = address;
+		header.length_w = transfer_size_w;
+		header.length_r = transfer_size_r;
+		fix_endianness_header(&header);
+		int ret = 0;
+		int num_bytes = 0;
+		if(is_packet_direction_write(device_desc->device_type, packet_direction)) {
+			for(int j = 0; j < sizeof(is_device_rw_packet_header); j++)
+				single_usb_packet[j] = ((uint8_t*)&header)[j];
+			if(buf_w != NULL) {
+				for(int j = 0; j < transfer_size_w; j++)
+					single_usb_packet[sizeof(is_device_rw_packet_header) + j] = buf_w[(i * single_packet_covered_size_w) + j];
+				ret = bulk_out(handlers, device_desc, single_usb_packet, transfer_size_w + sizeof(is_device_rw_packet_header), &num_bytes);
+			}
+			else {
+				ret = bulk_out(handlers, device_desc, single_usb_packet, sizeof(is_device_rw_packet_header), &num_bytes);
+				transfer_size_w = 0;
+			}
+			if(ret < 0)
+				return return_and_delete(single_usb_packet, ret);
+			if(num_bytes != (transfer_size_w + sizeof(is_device_rw_packet_header)))
+				return return_and_delete(single_usb_packet, LIBUSB_ERROR_INTERRUPTED);
+		}
+		else {
+			header.length_r = 0;
+			header.length_w = transfer_size_r;
+			ret = bulk_out(handlers, device_desc, (uint8_t*)&header, sizeof(is_device_rw_packet_header), &num_bytes);
+			if(ret < 0)
+				return return_and_delete(single_usb_packet, ret);
+			if(num_bytes != sizeof(is_device_packet_header))
+				return return_and_delete(single_usb_packet, LIBUSB_ERROR_INTERRUPTED);
+		}
+		num_bytes = 0;
+		if(is_packet_direction_read(device_desc->device_type, packet_direction)) {
+			if(buf_r != NULL) {
+				ret = bulk_in(handlers, device_desc, buf_r + (i * single_packet_covered_size_r), transfer_size_r, &num_bytes);
+				if(ret < 0)
+					return return_and_delete(single_usb_packet, ret);
+				if(num_bytes != transfer_size_r)
+					return return_and_delete(single_usb_packet, LIBUSB_ERROR_INTERRUPTED);
+			}
+		}
+	}
+	return return_and_delete(single_usb_packet, LIBUSB_SUCCESS);
+}
+
 int SendReadCommand(is_device_device_handlers* handlers, uint16_t command, uint8_t* buf, int length, const is_device_usb_device* device_desc) {
 	return SendReadPacket(handlers, command, IS_NITRO_PACKET_TYPE_COMMAND, 0, buf, length, device_desc);
 }
@@ -339,11 +525,20 @@ int SendWriteCommandU32(is_device_device_handlers* handlers, uint16_t command, u
 }
 
 int GetDeviceSerial(is_device_device_handlers* handlers, uint8_t* buf, const is_device_usb_device* device_desc) {
+	int ret = 0;
+	uint32_t value = 0;
 	switch(device_desc->device_type) {
 		case IS_NITRO_EMULATOR_DEVICE:
 			return SendReadCommand(handlers, IS_NITRO_EMU_CMD_GET_SERIAL, buf, IS_DEVICE_REAL_SERIAL_NUMBER_SIZE, device_desc);
 		case IS_NITRO_CAPTURE_DEVICE:
 			return SendReadCommand(handlers, IS_NITRO_CAP_CMD_GET_SERIAL, buf, IS_DEVICE_REAL_SERIAL_NUMBER_SIZE, device_desc);
+		case IS_TWL_CAPTURE_DEVICE:
+			ret = SendReadCommandU32(handlers, IS_TWL_CAP_CMD_UNLOCK_COMMS, &value, device_desc);
+			if(ret < 0)
+				return ret;
+			ret = SendReadCommand(handlers, IS_TWL_CAP_CMD_GET_SERIAL, buf, IS_TWL_SERIAL_NUMBER_SIZE, device_desc);
+			buf[IS_TWL_SERIAL_NUMBER_SIZE] = '\0';
+			return ret;
 		default:
 			return 0;
 	}

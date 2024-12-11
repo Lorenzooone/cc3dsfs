@@ -13,6 +13,7 @@
 enum is_device_type {
 	IS_NITRO_EMULATOR_DEVICE,
 	IS_NITRO_CAPTURE_DEVICE,
+	IS_TWL_CAPTURE_DEVICE,
 };
 
 enum is_device_forward_config_values_colors {
@@ -59,12 +60,16 @@ struct is_device_usb_device {
 	int default_config;
 	int default_interface;
 	int bulk_timeout;
-	int ep2_in;
-	int ep1_out;
+	int ep_in;
+	int ep_out;
+	std::string write_pipe;
+	std::string read_pipe;
 	int product_id;
 	int manufacturer_id;
 	is_device_type device_type;
 	InputVideoDataType video_data_type;
+	size_t max_usb_packet_size;
+	bool do_pipe_clear_reset;
 };
 
 struct is_device_device_handlers {

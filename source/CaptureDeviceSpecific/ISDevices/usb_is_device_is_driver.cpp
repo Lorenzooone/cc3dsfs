@@ -99,7 +99,7 @@ static bool is_driver_get_device_pid_vid(std::string path, uint16_t& out_vid, ui
 	return true;
 }
 
-static bool is_driver_setup_connection(is_device_device_handlers* handlers, std::string path) {
+static bool is_driver_setup_connection(is_device_device_handlers* handlers, std::string path, std::string pipe_r, std::string pipe_w, bool do_pipe_clear_reset) {
 	handlers->usb_handle = NULL;
 	handlers->mutex = NULL;
 	handlers->write_handle = INVALID_HANDLE_VALUE;
@@ -107,22 +107,24 @@ static bool is_driver_setup_connection(is_device_device_handlers* handlers, std:
 	std::string mutex_name = "Global\\ISU_" + path.substr(4);
 	std::replace(mutex_name.begin(), mutex_name.end(), '\\', '@');
 	handlers->mutex = CreateMutex(NULL, true, mutex_name.c_str());
-	if ((handlers->mutex != NULL) && (GetLastError() == ERROR_ALREADY_EXISTS)) {
+	if((handlers->mutex != NULL) && (GetLastError() == ERROR_ALREADY_EXISTS)) {
 		CloseHandle(handlers->mutex);
 		handlers->mutex = NULL;
 	}
-	if (handlers->mutex == NULL)
+	if(handlers->mutex == NULL)
 		return false;
-	handlers->write_handle = CreateFile((path + (char)(std::filesystem::path::preferred_separator)+"Pipe00").c_str(), (GENERIC_READ | GENERIC_WRITE), (FILE_SHARE_READ | FILE_SHARE_WRITE), NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
-	handlers->read_handle = CreateFile((path + (char)(std::filesystem::path::preferred_separator)+"Pipe01").c_str(), (GENERIC_READ | GENERIC_WRITE), (FILE_SHARE_READ | FILE_SHARE_WRITE), NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
-	if ((handlers->write_handle == INVALID_HANDLE_VALUE) || (handlers->read_handle == INVALID_HANDLE_VALUE))
+	handlers->write_handle = CreateFile((path + (char)(std::filesystem::path::preferred_separator)+ pipe_w).c_str(), (GENERIC_READ | GENERIC_WRITE), (FILE_SHARE_READ | FILE_SHARE_WRITE), NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+	handlers->read_handle = CreateFile((path + (char)(std::filesystem::path::preferred_separator)+ pipe_r).c_str(), (GENERIC_READ | GENERIC_WRITE), (FILE_SHARE_READ | FILE_SHARE_WRITE), NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+	if((handlers->write_handle == INVALID_HANDLE_VALUE) || (handlers->read_handle == INVALID_HANDLE_VALUE))
 		return false;
-	if (!is_driver_device_reset(handlers->write_handle))
-		return false;
-	if (!is_driver_pipe_reset(handlers->write_handle))
-		return false;
-	if (!is_driver_pipe_reset(handlers->read_handle))
-		return false;
+	if(do_pipe_clear_reset) {
+		if(!is_driver_device_reset(handlers->write_handle))
+			return false;
+		if(!is_driver_pipe_reset(handlers->write_handle))
+			return false;
+		if(!is_driver_pipe_reset(handlers->read_handle))
+			return false;
+	}
 	return true;
 }
 
@@ -169,7 +171,8 @@ is_device_device_handlers* is_driver_serial_reconnection(CaptureDevice* device) 
 	#ifdef _WIN32
 	if (device->path != "") {
 		is_device_device_handlers handlers;
-		if (is_driver_setup_connection(&handlers, device->path)) {
+		const is_device_usb_device* usb_device_info = (const is_device_usb_device*)device->descriptor;
+		if (is_driver_setup_connection(&handlers, device->path, usb_device_info->read_pipe, usb_device_info->write_pipe, usb_device_info->do_pipe_clear_reset)) {
 			final_handlers = new is_device_device_handlers;
 			final_handlers->usb_handle = NULL;
 			final_handlers->mutex = handlers.mutex;
@@ -221,7 +224,7 @@ void is_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool* not_
 			const is_device_usb_device* usb_device_desc = GetISDeviceDesc(j);
 			if(not_supported_elems[j] && (usb_device_desc->vid == vid) && (usb_device_desc->pid == pid)) {
 				is_device_device_handlers handlers;
-				if(is_driver_setup_connection(&handlers, path))
+				if(is_driver_setup_connection(&handlers, path, usb_device_desc->read_pipe, usb_device_desc->write_pipe, usb_device_desc->do_pipe_clear_reset))
 					is_device_insert_device(devices_list, &handlers, usb_device_desc, curr_serial_extra_id_is_device[j], path);
 				is_driver_end_connection(&handlers);
 				break;

@@ -54,10 +54,12 @@ static bool is_device_libusb_setup_connection(libusb_device_handle* handle, cons
 		return false;
 	if(libusb_claim_interface(handle, usb_device_desc->default_interface) != LIBUSB_SUCCESS)
 		return false;
-	if(libusb_clear_halt(handle, usb_device_desc->ep1_out) != LIBUSB_SUCCESS)
-		return false;
-	if(libusb_clear_halt(handle, usb_device_desc->ep2_in) != LIBUSB_SUCCESS)
-		return false;
+	if(usb_device_desc->do_pipe_clear_reset) {
+		if(libusb_clear_halt(handle, usb_device_desc->ep_out) != LIBUSB_SUCCESS)
+			return false;
+		if(libusb_clear_halt(handle, usb_device_desc->ep_in) != LIBUSB_SUCCESS)
+			return false;
+	}
 	return true;
 }
 
@@ -154,12 +156,12 @@ void is_device_libusb_list_devices(std::vector<CaptureDevice> &devices_list, boo
 
 // Write to bulk
 int is_device_libusb_bulk_out(is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
-	return libusb_bulk_transfer(handlers->usb_handle, usb_device_desc->ep1_out, buf, length, transferred, usb_device_desc->bulk_timeout);
+	return libusb_bulk_transfer(handlers->usb_handle, usb_device_desc->ep_out, buf, length, transferred, usb_device_desc->bulk_timeout);
 }
 
 // Read from bulk
 int is_device_libusb_bulk_in(is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
-	return libusb_bulk_transfer(handlers->usb_handle, usb_device_desc->ep2_in, buf, length, transferred, usb_device_desc->bulk_timeout);
+	return libusb_bulk_transfer(handlers->usb_handle, usb_device_desc->ep_in, buf, length, transferred, usb_device_desc->bulk_timeout);
 }
 
 void is_device_libusb_cancell_callback(isd_async_callback_data* cb_data) {
@@ -190,7 +192,7 @@ void is_device_libusb_async_in_start(is_device_device_handlers* handlers, const 
 	cb_data->transfer_data_access.lock();
 	cb_data->transfer_data = transfer_in;
 	cb_data->is_transfer_done_mutex->specific_try_lock(cb_data->internal_index);
-	libusb_fill_bulk_transfer(transfer_in, handlers->usb_handle, usb_device_desc->ep2_in, buf, length, is_device_libusb_async_callback, cb_data, usb_device_desc->bulk_timeout);
+	libusb_fill_bulk_transfer(transfer_in, handlers->usb_handle, usb_device_desc->ep_in, buf, length, is_device_libusb_async_callback, cb_data, usb_device_desc->bulk_timeout);
 	transfer_in->flags |= LIBUSB_TRANSFER_FREE_TRANSFER;
 	libusb_submit_transfer(transfer_in);
 	cb_data->transfer_data_access.unlock();
