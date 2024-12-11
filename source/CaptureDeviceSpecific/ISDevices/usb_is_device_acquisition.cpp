@@ -45,7 +45,7 @@ static bool initial_cleanup(const is_device_usb_device* usb_device_desc, is_devi
 		case IS_NITRO_CAPTURE_DEVICE:
 			return initial_cleanup_capture(usb_device_desc, handlers) != LIBUSB_SUCCESS;
 		default:
-			return true;
+			return false;
 	}
 }
 

@@ -61,6 +61,11 @@ struct PACKED ISNitroEmulatorVideoInputData {
 	uint8_t screen_data[IN_VIDEO_SIZE_DS][3];
 };
 
+struct PACKED ISTWLCaptureVideoInputData {
+	USBOldDSPixelData screen_data[IN_VIDEO_SIZE_DS];
+	uint8_t bit_6_rb_screen_data[(IN_VIDEO_SIZE_DS >> 3) * 2];
+};
+
 struct ALIGNED(16) PACKED FTD3_3DSCaptureReceived {
 	RGB83DSVideoInputData video_in;
 	uint16_t audio_data[N3DSXL_SAMPLES_IN];
@@ -111,6 +116,23 @@ struct ALIGNED(16) PACKED FTD2OldDSCaptureReceivedRaw {
 
 struct ALIGNED(16) PACKED ISNitroCaptureReceived {
 	ISNitroEmulatorVideoInputData video_in;
+};
+
+struct ALIGNED(16) PACKED ISTWLCaptureVideoReceived {
+	ISTWLCaptureVideoInputData video_in;
+	uint32_t time;
+	uint32_t frame;
+	uint8_t unknown[0x40000 - (sizeof(ISTWLCaptureVideoInputData) + (sizeof(uint32_t) * 2))];
+};
+
+struct ALIGNED(16) PACKED ISTWLCaptureAudioReceived {
+	uint32_t time;
+	uint16_t sound_data[TWL_CAPTURE_SAMPLES_IN];
+};
+
+struct ALIGNED(16) PACKED ISTWLCaptureReceived {
+	ISTWLCaptureVideoReceived video_capture_in;
+	ISTWLCaptureAudioReceived audio_capture_in[TWL_CAPTURE_MAX_SAMPLES_CHUNK_NUM];
 };
 
 #pragma pack(pop)

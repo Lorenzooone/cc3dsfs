@@ -54,10 +54,10 @@ static bool is_device_libusb_setup_connection(libusb_device_handle* handle, cons
 		return false;
 	if(libusb_claim_interface(handle, usb_device_desc->default_interface) != LIBUSB_SUCCESS)
 		return false;
-	if(libusb_clear_halt(handle, usb_device_desc->ep1_out) != LIBUSB_SUCCESS)
-		return false;
-	if(libusb_clear_halt(handle, usb_device_desc->ep2_in) != LIBUSB_SUCCESS)
-		return false;
+	//if(libusb_clear_halt(handle, usb_device_desc->ep1_out) != LIBUSB_SUCCESS)
+	//	return false;
+	//if(libusb_clear_halt(handle, usb_device_desc->ep2_in) != LIBUSB_SUCCESS)
+	//	return false;
 	return true;
 }
 
