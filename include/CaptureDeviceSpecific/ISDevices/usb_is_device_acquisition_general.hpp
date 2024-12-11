@@ -35,6 +35,7 @@ void wait_all_is_device_transfers_done(CaptureData* capture_data, ISDeviceCaptur
 void wait_all_is_device_buffers_free(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data);
 void wait_one_is_device_buffer_free(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data);
 int get_is_device_status(ISDeviceCaptureReceivedData* is_device_capture_recv_data);
+void error_is_device_status(ISDeviceCaptureReceivedData* is_device_capture_recv_data, int error_value);
 void reset_is_device_status(ISDeviceCaptureReceivedData* is_device_capture_recv_data);
 
 #endif

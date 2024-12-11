@@ -343,7 +343,10 @@ void is_nitro_acquisition_emulator_main_loop(CaptureData* capture_data, ISDevice
 			return;
 		}
 		if(single_frame_time > 0) {
-			is_device_read_frame_request(capture_data, is_device_get_free_buffer(capture_data, is_device_capture_recv_data), curr_capture_type, index++);
+			ISDeviceCaptureReceivedData* chosen_buffer = is_device_get_free_buffer(capture_data, is_device_capture_recv_data);
+			if(chosen_buffer == NULL)
+				error_is_device_status(is_device_capture_recv_data, LIBUSB_ERROR_TIMEOUT);
+			is_device_read_frame_request(capture_data, chosen_buffer, curr_capture_type, index++);
 			frame_wait(single_frame_time, clock_last_reset, curr_capture_type, curr_capture_speed, curr_frame_counter + 1, last_frame_counter);
 		}
 		else {

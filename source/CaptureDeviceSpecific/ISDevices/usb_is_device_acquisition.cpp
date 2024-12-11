@@ -227,6 +227,8 @@ int is_device_read_frame_and_output(CaptureData* capture_data, CaptureReceived* 
 void is_device_read_frame_request(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data, CaptureScreensType curr_capture_type, uint32_t index) {
 	if(is_device_capture_recv_data == NULL)
 		return;
+	if((*is_device_capture_recv_data->status) < 0)
+		return;
 	const is_device_usb_device* usb_device_info = (const is_device_usb_device*)capture_data->status.device.descriptor;
 	is_device_capture_recv_data->index = index;
 	is_device_capture_recv_data->curr_capture_type = curr_capture_type;
@@ -266,11 +268,14 @@ int is_device_get_num_free_buffers(ISDeviceCaptureReceivedData* is_device_captur
 	return num_free;
 }
 
-static void close_all_reads_error(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data, bool &errored_out) {
-	if(*is_device_capture_recv_data[0].status < 0) {
-		if(!errored_out) {
+static void close_all_reads_error(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data, bool &async_read_closed, bool &reset_usb_device, bool do_reset) {
+	if(get_is_device_status(is_device_capture_recv_data) < 0) {
+		if(!async_read_closed) {
 			for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
 				CloseAsyncRead((is_device_device_handlers*)capture_data->handle, &is_device_capture_recv_data[i].cb_data);
+			async_read_closed = true;
+		}
+		if(do_reset && (!reset_usb_device)) {
 			int ret = ResetUSBDevice((is_device_device_handlers*)capture_data->handle);
 			if((ret == LIBUSB_ERROR_NO_DEVICE) || (ret == LIBUSB_ERROR_NOT_FOUND)) {
 				for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++) {
@@ -280,24 +285,30 @@ static void close_all_reads_error(CaptureData* capture_data, ISDeviceCaptureRece
 					is_device_capture_recv_data[i].in_use = false;
 				}
 			}
+			reset_usb_device = true;
 		}
-		errored_out = true;
 	}
 }
 
-static void check_too_much_time_passed(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data, bool &errored_out, const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time) {
+static bool has_too_much_time_passed(const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time) {
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - start_time;
-	if(diff.count() > MAX_TIME_WAIT)
-		*is_device_capture_recv_data[0].status = -1;
-	close_all_reads_error(capture_data, is_device_capture_recv_data, errored_out);
+	return diff.count() > MAX_TIME_WAIT;
+}
+
+static void error_too_much_time_passed(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data, bool &async_read_closed, bool &reset_usb_device, const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time) {
+	if(has_too_much_time_passed(start_time)) {
+		error_is_device_status(is_device_capture_recv_data, -1);
+		close_all_reads_error(capture_data, is_device_capture_recv_data, async_read_closed, reset_usb_device, true);
+	}
 }
 
 void wait_all_is_device_transfers_done(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data) {
-	if (is_device_capture_recv_data == NULL)
+	if(is_device_capture_recv_data == NULL)
 		return;
-	bool errored_out = false;
-	close_all_reads_error(capture_data, is_device_capture_recv_data, errored_out);
+	bool async_read_closed = false;
+	bool reset_usb_device = false;
+	close_all_reads_error(capture_data, is_device_capture_recv_data, async_read_closed, reset_usb_device, false);
 	const auto start_time = std::chrono::high_resolution_clock::now();
 	for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++) {
 		void* transfer_data;
@@ -306,7 +317,7 @@ void wait_all_is_device_transfers_done(CaptureData* capture_data, ISDeviceCaptur
 			transfer_data = is_device_capture_recv_data[i].cb_data.transfer_data;
 			is_device_capture_recv_data[i].cb_data.transfer_data_access.unlock();
 			if(transfer_data) {
-				check_too_much_time_passed(capture_data, is_device_capture_recv_data, errored_out, start_time);
+				error_too_much_time_passed(capture_data, is_device_capture_recv_data, async_read_closed, reset_usb_device, start_time);
 				is_device_capture_recv_data[i].cb_data.is_transfer_done_mutex->specific_timed_lock(i);
 			}
 		} while(transfer_data);
@@ -316,19 +327,19 @@ void wait_all_is_device_transfers_done(CaptureData* capture_data, ISDeviceCaptur
 void wait_all_is_device_buffers_free(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data) {
 	if(is_device_capture_recv_data == NULL)
 		return;
-	bool errored_out = false;
-	close_all_reads_error(capture_data, is_device_capture_recv_data, errored_out);
+	bool async_read_closed = false;
+	bool reset_usb_device = false;
+	close_all_reads_error(capture_data, is_device_capture_recv_data, async_read_closed, reset_usb_device, false);
 	const auto start_time = std::chrono::high_resolution_clock::now();
 	for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
 		while(is_device_capture_recv_data[i].in_use) {
-			check_too_much_time_passed(capture_data, is_device_capture_recv_data, errored_out, start_time);
+			error_too_much_time_passed(capture_data, is_device_capture_recv_data, async_read_closed, reset_usb_device, start_time);
 			is_device_capture_recv_data[i].is_buffer_free_shared_mutex->specific_timed_lock(i);
 		}
 }
 
 void wait_one_is_device_buffer_free(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data) {
 	bool done = false;
-	bool errored_out = false;
 	const auto start_time = std::chrono::high_resolution_clock::now();
 	while(!done) {
 		for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++) {
@@ -336,8 +347,9 @@ void wait_one_is_device_buffer_free(CaptureData* capture_data, ISDeviceCaptureRe
 				done = true;
 		}
 		if(!done) {
-			check_too_much_time_passed(capture_data, is_device_capture_recv_data, errored_out, start_time);
-			if(*is_device_capture_recv_data[0].status < 0)
+			if(has_too_much_time_passed(start_time))
+				return;
+			if(get_is_device_status(is_device_capture_recv_data) < 0)
 				return;
 			int dummy = 0;
 			is_device_capture_recv_data[0].is_buffer_free_shared_mutex->general_timed_lock(&dummy);
@@ -351,7 +363,7 @@ bool is_device_are_buffers_all_free(ISDeviceCaptureReceivedData* is_device_captu
 
 ISDeviceCaptureReceivedData* is_device_get_free_buffer(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data) {
 	wait_one_is_device_buffer_free(capture_data, is_device_capture_recv_data);
-	if(*is_device_capture_recv_data[0].status < 0)
+	if(get_is_device_status(is_device_capture_recv_data) < 0)
 		return NULL;
 	for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
 		if(!is_device_capture_recv_data[i].in_use) {
@@ -366,8 +378,13 @@ int get_is_device_status(ISDeviceCaptureReceivedData* is_device_capture_recv_dat
 	return *is_device_capture_recv_data[0].status;
 }
 
+void error_is_device_status(ISDeviceCaptureReceivedData* is_device_capture_recv_data, int error_val) {
+	if((error_val == 0) || (get_is_device_status(is_device_capture_recv_data) == 0))
+		*is_device_capture_recv_data[0].status = error_val;
+}
+
 void reset_is_device_status(ISDeviceCaptureReceivedData* is_device_capture_recv_data) {
-	*is_device_capture_recv_data[0].status = 0;
+	error_is_device_status(is_device_capture_recv_data, 0);
 }
 
 void is_device_acquisition_main_loop(CaptureData* capture_data) {
