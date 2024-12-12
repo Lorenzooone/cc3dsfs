@@ -75,6 +75,7 @@ public:
 	int save_data();
 	bool open_capture();
 	bool close_capture();
+	bool scheduled_split();
 	int get_ret_val();
 
 private:
@@ -106,6 +107,7 @@ private:
 	bool last_connected_status;
 	bool m_prepare_open;
 	bool m_prepare_quit;
+	bool m_scheduled_split;
 	int ret_val;
 	bool font_load_success;
 	double frame_time;
@@ -328,6 +330,8 @@ void reset_display_data(DisplayData *display_data);
 void reset_input_data(InputData* input_data);
 void reset_shared_data(SharedData* shared_data);
 void reset_fullscreen_info(ScreenInfo &info);
+void sanitize_enabled_info(ScreenInfo &top_bot_info, ScreenInfo &top_info, ScreenInfo &bot_info);
+void override_set_data_to_screen_info(override_win_data &override_win, ScreenInfo &info);
 void reset_screen_info(ScreenInfo &info);
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
 std::string save_screen_info(std::string base, const ScreenInfo &info);

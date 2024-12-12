@@ -96,7 +96,7 @@ void list_devices_ftd3(std::vector<CaptureDevice> &devices_list, std::vector<no_
 	std::string valid_descriptions[] = {"N3DSXL", "N3DSXL.2"};
 	ftStatus = FT_CreateDeviceInfoList(&numDevs);
 	size_t num_inserted = 0;
-	if (!FT_FAILED(ftStatus) && numDevs > 0)
+	if(!FT_FAILED(ftStatus) && numDevs > 0)
 	{
 		const int debug_multiplier = 1;
 		FT_HANDLE ftHandle = NULL;
@@ -109,14 +109,18 @@ void list_devices_ftd3(std::vector<CaptureDevice> &devices_list, std::vector<no_
 		{
 			ftStatus = FT_GetDeviceInfoDetail(i, &Flags, &Type, &ID, NULL,
 			SerialNumber, Description, &ftHandle);
-			if (!FT_FAILED(ftStatus))
+			if(!FT_FAILED(ftStatus))
 			{
-				for(int j = 0; j < sizeof(valid_descriptions) / sizeof(*valid_descriptions); j++) {
-					if(Description == valid_descriptions[j]) {
-						for(int u = 0; u < debug_multiplier; u++)
-							devices_list.emplace_back(std::string(SerialNumber), "N3DSXL", CAPTURE_CONN_FTD3, (void*)NULL, true, true, true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, N3DSXL_SAMPLES_IN, 90, 0, 0, TOP_WIDTH_3DS, 0, VIDEO_DATA_RGB);
-						break;
+				ftStatus = FT_Create(SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, &ftHandle);
+				if(!FT_FAILED(ftStatus)) {
+					for(int j = 0; j < sizeof(valid_descriptions) / sizeof(*valid_descriptions); j++) {
+						if(Description == valid_descriptions[j]) {
+							for(int u = 0; u < debug_multiplier; u++)
+								devices_list.emplace_back(std::string(SerialNumber), "N3DSXL", CAPTURE_CONN_FTD3, (void*)NULL, true, true, true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, N3DSXL_SAMPLES_IN, 90, 0, 0, TOP_WIDTH_3DS, 0, VIDEO_DATA_RGB);
+							break;
+						}
 					}
+					FT_Close(ftHandle);
 				}
 			}
 		}
@@ -151,7 +155,7 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 	char SerialNumber[SERIAL_NUMBER_SIZE] = { 0 };
 	strncpy(SerialNumber, device->serial_number.c_str(), REAL_SERIAL_NUMBER_SIZE);
 	SerialNumber[REAL_SERIAL_NUMBER_SIZE] = 0;
-	if (FT_Create(SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, &capture_data->handle)) {
+	if(FT_Create(SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, &capture_data->handle)) {
 		capture_error_print(print_failed, capture_data, "Create failed");
 		return false;
 	}
@@ -159,7 +163,7 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 	UCHAR buf[4] = {0x40, 0x80, 0x00, 0x00};
 	ULONG written = 0;
 
-	if (FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
+	if(FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
 		capture_error_print(print_failed, capture_data, "Write failed");
 		preemptive_close_connection(capture_data);
 		return false;
@@ -167,13 +171,13 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 
 	buf[1] = 0x00;
 
-	if (FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
+	if(FT_WritePipe(capture_data->handle, BULK_OUT, buf, 4, &written, 0)) {
 		capture_error_print(print_failed, capture_data, "Write failed");
 		preemptive_close_connection(capture_data);
 		return false;
 	}
 
-	if (FT_SetStreamPipe(capture_data->handle, false, false, BULK_IN, get_capture_size(capture_data))) {
+	if(FT_SetStreamPipe(capture_data->handle, false, false, BULK_IN, get_capture_size(capture_data))) {
 		capture_error_print(print_failed, capture_data, "Stream failed");
 		preemptive_close_connection(capture_data);
 		return false;
@@ -186,7 +190,7 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 			return false;
 		}
 
-		if (FT_SetStreamPipe(capture_data->handle, false, false, BULK_IN, get_capture_size(capture_data))) {
+		if(FT_SetStreamPipe(capture_data->handle, false, false, BULK_IN, get_capture_size(capture_data))) {
 			capture_error_print(print_failed, capture_data, "Stream failed");
 			preemptive_close_connection(capture_data);
 			return false;
@@ -214,7 +218,7 @@ static void fast_capture_call(FTD3XXReceivedDataBuffer* received_buffer, Capture
 	FT_STATUS ftStatus;
 	for (inner_curr_in = 0; inner_curr_in < FTD3XX_CONCURRENT_BUFFERS; ++inner_curr_in) {
 		ftStatus = FT_InitializeOverlapped(capture_data->handle, &received_buffer[inner_curr_in].overlap);
-		if (ftStatus) {
+		if(ftStatus) {
 			capture_error_print(true, capture_data, "Disconnected: Initialize failed");
 			return;
 		}
@@ -222,7 +226,7 @@ static void fast_capture_call(FTD3XXReceivedDataBuffer* received_buffer, Capture
 
 	for (inner_curr_in = 0; inner_curr_in < FTD3XX_CONCURRENT_BUFFERS - 1; ++inner_curr_in) {
 		ftStatus = FT_ASYNC_CALL(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&received_buffer[inner_curr_in].capture_buf, get_capture_size(capture_data), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
-		if (ftStatus != FT_IO_PENDING) {
+		if(ftStatus != FT_IO_PENDING) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");
 			return;
 		}
@@ -235,7 +239,7 @@ static void fast_capture_call(FTD3XXReceivedDataBuffer* received_buffer, Capture
 	while (capture_data->status.connected && capture_data->status.running) {
 
 		ftStatus = FT_ASYNC_CALL(capture_data->handle, FIFO_CHANNEL, (UCHAR*)&received_buffer[inner_curr_in].capture_buf, get_capture_size(capture_data), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
-		if (ftStatus != FT_IO_PENDING) {
+		if(ftStatus != FT_IO_PENDING) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");
 			return;
 		}
@@ -309,7 +313,7 @@ void ftd3_capture_cleanup(CaptureData* capture_data) {
 		capture_error_print(true, capture_data, "Disconnected: Abort failed");
 	}
 
-	if (FT_Close(capture_data->handle)) {
+	if(FT_Close(capture_data->handle)) {
 		capture_error_print(true, capture_data, "Disconnected: Close failed");
 	}
 }

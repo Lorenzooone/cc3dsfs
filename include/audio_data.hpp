@@ -26,6 +26,7 @@ public:
 	int get_real_volume();
 	bool load_audio_data(std::string key, std::string value);
 	std::string save_audio_data();
+	void set_audio_volume(int new_volume);
 
 private:
 	int volume;
@@ -37,7 +38,6 @@ private:
 	std::string text;
 	void set_max_audio_latency(int new_value);
 	void set_audio_output_type(int new_value);
-	void set_audio_volume(int new_volume);
 	void set_audio_mute(bool new_mute);
 	void update_text(std::string text);
 	const std::string max_audio_latency_str = "max_audio_latency";

@@ -22,8 +22,10 @@ static bool poll_connection_window_screen(WindowScreen *screen, int &chosen_inde
 	return false;
 }
 
-static int choose_device(std::vector<CaptureDevice> *devices_list, FrontendData* frontend_data) {
+static int choose_device(std::vector<CaptureDevice> *devices_list, FrontendData* frontend_data, bool auto_connect_to_first) {
 	if(devices_list->size() == 1)
+		return 0;
+	if(auto_connect_to_first)
 		return 0;
 	int chosen_index = CONNECTION_NO_DEVICE_SELECTED;
 	frontend_data->top_screen->setup_connection_menu(devices_list);
@@ -61,7 +63,7 @@ void capture_error_print(bool print_failed, CaptureData* capture_data, std::stri
 	}
 }
 
-bool connect(bool print_failed, CaptureData* capture_data, FrontendData* frontend_data) {
+bool connect(bool print_failed, CaptureData* capture_data, FrontendData* frontend_data, bool auto_connect_to_first) {
 	capture_data->status.new_error_text = false;
 	if (capture_data->status.connected) {
 		capture_data->status.close_success = false;
@@ -106,7 +108,7 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 		return false;
 	}
 
-	int chosen_device = choose_device(&devices_list, frontend_data);
+	int chosen_device = choose_device(&devices_list, frontend_data, auto_connect_to_first);
 	if(chosen_device == CONNECTION_NO_DEVICE_SELECTED) {
 		capture_error_print(print_failed, capture_data, "No device was selected");
 		return false;

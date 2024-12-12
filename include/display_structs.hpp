@@ -6,12 +6,24 @@
 #include "shaders_list.hpp"
 #include "WindowCommands.hpp"
 
+#define DEFAULT_NO_POS_WINDOW_VALUE -1
+#define DEFAULT_NO_VOLUME_VALUE -1
+#define DEFAULT_NO_ENABLED_VALUE -1
+#define DEFAULT_NO_SCALING_VALUE -1
+
 enum ScreenType { TOP, BOTTOM, JOINT };
 enum BottomRelativePosition { UNDER_TOP, LEFT_TOP, ABOVE_TOP, RIGHT_TOP, BOT_REL_POS_END };
 enum NonIntegerScalingModes { SMALLER_PRIORITY, INVERSE_PROPORTIONAL_PRIORITY, EQUAL_PRIORITY, PROPORTIONAL_PRIORITY, BIGGER_PRIORITY, END_NONINT_SCALE_MODES };
 enum CurrMenuType { DEFAULT_MENU_TYPE, CONNECT_MENU_TYPE, MAIN_MENU_TYPE, VIDEO_MENU_TYPE, AUDIO_MENU_TYPE, CROP_MENU_TYPE, TOP_PAR_MENU_TYPE, BOTTOM_PAR_MENU_TYPE, ROTATION_MENU_TYPE, OFFSET_MENU_TYPE, BFI_MENU_TYPE, LOAD_MENU_TYPE, SAVE_MENU_TYPE, RESOLUTION_MENU_TYPE, EXTRA_MENU_TYPE, STATUS_MENU_TYPE, LICENSES_MENU_TYPE, RELATIVE_POS_MENU_TYPE, SHORTCUTS_MENU_TYPE, ACTION_SELECTION_MENU_TYPE, SCALING_RATIO_MENU_TYPE, ISN_MENU_TYPE, VIDEO_EFFECTS_MENU_TYPE, INPUT_MENU_TYPE };
 enum InputColorspaceMode { FULL_COLORSPACE, DS_COLORSPACE, GBA_COLORSPACE, INPUT_COLORSPACE_END };
 enum FrameBlendingMode { NO_FRAME_BLENDING, FULL_FRAME_BLENDING, DS_3D_BOTH_SCREENS_FRAME_BLENDING, FRAME_BLENDING_END };
+
+struct override_win_data {
+	int pos_x = DEFAULT_NO_POS_WINDOW_VALUE;
+	int pos_y = DEFAULT_NO_POS_WINDOW_VALUE;
+	int enabled = DEFAULT_NO_ENABLED_VALUE;
+	int scaling = DEFAULT_NO_SCALING_VALUE;
+};
 
 struct ScreenInfo {
 	bool is_blurred;
@@ -47,12 +59,15 @@ struct ScreenInfo {
 	InputColorspaceMode in_colorspace_bot;
 	FrameBlendingMode frame_blending_top;
 	FrameBlendingMode frame_blending_bot;
+	bool window_enabled;
+	int initial_pos_x;
+	int initial_pos_y; 
 };
 
 struct DisplayData {
-	bool split;
 	bool mono_app_mode;
 	bool last_connected_ds;
+	bool force_disable_mouse;
 };
 
 struct ExtraButtonShortcuts {

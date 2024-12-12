@@ -35,6 +35,19 @@ struct OutTextData {
 	TextKind kind;
 };
 
+struct override_all_data {
+	override_win_data override_top_bot_data;
+	override_win_data override_top_data;
+	override_win_data override_bot_data;
+	bool no_audio = false;
+	int volume = DEFAULT_NO_VOLUME_VALUE;
+	bool always_prevent_mouse_showing = false;
+	bool auto_connect_to_first = false;
+	int loaded_profile = STARTUP_FILE_INDEX;
+	bool mono_app = false;
+	bool recovery_mode = false;
+};
+
 static void ConsoleOutText(std::string full_text) {
 	if(full_text != "")
 		std::cout << "[" << NAME << "] " << full_text << std::endl;
@@ -156,7 +169,10 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 						continue;
 
 					if(key == "split") {
-						display_data.split = std::stoi(value);
+						bool split = std::stoi(value);
+						joint_info.window_enabled = !split;
+						top_info.window_enabled = split;
+						bottom_info.window_enabled = split;
 						continue;
 					}
 
@@ -197,6 +213,7 @@ static void defaults_reload(FrontendData *frontend_data, AudioData* audio_data, 
 	reset_screen_info(frontend_data->top_screen->m_info);
 	reset_screen_info(frontend_data->bot_screen->m_info);
 	reset_screen_info(frontend_data->joint_screen->m_info);
+	sanitize_enabled_info(frontend_data->joint_screen->m_info, frontend_data->top_screen->m_info, frontend_data->bot_screen->m_info);
 	audio_data->reset();
 	reset_display_data(&frontend_data->display_data);
 	if(frontend_data->display_data.mono_app_mode)
@@ -228,6 +245,7 @@ static void load_layout_file(int load_index, FrontendData *frontend_data, AudioD
 	}
 	else if(!op_success)
 		defaults_reload(frontend_data, audio_data, capture_status);
+	sanitize_enabled_info(frontend_data->joint_screen->m_info, frontend_data->top_screen->m_info, frontend_data->bot_screen->m_info);
 	if(!is_first_load)
 		return;
 	bool shared_op_success = load_shared(shared_layout_path, shared_layout_name, &frontend_data->shared_data, out_text_data, op_success);
@@ -269,7 +287,6 @@ static bool save(const std::string path, const std::string name, const std::stri
 	file << save_screen_info("bot_", bottom_info);
 	file << save_screen_info("joint_", joint_info);
 	file << save_screen_info("top_", top_info);
-	file << "split=" << display_data.split << std::endl;
 	file << "last_connected_ds=" << display_data.last_connected_ds << std::endl;
 	file << "is_screen_capture_type=" << capture_status->capture_type << std::endl;
 	file << "is_speed_capture=" << capture_status->capture_speed << std::endl;
@@ -400,7 +417,7 @@ static float get_time_multiplier(CaptureData* capture_data, bool should_ignore_d
 	}
 }
 
-static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data, bool mono_app, bool created_proper_folder, bool recovery_mode) {
+static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data, bool created_proper_folder, override_all_data &override_data) {
 	VideoOutputData *out_buf;
 	double last_frame_time = 0.0;
 	int num_elements_fps_array = 0;
@@ -408,7 +425,8 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	ConsumerMutex draw_lock;
 	reset_display_data(&frontend_data.display_data);
 	reset_shared_data(&frontend_data.shared_data);
-	frontend_data.display_data.mono_app_mode = mono_app;
+	frontend_data.display_data.mono_app_mode = override_data.mono_app;
+	frontend_data.display_data.force_disable_mouse = override_data.always_prevent_mouse_showing;
 	frontend_data.reload = true;
 	bool skip_io = false;
 	int num_allowed_blanks = MAX_ALLOWED_BLANKS;
@@ -429,8 +447,14 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	frontend_data.bot_screen = bot_screen;
 	frontend_data.joint_screen = joint_screen;
 
-	if(!recovery_mode)
-		load_layout_file(STARTUP_FILE_INDEX, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, false, created_proper_folder, true);
+	if(!override_data.recovery_mode)
+		load_layout_file(override_data.loaded_profile, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, false, created_proper_folder, true);
+	if(override_data.volume != DEFAULT_NO_VOLUME_VALUE)
+		audio_data->set_audio_volume(override_data.volume);
+	override_set_data_to_screen_info(override_data.override_top_bot_data, frontend_data.joint_screen->m_info);
+	override_set_data_to_screen_info(override_data.override_top_data, frontend_data.top_screen->m_info);
+	override_set_data_to_screen_info(override_data.override_bot_data, frontend_data.bot_screen->m_info);
+	sanitize_enabled_info(frontend_data.joint_screen->m_info, frontend_data.top_screen->m_info, frontend_data.bot_screen->m_info);
 	// Due to the risk for seizures, at the start of the program, set BFI to false!
 	top_screen->m_info.bfi = false;
 	bot_screen->m_info.bfi = false;
@@ -444,7 +468,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	std::thread bot_thread(screen_display_thread, bot_screen);
 	std::thread joint_thread(screen_display_thread, joint_screen);
 
-	capture_data->status.connected = connect(true, capture_data, &frontend_data);
+	capture_data->status.connected = connect(true, capture_data, &frontend_data, override_data.auto_connect_to_first);
 	bool last_connected = capture_data->status.connected;
 	SuccessConnectionOutTextGenerator(out_text_data, capture_data);
 	int no_data_consecutive = 0;
@@ -521,6 +545,17 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		int load_index = 0;
 		int save_index = 0;
 
+		if(top_screen->scheduled_split() || bot_screen->scheduled_split()) {
+			top_screen->m_info.window_enabled = false;
+			bot_screen->m_info.window_enabled = false;
+			joint_screen->m_info.window_enabled = true;
+		}
+		if(joint_screen->scheduled_split()) {
+			top_screen->m_info.window_enabled = true;
+			bot_screen->m_info.window_enabled = true;
+			joint_screen->m_info.window_enabled = false;
+		}
+
 		if(top_screen->open_capture() || bot_screen->open_capture() || joint_screen->open_capture()) {
 			capture_data->status.connected = connect(true, capture_data, &frontend_data);
 			SuccessConnectionOutTextGenerator(out_text_data, capture_data);
@@ -574,7 +609,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	bot_screen->after_thread_join();
 	joint_screen->after_thread_join();
 
-	save_layout_file(STARTUP_FILE_INDEX, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, false, created_proper_folder);
+	save_layout_file(override_data.loaded_profile, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, false, created_proper_folder);
 
 	if(!out_text_data.consumed) {
 		ConsoleOutText(out_text_data.full_text);
@@ -631,18 +666,51 @@ static bool parse_int_arg(int &index, int argc, char **argv, int &target, std::s
 
 int main(int argc, char **argv) {
 	init_threads();
-	bool mono_app = false;
-	bool recovery_mode = false;
 	int page_up_id = -1;
 	int page_down_id = -1;
 	int enter_id = -1;
 	int power_id = -1;
 	bool use_pud_up = true;
 	bool created_proper_folder = create_out_folder();
+	override_all_data override_data;
 	for (int i = 1; i < argc; i++) {
-		if(parse_existence_arg(i, argv, mono_app, true, "--mono_app"))
+		if(parse_existence_arg(i, argv, override_data.mono_app, true, "--mono_app"))
 			continue;
-		if(parse_existence_arg(i, argv, recovery_mode, true, "--recovery_mode"))
+		if(parse_existence_arg(i, argv, override_data.recovery_mode, true, "--recovery_mode"))
+			continue;
+		if(parse_int_arg(i, argc, argv, override_data.override_top_bot_data.pos_x, "--pos_x_both"))
+			continue;
+		if(parse_int_arg(i, argc, argv, override_data.override_top_bot_data.pos_y, "--pos_y_both"))
+			continue;
+		if(parse_int_arg(i, argc, argv, override_data.override_top_bot_data.scaling, "--scaling_both"))
+			continue;
+		if(parse_int_arg(i, argc, argv, override_data.override_top_bot_data.enabled, "--enabled_both"))
+			continue;
+		if(parse_int_arg(i, argc, argv, override_data.override_top_data.pos_x, "--pos_x_top"))
+			continue;
+		if(parse_int_arg(i, argc, argv, override_data.override_top_data.pos_y, "--pos_y_top"))
+			continue;
+		if(parse_int_arg(i, argc, argv, override_data.override_top_data.scaling, "--scaling_top"))
+			continue;
+		if(parse_int_arg(i, argc, argv, override_data.override_top_data.enabled, "--enabled_top"))
+			continue;
+		if(parse_int_arg(i, argc, argv, override_data.override_bot_data.pos_x, "--pos_x_bot"))
+			continue;
+		if(parse_int_arg(i, argc, argv, override_data.override_bot_data.pos_y, "--pos_y_bot"))
+			continue;
+		if(parse_int_arg(i, argc, argv, override_data.override_bot_data.scaling, "--scaling_bot"))
+			continue;
+		if(parse_int_arg(i, argc, argv, override_data.override_bot_data.enabled, "--enabled_bot"))
+			continue;
+		if(parse_int_arg(i, argc, argv, override_data.volume, "--volume"))
+			continue;
+		if(parse_existence_arg(i, argv, override_data.no_audio, true, "--no_audio"))
+			continue;
+		if(parse_existence_arg(i, argv, override_data.always_prevent_mouse_showing, true, "--no_cursor"))
+			continue;
+		if(parse_existence_arg(i, argv, override_data.auto_connect_to_first, true, "--auto_connect"))
+			continue;
+		if(parse_int_arg(i, argc, argv, override_data.loaded_profile, "--profile"))
 			continue;
 		#ifdef RASPI
 		if(parse_int_arg(i, argc, argv, page_up_id, "--pi_select"))
@@ -660,6 +728,29 @@ int main(int argc, char **argv) {
 		std::cout << "  --mono_app       Enables special mode for when only this application" << std::endl;
 		std::cout << "                   should run on the system. Disabled by default." << std::endl;
 		std::cout << "  --recovery_mode  Resets to the defaults." << std::endl;
+		std::cout << "  --pos_x_both     Set default x position for the window with both screens." << std::endl;
+		std::cout << "  --pos_y_both     Set default y position for the window with both screens." << std::endl;
+		std::cout << "  --scaling_both   Overrides the scale factor for the window with both screens." << std::endl;
+		std::cout << "  --enabled_both   Overrides the presence of the window with both screens." << std::endl;
+		std::cout << "                   1 On, 0 Off." << std::endl;
+		std::cout << "  --pos_x_top      Set default x position for the top screen's window." << std::endl;
+		std::cout << "  --pos_y_top      Set default y position for the top screen's window." << std::endl;
+		std::cout << "  --scaling_top    Overrides the top screen window's scale factor." << std::endl;
+		std::cout << "  --enabled_top    Overrides the presence of the top screen's window." << std::endl;
+		std::cout << "                   1 On, 0 Off." << std::endl;
+		std::cout << "  --pos_x_bot      Set default x position for the bottom screen's window." << std::endl;
+		std::cout << "  --pos_y_bot      Set default y position for the bottom screen's window." << std::endl;
+		std::cout << "  --scaling_bot    Overrides the bottom screen window's scale factor." << std::endl;
+		std::cout << "  --enabled_bot    Overrides the presence of the bottom screen's window." << std::endl;
+		std::cout << "                   1 On, 0 Off." << std::endl;
+		std::cout << "  --volume         Overrides the saved volume for the audio. 0 - 200" << std::endl;
+		std::cout << "  --no_audio       Disables audio output and processing completely." << std::endl;
+		std::cout << "  --no_cursor      Prevents the mouse cursor from showing, unless moved." << std::endl;
+		std::cout << "  --auto_connect   Automatically connects to the first available device," << std::endl;
+		std::cout << "                   even if multiple are present." << std::endl;
+		std::cout << "  --profile        Loads the profile with the specified ID at startup" << std::endl;
+		std::cout << "                   instead of the default one. When the program closes," << std::endl;
+		std::cout << "                   the data is also saved to the specified profile." << std::endl;
 		#ifdef RASPI
 		std::cout << "  --pi_select ID   Specifies ID for the select GPIO button." << std::endl;
 		std::cout << "  --pi_menu ID     Specifies ID for the menu GPIO button." << std::endl;
@@ -676,10 +767,13 @@ int main(int argc, char **argv) {
 	capture_init();
 
 	std::thread capture_thread(captureCall, capture_data);
-	std::thread audio_thread(soundCall, &audio_data, capture_data);
+	std::thread audio_thread;
+	if(!override_data.no_audio)
+		audio_thread = std::thread(soundCall, &audio_data, capture_data);
 
-	int ret_val = mainVideoOutputCall(&audio_data, capture_data, mono_app, created_proper_folder, recovery_mode);
-	audio_thread.join();
+	int ret_val = mainVideoOutputCall(&audio_data, capture_data, created_proper_folder, override_data);
+	if(!override_data.no_audio)
+		audio_thread.join();
 	capture_thread.join();
 	delete capture_data;
 	end_extra_buttons_poll();

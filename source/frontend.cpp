@@ -392,7 +392,6 @@ void insert_basic_pars(std::vector<const PARData*> &par_vector) {
 }
 
 void reset_display_data(DisplayData* display_data) {
-	display_data->split = false;
 	display_data->last_connected_ds = false;
 }
 
@@ -414,6 +413,12 @@ void reset_fullscreen_info(ScreenInfo &info) {
 	info.fullscreen_mode_width = 0;
 	info.fullscreen_mode_height = 0;
 	info.fullscreen_mode_bpp = 0;
+}
+
+void sanitize_enabled_info(ScreenInfo &top_bot_info, ScreenInfo &top_info, ScreenInfo &bot_info) {
+	if((top_bot_info.window_enabled) || (top_info.window_enabled) || (bot_info.window_enabled))
+		return;
+	top_bot_info.window_enabled = true;
 }
 
 void reset_screen_info(ScreenInfo &info) {
@@ -454,6 +459,18 @@ void reset_screen_info(ScreenInfo &info) {
 	info.in_colorspace_bot = FULL_COLORSPACE;
 	info.frame_blending_top = NO_FRAME_BLENDING;
 	info.frame_blending_bot = NO_FRAME_BLENDING;
+	info.window_enabled = false;
+	info.initial_pos_x = DEFAULT_NO_POS_WINDOW_VALUE;
+	info.initial_pos_y = DEFAULT_NO_POS_WINDOW_VALUE;
+}
+
+void override_set_data_to_screen_info(override_win_data &override_win, ScreenInfo &info) {
+	info.initial_pos_x = override_win.pos_x;
+	info.initial_pos_y = override_win.pos_y;
+	if(override_win.enabled != DEFAULT_NO_ENABLED_VALUE)
+		info.window_enabled = override_win.enabled;
+	if((override_win.scaling != DEFAULT_NO_SCALING_VALUE) && (override_win.scaling > 0))
+		info.scaling = override_win.scaling;
 }
 
 static InputColorspaceMode input_colorspace_sanitization(int value) {
@@ -644,6 +661,10 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		info.frame_blending_bot = frame_blending_sanitization(std::stoi(value));
 		return true;
 	}
+	if(key == (base + "window_enabled")) {
+		info.window_enabled = frame_blending_sanitization(std::stoi(value));
+		return true;
+	}
 	return false;
 }
 
@@ -684,6 +705,7 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "in_colorspace_bot=" + std::to_string(info.in_colorspace_bot) + "\n";
 	out += base + "frame_blending_top=" + std::to_string(info.frame_blending_top) + "\n";
 	out += base + "frame_blending_bot=" + std::to_string(info.frame_blending_bot) + "\n";
+	out += base + "window_enabled=" + std::to_string(info.window_enabled) + "\n";
 	return out;
 }
 
@@ -798,12 +820,18 @@ void update_output(FrontendData* frontend_data, double frame_time, VideoOutputDa
 		frontend_data->reload = false;
 	}
 	// Make sure the window is closed before showing split/non-split
-	if(frontend_data->display_data.split)
+	if(!frontend_data->joint_screen->m_info.window_enabled)
 		frontend_data->joint_screen->draw(frame_time, out_buf);
-	frontend_data->top_screen->draw(frame_time, out_buf);
-	frontend_data->bot_screen->draw(frame_time, out_buf);
-	if(!frontend_data->display_data.split)
+	if(!frontend_data->top_screen->m_info.window_enabled)
+		frontend_data->top_screen->draw(frame_time, out_buf);
+	if(!frontend_data->bot_screen->m_info.window_enabled)
+		frontend_data->bot_screen->draw(frame_time, out_buf);
+	if(frontend_data->joint_screen->m_info.window_enabled)
 		frontend_data->joint_screen->draw(frame_time, out_buf);
+	if(frontend_data->top_screen->m_info.window_enabled)
+		frontend_data->top_screen->draw(frame_time, out_buf);
+	if(frontend_data->bot_screen->m_info.window_enabled)
+		frontend_data->bot_screen->draw(frame_time, out_buf);
 }
 
 static bool are_cc_device_screens_same(const CaptureDevice &old_cc_device, const CaptureDevice &new_cc_device) {

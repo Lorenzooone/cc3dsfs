@@ -147,7 +147,7 @@ void WindowScreen::split_change() {
 	if(this->curr_menu != CONNECT_MENU_TYPE)
 		this->setup_no_menu();
 	this->m_info.is_fullscreen = false;
-	this->display_data->split = !this->display_data->split;
+	this->m_scheduled_split = true;
 }
 
 void WindowScreen::fullscreen_change() {
@@ -1222,7 +1222,7 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 void WindowScreen::poll(bool do_everything) {
 	if(this->close_capture())
 		return;
-	if((this->m_info.is_fullscreen || this->display_data->mono_app_mode) && this->m_info.show_mouse) {
+	if((this->m_info.is_fullscreen || this->display_data->mono_app_mode || this->display_data->force_disable_mouse) && this->m_info.show_mouse) {
 		auto curr_time = std::chrono::high_resolution_clock::now();
 		const std::chrono::duration<double> diff = curr_time - this->last_mouse_action_time;
 		if(diff.count() > this->mouse_timeout)
@@ -2020,6 +2020,12 @@ bool WindowScreen::open_capture() {
 
 bool WindowScreen::close_capture() {
 	return this->m_prepare_quit;
+}
+
+bool WindowScreen::scheduled_split() {
+	bool ret_val = this->m_scheduled_split;
+	this->m_scheduled_split = false;
+	return ret_val;
 }
 
 int WindowScreen::get_ret_val() {

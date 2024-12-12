@@ -43,6 +43,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->m_prepare_load = 0;
 	this->m_prepare_open = false;
 	this->m_prepare_quit = false;
+	this->m_scheduled_split = false;
 	this->ret_val = 0;
 	reset_screen_info(this->m_info);
 	this->font_load_success = this->text_font.openFromMemory(font_ttf, font_ttf_len);
@@ -208,9 +209,7 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 	if(!this->done_display)
 		return;
 
-	bool should_be_open = this->display_data->split;
-	if(this->m_stype == ScreenType::JOINT)
-		should_be_open = !should_be_open;
+	bool should_be_open = this->m_info.window_enabled;
 	if(this->m_win.isOpen() ^ should_be_open) {
 		if(this->m_win.isOpen())
 			this->close();
@@ -239,6 +238,8 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 			this->was_last_frame_null = true;
 		}
 		loaded_info = m_info;
+		m_info.initial_pos_x = DEFAULT_NO_POS_WINDOW_VALUE;
+		m_info.initial_pos_y = DEFAULT_NO_POS_WINDOW_VALUE;
 		this->notification->setTextFactor(this->loaded_info.menu_scaling_factor);
 		this->notification->prepareRenderText();
 		this->frame_time = frame_time;
@@ -413,6 +414,8 @@ void WindowScreen::window_factory(bool is_main_thread) {
 		sf::Vector2i prev_pos = sf::Vector2i(0, 0);
 		if(previously_open)
 			prev_pos = this->m_win.getPosition();
+		if((this->loaded_info.initial_pos_x != DEFAULT_NO_POS_WINDOW_VALUE) && (this->loaded_info.initial_pos_y != DEFAULT_NO_POS_WINDOW_VALUE))
+			prev_pos = sf::Vector2i(this->loaded_info.initial_pos_x, this->loaded_info.initial_pos_y);
 		if(!this->loaded_info.is_fullscreen) {
 			this->update_screen_settings();
 			if(this->loaded_info.have_titlebar)
@@ -430,6 +433,8 @@ void WindowScreen::window_factory(bool is_main_thread) {
 				this->m_win.create(this->curr_desk_mode, this->title_factory(), sf::Style::None);
 		}
 		if(previously_open && this->loaded_operations.call_titlebar)
+			this->m_win.setPosition(prev_pos);
+		if((this->loaded_info.initial_pos_x != DEFAULT_NO_POS_WINDOW_VALUE) && (this->loaded_info.initial_pos_y != DEFAULT_NO_POS_WINDOW_VALUE))
 			this->m_win.setPosition(prev_pos);
 		this->last_window_creation_time = std::chrono::high_resolution_clock::now();
 		this->update_screen_settings();
