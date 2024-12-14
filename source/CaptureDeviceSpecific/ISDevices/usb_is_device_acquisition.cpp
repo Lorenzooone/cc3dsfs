@@ -7,6 +7,7 @@
 #include "usb_is_device_acquisition_general.hpp"
 #include "usb_is_nitro_acquisition_capture.hpp"
 #include "usb_is_nitro_acquisition_emulator.hpp"
+#include "usb_is_twl_acquisition_capture.hpp"
 #include "usb_generic.hpp"
 
 #include <libusb.h>
@@ -44,6 +45,8 @@ static bool initial_cleanup(const is_device_usb_device* usb_device_desc, is_devi
 			return initial_cleanup_emulator(usb_device_desc, handlers) != LIBUSB_SUCCESS;
 		case IS_NITRO_CAPTURE_DEVICE:
 			return initial_cleanup_capture(usb_device_desc, handlers) != LIBUSB_SUCCESS;
+		case IS_TWL_CAPTURE_DEVICE:
+			return initial_cleanup_twl_capture(usb_device_desc, handlers) != LIBUSB_SUCCESS;
 		default:
 			return false;
 	}
@@ -67,11 +70,11 @@ std::string get_serial(const is_device_usb_device* usb_device_desc, is_device_de
 }
 
 void is_device_insert_device(std::vector<CaptureDevice>& devices_list, is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, int& curr_serial_extra_id_is_device, std::string path) {
-	devices_list.emplace_back(get_serial(usb_device_desc, handlers, curr_serial_extra_id_is_device), usb_device_desc->name, usb_device_desc->long_name, path, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS, usb_device_desc->video_data_type);
+	devices_list.emplace_back(get_serial(usb_device_desc, handlers, curr_serial_extra_id_is_device), usb_device_desc->name, usb_device_desc->long_name, path, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, usb_device_desc->audio_enabled, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, usb_device_desc->max_audio_samples_size, 0, 0, 0, 0, HEIGHT_DS, usb_device_desc->video_data_type);
 }
 
 void is_device_insert_device(std::vector<CaptureDevice>& devices_list, is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, int& curr_serial_extra_id_is_device) {
-	devices_list.emplace_back(get_serial(usb_device_desc, handlers, curr_serial_extra_id_is_device), usb_device_desc->name, usb_device_desc->long_name, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS, usb_device_desc->video_data_type);
+	devices_list.emplace_back(get_serial(usb_device_desc, handlers, curr_serial_extra_id_is_device), usb_device_desc->name, usb_device_desc->long_name, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, usb_device_desc->audio_enabled, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, usb_device_desc->max_audio_samples_size, 0, 0, 0, 0, HEIGHT_DS, usb_device_desc->video_data_type);
 }
 
 static is_device_device_handlers* usb_find_by_serial_number(const is_device_usb_device* usb_device_desc, CaptureDevice* device) {
@@ -135,6 +138,8 @@ bool is_device_connect_usb(bool print_failed, CaptureData* capture_data, Capture
 }
 
 uint64_t usb_is_device_get_video_in_size(CaptureScreensType capture_type, is_device_type device_type) {
+	if(device_type == IS_TWL_CAPTURE_DEVICE)
+		return sizeof(ISTWLCaptureVideoInputData) + (sizeof(uint32_t) * 2);
 	if((capture_type == CAPTURE_SCREENS_TOP) || (capture_type == CAPTURE_SCREENS_BOTTOM))
 		return sizeof(ISNitroEmulatorVideoInputData) / 2;
 	return sizeof(ISNitroEmulatorVideoInputData);
@@ -185,6 +190,8 @@ int EndAcquisition(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_de
 			return EndAcquisitionEmulator(capture_data, is_device_capture_recv_data, do_drain_frames, start_frames, capture_type);
 		case IS_NITRO_CAPTURE_DEVICE:
 			return EndAcquisitionCapture(capture_data, is_device_capture_recv_data);
+		case IS_TWL_CAPTURE_DEVICE:
+			return EndAcquisitionTWLCapture(capture_data, is_device_capture_recv_data);
 		default:
 			return 0;
 	}
@@ -196,23 +203,30 @@ int EndAcquisition(const is_device_usb_device* usb_device_desc, is_device_device
 			return EndAcquisitionEmulator(usb_device_desc, handlers, do_drain_frames, start_frames, capture_type);
 		case IS_NITRO_CAPTURE_DEVICE:
 			return EndAcquisitionCapture(usb_device_desc, handlers);
+		case IS_TWL_CAPTURE_DEVICE:
+			return EndAcquisitionTWLCapture(usb_device_desc, handlers);
 		default:
 			return 0;
 	}
 }
 
-static void output_to_thread(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start) {
+void output_to_thread(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t read_size) {
 	// Output to the other threads...
 	const is_device_usb_device* usb_device_info = (const is_device_usb_device*)capture_data->status.device.descriptor;
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - (*clock_start);
 	*clock_start = curr_time;
-	capture_data->data_buffers.WriteToBuffer(capture_buf, usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type), diff.count(), &capture_data->status.device, curr_capture_type);
+	capture_data->data_buffers.WriteToBuffer(capture_buf, read_size, diff.count(), &capture_data->status.device, curr_capture_type);
 
 	if (capture_data->status.cooldown_curr_in)
 		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
 	capture_data->status.video_wait.unlock();
 	capture_data->status.audio_wait.unlock();
+}
+
+static void output_to_thread(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start) {
+	const is_device_usb_device* usb_device_info = (const is_device_usb_device*)capture_data->status.device.descriptor;
+	output_to_thread(capture_data, capture_buf, curr_capture_type, clock_start, usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type));
 }
 
 int is_device_read_frame_and_output(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_start) {
@@ -427,6 +441,9 @@ void is_device_acquisition_main_loop(CaptureData* capture_data) {
 			break;
 		case IS_NITRO_CAPTURE_DEVICE:
 			is_nitro_acquisition_capture_main_loop(capture_data, is_device_capture_recv_data);
+			break;
+		case IS_TWL_CAPTURE_DEVICE:
+			is_twl_acquisition_capture_main_loop(capture_data, is_device_capture_recv_data);
 			break;
 		default:
 			break;

@@ -27,6 +27,7 @@ int EndAcquisition(const is_device_usb_device* usb_device_desc, is_device_device
 int is_device_read_frame_and_output(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_start);
 void is_device_read_frame_request(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data, CaptureScreensType curr_capture_type, uint32_t index);
 uint64_t usb_is_device_get_video_in_size(CaptureScreensType capture_type, is_device_type device_type);
+void output_to_thread(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t read_size);
 
 ISDeviceCaptureReceivedData* is_device_get_free_buffer(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data);
 bool is_device_are_buffers_all_free(ISDeviceCaptureReceivedData* is_device_capture_recv_data);

@@ -25,6 +25,32 @@ struct deinterleaved_ds_pixels_le {
 	uint64_t fourth : 16;
 };
 
+struct twl_16bit_pixels {
+	uint16_t first_r : 5;
+	uint16_t first_g : 6;
+	uint16_t first_b : 5;
+	uint16_t second_r : 5;
+	uint16_t second_g : 6;
+	uint16_t second_b : 5;
+	uint16_t third_r : 5;
+	uint16_t third_g : 6;
+	uint16_t third_b : 5;
+	uint16_t fourth_r : 5;
+	uint16_t fourth_g : 6;
+	uint16_t fourth_b : 5;
+};
+
+struct twl_2bit_pixels {
+	uint8_t first_r : 1;
+	uint8_t first_b : 1;
+	uint8_t second_r : 1;
+	uint8_t second_b : 1;
+	uint8_t third_r : 1;
+	uint8_t third_b : 1;
+	uint8_t fourth_r : 1;
+	uint8_t fourth_b : 1;
+};
+
 static inline void convertVideoToOutputChunk(RGB83DSVideoInputData *p_in, VideoOutputData *p_out, int iters, int start_in, int start_out) {
 	memcpy(&p_out->screen_data[start_out], &p_in->screen_data[start_in], iters * 3);
 }
@@ -171,17 +197,63 @@ static void usb_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_o
 		usb_oldDSconvertVideoToOutput(&p_in->usb_received_old_ds, p_out, is_big_endian);
 }
 
+inline static uint8_t to_8_bit_6(uint8_t data) {
+	return (data << 2) | (data >> 4);
+}
+
+inline static void to_8_bit_6(uint8_t* out, uint8_t* in) {
+	out[0] = to_8_bit_6(in[0]);
+	out[1] = to_8_bit_6(in[1]);
+	out[2] = to_8_bit_6(in[2]);
+}
+
 static void usb_is_device_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureStatus* status, CaptureScreensType capture_type) {
-	int num_pixels = usb_is_device_get_video_in_size(status) / 3;
-	int out_start_pos = 0;
-	int out_clear_pos = num_pixels;
-	if(capture_type == CAPTURE_SCREENS_BOTTOM) {
-		out_start_pos = num_pixels;
-		out_clear_pos = 0;
+	bool is_nitro = true;
+	#ifdef USE_IS_DEVICES_USB
+	is_nitro = is_device_is_nitro(&status->device);
+	#endif
+	if(is_nitro) {
+		int num_pixels = usb_is_device_get_video_in_size(status) / 3;
+		int out_start_pos = 0;
+		int out_clear_pos = num_pixels;
+		if(capture_type == CAPTURE_SCREENS_BOTTOM) {
+			out_start_pos = num_pixels;
+			out_clear_pos = 0;
+		}
+		if((capture_type == CAPTURE_SCREENS_BOTTOM) || (capture_type == CAPTURE_SCREENS_TOP))
+			memset(p_out->screen_data[out_clear_pos], 0, num_pixels * 3);
+		memcpy(p_out->screen_data[out_start_pos], p_in->is_nitro_capture_received.video_in.screen_data, num_pixels * 3);
+		return;
 	}
-	if((capture_type == CAPTURE_SCREENS_BOTTOM) || (capture_type == CAPTURE_SCREENS_TOP))
-		memset(p_out->screen_data[out_clear_pos], 0, num_pixels * 3);
-	memcpy(p_out->screen_data[out_start_pos], p_in->is_nitro_capture_received.video_in.screen_data, num_pixels * 3);
+	ISTWLCaptureVideoInputData* data = &p_in->is_twl_capture_received.video_capture_in.video_in;
+	twl_16bit_pixels* data_16_bit = (twl_16bit_pixels*)data->screen_data;
+	twl_2bit_pixels* data_2_bit = (twl_2bit_pixels*)data->bit_6_rb_screen_data;
+	int num_pixels = IN_VIDEO_SIZE_DS;
+	const int num_pixels_struct = sizeof(twl_16bit_pixels) / sizeof(uint16_t);
+	const int num_screens = 2;
+	for(int i = 0; i < HEIGHT_DS; i++) {
+		for(int j = 0; j < num_screens; j++) {
+			size_t out_pos = ((num_screens - 1 - j) * (WIDTH_DS * HEIGHT_DS)) + (i * WIDTH_DS);
+			for(int u = 0; u < (WIDTH_DS / num_pixels_struct); u++) {
+				uint8_t pixels[num_pixels_struct][3];
+				size_t index = (((i * num_screens * WIDTH_DS) + (j * WIDTH_DS)) / num_pixels_struct) + u;
+				pixels[0][0] = (data_16_bit[index].first_r << 1) | (data_2_bit[index].first_r);
+				pixels[0][1] = data_16_bit[index].first_g;
+				pixels[0][2] = (data_16_bit[index].first_b << 1) | (data_2_bit[index].first_b);
+				pixels[1][0] = (data_16_bit[index].second_r << 1) | (data_2_bit[index].second_r);
+				pixels[1][1] = data_16_bit[index].second_g;
+				pixels[1][2] = (data_16_bit[index].second_b << 1) | (data_2_bit[index].second_b);
+				pixels[2][0] = (data_16_bit[index].third_r << 1) | (data_2_bit[index].third_r);
+				pixels[2][1] = data_16_bit[index].third_g;
+				pixels[2][2] = (data_16_bit[index].third_b << 1) | (data_2_bit[index].third_b);
+				pixels[3][0] = (data_16_bit[index].fourth_r << 1) | (data_2_bit[index].fourth_r);
+				pixels[3][1] = data_16_bit[index].fourth_g;
+				pixels[3][2] = (data_16_bit[index].fourth_b << 1) | (data_2_bit[index].fourth_b);
+				for(int k = 0; k < num_pixels_struct; k++)
+					to_8_bit_6(p_out->screen_data[out_pos + (u * num_pixels_struct) + k], pixels[k]);
+			}
+		}
+	}
 }
 
 bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status) {
@@ -238,6 +310,16 @@ bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, const bool i
 			base_ptr = (uint8_t*)p_in->usb_received_3ds.audio_data;
 		else
 			base_ptr = (uint8_t*)p_in->usb_received_3ds_3d.audio_data;
+	}
+	#endif
+	#ifdef USE_IS_DEVICES_USB
+	if(status->device.cc_type == CAPTURE_CONN_IS_NITRO) {
+		base_ptr = (uint8_t*)p_in->is_twl_capture_received.audio_capture_in;
+		size_t size_real = n_samples * 2;
+		size_t size_packet_converted = sizeof(ISTWLCaptureAudioReceived) - sizeof(uint32_t);
+		size_t num_packets = size_real / size_packet_converted;
+		for(int i = 0; i < num_packets; i++)
+			memcpy(base_ptr + (i * size_packet_converted), ((uint8_t*)&p_in->is_twl_capture_received.audio_capture_in[i]) + sizeof(uint32_t), size_packet_converted);
 	}
 	#endif
 	if(base_ptr == NULL)

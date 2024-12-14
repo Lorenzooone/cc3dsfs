@@ -2,6 +2,7 @@
 #include "usb_is_device_communications.hpp"
 #include "usb_is_device_libusb.hpp"
 #include "usb_is_device_is_driver.hpp"
+#include "is_twl_0x81_packet.h"
 
 #include <libusb.h>
 #include <cstring>
@@ -36,6 +37,9 @@
 #define REG_USB_DMA_CONTROL_2 0x0C000028
 #define REG_USB_BIU_CONTROL_2 0x0C0000A4
 
+#define DEFAULT_MAX_LENGTH_IS_TWL_VIDEO 0x00040000
+#define DEFAULT_MAX_LENGTH_IS_TWL_AUDIO 0x00007800
+
 enum is_nitro_packet_emulator_dir {
 	IS_NITRO_PACKET_EMU_DIR_WRITE = 0x10,
 	IS_NITRO_PACKET_EMU_DIR_READ  = 0x11
@@ -59,7 +63,8 @@ enum is_device_packet_type {
 	IS_NITRO_CAPTURE_PACKET_TYPE_DMA_CONTROL = 2,
 	IS_NITRO_PACKET_TYPE_CAPTURE = 3,
 	IS_NITRO_PACKET_TYPE_AGB_CART_ROM = 4,
-	IS_NITRO_PACKET_TYPE_AGB_BUS2 = 5
+	IS_NITRO_PACKET_TYPE_AGB_BUS2 = 5,
+	IS_TWL_PACKET_TYPE_FRAME = 7,
 };
 
 enum is_nitro_emulator_command {
@@ -88,8 +93,17 @@ enum is_nitro_capture_command {
 };
 
 enum is_twl_capture_command {
+	IS_TWL_CAP_CMD_GET_CAP = 0x00,
 	IS_TWL_CAP_CMD_GET_SERIAL = 0x13,
 	IS_TWL_CAP_CMD_UNLOCK_COMMS = 0x1C,
+	IS_TWL_CAP_CMD_ENABLE_CAP_PRE_3 = 0x80,
+	IS_TWL_CAP_CMD_ENABLE_CAP_PRE_1 = 0x81,
+	IS_TWL_CAP_CMD_ASK_CAPTURE_INFORMATION = 0x83,
+	IS_TWL_CAP_CMD_ENABLE_CAP = 0x84,
+	IS_TWL_CAP_CMD_ENABLE_CAP_PRE_2 = 0x85,
+	IS_TWL_CAP_CMD_STOP_FRAME_READS = 0x88,
+	IS_TWL_CAP_CMD_SET_LAST_FRAME_INFORMATION = 0x8B,
+	IS_TWL_CAP_CMD_ENABLE_CAP_PART_2 = 0x8C,
 };
 
 enum is_nitro_emulator_forward_bits {
@@ -126,6 +140,26 @@ struct PACKED is_device_rw_packet_header {
 	uint32_t length_w;
 	uint32_t length_r;
 };
+
+struct PACKED is_twl_ask_capture_information_packet {
+	uint32_t unk[2];
+	uint32_t max_length_video;
+	uint32_t unk2[2];
+	uint32_t max_length_audio;
+	uint32_t unk3[0x10];
+};
+// These two are probably the same struct, with different fields used for
+// different packets...
+// I say probably, that's why I keep them separate.
+struct PACKED is_twl_capture_information_packet {
+	uint32_t available_video_length;
+	uint32_t video_start_address;
+	uint32_t unk;
+	uint32_t available_audio_length;
+	uint32_t audio_start_address;
+	uint32_t unk2;
+	uint32_t unk3[0x10];
+};
 #pragma pack(pop)
 
 static const is_device_usb_device usb_is_nitro_emu_rare_desc = {
@@ -137,7 +171,7 @@ static const is_device_usb_device usb_is_nitro_emu_rare_desc = {
 .write_pipe = "Pipe00", .read_pipe = "Pipe01",
 .product_id = 2, .manufacturer_id = 1, .device_type = IS_NITRO_EMULATOR_DEVICE,
 .video_data_type = VIDEO_DATA_BGR, .max_usb_packet_size = IS_NITRO_USB_PACKET_LIMIT,
-.do_pipe_clear_reset = true
+.do_pipe_clear_reset = true, .audio_enabled = false, .max_audio_samples_size = 0
 };
 
 static const is_device_usb_device usb_is_nitro_emu_common_desc = {
@@ -149,7 +183,7 @@ static const is_device_usb_device usb_is_nitro_emu_common_desc = {
 .write_pipe = "Pipe00", .read_pipe = "Pipe01",
 .product_id = 2, .manufacturer_id = 1, .device_type = IS_NITRO_EMULATOR_DEVICE,
 .video_data_type = VIDEO_DATA_BGR, .max_usb_packet_size = IS_NITRO_USB_PACKET_LIMIT,
-.do_pipe_clear_reset = true
+.do_pipe_clear_reset = true, .audio_enabled = false, .max_audio_samples_size = 0
 };
 
 static const is_device_usb_device usb_is_nitro_cap_desc = {
@@ -161,11 +195,11 @@ static const is_device_usb_device usb_is_nitro_cap_desc = {
 .write_pipe = "Pipe00", .read_pipe = "Pipe01",
 .product_id = 2, .manufacturer_id = 1, .device_type = IS_NITRO_CAPTURE_DEVICE,
 .video_data_type = VIDEO_DATA_BGR, .max_usb_packet_size = IS_NITRO_USB_PACKET_LIMIT,
-.do_pipe_clear_reset = true
+.do_pipe_clear_reset = true, .audio_enabled = false, .max_audio_samples_size = 0
 };
 
 static const is_device_usb_device usb_is_twl_cap_desc = {
-.name = "ISTC", .long_name = "IS TWL Capture",
+.name = "ISTCD", .long_name = "IS TWL Capture (Dev)",
 .vid = 0x0f6e, .pid = 0x0501,
 .default_config = 1, .default_interface = 0,
 .bulk_timeout = 500,
@@ -173,11 +207,11 @@ static const is_device_usb_device usb_is_twl_cap_desc = {
 .write_pipe = "Pipe01", .read_pipe = "Pipe03",
 .product_id = 2, .manufacturer_id = 1, .device_type = IS_TWL_CAPTURE_DEVICE,
 .video_data_type = VIDEO_DATA_RGB, .max_usb_packet_size = IS_TWL_USB_PACKET_LIMIT,
-.do_pipe_clear_reset = false
+.do_pipe_clear_reset = false, .audio_enabled = true, .max_audio_samples_size = sizeof(ISTWLCaptureAudioReceived) * TWL_CAPTURE_MAX_SAMPLES_CHUNK_NUM
 };
 
 static const is_device_usb_device usb_is_twl_cap_desc_2 = {
-.name = "ISTC", .long_name = "IS TWL Capture",
+.name = "ISTCR", .long_name = "IS TWL Capture (Retail)",
 .vid = 0x0f6e, .pid = 0x0502,
 .default_config = 1, .default_interface = 0,
 .bulk_timeout = 500,
@@ -185,7 +219,7 @@ static const is_device_usb_device usb_is_twl_cap_desc_2 = {
 .write_pipe = "Pipe01", .read_pipe = "Pipe03",
 .product_id = 2, .manufacturer_id = 1, .device_type = IS_TWL_CAPTURE_DEVICE,
 .video_data_type = VIDEO_DATA_RGB, .max_usb_packet_size = IS_TWL_USB_PACKET_LIMIT,
-.do_pipe_clear_reset = false
+.do_pipe_clear_reset = false, .audio_enabled = true, .max_audio_samples_size = sizeof(ISTWLCaptureAudioReceived) * TWL_CAPTURE_MAX_SAMPLES_CHUNK_NUM
 };
 
 static const is_device_usb_device* all_usb_is_device_devices_desc[] = {
@@ -510,6 +544,10 @@ int SendWriteCommand(is_device_device_handlers* handlers, uint16_t command, uint
 	return SendWritePacket(handlers, command, IS_NITRO_PACKET_TYPE_COMMAND, 0, buf, length, device_desc);
 }
 
+int SendReadWriteCommand(is_device_device_handlers* handlers, uint16_t command, uint8_t* out_buf, int out_length, uint8_t* in_buf, int in_length, const is_device_usb_device* device_desc) {
+	return SendReadWritePacket(handlers, command, IS_NITRO_PACKET_TYPE_COMMAND, 0, out_buf, out_length, in_buf, in_length, device_desc);
+}
+
 int SendReadCommandU32(is_device_device_handlers* handlers, uint16_t command, uint32_t* out, const is_device_usb_device* device_desc) {
 	uint32_t buffer;
 	int ret = SendReadCommand(handlers, command, (uint8_t*)&buffer, sizeof(uint32_t), device_desc);
@@ -617,6 +655,9 @@ int DisableLca2(is_device_device_handlers* handlers, const is_device_usb_device*
 
 int StartUsbCaptureDma(is_device_device_handlers* handlers, const is_device_usb_device* device_desc) {
 	int ret = 0;
+	uint8_t buffer[0x200];
+	uint8_t is_twl_handshake_buffer[0x10] = {0x39, 0xC5, 0x5E, 0xC1, 0xA3, 0x02, 0x1D, 0xA1, 0x1E, 0xE9, 0x2F, 0x35, 0x29, 0x98, 0x63, 0x6C};
+	uint8_t is_twl_handshake_buffer_pre2[0x10] = {0x0C, 0xF7, 0x48, 0x2B, 0xE9, 0x5A, 0xA2, 0x3C, 0xE5, 0x0E, 0x1F, 0xEB, 0x1C, 0x71, 0xB8, 0xAE};
 	switch(device_desc->device_type) {
 		case IS_NITRO_EMULATOR_DEVICE:
 			ret = WriteNecMemU16(handlers, REG_USB_DMA_CONTROL_2, 2, device_desc);
@@ -625,6 +666,24 @@ int StartUsbCaptureDma(is_device_device_handlers* handlers, const is_device_usb_
 			return WriteNecMemU16(handlers, REG_USB_BIU_CONTROL_2, 1, device_desc);
 		case IS_NITRO_CAPTURE_DEVICE:
 			return SendReadPacket(handlers, IS_NITRO_CAP_CMD_ENABLE_CAP, IS_NITRO_CAPTURE_PACKET_TYPE_DMA_CONTROL, 0, NULL, 1, device_desc, false);
+		case IS_TWL_CAPTURE_DEVICE:
+			ret = SendWriteCommand(handlers, IS_TWL_CAP_CMD_ENABLE_CAP_PART_2, NULL, 0, device_desc);
+			if(ret < 0)
+				return ret;
+			ret = SendReadWriteCommand(handlers, IS_TWL_CAP_CMD_ENABLE_CAP_PRE_1, is_twl_0x81_packet, is_twl_0x81_packet_len, buffer, is_twl_0x81_packet_len, device_desc);
+			if(ret < 0)
+				return ret;
+			ret = SendWriteCommand(handlers, IS_TWL_CAP_CMD_ENABLE_CAP_PRE_2, is_twl_handshake_buffer_pre2, 0x10, device_desc);
+			if(ret < 0)
+				return ret;
+			ret = SendReadCommand(handlers, IS_TWL_CAP_CMD_ENABLE_CAP_PRE_3, buffer, 0x200, device_desc);
+			if(ret < 0)
+				return ret;
+			ret = SendReadCommand(handlers, IS_TWL_CAP_CMD_ENABLE_CAP, buffer, 0x10, device_desc);
+			if(ret < 0)
+				return ret;
+			ret = SendReadWriteCommand(handlers, IS_TWL_CAP_CMD_ENABLE_CAP_PART_2, is_twl_handshake_buffer, sizeof(is_twl_handshake_buffer), buffer, 8, device_desc);
+			return ret;
 		default:
 			return 0;
 	}
@@ -640,6 +699,8 @@ int StopUsbCaptureDma(is_device_device_handlers* handlers, const is_device_usb_d
 			return WriteNecMemU16(handlers, REG_USB_BIU_CONTROL_2, 0, device_desc);
 		case IS_NITRO_CAPTURE_DEVICE:
 			return SendReadPacket(handlers, IS_NITRO_CAP_CMD_ENABLE_CAP, IS_NITRO_CAPTURE_PACKET_TYPE_DMA_CONTROL, 0, NULL, 0, device_desc);
+		case IS_TWL_CAPTURE_DEVICE:
+			return SendWriteCommand(handlers, IS_TWL_CAP_CMD_STOP_FRAME_READS, NULL, 0, device_desc);
 		default:
 			return 0;
 	}
@@ -796,6 +857,46 @@ int ResetFullHardware(is_device_device_handlers* handlers, const is_device_usb_d
 		default:
 			return 0;
 	}
+}
+
+int AskFrameLengthPos(is_device_device_handlers* handlers, uint32_t* video_address, uint32_t* video_length, bool video_enabled, uint32_t* audio_address, uint32_t* audio_length, bool audio_enabled, const is_device_usb_device* device_desc) {
+	if(device_desc->device_type != IS_TWL_CAPTURE_DEVICE)
+		return 0;
+	is_twl_ask_capture_information_packet out_packet;
+	is_twl_capture_information_packet in_packet;
+	memset(&out_packet, 0, sizeof(out_packet));
+	if(video_enabled)
+		out_packet.max_length_video = to_le((uint32_t)DEFAULT_MAX_LENGTH_IS_TWL_VIDEO);
+	if(audio_enabled)
+		out_packet.max_length_audio = to_le((uint32_t)DEFAULT_MAX_LENGTH_IS_TWL_AUDIO);
+	int ret = SendReadWriteCommand(handlers, IS_TWL_CAP_CMD_ASK_CAPTURE_INFORMATION, (uint8_t*)&out_packet, sizeof(out_packet), (uint8_t*)&in_packet, sizeof(in_packet), device_desc);
+	if(ret < 0)
+		return ret;
+	*video_length = from_le(in_packet.available_video_length);
+	*video_address = from_le(in_packet.video_start_address);
+	*audio_length = from_le(in_packet.available_audio_length);
+	*audio_address = from_le(in_packet.audio_start_address);
+	return ret;
+}
+
+int SetLastFrameInfo(is_device_device_handlers* handlers, uint32_t video_address, uint32_t video_length, uint32_t audio_address, uint32_t audio_length, const is_device_usb_device* device_desc) {
+	if(device_desc->device_type != IS_TWL_CAPTURE_DEVICE)
+		return 0;
+	is_twl_capture_information_packet out_packet;
+	memset(&out_packet, 0, sizeof(out_packet));
+	out_packet.available_video_length = to_le(video_length);
+	out_packet.video_start_address = to_le(video_address);
+	out_packet.available_audio_length = to_le(audio_length);
+	out_packet.audio_start_address = to_le(audio_address);
+	return SendWriteCommand(handlers, IS_TWL_CAP_CMD_SET_LAST_FRAME_INFORMATION, (uint8_t*)&out_packet, sizeof(out_packet), device_desc);
+}
+
+int ReadFrame(is_device_device_handlers* handlers, uint8_t* buf, uint32_t address, uint32_t length, const is_device_usb_device* device_desc) {
+	if(device_desc->device_type != IS_TWL_CAPTURE_DEVICE)
+		return 0;
+	if(length == 0)
+		return 0;
+	return SendReadPacket(handlers, IS_TWL_CAP_CMD_GET_CAP, IS_TWL_PACKET_TYPE_FRAME, address, buf, length, device_desc);
 }
 
 int ReadFrame(is_device_device_handlers* handlers, uint8_t* buf, int length, const is_device_usb_device* device_desc) {

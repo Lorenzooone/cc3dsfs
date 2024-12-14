@@ -146,6 +146,7 @@ union CaptureReceived {
 	FTD2OldDSCaptureReceived ftd2_received_old_ds;
 	FTD2OldDSCaptureReceivedRaw ftd2_received_old_ds_raw;
 	ISNitroCaptureReceived is_nitro_capture_received;
+	ISTWLCaptureReceived is_twl_capture_received;
 };
 
 struct CaptureDevice {

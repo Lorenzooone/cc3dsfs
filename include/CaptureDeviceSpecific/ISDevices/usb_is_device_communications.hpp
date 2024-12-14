@@ -70,6 +70,8 @@ struct is_device_usb_device {
 	InputVideoDataType video_data_type;
 	size_t max_usb_packet_size;
 	bool do_pipe_clear_reset;
+	bool audio_enabled;
+	size_t max_audio_samples_size;
 };
 
 struct is_device_device_handlers {
@@ -96,6 +98,9 @@ int ReadPowerButtonState(is_device_device_handlers* handlers, bool* out, const i
 int ResetCPUStart(is_device_device_handlers* handlers, const is_device_usb_device* device_desc);
 int ResetCPUEnd(is_device_device_handlers* handlers, const is_device_usb_device* device_desc);
 int ResetFullHardware(is_device_device_handlers* handlers, const is_device_usb_device* device_desc);
+int AskFrameLengthPos(is_device_device_handlers* handlers, uint32_t* video_address, uint32_t* video_length, bool video_enabled, uint32_t* audio_address, uint32_t* audio_length, bool audio_enabled, const is_device_usb_device* device_desc);
+int SetLastFrameInfo(is_device_device_handlers* handlers, uint32_t video_address, uint32_t video_length, uint32_t audio_address, uint32_t audio_length, const is_device_usb_device* device_desc);
+int ReadFrame(is_device_device_handlers* handlers, uint8_t* buf, uint32_t address, uint32_t length, const is_device_usb_device* device_desc);
 int ReadFrame(is_device_device_handlers* handlers, uint8_t* buf, int length, const is_device_usb_device* device_desc);
 void ReadFrameAsync(is_device_device_handlers* handlers, uint8_t* buf, int length, const is_device_usb_device* device_desc, isd_async_callback_data* cb_data);
 void CloseAsyncRead(is_device_device_handlers* handlers, isd_async_callback_data* cb_data);
