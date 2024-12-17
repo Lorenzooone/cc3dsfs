@@ -26,26 +26,28 @@ static int process_frame_and_read(CaptureData* capture_data, CaptureReceived* ca
 		default:
 			break;
 	}
-	int num_available_frames = multiplier;
-	if(num_available_frames < multiplier)
+	is_device_device_handlers* handlers = (is_device_device_handlers*)capture_data->handle;
+	const is_device_usb_device* usb_device_desc = (const is_device_usb_device*)capture_data->status.device.descriptor;
+	uint8_t frame_info[4];
+	int ret = ReadFrame(handlers, frame_info, 0x36004, 4, usb_device_desc);
+	if(ret < 0)
+		return ret;
+	uint32_t curr_frame = 0;
+	for(int i = 0; i < 4; i++)
+		curr_frame |= (frame_info[i] << (i * 8));
+	printf("%x ", curr_frame);
+	if((curr_frame - last_read_frame_index) < multiplier)
 		return 0;
+	int num_available_frames = 1;
 	processed = true;
 	int frame_next = num_available_frames - 1;
 	last_read_frame_index += num_available_frames;
 	video_address = video_address + (frame_next * sizeof(ISTWLCaptureVideoReceived));
-	is_device_device_handlers* handlers = (is_device_device_handlers*)capture_data->handle;
-	const is_device_usb_device* usb_device_desc = (const is_device_usb_device*)capture_data->status.device.descriptor;
 	size_t video_processed_size = usb_is_device_get_video_in_size(curr_capture_type, IS_TWL_CAPTURE_DEVICE);
-	int ret = ReadFrame(handlers, (uint8_t*)&capture_buf->is_twl_capture_received.video_capture_in, 0, video_processed_size, usb_device_desc);
+	ret = ReadFrame(handlers, (uint8_t*)&capture_buf->is_twl_capture_received.video_capture_in, 0, video_processed_size, usb_device_desc);
 	if(ret < 0)
 		return ret;
-	int audio_diff_from_max = usb_device_desc->max_audio_samples_size - audio_length;
-	if(audio_diff_from_max >= 0)
-		audio_diff_from_max = 0;
-	else {
-		audio_address -= audio_diff_from_max;
-		audio_length = usb_device_desc->max_audio_samples_size;
-	}
+	audio_length = 0;
 	ret = ReadFrame(handlers, (uint8_t*)&capture_buf->is_twl_capture_received.audio_capture_in, audio_address, audio_length, usb_device_desc);
 	if(ret < 0)
 		return ret;
@@ -90,45 +92,37 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 		capture_error_print(true, capture_data, "Capture Start: Failed");
 		return;
 	}
-	/*
-	ret = AskFrameLengthPos(handlers, &video_address, &video_length, true, &audio_address, &audio_length, audio_enabled, usb_device_desc);
-	if(ret < 0) {
-		capture_error_print(true, capture_data, "Initial Frame Info Read: Failed");
-		return;
-	}
 	ret = SetLastFrameInfo(handlers, video_address, video_length, audio_address, audio_length, usb_device_desc);
 	if(ret < 0) {
 		capture_error_print(true, capture_data, "Initial Frame Info Set: Failed");
 		return;
 	}
-	*/
+	ret = AskFrameLengthPos(handlers, &video_address, &video_length, true, &audio_address, &audio_length, audio_enabled, usb_device_desc);
+	if(ret < 0) {
+		capture_error_print(true, capture_data, "Initial Frame Info Ask: Failed");
+		return;
+	}
 	default_sleep(DEFAULT_FRAME_TIME_MS / SLEEP_FRAME_DIVIDER);
 
 	while(capture_data->status.connected && capture_data->status.running) {
 		bool processed = false;
-		/*
-		ret = AskFrameLengthPos(handlers, &video_address, &video_length, true, &audio_address, &audio_length, audio_enabled, usb_device_desc);
+		ret = process_frame_and_read(capture_data, &is_device_capture_recv_data[0].buffer, curr_capture_type, curr_capture_speed, &clock_last_frame, last_read_frame_index, video_address, video_length, audio_address, audio_length, processed, last_frame_length);
 		if(ret < 0) {
-			capture_error_print(true, capture_data, "Frame Info Read: Failed");
+			capture_error_print(true, capture_data, "Frame Read: Error " + std::to_string(ret));
 			return;
 		}
-		if(video_length > 0) {
-		*/
-			ret = process_frame_and_read(capture_data, &is_device_capture_recv_data[0].buffer, curr_capture_type, curr_capture_speed, &clock_last_frame, last_read_frame_index, video_address, video_length, audio_address, audio_length, processed, last_frame_length);
+		if(processed) {
+			ret = SetLastFrameInfo(handlers, video_address, video_length, audio_address, audio_length, usb_device_desc);
 			if(ret < 0) {
-					capture_error_print(true, capture_data, "Frame Read: Error " + std::to_string(ret));
-					return;
+				capture_error_print(true, capture_data, "Frame Info Set: Failed");
+				return;
 			}
-			/*
-			if(processed) {
-				ret = SetLastFrameInfo(handlers, video_address, video_length, audio_address, audio_length, usb_device_desc);
-				if(ret < 0) {
-					capture_error_print(true, capture_data, "Frame Info Set: Failed");
-					return;
-				}
+			ret = AskFrameLengthPos(handlers, &video_address, &video_length, true, &audio_address, &audio_length, audio_enabled, usb_device_desc);
+			if(ret < 0) {
+				capture_error_print(true, capture_data, "Frame Info Ask: Failed");
+				return;
 			}
 		}
-		*/
 		if(last_frame_length > 0)
 			default_sleep((last_frame_length * 1000) / SLEEP_FRAME_DIVIDER);
 		else

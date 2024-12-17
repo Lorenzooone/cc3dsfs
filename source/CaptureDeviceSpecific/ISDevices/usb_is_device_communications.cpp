@@ -39,6 +39,7 @@
 
 #define DEFAULT_MAX_LENGTH_IS_TWL_VIDEO 0x00040000
 #define DEFAULT_MAX_LENGTH_IS_TWL_AUDIO 0x00007800
+#define BASE_IS_TWL_AUDIO_POS 0x01800000
 
 enum is_nitro_packet_emulator_dir {
 	IS_NITRO_PACKET_EMU_DIR_WRITE = 0x10,
@@ -872,10 +873,10 @@ int AskFrameLengthPos(is_device_device_handlers* handlers, uint32_t* video_addre
 	int ret = SendReadWriteCommand(handlers, IS_TWL_CAP_CMD_ASK_CAPTURE_INFORMATION, (uint8_t*)&out_packet, sizeof(out_packet), (uint8_t*)&in_packet, sizeof(in_packet), device_desc);
 	if(ret < 0)
 		return ret;
-	*video_length = from_le(in_packet.available_video_length);
-	*video_address = from_le(in_packet.video_start_address);
-	*audio_length = from_le(in_packet.available_audio_length);
-	*audio_address = from_le(in_packet.audio_start_address);
+	*video_length = DEFAULT_MAX_LENGTH_IS_TWL_VIDEO;
+	*video_address = 0;
+	*audio_length = 0;
+	*audio_address = BASE_IS_TWL_AUDIO_POS;
 	return ret;
 }
 
@@ -887,7 +888,7 @@ int SetLastFrameInfo(is_device_device_handlers* handlers, uint32_t video_address
 	out_packet.available_video_length = to_le(video_length);
 	out_packet.video_start_address = to_le(video_address);
 	out_packet.available_audio_length = to_le(audio_length);
-	out_packet.audio_start_address = to_le(audio_address);
+	out_packet.audio_start_address = to_le((uint32_t)BASE_IS_TWL_AUDIO_POS);
 	return SendWriteCommand(handlers, IS_TWL_CAP_CMD_SET_LAST_FRAME_INFORMATION, (uint8_t*)&out_packet, sizeof(out_packet), device_desc);
 }
 
