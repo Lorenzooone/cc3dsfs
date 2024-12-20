@@ -77,7 +77,8 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 	bool is_acquisition_off = true;
 	uint32_t last_read_frame_index = 0;
 	CaptureScreensType curr_capture_type = capture_data->status.capture_type;
-	CaptureSpeedsType curr_capture_speed = capture_data->status.capture_speed;
+	//CaptureSpeedsType curr_capture_speed = capture_data->status.capture_speed;
+	CaptureSpeedsType curr_capture_speed = CAPTURE_SPEEDS_FULL;
 	bool audio_enabled = true;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_frame = std::chrono::high_resolution_clock::now();
 	float last_frame_length = 0.0;
@@ -123,7 +124,7 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 					return;
 			}
 			if(processed) {
-				curr_capture_speed = capture_data->status.capture_speed;
+				//curr_capture_speed = capture_data->status.capture_speed;
 				ret = SetLastFrameInfo(handlers, video_address, video_length, audio_address, audio_length, usb_device_desc);
 				if(ret < 0) {
 					capture_error_print(true, capture_data, "Frame Info Set: Failed");

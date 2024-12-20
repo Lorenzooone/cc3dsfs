@@ -470,6 +470,10 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	std::thread joint_thread(screen_display_thread, joint_screen);
 
 	capture_data->status.connected = connect(true, capture_data, &frontend_data, override_data.auto_connect_to_first);
+	if(override_data.quit_on_first_connection_failure && (!capture_data->status.connected)) {
+		capture_data->status.running = false;
+		ret_val = -3;
+	}
 	bool last_connected = capture_data->status.connected;
 	SuccessConnectionOutTextGenerator(out_text_data, capture_data);
 	int no_data_consecutive = 0;
@@ -712,7 +716,7 @@ int main(int argc, char **argv) {
 			continue;
 		if(parse_existence_arg(i, argv, override_data.auto_connect_to_first, true, "--auto_connect"))
 			continue;
-		if(parse_existence_arg(i, argv, override_data.quit_on_first_connection_failure, true, "--close_first_on_failure"))
+		if(parse_existence_arg(i, argv, override_data.quit_on_first_connection_failure, true, "--failure_close"))
 			continue;
 		if(parse_int_arg(i, argc, argv, override_data.loaded_profile, "--profile"))
 			continue;
@@ -752,6 +756,8 @@ int main(int argc, char **argv) {
 		std::cout << "  --no_cursor      Prevents the mouse cursor from showing, unless moved." << std::endl;
 		std::cout << "  --auto_connect   Automatically connects to the first available device," << std::endl;
 		std::cout << "                   even if multiple are present." << std::endl;
+		std::cout << "  --failure_close  Automatically closes the software if the first connection" << std::endl;
+		std::cout << "                   doesn't succeed." << std::endl;
 		std::cout << "  --profile        Loads the profile with the specified ID at startup" << std::endl;
 		std::cout << "                   instead of the default one. When the program closes," << std::endl;
 		std::cout << "                   the data is also saved to the specified profile." << std::endl;
