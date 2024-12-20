@@ -10,6 +10,7 @@ is_device_device_handlers* is_device_libusb_serial_reconnection(const is_device_
 void is_device_libusb_end_connection(is_device_device_handlers* handlers, const is_device_usb_device* device_desc, bool interface_claimed);
 int is_device_libusb_bulk_out(is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred);
 int is_device_libusb_bulk_in(is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred);
+int is_device_libusb_ctrl_in(is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, uint8_t* buf, int length, uint8_t request, uint16_t index, int* transferred);
 void is_device_libusb_async_in_start(is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, uint8_t* buf, int length, isd_async_callback_data* cb_data);
 void is_device_libusb_cancell_callback(isd_async_callback_data* cb_data);
 int is_device_libusb_reset_device(is_device_device_handlers* handlers);

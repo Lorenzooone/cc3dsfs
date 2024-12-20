@@ -122,12 +122,20 @@ struct ALIGNED(16) PACKED ISTWLCaptureVideoReceived {
 	ISTWLCaptureVideoInputData video_in;
 	uint32_t time;
 	uint32_t frame;
-	uint8_t unknown[0x40000 - (sizeof(ISTWLCaptureVideoInputData) + (sizeof(uint32_t) * 2))];
 };
 
-struct ALIGNED(16) PACKED ISTWLCaptureAudioReceived {
+struct ALIGNED(16) PACKED ISTWLCaptureVideoInternalReceived {
+	ISTWLCaptureVideoReceived real_video_in;
+	uint8_t unknown[0x40000 - sizeof(ISTWLCaptureVideoReceived)];
+};
+
+struct ALIGNED(4) PACKED ISTWLCaptureSoundData {
+	uint16_t data[TWL_CAPTURE_SAMPLES_IN];
+};
+
+struct ALIGNED(4) PACKED ISTWLCaptureAudioReceived {
 	uint32_t time;
-	uint16_t sound_data[TWL_CAPTURE_SAMPLES_IN];
+	ISTWLCaptureSoundData sound_data;
 };
 
 struct ALIGNED(16) PACKED ISTWLCaptureReceived {

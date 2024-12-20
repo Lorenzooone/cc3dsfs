@@ -26,6 +26,7 @@
 
 static bool checked_be_once = false;
 static bool _is_be = false;
+std::chrono::time_point<std::chrono::high_resolution_clock> clock_start_program;
 
 bool is_big_endian(void) {
 	if(checked_be_once)
@@ -40,11 +41,11 @@ bool is_big_endian(void) {
 	return _is_be;
 }
 
-static uint32_t reverse_endianness(uint32_t value) {
+uint32_t reverse_endianness(uint32_t value) {
 	return ((value & 0xFF) << 24) | ((value & 0xFF00) << 8) | ((value & 0xFF0000) >> 8) | ((value & 0xFF000000) >> 24);
 }
 
-static uint16_t reverse_endianness(uint16_t value) {
+uint16_t reverse_endianness(uint16_t value) {
 	return ((value & 0xFF) << 8) | ((value & 0xFF00) >> 8);
 }
 
@@ -94,6 +95,85 @@ uint16_t from_be(uint16_t value) {
 	if(!is_big_endian())
 		value = reverse_endianness(value);
 	return value;
+}
+
+uint16_t read_le16(const uint8_t* data, size_t count, size_t multiplier) {
+	data += count * multiplier;
+	return data[0] | (data[1] << 8);
+}
+
+uint16_t read_be16(const uint8_t* data, size_t count, size_t multiplier) {
+	data += count * multiplier;
+	return data[1] | (data[0] << 8);
+}
+
+uint32_t read_le32(const uint8_t* data, size_t count, size_t multiplier) {
+	data += count * multiplier;
+	return data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+}
+
+uint32_t read_be32(const uint8_t* data, size_t count, size_t multiplier) {
+	data += count * multiplier;
+	return data[3] | (data[2] << 8) | (data[1] << 16) | (data[0] << 24);
+}
+
+void write_le16(uint8_t* data, uint16_t value, size_t count, size_t multiplier) {
+	data += count * multiplier;
+	data[0] = value & 0xFF;
+	data[1] = (value >> 8) & 0xFF;
+}
+
+void write_be16(uint8_t* data, uint16_t value, size_t count, size_t multiplier) {
+	data += count * multiplier;
+	data[0] = (value >> 8) & 0xFF;
+	data[1] = value & 0xFF;
+}
+
+void write_le32(uint8_t* data, uint32_t value, size_t count, size_t multiplier) {
+	data += count * multiplier;
+	data[0] = value & 0xFF;
+	data[1] = (value >> 8) & 0xFF;
+	data[2] = (value >> 16) & 0xFF;
+	data[3] = (value >> 24) & 0xFF;
+}
+
+void write_be32(uint8_t* data, uint32_t value, size_t count, size_t multiplier) {
+	data += count * multiplier;
+	data[0] = (value >> 24) & 0xFF;
+	data[1] = (value >> 16) & 0xFF;
+	data[2] = (value >> 8) & 0xFF;
+	data[3] = value & 0xFF;
+}
+
+void write_string(uint8_t* data, std::string text) {
+	for(int i = 0; i < text.size(); i++)
+		data[i] = (uint8_t)text[i];
+}
+
+std::string read_string(uint8_t* data, size_t size) {
+	std::string out_str = "";
+	out_str.reserve(size);
+	for(int i = 0; i < size; i++)
+		out_str[i] = (char)data[i];
+	return out_str;
+}
+
+uint32_t rotate_bits_left(uint32_t value) {
+	return (value << 1) | ((value & 0x80000000) >> 31);
+}
+
+uint32_t rotate_bits_right(uint32_t value) {
+	return (value >> 1) | ((value & 1) << 31);
+}
+
+void init_start_time() {
+	clock_start_program = std::chrono::high_resolution_clock::now();
+}
+
+uint32_t ms_since_start() {
+	const auto curr_time = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double>diff = curr_time - clock_start_program;
+	return (uint32_t)(diff.count() * 1000);
 }
 
 std::string to_hex(uint16_t value) {

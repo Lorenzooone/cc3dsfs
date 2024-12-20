@@ -46,6 +46,7 @@ struct override_all_data {
 	int loaded_profile = STARTUP_FILE_INDEX;
 	bool mono_app = false;
 	bool recovery_mode = false;
+	bool quit_on_first_connection_failure = false;
 };
 
 static void ConsoleOutText(std::string full_text) {
@@ -666,6 +667,7 @@ static bool parse_int_arg(int &index, int argc, char **argv, int &target, std::s
 
 int main(int argc, char **argv) {
 	init_threads();
+	init_start_time();
 	int page_up_id = -1;
 	int page_down_id = -1;
 	int enter_id = -1;
@@ -709,6 +711,8 @@ int main(int argc, char **argv) {
 		if(parse_existence_arg(i, argv, override_data.always_prevent_mouse_showing, true, "--no_cursor"))
 			continue;
 		if(parse_existence_arg(i, argv, override_data.auto_connect_to_first, true, "--auto_connect"))
+			continue;
+		if(parse_existence_arg(i, argv, override_data.quit_on_first_connection_failure, true, "--close_first_on_failure"))
 			continue;
 		if(parse_int_arg(i, argc, argv, override_data.loaded_profile, "--profile"))
 			continue;

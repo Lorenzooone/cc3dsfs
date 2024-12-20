@@ -26,25 +26,26 @@ static int process_frame_and_read(CaptureData* capture_data, CaptureReceived* ca
 		default:
 			break;
 	}
-	int num_available_frames = multiplier;
+	int num_available_frames = video_length / sizeof(ISTWLCaptureVideoInternalReceived);
 	if(num_available_frames < multiplier)
 		return 0;
 	processed = true;
 	int frame_next = num_available_frames - 1;
 	last_read_frame_index += num_available_frames;
-	video_address = video_address + (frame_next * sizeof(ISTWLCaptureVideoReceived));
+	video_address = video_address + (frame_next * sizeof(ISTWLCaptureVideoInternalReceived));
 	is_device_device_handlers* handlers = (is_device_device_handlers*)capture_data->handle;
 	const is_device_usb_device* usb_device_desc = (const is_device_usb_device*)capture_data->status.device.descriptor;
 	size_t video_processed_size = usb_is_device_get_video_in_size(curr_capture_type, IS_TWL_CAPTURE_DEVICE);
-	int ret = ReadFrame(handlers, (uint8_t*)&capture_buf->is_twl_capture_received.video_capture_in, 0, video_processed_size, usb_device_desc);
+	int ret = ReadFrame(handlers, (uint8_t*)&capture_buf->is_twl_capture_received.video_capture_in, video_address, video_processed_size, usb_device_desc);
 	if(ret < 0)
 		return ret;
-	int audio_diff_from_max = usb_device_desc->max_audio_samples_size - audio_length;
+	int max_audio_length = (multiplier * 5) * sizeof(ISTWLCaptureAudioReceived);
+	int audio_diff_from_max = max_audio_length - audio_length;
 	if(audio_diff_from_max >= 0)
 		audio_diff_from_max = 0;
 	else {
-		audio_address -= audio_diff_from_max;
-		audio_length = usb_device_desc->max_audio_samples_size;
+		audio_address += audio_diff_from_max;
+		audio_length = max_audio_length;
 	}
 	ret = ReadFrame(handlers, (uint8_t*)&capture_buf->is_twl_capture_received.audio_capture_in, audio_address, audio_length, usb_device_desc);
 	if(ret < 0)
@@ -52,7 +53,7 @@ static int process_frame_and_read(CaptureData* capture_data, CaptureReceived* ca
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - (*clock_start);
 	last_frame_length = diff.count();
-	output_to_thread(capture_data, capture_buf, curr_capture_type, clock_start, video_processed_size + (audio_length / sizeof(ISTWLCaptureAudioReceived)) * (sizeof(ISTWLCaptureAudioReceived) - sizeof(uint32_t)));
+	output_to_thread(capture_data, capture_buf, curr_capture_type, clock_start, video_processed_size + ((audio_length / sizeof(ISTWLCaptureAudioReceived)) * sizeof(ISTWLCaptureSoundData)));
 	return 0;
 }
 
@@ -85,12 +86,17 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 	uint32_t video_length = 0;
 	uint32_t audio_address = 0;
 	uint32_t audio_length = 0;
-	ret = StartUsbCaptureDma(handlers, usb_device_desc);
+	is_device_twl_enc_dec_table enc_table, dec_table;
+	ret = PrepareEncDecTable(handlers, &enc_table, &dec_table, usb_device_desc);
+	if(ret < 0) {
+		capture_error_print(true, capture_data, "Enc Dec Table init: Failed");
+		return;
+	}
+	ret = StartUsbCaptureDma(handlers, usb_device_desc, audio_enabled, &enc_table, &dec_table);
 	if(ret < 0) {
 		capture_error_print(true, capture_data, "Capture Start: Failed");
 		return;
 	}
-	/*
 	ret = AskFrameLengthPos(handlers, &video_address, &video_length, true, &audio_address, &audio_length, audio_enabled, usb_device_desc);
 	if(ret < 0) {
 		capture_error_print(true, capture_data, "Initial Frame Info Read: Failed");
@@ -101,26 +107,23 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 		capture_error_print(true, capture_data, "Initial Frame Info Set: Failed");
 		return;
 	}
-	*/
 	default_sleep(DEFAULT_FRAME_TIME_MS / SLEEP_FRAME_DIVIDER);
 
 	while(capture_data->status.connected && capture_data->status.running) {
 		bool processed = false;
-		/*
 		ret = AskFrameLengthPos(handlers, &video_address, &video_length, true, &audio_address, &audio_length, audio_enabled, usb_device_desc);
 		if(ret < 0) {
 			capture_error_print(true, capture_data, "Frame Info Read: Failed");
 			return;
 		}
 		if(video_length > 0) {
-		*/
 			ret = process_frame_and_read(capture_data, &is_device_capture_recv_data[0].buffer, curr_capture_type, curr_capture_speed, &clock_last_frame, last_read_frame_index, video_address, video_length, audio_address, audio_length, processed, last_frame_length);
 			if(ret < 0) {
 					capture_error_print(true, capture_data, "Frame Read: Error " + std::to_string(ret));
 					return;
 			}
-			/*
 			if(processed) {
+				curr_capture_speed = capture_data->status.capture_speed;
 				ret = SetLastFrameInfo(handlers, video_address, video_length, audio_address, audio_length, usb_device_desc);
 				if(ret < 0) {
 					capture_error_print(true, capture_data, "Frame Info Set: Failed");
@@ -128,7 +131,6 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 				}
 			}
 		}
-		*/
 		if(last_frame_length > 0)
 			default_sleep((last_frame_length * 1000) / SLEEP_FRAME_DIVIDER);
 		else

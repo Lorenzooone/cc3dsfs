@@ -315,11 +315,19 @@ bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, const bool i
 	#ifdef USE_IS_DEVICES_USB
 	if(status->device.cc_type == CAPTURE_CONN_IS_NITRO) {
 		base_ptr = (uint8_t*)p_in->is_twl_capture_received.audio_capture_in;
+		uint16_t* base_ptr16 = (uint16_t*)base_ptr;
 		size_t size_real = n_samples * 2;
-		size_t size_packet_converted = sizeof(ISTWLCaptureAudioReceived) - sizeof(uint32_t);
+		size_t size_packet_converted = sizeof(ISTWLCaptureSoundData);
 		size_t num_packets = size_real / size_packet_converted;
 		for(int i = 0; i < num_packets; i++)
-			memcpy(base_ptr + (i * size_packet_converted), ((uint8_t*)&p_in->is_twl_capture_received.audio_capture_in[i]) + sizeof(uint32_t), size_packet_converted);
+			memcpy(base_ptr + (i * size_packet_converted), ((uint8_t*)&p_in->is_twl_capture_received.audio_capture_in[i].sound_data.data), size_packet_converted);
+		// Inverted L and R...
+		for(int i = 0; i < n_samples; i++) {
+			uint16_t r_sample = base_ptr16[(i * 2)];
+			base_ptr16[(i * 2)] = base_ptr16[(i * 2) + 1];
+			base_ptr16[(i * 2) + 1] = r_sample;
+		}
+			
 	}
 	#endif
 	if(base_ptr == NULL)

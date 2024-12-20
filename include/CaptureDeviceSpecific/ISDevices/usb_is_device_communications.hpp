@@ -78,13 +78,23 @@ struct is_device_device_handlers {
 	libusb_device_handle* usb_handle;
 	void* read_handle;
 	void* write_handle;
+	void* ctrl_in_handle;
 	void* mutex;
+	std::string path;
+};
+
+struct is_device_twl_enc_dec_table {
+	uint32_t rotating_value;
+	uint8_t num_values;
+	uint8_t num_iters_full;
+	uint8_t num_iters_before_refresh;
+	uint16_t action_values[8];
 };
 
 int GetNumISDeviceDesc(void);
 const is_device_usb_device* GetISDeviceDesc(int index);
 int DisableLca2(is_device_device_handlers* handlers, const is_device_usb_device* device_desc);
-int StartUsbCaptureDma(is_device_device_handlers* handlers, const is_device_usb_device* device_desc);
+int StartUsbCaptureDma(is_device_device_handlers* handlers, const is_device_usb_device* device_desc, bool enable_sound_capture = false, is_device_twl_enc_dec_table* enc_table = NULL, is_device_twl_enc_dec_table* dec_table = NULL);
 int StopUsbCaptureDma(is_device_device_handlers* handlers, const is_device_usb_device* device_desc);
 int SetForwardFrameCount(is_device_device_handlers* handlers, uint16_t count, const is_device_usb_device* device_desc);
 int SetForwardFramePermanent(is_device_device_handlers* handlers, const is_device_usb_device* device_desc);
@@ -105,6 +115,7 @@ int ReadFrame(is_device_device_handlers* handlers, uint8_t* buf, int length, con
 void ReadFrameAsync(is_device_device_handlers* handlers, uint8_t* buf, int length, const is_device_usb_device* device_desc, isd_async_callback_data* cb_data);
 void CloseAsyncRead(is_device_device_handlers* handlers, isd_async_callback_data* cb_data);
 int ResetUSBDevice(is_device_device_handlers* handlers);
+int PrepareEncDecTable(is_device_device_handlers* handlers, is_device_twl_enc_dec_table* enc_table, is_device_twl_enc_dec_table* dec_table, const is_device_usb_device* device_desc);
 
 void SetupISDeviceAsyncThread(is_device_device_handlers* handlers, void* user_data, std::thread* thread_ptr, bool* keep_going, ConsumerMutex* is_data_ready);
 void EndISDeviceAsyncThread(is_device_device_handlers* handlers, void* user_data, std::thread* thread_ptr, bool* keep_going, ConsumerMutex* is_data_ready);

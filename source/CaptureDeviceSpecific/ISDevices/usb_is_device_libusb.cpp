@@ -164,6 +164,14 @@ int is_device_libusb_bulk_in(is_device_device_handlers* handlers, const is_devic
 	return libusb_bulk_transfer(handlers->usb_handle, usb_device_desc->ep_in, buf, length, transferred, usb_device_desc->bulk_timeout);
 }
 
+// Read from ctrl_in
+int is_device_libusb_ctrl_in(is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, uint8_t* buf, int length, uint8_t request, uint16_t index, int* transferred) {
+	int ret = libusb_control_transfer(handlers->usb_handle, 0xC0, request, 0, index, buf, length, usb_device_desc->bulk_timeout);
+	if(ret >= 0)
+		*transferred = ret;
+	return ret;
+}
+
 void is_device_libusb_cancell_callback(isd_async_callback_data* cb_data) {
 	cb_data->transfer_data_access.lock();
 	if(cb_data->transfer_data)

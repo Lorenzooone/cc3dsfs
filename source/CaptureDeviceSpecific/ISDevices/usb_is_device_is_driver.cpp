@@ -51,6 +51,16 @@ static bool read_is_driver_device_info(HANDLE handle, uint8_t* buffer, size_t si
 	return DeviceIoControl(handle, 0x22000C, buffer, size, buffer, size, num_read, NULL);
 }
 
+static bool is_driver_send_ioctl(HANDLE handle, uint8_t* buffer, size_t size, uint8_t request, uint16_t index, DWORD* num_read) {
+	uint8_t data[0x10];
+	memset(data, 0, 0x10);
+	write_le32(data, 0x17);
+	write_le32(data, 2, 1);
+	write_le32(data, ((uint32_t)request) << 8, 2);
+	write_le32(data, index, 3);
+	return DeviceIoControl(handle, 0x220020, data, 0x10, buffer, size, num_read, NULL);
+}
+
 static bool is_driver_device_reset(HANDLE handle) {
 	DWORD num_read;
 	return DeviceIoControl(handle, 0x220004, NULL, 0, NULL, 0, &num_read, NULL);
@@ -94,8 +104,8 @@ static bool is_driver_get_device_pid_vid(std::string path, uint16_t& out_vid, ui
 		return false;
 	if (num_read < 11)
 		return false;
-	out_vid = buffer[8] + (buffer[9] << 8);
-	out_pid = buffer[10] + (buffer[11] << 8);
+	out_vid = read_le16(buffer, 4);
+	out_pid = read_le16(buffer, 5);
 	return true;
 }
 
@@ -104,6 +114,7 @@ static bool is_driver_setup_connection(is_device_device_handlers* handlers, std:
 	handlers->mutex = NULL;
 	handlers->write_handle = INVALID_HANDLE_VALUE;
 	handlers->read_handle = INVALID_HANDLE_VALUE;
+	handlers->path = path;
 	std::string mutex_name = "Global\\ISU_" + path.substr(4);
 	std::replace(mutex_name.begin(), mutex_name.end(), '\\', '@');
 	handlers->mutex = CreateMutex(NULL, true, mutex_name.c_str());
@@ -164,7 +175,32 @@ static void STDCALL OverlappedCompletionNothingRoutine(DWORD dwErrorCode, DWORD 
 	return;
 }
 
+static void is_driver_close_handle(void** handle, void* default_value = INVALID_HANDLE_VALUE) {
+	#ifdef _WIN32
+	if ((*handle) == default_value)
+		return;
+	CloseHandle(*handle);
+	*handle = default_value;
+	#endif
+}
+
 #endif
+
+bool is_driver_prepare_ctrl_in_handle(is_device_device_handlers* handlers) {
+	#ifdef _WIN32
+	HANDLE handle = CreateFile(handlers->path.c_str(), (GENERIC_READ | GENERIC_WRITE), (FILE_SHARE_READ | FILE_SHARE_WRITE), NULL, OPEN_EXISTING, 0, NULL);
+	if (handle == INVALID_HANDLE_VALUE)
+		return false;
+	handlers->ctrl_in_handle = handle;
+	#endif
+	return true;
+}
+
+void is_driver_close_ctrl_in_handle(is_device_device_handlers* handlers) {
+	#ifdef _WIN32
+	is_driver_close_handle(&handlers->ctrl_in_handle);
+	#endif
+}
 
 is_device_device_handlers* is_driver_serial_reconnection(CaptureDevice* device) {
 	is_device_device_handlers* final_handlers = NULL;
@@ -178,6 +214,7 @@ is_device_device_handlers* is_driver_serial_reconnection(CaptureDevice* device) 
 			final_handlers->mutex = handlers.mutex;
 			final_handlers->read_handle = handlers.read_handle;
 			final_handlers->write_handle = handlers.write_handle;
+			final_handlers->path = device->path;
 		}
 		else
 			is_driver_end_connection(&handlers);
@@ -188,15 +225,10 @@ is_device_device_handlers* is_driver_serial_reconnection(CaptureDevice* device) 
 
 void is_driver_end_connection(is_device_device_handlers* handlers) {
 	#ifdef _WIN32
-	if (handlers->write_handle != INVALID_HANDLE_VALUE)
-		CloseHandle(handlers->write_handle);
-	handlers->write_handle = INVALID_HANDLE_VALUE;
-	if (handlers->read_handle != INVALID_HANDLE_VALUE)
-		CloseHandle(handlers->read_handle);
-	handlers->read_handle = INVALID_HANDLE_VALUE;
-	if(handlers->mutex != NULL)
-		CloseHandle(handlers->mutex);
-	handlers->mutex = NULL;
+	is_driver_close_handle(&handlers->write_handle);
+	is_driver_close_handle(&handlers->read_handle);
+	is_driver_close_handle(&handlers->ctrl_in_handle);
+	is_driver_close_handle(&handlers->mutex, NULL);
 	#endif
 }
 
@@ -261,6 +293,18 @@ int is_driver_bulk_in(is_device_device_handlers* handlers, const is_device_usb_d
 	if (retval == 0)
 		return LIBUSB_ERROR_BUSY;
 	return wait_result_io_operation(handlers->read_handle, &overlapped_var, transferred, usb_device_desc);
+	#endif
+	return LIBUSB_SUCCESS;
+}
+
+// Read from ctrl, which also sends commands
+int is_driver_ctrl_in(is_device_device_handlers* handlers, uint8_t* buf, int length, uint8_t request, uint16_t index, int* transferred) {
+	#ifdef _WIN32
+	DWORD num_read = 0;
+	bool ret = is_driver_send_ioctl(handlers->ctrl_in_handle, buf, length, request, index, &num_read);
+	if(!ret)
+		return LIBUSB_ERROR_BUSY;
+	*transferred = num_read;
 	#endif
 	return LIBUSB_SUCCESS;
 }

@@ -45,7 +45,8 @@ sudo apt install \
     libegl1-mesa-dev \
     libdrm-dev \
     libgbm-dev \
-    libfreetype-dev
+    libfreetype-dev \
+    xorg-dev
 ```
 
 Additionally, when compiling for a Raspberry Pi, install gpiod and libgpiod-dev.

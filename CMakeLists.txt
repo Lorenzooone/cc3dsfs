@@ -313,7 +313,7 @@ if(USE_LIBUSB_SUPPORT)
 	endif()
 endif()
 if(IS_DEVICES_SUPPORT)
-	list(APPEND SOURCE_CPP_EXTRA_FILES ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_communications.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_acquisition.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_nitro_acquisition_capture.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_twl_acquisition_capture.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_nitro_acquisition_emulator.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_is_driver.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_libusb.cpp ${TOOLS_DATA_DIR}/is_twl_0x81_packet.cpp)
+	list(APPEND SOURCE_CPP_EXTRA_FILES ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_communications.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_acquisition.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_nitro_acquisition_capture.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_twl_acquisition_capture.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_nitro_acquisition_emulator.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_is_driver.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_libusb.cpp ${TOOLS_DATA_DIR}/is_twl_cap_crc32_table.cpp ${TOOLS_DATA_DIR}/is_twl_cap_init_seed_table.cpp)
 	if(MSVC)
 		list(APPEND EXTRA_CXX_FLAGS "/DUSE_IS_DEVICES_USB")
 	else()
@@ -517,10 +517,17 @@ add_custom_command(
 )
 
 add_custom_command(
-	OUTPUT ${TOOLS_DATA_DIR}/is_twl_0x81_packet.cpp
-	COMMENT "Convert binary to C - IS TWL Capture 0x81 Packet"
-	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/is_twl_0x81_packet.bin ${TOOLS_DATA_DIR} is_twl_0x81_packet is_twl_0x81_packet
-	DEPENDS ${CMAKE_SOURCE_DIR}/bin/is_twl_0x81_packet.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
+	OUTPUT ${TOOLS_DATA_DIR}/is_twl_cap_crc32_table.cpp
+	COMMENT "Convert binary to C - IS TWL CRC32 table"
+	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/is_twl_cap_crc32_table.bin ${TOOLS_DATA_DIR} is_twl_cap_crc32_table is_twl_cap_crc32_table
+	DEPENDS ${CMAKE_SOURCE_DIR}/bin/is_twl_cap_crc32_table.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
+)
+
+add_custom_command(
+	OUTPUT ${TOOLS_DATA_DIR}/is_twl_cap_init_seed_table.cpp
+	COMMENT "Convert binary to C - IS TWL CRC32 table"
+	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/is_twl_cap_init_seed_table.bin ${TOOLS_DATA_DIR} is_twl_cap_init_seed_table is_twl_cap_init_seed_table
+	DEPENDS ${CMAKE_SOURCE_DIR}/bin/is_twl_cap_init_seed_table.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
 )
 
 add_custom_command(

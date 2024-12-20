@@ -139,7 +139,7 @@ bool is_device_connect_usb(bool print_failed, CaptureData* capture_data, Capture
 
 uint64_t usb_is_device_get_video_in_size(CaptureScreensType capture_type, is_device_type device_type) {
 	if(device_type == IS_TWL_CAPTURE_DEVICE)
-		return sizeof(ISTWLCaptureVideoInputData) + (sizeof(uint32_t) * 2);
+		return sizeof(ISTWLCaptureVideoReceived);
 	if((capture_type == CAPTURE_SCREENS_TOP) || (capture_type == CAPTURE_SCREENS_BOTTOM))
 		return sizeof(ISNitroEmulatorVideoInputData) / 2;
 	return sizeof(ISNitroEmulatorVideoInputData);
@@ -216,7 +216,21 @@ void output_to_thread(CaptureData* capture_data, CaptureReceived* capture_buf, C
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - (*clock_start);
 	*clock_start = curr_time;
-	capture_data->data_buffers.WriteToBuffer(capture_buf, read_size, diff.count(), &capture_data->status.device, curr_capture_type);
+	if(usb_device_info->device_type == IS_TWL_CAPTURE_DEVICE) {
+		CaptureDataSingleBuffer* target = capture_data->data_buffers.GetWriterBuffer();
+		// Copy data to buffer, with special memcpy which accounts for ftd2 header data and skips synch bytes
+		size_t video_size = usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type);
+		memcpy(&target->capture_buf.is_twl_capture_received.video_capture_in, &capture_buf->is_twl_capture_received.video_capture_in, video_size);
+		if(read_size > video_size) {
+			size_t audio_size = ((read_size - video_size) / sizeof(ISTWLCaptureSoundData)) * sizeof(ISTWLCaptureAudioReceived);
+			memcpy(&target->capture_buf.is_twl_capture_received.audio_capture_in, &capture_buf->is_twl_capture_received.audio_capture_in, audio_size);
+		}
+		target->read = read_size;
+		target->time_in_buf = diff.count();
+		capture_data->data_buffers.ReleaseWriterBuffer();
+	}
+	else
+		capture_data->data_buffers.WriteToBuffer(capture_buf, read_size, diff.count(), &capture_data->status.device, curr_capture_type);
 
 	if (capture_data->status.cooldown_curr_in)
 		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
