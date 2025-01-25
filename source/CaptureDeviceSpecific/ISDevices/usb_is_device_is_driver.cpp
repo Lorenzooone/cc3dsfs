@@ -176,12 +176,10 @@ static void STDCALL OverlappedCompletionNothingRoutine(DWORD dwErrorCode, DWORD 
 }
 
 static void is_driver_close_handle(void** handle, void* default_value = INVALID_HANDLE_VALUE) {
-	#ifdef _WIN32
 	if ((*handle) == default_value)
 		return;
 	CloseHandle(*handle);
 	*handle = default_value;
-	#endif
 }
 
 #endif

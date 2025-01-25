@@ -207,6 +207,20 @@ inline static void to_8_bit_6(uint8_t* out, uint8_t* in) {
 	out[2] = to_8_bit_6(in[2]);
 }
 
+static void usb_cypress_nisetro_ds_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out) {
+	int pos_top = 0;
+	int pos_bottom = WIDTH_DS * HEIGHT_DS * 3;
+	uint8_t* data_in = (uint8_t*)p_in->cypress_nisetro_capture_received.video_in.screen_data;
+	uint8_t* data_out = (uint8_t*)p_out->screen_data;
+	for(int i = 0; i < sizeof(CypressNisetroDSCaptureReceived); i++) {
+		uint8_t conv = to_8_bit_6(data_in[i]);
+		if(data_in[i] & 0x40)
+			data_out[pos_bottom++] = conv;
+		else
+			data_out[pos_top++] = conv;
+	}
+}
+
 static void usb_is_device_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureStatus* status, CaptureScreensType capture_type) {
 	bool is_nitro = true;
 	#ifdef USE_IS_DEVICES_USB
@@ -281,6 +295,12 @@ bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, Capt
 	#ifdef USE_IS_DEVICES_USB
 	if(chosen_device->cc_type == CAPTURE_CONN_IS_NITRO) {
 		usb_is_device_convertVideoToOutput(p_in, p_out, status, data_buffer->capture_type);
+		converted = true;
+	}
+	#endif
+	#ifdef USE_CYNI_USB
+	if(chosen_device->cc_type == CAPTURE_CONN_CYPRESS_NISETRO) {
+		usb_cypress_nisetro_ds_convertVideoToOutput(p_in, p_out);
 		converted = true;
 	}
 	#endif
