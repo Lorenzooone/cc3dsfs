@@ -3,6 +3,7 @@
 #include "dscapture_ftd2_shared.hpp"
 #include "usb_ds_3ds_capture.hpp"
 #include "usb_is_device_acquisition.hpp"
+#include "cypress_nisetro_acquisition.hpp"
 
 #include <vector>
 #include <thread>
@@ -78,6 +79,9 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	// Device Listing
 	std::vector<CaptureDevice> devices_list;
 	std::vector<no_access_recap_data> no_access_list;
+	#ifdef USE_CYNI_USB
+	list_devices_cyni_device(devices_list, no_access_list);
+	#endif
 	#ifdef USE_FTD3
 	list_devices_ftd3(devices_list, no_access_list);
 	#endif
@@ -115,6 +119,10 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	}
 
 	// Actual connection
+	#ifdef USE_CYNI_USB
+	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_CYPRESS_NISETRO) && (!cyni_device_connect_usb(print_failed, capture_data, &devices_list[chosen_device])))
+		return false;
+	#endif
 	#ifdef USE_FTD3
 	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_FTD3) && (!connect_ftd3(print_failed, capture_data, &devices_list[chosen_device])))
 		return false;
@@ -151,6 +159,10 @@ void captureCall(CaptureData* capture_data) {
 		}
 
 		// Main capture loop
+		#ifdef USE_CYNI_USB
+		if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_NISETRO)
+			cyni_device_acquisition_main_loop(capture_data);
+		#endif
 		#ifdef USE_FTD3
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
 			ftd3_capture_main_loop(capture_data);
@@ -177,6 +189,10 @@ void captureCall(CaptureData* capture_data) {
 		capture_data->status.audio_wait.unlock();
 
 		// Capture cleanup
+		#ifdef USE_CYNI_USB
+		if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_NISETRO)
+			usb_cyni_device_acquisition_cleanup(capture_data);
+		#endif
 		#ifdef USE_FTD3
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
 			ftd3_capture_cleanup(capture_data);
@@ -214,6 +230,10 @@ uint64_t get_audio_n_samples(CaptureData* capture_data, uint64_t read) {
 }
 
 uint64_t get_video_in_size(CaptureData* capture_data) {
+	#ifdef USE_CYNI_USB
+	if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_NISETRO)
+		return cyni_device_get_video_in_size(capture_data);
+	#endif
 	#ifdef USE_FTD3
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
 		return ftd3_get_video_in_size(capture_data);
@@ -251,6 +271,9 @@ void capture_init() {
 	#ifdef USE_FTD2
 	ftd2_init_shared();
 	#endif
+	#ifdef USE_CYNI_USB
+	usb_cyni_device_init();
+	#endif
 }
 
 void capture_close() {
@@ -262,5 +285,8 @@ void capture_close() {
 	#endif
 	#ifdef USE_FTD2
 	ftd2_end_shared();
+	#endif
+	#ifdef USE_CYNI_USB
+	usb_cyni_device_close();
 	#endif
 }

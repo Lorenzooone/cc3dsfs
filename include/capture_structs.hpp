@@ -20,7 +20,7 @@
 #define FTD2_INTRA_PACKET_HEADER_SIZE 2
 #define MAX_PACKET_SIZE_FTD2 (MAX_PACKET_SIZE_USB2 - FTD2_INTRA_PACKET_HEADER_SIZE)
 
-enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_FTD2, CAPTURE_CONN_IS_NITRO };
+enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_FTD2, CAPTURE_CONN_IS_NITRO, CAPTURE_CONN_CYPRESS_NISETRO };
 enum InputVideoDataType { VIDEO_DATA_RGB, VIDEO_DATA_BGR, VIDEO_DATA_RGB16, VIDEO_DATA_BGR16 };
 enum CaptureScreensType { CAPTURE_SCREENS_BOTH, CAPTURE_SCREENS_TOP, CAPTURE_SCREENS_BOTTOM, CAPTURE_SCREENS_ENUM_END };
 enum CaptureSpeedsType { CAPTURE_SPEEDS_FULL, CAPTURE_SPEEDS_HALF, CAPTURE_SPEEDS_THIRD, CAPTURE_SPEEDS_QUARTER, CAPTURE_SPEEDS_ENUM_END };
@@ -118,6 +118,10 @@ struct ALIGNED(16) PACKED ISNitroCaptureReceived {
 	ISNitroEmulatorVideoInputData video_in;
 };
 
+struct ALIGNED(16) PACKED CypressNisetroDSCaptureReceived {
+	ISNitroEmulatorVideoInputData video_in;
+};
+
 struct ALIGNED(16) PACKED ISTWLCaptureVideoReceived {
 	ISTWLCaptureVideoInputData video_in;
 	uint32_t time;
@@ -155,6 +159,7 @@ union CaptureReceived {
 	FTD2OldDSCaptureReceivedRaw ftd2_received_old_ds_raw;
 	ISNitroCaptureReceived is_nitro_capture_received;
 	ISTWLCaptureReceived is_twl_capture_received;
+	CypressNisetroDSCaptureReceived cypress_nisetro_capture_received;
 };
 
 struct CaptureDevice {

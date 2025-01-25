@@ -10,10 +10,11 @@ set(N3DSXL_LOOPY_SUPPORT 1)
 set(NEW_DS_LOOPY_SUPPORT 1)
 set(IS_DEVICES_SUPPORT 1)
 set(OLD_DS_3DS_LOOPY_SUPPORT 1)
+set(CYPRESS_NISETRO_SUPPORT 1)
 
 set(USE_FTD2XX_FOR_NEW_DS_LOOPY ${NEW_DS_LOOPY_SUPPORT})
 set(USE_LIBFTDI_FOR_NEW_DS_LOOPY ${NEW_DS_LOOPY_SUPPORT})
-set(USE_LIBUSB_SUPPORT ${IS_DEVICES_SUPPORT} OR ${OLD_DS_3DS_LOOPY_SUPPORT} OR ${USE_LIBFTDI_FOR_NEW_DS_LOOPY})
+set(USE_LIBUSB_SUPPORT ${IS_DEVICES_SUPPORT} OR ${OLD_DS_3DS_LOOPY_SUPPORT} OR ${USE_LIBFTDI_FOR_NEW_DS_LOOPY} OR ${CYPRESS_NISETRO_SUPPORT})
 if(NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Windows"))
 	#Performance outside of Windows is very bad for the official drivers...
 	set(USE_FTD2XX_FOR_NEW_DS_LOOPY 0)
@@ -293,6 +294,7 @@ set(EXTRA_DEPENDENCIES "")
 set(SOURCE_CPP_DEVICE_FILES_BASE_PATH "source/CaptureDeviceSpecific")
 set(SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH "${SOURCE_CPP_DEVICE_FILES_BASE_PATH}/ISDevices")
 set(SOURCE_CPP_FTD2_FILES_BASE_PATH "${SOURCE_CPP_DEVICE_FILES_BASE_PATH}/DSCapture_FTD2")
+set(SOURCE_CPP_CYPRESS_NISETRO_DEVICES_FILES_BASE_PATH "${SOURCE_CPP_DEVICE_FILES_BASE_PATH}/Nisetro")
 if(N3DSXL_LOOPY_SUPPORT)
 	list(APPEND FETCH_CONTENT_MAKE_AVAILABLE_LIBRARIES FTD3XX)
 	list(APPEND SOURCE_CPP_EXTRA_FILES ${SOURCE_CPP_DEVICE_FILES_BASE_PATH}/3dscapture_ftd3.cpp)
@@ -326,6 +328,14 @@ if(OLD_DS_3DS_LOOPY_SUPPORT)
 		list(APPEND EXTRA_CXX_FLAGS "/DUSE_DS_3DS_USB")
 	else()
 		list(APPEND EXTRA_CXX_FLAGS "-DUSE_DS_3DS_USB")
+	endif()
+endif()
+if(CYPRESS_NISETRO_SUPPORT)
+	list(APPEND SOURCE_CPP_EXTRA_FILES ${SOURCE_CPP_CYPRESS_NISETRO_DEVICES_FILES_BASE_PATH}/cypress_nisetro_driver_comms.cpp ${SOURCE_CPP_CYPRESS_NISETRO_DEVICES_FILES_BASE_PATH}/cypress_nisetro_libusb_comms.cpp ${SOURCE_CPP_CYPRESS_NISETRO_DEVICES_FILES_BASE_PATH}/cypress_nisetro_communications.cpp ${SOURCE_CPP_CYPRESS_NISETRO_DEVICES_FILES_BASE_PATH}/cypress_nisetro_acquisition.cpp ${TOOLS_DATA_DIR}/nisetro_ds_fw.cpp)
+	if(MSVC)
+		list(APPEND EXTRA_CXX_FLAGS "/DUSE_CYNI_USB")
+	else()
+		list(APPEND EXTRA_CXX_FLAGS "-DUSE_CYNI_USB")
 	endif()
 endif()
 if(NEW_DS_LOOPY_SUPPORT)
@@ -475,9 +485,9 @@ execute_process(COMMAND ${CMAKE_COMMAND} --build ${TOOLS_DATA_DIR})
 set(OUTPUT_NAME cc3dsfs)
 
 if(MSVC)
-	set_source_files_properties(source/conversions.cpp PROPERTIES COMPILE_OPTIONS "/O2")
+	set_source_files_properties(source/conversions.cpp PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:Release>:/O2>")
 else()
-	set_source_files_properties(source/conversions.cpp PROPERTIES COMPILE_OPTIONS "-O3")
+	set_source_files_properties(source/conversions.cpp PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:Release>:-O3>")
 endif()
 add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp source/Menus/ScalingRatioMenu.cpp source/Menus/ISNitroMenu.cpp source/Menus/VideoEffectsMenu.cpp source/CaptureDataBuffers.cpp source/Menus/InputMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp ${TOOLS_DATA_DIR}/shaders_list.cpp ${SOURCE_CPP_EXTRA_FILES})
 
@@ -498,7 +508,7 @@ endif()
 if(USE_FTD2XX_FOR_NEW_DS_LOOPY)
 	target_link_libraries(${OUTPUT_NAME} PRIVATE ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER}/${FTD2XX_LIB})
 endif()
-target_include_directories(${OUTPUT_NAME} PRIVATE ${EXTRA_INCLUDE_DIRECTORIES} ${TOOLS_DATA_DIR} ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/include/Menus ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/ISDevices ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/DSCapture_FTD2 ${libftdi1_SOURCE_DIR}/src)
+target_include_directories(${OUTPUT_NAME} PRIVATE ${EXTRA_INCLUDE_DIRECTORIES} ${TOOLS_DATA_DIR} ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/include/Menus ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/ISDevices ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/Nisetro ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/DSCapture_FTD2 ${libftdi1_SOURCE_DIR}/src)
 target_compile_features(${OUTPUT_NAME} PRIVATE cxx_std_20)
 target_compile_options(${OUTPUT_NAME} PRIVATE ${EXTRA_CXX_FLAGS})
 
@@ -535,6 +545,13 @@ add_custom_command(
 	COMMENT "Convert fw binary to C - FTD2 NDS 2"
 	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/ftd2_ds2_fw_2.bin ${TOOLS_DATA_DIR} ftd2_ds2_fw_2 ftd2_ds2_fw_2
 	DEPENDS ${CMAKE_SOURCE_DIR}/bin/ftd2_ds2_fw_2.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
+)
+
+add_custom_command(
+	OUTPUT ${TOOLS_DATA_DIR}/nisetro_ds_fw.cpp
+	COMMENT "Convert fw binary to C - Nisetro DS"
+	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/nisetro_ds_fw.bin ${TOOLS_DATA_DIR} nisetro_ds_fw nisetro_ds_fw
+	DEPENDS ${CMAKE_SOURCE_DIR}/bin/nisetro_ds_fw.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
 )
 
 set(SHADERS_LIST "")
@@ -606,6 +623,7 @@ else()
 	install(FILES ${USB_RULES_DIR}/51-istwl.rules DESTINATION .)
 	install(FILES ${USB_RULES_DIR}/50-ftd2xx.rules DESTINATION .)
 	install(FILES ${USB_RULES_DIR}/51-ftd2xx.rules DESTINATION .)
+	install(FILES ${USB_RULES_DIR}/51-nisetro.rules DESTINATION .)
 	install(FILES ${SETUP_SCRIPTS_DIR}/install_usb_rules${SCRIPT_EXTENSION} DESTINATION .)
 endif()
 
