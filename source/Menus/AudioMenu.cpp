@@ -1,5 +1,7 @@
 #include "AudioMenu.hpp"
 
+#include "SFML/Audio/PlaybackDevice.hpp"
+
 #define NUM_TOTAL_MENU_OPTIONS (sizeof(pollable_options)/sizeof(pollable_options[0]))
 
 struct AudioMenuOptionInfo {
@@ -37,12 +39,19 @@ static const AudioMenuOptionInfo audio_restart_option = {
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = AUDIO_MENU_NO_ACTION,
 .out_action = AUDIO_MENU_RESTART};
 
+static const AudioMenuOptionInfo audio_next_device_option = {
+.base_name = "Output Device", .false_name = "",
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = AUDIO_MENU_NO_ACTION,
+.out_action = AUDIO_MENU_NEXT_DEVICE};
+
+
 static const AudioMenuOptionInfo* pollable_options[] = {
 &audio_volume_option,
 &audio_mute_option,
 &audio_max_latency_option,
 &audio_output_type_option,
 &audio_restart_option,
+&audio_next_device_option,
 };
 
 AudioMenu::AudioMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
@@ -134,6 +143,11 @@ void AudioMenu::prepare(float menu_scaling_factor, int view_size_x, int view_siz
 				break;
 			case AUDIO_MENU_MUTE:
 				this->labels[index]->setText(this->setTextOptionBool(real_index, audio_data->get_mute()));
+				break;
+			case AUDIO_MENU_NEXT_DEVICE:
+				if (std::optional<std::string> cur_dev = sf::PlaybackDevice::getDevice()) {
+					this->labels[index]->setText(this->setTextOptionString(real_index, *cur_dev));
+				}
 				break;
 			default:
 				break;
