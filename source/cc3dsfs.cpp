@@ -43,6 +43,7 @@ struct override_all_data {
 	int volume = DEFAULT_NO_VOLUME_VALUE;
 	bool always_prevent_mouse_showing = false;
 	bool auto_connect_to_first = false;
+	bool auto_close = false;
 	int loaded_profile = STARTUP_FILE_INDEX;
 	bool mono_app = false;
 	bool recovery_mode = false;
@@ -470,7 +471,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	std::thread joint_thread(screen_display_thread, joint_screen);
 
 	capture_data->status.connected = connect(true, capture_data, &frontend_data, override_data.auto_connect_to_first);
-	if(override_data.quit_on_first_connection_failure && (!capture_data->status.connected)) {
+	if((override_data.quit_on_first_connection_failure || override_data.auto_close) && (!capture_data->status.connected)) {
 		capture_data->status.running = false;
 		ret_val = -3;
 	}
@@ -569,6 +570,10 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		check_close_application(top_screen, capture_data, ret_val);
 		check_close_application(bot_screen, capture_data, ret_val);
 		check_close_application(joint_screen, capture_data, ret_val);
+		if(override_data.auto_close && (!capture_data->status.connected)) {
+			capture_data->status.running = false;
+			ret_val = -4;
+		}
 		
 		if((load_index = top_screen->load_data()) || (load_index = bot_screen->load_data()) || (load_index = joint_screen->load_data())) {
 			// This value should only be loaded when starting the program...
@@ -716,6 +721,8 @@ int main(int argc, char **argv) {
 			continue;
 		if(parse_existence_arg(i, argv, override_data.auto_connect_to_first, true, "--auto_connect"))
 			continue;
+		if(parse_existence_arg(i, argv, override_data.auto_close, true, "--auto_close"))
+			continue;
 		if(parse_existence_arg(i, argv, override_data.quit_on_first_connection_failure, true, "--failure_close"))
 			continue;
 		if(parse_int_arg(i, argc, argv, override_data.loaded_profile, "--profile"))
@@ -758,6 +765,7 @@ int main(int argc, char **argv) {
 		std::cout << "                   even if multiple are present." << std::endl;
 		std::cout << "  --failure_close  Automatically closes the software if the first connection" << std::endl;
 		std::cout << "                   doesn't succeed." << std::endl;
+		std::cout << "  --failure_close  Automatically closes the software on disconnect." << std::endl;
 		std::cout << "  --profile        Loads the profile with the specified ID at startup" << std::endl;
 		std::cout << "                   instead of the default one. When the program closes," << std::endl;
 		std::cout << "                   the data is also saved to the specified profile." << std::endl;
