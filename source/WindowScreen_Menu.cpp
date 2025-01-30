@@ -1,4 +1,7 @@
+#include <iostream>
+
 #include "frontend.hpp"
+#include "SFML/Audio/PlaybackDevice.hpp"
 
 #define FPS_WINDOW_SIZE 64
 
@@ -1370,6 +1373,25 @@ void WindowScreen::poll(bool do_everything) {
 							break;
 						case AUDIO_MENU_RESTART:
 							this->audio_data->request_audio_restart();
+							break;
+						case AUDIO_MENU_NEXT_DEVICE:
+							if (std::optional<std::string> cur_dev = sf::PlaybackDevice::getDevice()) {
+								std::cout << *cur_dev << std::endl;
+								int idx = 0;
+								auto audio_devices =  sf::PlaybackDevice::getAvailableDevices();
+								for (const std::string& device : audio_devices) {
+									if (device == *cur_dev) {
+										break;
+									}
+									idx++;
+								}
+								idx = std::max((idx + 1) % static_cast<int>(audio_devices.size()), 0);
+								std::cout << "next device: " << audio_devices.at(idx)  << std::endl;
+								if (sf::PlaybackDevice::setDevice(audio_devices.at(idx))) {
+									std::cout << "Device selected: " << audio_devices.at(idx) << std::endl;
+									// this->audio_data->request_audio_restart();
+								}
+							}
 							break;
 						default:
 							break;
