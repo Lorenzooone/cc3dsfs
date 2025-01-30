@@ -30,6 +30,31 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Restore file modification times
+      if: runner.os == 'Windows'
+      run: |
+        git ls-tree -r --name-only HEAD | while read filename; do
+          commit_date=$(git log -1 --follow --format=%ci -- "$filename")
+          timestamp=$(date -d "$commit_date" +'%Y%m%d%H%M.%S')
+          touch -t "$timestamp" "$filename"
+          mod_time=$(stat -c %y "$filename")
+          echo "File: $filename | Git timestamp: $timestamp | File mtime: $mod_time"
+        done
+      shell: bash
+
+    - name: Cache build folders
+      id: build-cache
+      if: runner.os == 'Windows'
+      uses: actions/cache@v4
+      with:
+        path: |
+          build
+        key: ${{ runner.os }}-${{ matrix.platform.artifact_name }}-build-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.platform.artifact_name }}-build-
 
     - name: Configure
       if: runner.os != 'Linux'
