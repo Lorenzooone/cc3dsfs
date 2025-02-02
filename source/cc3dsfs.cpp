@@ -27,6 +27,7 @@
 
 #define LOW_POLL_DIVISOR 6
 #define NO_DATA_CONSECUTIVE_THRESHOLD 4
+#define TIME_AUDIO_DEVICE_CHECK 0.1
 
 struct OutTextData {
 	std::string full_text;
@@ -339,68 +340,7 @@ static bool setDefaultAudioDevice(Audio &audio) {
 	return success;
 }
 
-static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
-	std::int16_t (*out_buf)[MAX_SAMPLES_IN] = new std::int16_t[NUM_CONCURRENT_AUDIO_BUFFERS][MAX_SAMPLES_IN];
-	Audio audio(audio_data);
-	int audio_buf_counter = 0;
-	const bool endianness = is_big_endian();
-	volatile int loaded_samples;
-	audio_output_device_data in_use_audio_output_device_data;
-	std::optional<std::string> curr_device = sf::PlaybackDevice::getDevice();
-
-	while(capture_data->status.running) {
-		if(capture_data->status.connected && capture_data->status.device.has_audio) {
-			bool timed_out = !capture_data->status.audio_wait.timed_lock();
-
-			if(!capture_data->status.cooldown_curr_in) {
-				CaptureDataSingleBuffer* data_buffer = capture_data->data_buffers.GetReaderBuffer(CAPTURE_READER_AUDIO);
-				if(data_buffer != NULL) {
-					loaded_samples = audio.samples.size();
-					if((data_buffer->read > get_video_in_size(capture_data)) && (loaded_samples < MAX_MAX_AUDIO_LATENCY)) {
-						uint64_t n_samples = get_audio_n_samples(capture_data, data_buffer->read);
-						double out_time = data_buffer->time_in_buf;
-						bool conversion_success = convertAudioToOutput(out_buf[audio_buf_counter], n_samples, endianness, data_buffer, &capture_data->status);
-						if(!conversion_success)
-							audio_data->signal_conversion_error();
-						audio.samples.emplace(out_buf[audio_buf_counter], n_samples, out_time);
-						if(++audio_buf_counter >= NUM_CONCURRENT_AUDIO_BUFFERS)
-							audio_buf_counter = 0;
-						audio.samples_wait.unlock();
-					}
-					capture_data->data_buffers.ReleaseReaderBuffer(CAPTURE_READER_AUDIO);
-				}
-			}
-
-			loaded_samples = audio.samples.size();
-			if(audio.getStatus() != sf::SoundStream::Status::Playing) {
-				audio.stop_audio();
-				if(loaded_samples > 0) {
-					bool do_restart = audio.restart;
-					executeSoundRestart(audio, audio_data, do_restart);
-					if(do_restart) {
-						in_use_audio_output_device_data.preference_requested = false;
-						curr_device = sf::PlaybackDevice::getDevice();
-					}
-				}
-			}
-			else {
-				if(loaded_samples > 0) {
-					if(audio.hasTooMuchTimeElapsed()) {
-						audio.stop_audio();
-						executeSoundRestart(audio, audio_data, true);
-						in_use_audio_output_device_data.preference_requested = false;
-						curr_device = sf::PlaybackDevice::getDevice();
-					}
-				}
-				audio.update_volume();
-			}
-		}
-		else {
-			audio.stop_audio();
-			audio.stop();
-			default_sleep();
-		}
-
+static void handleAudioDeviceChanges(Audio &audio, AudioData *audio_data, std::optional<std::string> &curr_device, audio_output_device_data &in_use_audio_output_device_data) {
 		// Code for audio device selection
 		audio_output_device_data new_audio_output_device_data = audio_data->get_audio_output_device_data();
 		if((new_audio_output_device_data.preference_requested != in_use_audio_output_device_data.preference_requested) || (new_audio_output_device_data.preference_requested && (new_audio_output_device_data.preferred != in_use_audio_output_device_data.preferred))) {
@@ -437,6 +377,79 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 				if(success)
 					curr_device = sf::PlaybackDevice::getDevice();
 			}
+		}
+}
+
+static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
+	std::int16_t (*out_buf)[MAX_SAMPLES_IN] = new std::int16_t[NUM_CONCURRENT_AUDIO_BUFFERS][MAX_SAMPLES_IN];
+	Audio audio(audio_data);
+	int audio_buf_counter = 0;
+	const bool endianness = is_big_endian();
+	volatile int loaded_samples;
+	audio_output_device_data in_use_audio_output_device_data;
+	std::optional<std::string> curr_device = sf::PlaybackDevice::getDevice();
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_device_check_time = std::chrono::high_resolution_clock::now();
+
+	while(capture_data->status.running) {
+		if(capture_data->status.connected && capture_data->status.device.has_audio) {
+			bool timed_out = !capture_data->status.audio_wait.timed_lock();
+
+			if(!capture_data->status.cooldown_curr_in) {
+				CaptureDataSingleBuffer* data_buffer = capture_data->data_buffers.GetReaderBuffer(CAPTURE_READER_AUDIO);
+				if(data_buffer != NULL) {
+					loaded_samples = audio.samples.size();
+					if((data_buffer->read > get_video_in_size(capture_data)) && (loaded_samples < MAX_MAX_AUDIO_LATENCY)) {
+						uint64_t n_samples = get_audio_n_samples(capture_data, data_buffer->read);
+						double out_time = data_buffer->time_in_buf;
+						bool conversion_success = convertAudioToOutput(out_buf[audio_buf_counter], n_samples, endianness, data_buffer, &capture_data->status);
+						if(!conversion_success)
+							audio_data->signal_conversion_error();
+						audio.samples.emplace(out_buf[audio_buf_counter], n_samples, out_time);
+						if(++audio_buf_counter >= NUM_CONCURRENT_AUDIO_BUFFERS)
+							audio_buf_counter = 0;
+						audio.samples_wait.unlock();
+					}
+					capture_data->data_buffers.ReleaseReaderBuffer(CAPTURE_READER_AUDIO);
+				}
+			}
+
+			loaded_samples = audio.samples.size();
+			if(audio.getStatus() != sf::SoundStream::Status::Playing) {
+				audio.stop_audio();
+				if(loaded_samples > 0) {
+					bool do_restart = audio.restart;
+					executeSoundRestart(audio, audio_data, do_restart);
+					if(do_restart) {
+						in_use_audio_output_device_data.preference_requested = false;
+						curr_device = sf::PlaybackDevice::getDevice();
+						last_device_check_time = std::chrono::high_resolution_clock::now();
+					}
+				}
+			}
+			else {
+				if(loaded_samples > 0) {
+					if(audio.hasTooMuchTimeElapsed()) {
+						audio.stop_audio();
+						executeSoundRestart(audio, audio_data, true);
+						in_use_audio_output_device_data.preference_requested = false;
+						curr_device = sf::PlaybackDevice::getDevice();
+						last_device_check_time = std::chrono::high_resolution_clock::now();
+					}
+				}
+				audio.update_volume();
+			}
+		}
+		else {
+			audio.stop_audio();
+			audio.stop();
+			default_sleep();
+		}
+		
+		auto curr_time = std::chrono::high_resolution_clock::now();
+		const std::chrono::duration<double> diff = curr_time - last_device_check_time;
+		if(diff.count() >= TIME_AUDIO_DEVICE_CHECK) {
+			last_device_check_time = curr_time;
+			handleAudioDeviceChanges(audio, audio_data, curr_device, in_use_audio_output_device_data);
 		}
 	}
 
