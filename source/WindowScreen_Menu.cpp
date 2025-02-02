@@ -115,6 +115,7 @@ void WindowScreen::init_menus() {
 	this->is_nitro_menu = new ISNitroMenu(this->font_load_success, this->text_font);
 	this->video_effects_menu = new VideoEffectsMenu(this->font_load_success, this->text_font);
 	this->input_menu = new InputMenu(this->font_load_success, this->text_font);
+	this->audio_device_menu = new AudioDeviceMenu(this->font_load_success, this->text_font);
 }
 
 void WindowScreen::destroy_menus() {
@@ -139,6 +140,7 @@ void WindowScreen::destroy_menus() {
 	delete this->is_nitro_menu;
 	delete this->video_effects_menu;
 	delete this->input_menu;
+	delete this->audio_device_menu;
 }
 
 void WindowScreen::set_close(int ret_val) {
@@ -287,6 +289,11 @@ void WindowScreen::offset_change(float &value, float change) {
 		close_slice = 0.0;
 	value = close_slice;
 	this->future_operations.call_screen_settings_update = true;
+}
+
+void WindowScreen::audio_device_change(audio_output_device_data new_device_data) {
+	this->audio_data->set_audio_output_device_data(new_device_data);
+	this->print_notification("Audio device changed");
 }
 
 void WindowScreen::menu_scaling_change(bool positive) {
@@ -690,6 +697,20 @@ void WindowScreen::setup_input_menu(bool reset_data) {
 		if(reset_data)
 			this->input_menu->reset_data();
 		this->input_menu->insert_data(is_shortcut_valid(), are_extra_buttons_usable());
+		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
+	}
+}
+
+void WindowScreen::setup_audio_devices_menu(bool reset_data){
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != AUDIO_DEVICE_MENU_TYPE) {
+		this->possible_audio_devices.clear();
+		this->possible_audio_devices = sf::PlaybackDevice::getAvailableDevices();
+		this->curr_menu = AUDIO_DEVICE_MENU_TYPE;
+		if(reset_data)
+			this->audio_device_menu->reset_data();
+		this->audio_device_menu->insert_data(&this->possible_audio_devices);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
 }
@@ -1374,24 +1395,9 @@ void WindowScreen::poll(bool do_everything) {
 						case AUDIO_MENU_RESTART:
 							this->audio_data->request_audio_restart();
 							break;
-						case AUDIO_MENU_NEXT_DEVICE:
-							if (std::optional<std::string> cur_dev = sf::PlaybackDevice::getDevice()) {
-								std::cout << *cur_dev << std::endl;
-								int idx = 0;
-								auto audio_devices =  sf::PlaybackDevice::getAvailableDevices();
-								for (const std::string& device : audio_devices) {
-									if (device == *cur_dev) {
-										break;
-									}
-									idx++;
-								}
-								idx = std::max((idx + 1) % static_cast<int>(audio_devices.size()), 0);
-								std::cout << "next device: " << audio_devices.at(idx)  << std::endl;
-								if (sf::PlaybackDevice::setDevice(audio_devices.at(idx))) {
-									std::cout << "Device selected: " << audio_devices.at(idx) << std::endl;
-									// this->audio_data->request_audio_restart();
-								}
-							}
+						case AUDIO_MENU_CHANGE_DEVICE:
+							this->setup_audio_devices_menu();
+							done = true;
 							break;
 						default:
 							break;
@@ -1984,6 +1990,29 @@ void WindowScreen::poll(bool do_everything) {
 					continue;
 				}
 				break;
+			case AUDIO_DEVICE_MENU_TYPE:
+				if(this->audio_device_menu->poll(event_data)) {
+					switch(this->audio_device_menu->selected_index) {
+						case AUDIODEVICE_MENU_BACK:
+							this->setup_audio_menu(false);
+							done = true;
+							break;
+						case AUDIODEVICE_MENU_NO_ACTION:
+							break;
+						default:
+							audio_output_device_data tmp_out_device;
+							int output_device_index = this->audio_device_menu->selected_index - 1;
+							if((output_device_index >= 0) && (output_device_index < this->possible_audio_devices.size())) {
+								tmp_out_device.preference_requested = true;
+								tmp_out_device.preferred = this->possible_audio_devices[output_device_index];
+							}
+							this->audio_device_change(tmp_out_device);
+							break;
+					}
+					this->audio_device_menu->reset_output_option();
+					continue;
+				}
+				break;
 			default:
 				break;
 		}
@@ -2257,6 +2286,9 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 		case INPUT_MENU_TYPE:
 			this->input_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->shared_data->input_data);
 			break;
+		case AUDIO_DEVICE_MENU_TYPE:
+			this->audio_device_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->audio_data->get_audio_output_device_data());
+			break;
 		default:
 			break;
 	}
@@ -2332,6 +2364,9 @@ void WindowScreen::execute_menu_draws() {
 			break;
 		case INPUT_MENU_TYPE:
 			this->input_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case AUDIO_DEVICE_MENU_TYPE:
+			this->audio_device_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

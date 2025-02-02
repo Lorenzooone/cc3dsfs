@@ -19,7 +19,7 @@ enum AudioMenuOutAction{
 	AUDIO_MENU_OUTPUT_DEC,
 	AUDIO_MENU_OUTPUT_INC,
 	AUDIO_MENU_RESTART,
-	AUDIO_MENU_NEXT_DEVICE,
+	AUDIO_MENU_CHANGE_DEVICE,
 };
 
 class AudioMenu : public OptionSelectionMenu {

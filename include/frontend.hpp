@@ -33,6 +33,7 @@
 #include "ISNitroMenu.hpp"
 #include "VideoEffectsMenu.hpp"
 #include "InputMenu.hpp"
+#include "AudioDeviceMenu.hpp"
 #include "display_structs.hpp"
 #include "event_structs.hpp"
 #include "shaders_list.hpp"
@@ -153,12 +154,14 @@ private:
 	ScalingRatioMenu *scaling_ratio_menu;
 	VideoEffectsMenu *video_effects_menu;
 	InputMenu *input_menu;
+	AudioDeviceMenu *audio_device_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const CropData*> possible_crops_ds;
 	std::vector<const CropData*> possible_crops_with_games;
 	std::vector<const CropData*> possible_crops_ds_with_games;
 	std::vector<const PARData*> possible_pars;
 	std::vector<sf::VideoMode> possible_resolutions;
+	std::vector<std::string> possible_audio_devices;
 	std::vector<FileData> possible_files;
 	std::vector<std::string> possible_buttons_names;
 	std::vector<const WindowCommand **> possible_buttons_ptrs;
@@ -226,6 +229,7 @@ private:
 	void fast_poll_change();
 	void padding_change();
 	void game_crop_enable_change();
+	void audio_device_change(audio_output_device_data new_device_data);
 	void is_nitro_capture_type_change(bool positive);
 	void is_nitro_capture_speed_change(bool positive);
 	void is_nitro_capture_reset_hw();
@@ -299,6 +303,7 @@ private:
 	void setup_bfi_menu(bool reset_data = true);
 	void setup_fileconfig_menu(bool is_save, bool reset_data = true, bool skip_setup_check = false);
 	void setup_resolution_menu(bool reset_data = true);
+	void setup_audio_devices_menu(bool reset_data = true);
 	void setup_extra_menu(bool reset_data = true);
 	void setup_shortcuts_menu(bool reset_data = true);
 	void setup_action_selection_menu(bool reset_data = true);

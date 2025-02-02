@@ -2,9 +2,17 @@
 #define __AUDIO_DATA_HPP
 
 #include <string>
+#include <vector>
 #define MAX_MAX_AUDIO_LATENCY 10
 
 enum AudioOutputType {AUDIO_OUTPUT_STEREO, AUDIO_OUTPUT_MONO, AUDIO_OUTPUT_END};
+
+struct audio_output_device_data {
+	bool preference_requested = false;
+	std::string preferred = "";
+};
+
+int searchAudioDevice(std::string device_name, std::vector<std::string> &audio_devices);
 
 class AudioData {
 public:
@@ -27,12 +35,15 @@ public:
 	bool load_audio_data(std::string key, std::string value);
 	std::string save_audio_data();
 	void set_audio_volume(int new_volume);
+	audio_output_device_data get_audio_output_device_data();
+	void set_audio_output_device_data(audio_output_device_data new_device_data);
 
 private:
 	int volume;
 	int max_audio_latency;
 	bool mute;
 	AudioOutputType output_type;
+	audio_output_device_data output_device;
 	bool restart_request = false;
 	bool text_updated;
 	std::string text;
@@ -44,6 +55,8 @@ private:
 	const std::string volume_str = "volume";
 	const std::string mute_str = "mute";
 	const std::string output_type_str = "audio_output_type";
+	const std::string device_request_str = "audio_output_device_requested";
+	const std::string device_name_str = "audio_output_device_name";
 };
 
 #endif

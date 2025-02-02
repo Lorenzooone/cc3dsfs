@@ -328,12 +328,25 @@ static void executeSoundRestart(Audio &audio, AudioData* audio_data, bool do_res
 	audio.play();
 }
 
+static bool setDefaultAudioDevice(Audio &audio) {
+	bool success = false;
+	std::optional<std::string> default_device = sf::PlaybackDevice::getDefaultDevice();
+	if(default_device) {
+		audio.stop_audio();
+		audio.stop();
+		success = sf::PlaybackDevice::setDevice(default_device.value());
+	}
+	return success;
+}
+
 static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 	std::int16_t (*out_buf)[MAX_SAMPLES_IN] = new std::int16_t[NUM_CONCURRENT_AUDIO_BUFFERS][MAX_SAMPLES_IN];
 	Audio audio(audio_data);
 	int audio_buf_counter = 0;
 	const bool endianness = is_big_endian();
 	volatile int loaded_samples;
+	audio_output_device_data in_use_audio_output_device_data;
+	std::optional<std::string> curr_device = sf::PlaybackDevice::getDevice();
 
 	while(capture_data->status.running) {
 		if(capture_data->status.connected && capture_data->status.device.has_audio) {
@@ -361,14 +374,22 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 			loaded_samples = audio.samples.size();
 			if(audio.getStatus() != sf::SoundStream::Status::Playing) {
 				audio.stop_audio();
-				if(loaded_samples > 0) 
-					executeSoundRestart(audio, audio_data, audio.restart);
+				if(loaded_samples > 0) {
+					bool do_restart = audio.restart;
+					executeSoundRestart(audio, audio_data, do_restart);
+					if(do_restart) {
+						in_use_audio_output_device_data.preference_requested = false;
+						curr_device = sf::PlaybackDevice::getDevice();
+					}
+				}
 			}
 			else {
 				if(loaded_samples > 0) {
 					if(audio.hasTooMuchTimeElapsed()) {
 						audio.stop_audio();
 						executeSoundRestart(audio, audio_data, true);
+						in_use_audio_output_device_data.preference_requested = false;
+						curr_device = sf::PlaybackDevice::getDevice();
 					}
 				}
 				audio.update_volume();
@@ -378,6 +399,44 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 			audio.stop_audio();
 			audio.stop();
 			default_sleep();
+		}
+
+		// Code for audio device selection
+		audio_output_device_data new_audio_output_device_data = audio_data->get_audio_output_device_data();
+		if((new_audio_output_device_data.preference_requested != in_use_audio_output_device_data.preference_requested) || (new_audio_output_device_data.preference_requested && (new_audio_output_device_data.preferred != in_use_audio_output_device_data.preferred))) {
+			int index = -1;
+			bool success = false;
+			if(new_audio_output_device_data.preference_requested) {
+				std::vector<std::string> audio_devices =  sf::PlaybackDevice::getAvailableDevices();
+				index = searchAudioDevice(new_audio_output_device_data.preferred, audio_devices);
+				if(index != -1) {
+					audio.stop_audio();
+					audio.stop();
+					success = sf::PlaybackDevice::setDevice(audio_devices[index]);
+				}
+			}
+			if(index == -1)
+				success = setDefaultAudioDevice(audio);
+			if(success)
+				curr_device = sf::PlaybackDevice::getDevice();
+		}
+		in_use_audio_output_device_data = new_audio_output_device_data;
+		if(!in_use_audio_output_device_data.preference_requested) {
+			std::optional<std::string> default_device = sf::PlaybackDevice::getDefaultDevice();
+			if(default_device != curr_device) {
+				bool success = setDefaultAudioDevice(audio);
+				if(success)
+					curr_device = sf::PlaybackDevice::getDevice();
+			}
+		}
+		else if(curr_device) {
+			std::vector<std::string> audio_devices =  sf::PlaybackDevice::getAvailableDevices();
+			int index = searchAudioDevice(curr_device.value(), audio_devices);
+			if(index == -1) {
+				bool success = setDefaultAudioDevice(audio);
+				if(success)
+					curr_device = sf::PlaybackDevice::getDevice();
+			}
 		}
 	}
 
@@ -765,7 +824,7 @@ int main(int argc, char **argv) {
 		std::cout << "                   even if multiple are present." << std::endl;
 		std::cout << "  --failure_close  Automatically closes the software if the first connection" << std::endl;
 		std::cout << "                   doesn't succeed." << std::endl;
-		std::cout << "  --failure_close  Automatically closes the software on disconnect." << std::endl;
+		std::cout << "  --auto_close  Automatically closes the software on disconnect." << std::endl;
 		std::cout << "  --profile        Loads the profile with the specified ID at startup" << std::endl;
 		std::cout << "                   instead of the default one. When the program closes," << std::endl;
 		std::cout << "                   the data is also saved to the specified profile." << std::endl;

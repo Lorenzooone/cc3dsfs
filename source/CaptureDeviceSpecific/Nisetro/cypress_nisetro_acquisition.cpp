@@ -262,6 +262,8 @@ static void cypress_device_read_frame_cb(void* user_data, int transfer_length, i
 	if((*cypress_device_capture_recv_data->consecutive_output_to_thread) > NUM_CONSECUTIVE_NEEDED_OUTPUT)
 		*cypress_device_capture_recv_data->errors_since_last_output = 0;
 	*cypress_device_capture_recv_data->last_index = cypress_device_capture_recv_data->index;
+
+	// Realign, with multiple of max_usb_packet_size
 	if((*cypress_device_capture_recv_data->is_active_special_read) && (((int32_t)(cypress_device_capture_recv_data->index - (*cypress_device_capture_recv_data->active_special_read_index))) >= 0)) {
 		*cypress_device_capture_recv_data->is_active_special_read = false;
 		return end_cypress_device_read_frame_cb(cypress_device_capture_recv_data);
@@ -394,6 +396,12 @@ void reset_cypress_device_status(CypressDeviceCaptureReceivedData* cypress_devic
 }
 
 void recalibration_reads(cyni_device_device_handlers* handlers, const cyni_device_usb_device* usb_device_desc, CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data, CypressDeviceCaptureReceivedData* chosen_buffer, uint32_t &index, CaptureScreensType curr_capture_type) {
+	// Enforce properly synchronized reads.
+	// Reduces complexity and latency, at the cost of some extra
+	// time between lid reopening and visible video output.
+	// For differences which are multiple of max_usb_packet_size,
+	// regular reads can be used. For non-multiples, use this,
+	// which adds sleeps to better align.
 	CaptureData* capture_data = cypress_device_capture_recv_data[0].capture_data;
 	do {
 		if(get_cypress_device_status(cypress_device_capture_recv_data) < 0)

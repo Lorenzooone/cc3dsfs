@@ -1,5 +1,15 @@
 #include "audio_data.hpp"
 
+int searchAudioDevice(std::string device_name, std::vector<std::string> &audio_devices) {
+	int index = -1;
+	for(int i = 0; i < audio_devices.size(); i++)
+		if(audio_devices[i] == device_name) {
+			index = i;
+			break;
+		}
+	return index;
+}
+
 void AudioData::reset() {
 	this->volume = 100;
 	this->mute = false;
@@ -7,6 +17,8 @@ void AudioData::reset() {
 	this->output_type = AUDIO_OUTPUT_STEREO;
 	this->restart_request = false;
 	this->text_updated = false;
+	this->output_device.preference_requested = false;
+	this->output_device.preferred = "";
 }
 
 void AudioData::change_max_audio_latency(bool is_change_positive) {
@@ -75,6 +87,19 @@ bool AudioData::has_text_to_print() {
 	if(retval)
 		this->text_updated = false;
 	return retval;
+}
+
+void AudioData::set_audio_output_device_data(audio_output_device_data new_device_data) {
+	bool had_preference = this->output_device.preference_requested;
+	if(had_preference)
+		this->output_device.preference_requested = new_device_data.preference_requested;
+	this->output_device.preferred = new_device_data.preferred;
+	if(!had_preference)
+		this->output_device.preference_requested = new_device_data.preference_requested;
+}
+
+audio_output_device_data AudioData::get_audio_output_device_data() {
+	return this->output_device;
 }
 
 std::string AudioData::text_to_print() {
@@ -147,6 +172,14 @@ bool AudioData::load_audio_data(std::string key, std::string value) {
 		this->set_audio_output_type(std::stoi(value));
 		return true;
 	}
+	if (key == this->device_request_str) {
+		this->output_device.preference_requested = std::stoi(value);
+		return true;
+	}
+	if (key == this->device_name_str) {
+		this->output_device.preferred = value;
+		return true;
+	}
 	return false;
 }
 
@@ -156,6 +189,8 @@ std::string AudioData::save_audio_data() {
 	out_str += this->volume_str + "=" + std::to_string(this->volume) + "\n";
 	out_str += this->max_audio_latency_str + "=" + std::to_string(this->max_audio_latency) + "\n";
 	out_str += this->output_type_str + "=" + std::to_string(this->output_type) + "\n";
+	out_str += this->device_request_str + "=" + std::to_string(this->output_device.preference_requested) + "\n";
+	out_str += this->device_name_str + "=" + this->output_device.preferred + "\n";
 	return out_str;
 }
 
