@@ -342,41 +342,24 @@ static bool setDefaultAudioDevice(Audio &audio) {
 
 static void handleAudioDeviceChanges(Audio &audio, AudioData *audio_data, std::optional<std::string> &curr_device, audio_output_device_data &in_use_audio_output_device_data) {
 		// Code for audio device selection
-		audio_output_device_data new_audio_output_device_data = audio_data->get_audio_output_device_data();
-		if((new_audio_output_device_data.preference_requested != in_use_audio_output_device_data.preference_requested) || (new_audio_output_device_data.preference_requested && (new_audio_output_device_data.preferred != in_use_audio_output_device_data.preferred))) {
-			int index = -1;
-			bool success = false;
-			if(new_audio_output_device_data.preference_requested) {
-				std::vector<std::string> audio_devices =  sf::PlaybackDevice::getAvailableDevices();
-				index = searchAudioDevice(new_audio_output_device_data.preferred, audio_devices);
-				if(index != -1) {
-					audio.stop_audio();
-					audio.stop();
-					success = sf::PlaybackDevice::setDevice(audio_devices[index]);
-				}
-			}
-			if(index == -1)
-				success = setDefaultAudioDevice(audio);
-			if(success)
-				curr_device = sf::PlaybackDevice::getDevice();
-		}
-		in_use_audio_output_device_data = new_audio_output_device_data;
-		if(!in_use_audio_output_device_data.preference_requested) {
-			std::optional<std::string> default_device = sf::PlaybackDevice::getDefaultDevice();
-			if(default_device != curr_device) {
-				bool success = setDefaultAudioDevice(audio);
-				if(success)
-					curr_device = sf::PlaybackDevice::getDevice();
-			}
-		}
-		else if(curr_device) {
+		in_use_audio_output_device_data = audio_data->get_audio_output_device_data();
+		int index = -1;
+		bool success = false;
+		if(in_use_audio_output_device_data.preference_requested) {
 			std::vector<std::string> audio_devices =  sf::PlaybackDevice::getAvailableDevices();
-			int index = searchAudioDevice(curr_device.value(), audio_devices);
-			if(index == -1) {
-				bool success = setDefaultAudioDevice(audio);
-				if(success)
-					curr_device = sf::PlaybackDevice::getDevice();
+			index = searchAudioDevice(in_use_audio_output_device_data.preferred, audio_devices);
+			if((index != -1) && (curr_device != audio_devices[index])) {
+				audio.stop_audio();
+				audio.stop();
+				success = sf::PlaybackDevice::setDevice(audio_devices[index]);
+				curr_device = audio_devices[index];
 			}
+		}
+		if(index == -1) {
+			std::optional<std::string> default_device = sf::PlaybackDevice::getDefaultDevice();
+			if(default_device != curr_device)
+				success = setDefaultAudioDevice(audio);
+			curr_device = default_device;
 		}
 }
 
