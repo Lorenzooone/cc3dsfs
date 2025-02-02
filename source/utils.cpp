@@ -9,6 +9,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
+#include <cstring>
 #include <queue>
 #include <cmath>
 
@@ -151,11 +152,12 @@ void write_string(uint8_t* data, std::string text) {
 }
 
 std::string read_string(uint8_t* data, size_t size) {
-	std::string out_str = "";
-	out_str.reserve(size);
-	for(int i = 0; i < size; i++)
-		out_str[i] = (char)data[i];
-	return out_str;
+	uint8_t* new_data = new uint8_t[size + 1];
+	memcpy(new_data, data, size);
+	new_data[size] = '\0';
+	std::string out = std::string((const char*)new_data);
+	delete []new_data;
+	return out;
 }
 
 uint32_t rotate_bits_left(uint32_t value) {
