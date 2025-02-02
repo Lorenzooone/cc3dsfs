@@ -64,6 +64,13 @@ bool Audio::hasTooMuchTimeElapsed() {
 	return (diff.count() > 1.0);
 }
 
+
+bool Audio::hasTooMuchTimeElapsedInside() {
+	auto curr_time = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> diff = curr_time - this->inside_clock_time_start;
+	return (diff.count() > 0.5);
+}
+
 bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 	if(terminate)
 		return false;
@@ -75,16 +82,21 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 		terminate = true;
 		return false;
 	}
+	inside_clock_time_start = std::chrono::high_resolution_clock::now();
 
 	inside_onGetData = true;
 	int loaded_samples = samples.size();
 	while(loaded_samples <= 0) {
-		samples_wait.lock();
+		samples_wait.timed_lock();
 		if(terminate) {
 			inside_onGetData = false;
 			return false;
 		}
 		loaded_samples = samples.size();
+		if((loaded_samples <= 0) && this->hasTooMuchTimeElapsedInside()) {
+			inside_onGetData = false;
+			return false;
+		}
 	}
 	data.samples = (const std::int16_t*)buffer;
 

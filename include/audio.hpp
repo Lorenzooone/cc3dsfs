@@ -35,9 +35,11 @@ private:
 	int num_consecutive_fast_seek;
 	std::int16_t *buffer;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_time_start;
+	std::chrono::time_point<std::chrono::high_resolution_clock> inside_clock_time_start;
 
 	bool onGetData(sf::SoundStream::Chunk &data) override;
 	void onSeek(sf::Time timeOffset) override;
+	bool hasTooMuchTimeElapsedInside();
 };
 
 #endif
