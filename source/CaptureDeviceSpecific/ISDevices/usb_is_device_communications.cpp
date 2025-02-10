@@ -214,7 +214,7 @@ static const is_device_usb_device usb_is_twl_cap_desc = {
 };
 
 static const is_device_usb_device usb_is_twl_cap_desc_2 = {
-.name = "ISTCR", .long_name = "IS TWL Capture (Retail)",
+.name = "ISTCR", .long_name = "IS TWL Capture (Ret)",
 .vid = 0x0f6e, .pid = 0x0502,
 .default_config = 1, .default_interface = 0,
 .bulk_timeout = 500,
@@ -1147,6 +1147,8 @@ int ReadFrame(is_device_device_handlers* handlers, uint8_t* buf, uint32_t addres
 int ReadFrame(is_device_device_handlers* handlers, uint8_t* buf, int length, const is_device_usb_device* device_desc) {
 	// Maybe making this async would be better for lower end hardware...
 	int num_bytes = 0;
+	if(length == 0)
+		return 0;
 	int ret = bulk_in(handlers, device_desc, buf, length, &num_bytes);
 	if(num_bytes != length)
 		return LIBUSB_ERROR_INTERRUPTED;

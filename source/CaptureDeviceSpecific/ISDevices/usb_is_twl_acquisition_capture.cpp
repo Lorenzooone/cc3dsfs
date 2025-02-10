@@ -9,9 +9,30 @@
 #define SLEEP_RESET_TIME_MS 2000
 #define DEFAULT_FRAME_TIME_MS 16.7
 #define SLEEP_FRAME_DIVIDER 4
+#define CUTOFF_LAST_FRAME_TIME 0.250
 
-static int process_frame_and_read(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, CaptureSpeedsType curr_capture_speed, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, uint32_t &last_read_frame_index, uint32_t video_address, uint32_t video_length, uint32_t audio_address, uint32_t audio_length, bool &processed, float &last_frame_length) {
+#define AUDIO_ADDRESS_RING_BUFFER_END 0x01880000
+#define VIDEO_ADDRESS_RING_BUFFER_END 0x01000000
+
+static void output_to_thread_reset_processed_data(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t video_processed_size, size_t &video_length_processed, size_t &audio_length_processed) {
+	output_to_thread(capture_data, capture_buf, curr_capture_type, clock_start, video_processed_size + ((audio_length_processed / sizeof(ISTWLCaptureAudioReceived)) * sizeof(ISTWLCaptureSoundData)));
+	video_length_processed = 0;
+	audio_length_processed = 0;
+}
+
+static int process_frame_and_read(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, CaptureSpeedsType curr_capture_speed, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, uint32_t &last_read_frame_index, uint32_t video_address, uint32_t video_length, size_t &video_length_processed, uint32_t audio_address, uint32_t audio_length, size_t &audio_length_processed, bool &processed, float &last_frame_length, bool &reprocess) {
+	const size_t video_processed_size = usb_is_device_get_video_in_size(curr_capture_type, IS_TWL_CAPTURE_DEVICE);
 	processed = false;
+	if((video_length == 0) && (audio_length == 0)) {
+		if(reprocess)
+			output_to_thread_reset_processed_data(capture_data, capture_buf, curr_capture_type, clock_start, video_processed_size, video_length_processed, audio_length_processed);
+		reprocess = false;
+		return 0;
+	}
+	reprocess = false;
+	processed = true;
+	is_device_device_handlers* handlers = (is_device_device_handlers*)capture_data->handle;
+	const is_device_usb_device* usb_device_desc = (const is_device_usb_device*)capture_data->status.device.descriptor;
 	int multiplier = 1;
 	switch(curr_capture_speed) {
 		case CAPTURE_SPEEDS_HALF:
@@ -26,34 +47,50 @@ static int process_frame_and_read(CaptureData* capture_data, CaptureReceived* ca
 		default:
 			break;
 	}
-	int num_available_frames = video_length / sizeof(ISTWLCaptureVideoInternalReceived);
-	if(num_available_frames < multiplier)
-		return 0;
-	processed = true;
-	int frame_next = num_available_frames - 1;
-	last_read_frame_index += num_available_frames;
-	video_address = video_address + (frame_next * sizeof(ISTWLCaptureVideoInternalReceived));
-	is_device_device_handlers* handlers = (is_device_device_handlers*)capture_data->handle;
-	const is_device_usb_device* usb_device_desc = (const is_device_usb_device*)capture_data->status.device.descriptor;
-	size_t video_processed_size = usb_is_device_get_video_in_size(curr_capture_type, IS_TWL_CAPTURE_DEVICE);
-	int ret = ReadFrame(handlers, (uint8_t*)&capture_buf->is_twl_capture_received.video_capture_in, video_address, video_processed_size, usb_device_desc);
-	if(ret < 0)
-		return ret;
+	video_length_processed += video_length;
+	// Process audio regardless, to ensure no issues with getting to the end of the ring buffer...
 	int max_audio_length = (multiplier * 5) * sizeof(ISTWLCaptureAudioReceived);
 	int audio_diff_from_max = max_audio_length - audio_length;
 	if(audio_diff_from_max >= 0)
 		audio_diff_from_max = 0;
 	else {
-		audio_address += audio_diff_from_max;
+		audio_address += -audio_diff_from_max;
 		audio_length = max_audio_length;
 	}
-	ret = ReadFrame(handlers, (uint8_t*)&capture_buf->is_twl_capture_received.audio_capture_in, audio_address, audio_length, usb_device_desc);
+	int audio_processed_diff_from_max = max_audio_length - audio_length_processed;
+	if(audio_processed_diff_from_max >= 0)
+		audio_processed_diff_from_max = 0;
+	else
+		audio_length_processed = max_audio_length - audio_length;
+	int ret = ReadFrame(handlers, ((uint8_t*)&capture_buf->is_twl_capture_received.audio_capture_in) + audio_length_processed, audio_address, audio_length, usb_device_desc);
 	if(ret < 0)
 		return ret;
-	const auto curr_time = std::chrono::high_resolution_clock::now();
-	const std::chrono::duration<double> diff = curr_time - (*clock_start);
-	last_frame_length = diff.count();
-	output_to_thread(capture_data, capture_buf, curr_capture_type, clock_start, video_processed_size + ((audio_length / sizeof(ISTWLCaptureAudioReceived)) * sizeof(ISTWLCaptureSoundData)));
+	audio_length_processed += audio_length;
+	// Have enough video frames been received? If yes, output!
+	int num_curr_available_frames = video_length / sizeof(ISTWLCaptureVideoInternalReceived);
+	int num_available_frames = video_length_processed / sizeof(ISTWLCaptureVideoInternalReceived);
+	if(num_available_frames < multiplier)
+		return 0;
+	if(num_curr_available_frames > 0) {
+		int frame_next = num_curr_available_frames - 1;
+		last_read_frame_index += num_curr_available_frames;
+		video_address = video_address + (frame_next * sizeof(ISTWLCaptureVideoInternalReceived));
+		ret = ReadFrame(handlers, (uint8_t*)&capture_buf->is_twl_capture_received.video_capture_in, video_address, video_processed_size, usb_device_desc);
+		if(ret < 0)
+			return ret;
+		const auto curr_time = std::chrono::high_resolution_clock::now();
+		const std::chrono::duration<double> diff = curr_time - (*clock_start);
+		last_frame_length = diff.count();
+	}
+	// Possible issue: there is more video or audio data available
+	// (end of ring buffer has been reached in this iteration),
+	// but it's not being processed since there
+	// are enough video frames right now...
+	if(((audio_address + audio_length) >=  AUDIO_ADDRESS_RING_BUFFER_END) || ((video_address + video_length) >=  VIDEO_ADDRESS_RING_BUFFER_END)) {
+		reprocess = true;
+		return 0;
+	}
+	output_to_thread_reset_processed_data(capture_data, capture_buf, curr_capture_type, clock_start, video_processed_size, video_length_processed, audio_length_processed);
 	return 0;
 }
 
@@ -77,9 +114,9 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 	bool is_acquisition_off = true;
 	uint32_t last_read_frame_index = 0;
 	CaptureScreensType curr_capture_type = capture_data->status.capture_type;
-	//CaptureSpeedsType curr_capture_speed = capture_data->status.capture_speed;
-	CaptureSpeedsType curr_capture_speed = CAPTURE_SPEEDS_FULL;
+	CaptureSpeedsType curr_capture_speed = capture_data->status.capture_speed;
 	bool audio_enabled = true;
+	bool reprocess = false;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_frame = std::chrono::high_resolution_clock::now();
 	float last_frame_length = 0.0;
 	int ret = 0;
@@ -87,6 +124,8 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 	uint32_t video_length = 0;
 	uint32_t audio_address = 0;
 	uint32_t audio_length = 0;
+	size_t video_length_processed = 0;
+	size_t audio_length_processed = 0;
 	is_device_twl_enc_dec_table enc_table, dec_table;
 	ret = PrepareEncDecTable(handlers, &enc_table, &dec_table, usb_device_desc);
 	if(ret < 0) {
@@ -117,25 +156,26 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 			capture_error_print(true, capture_data, "Frame Info Read: Failed");
 			return;
 		}
-		if(video_length > 0) {
-			ret = process_frame_and_read(capture_data, &is_device_capture_recv_data[0].buffer, curr_capture_type, curr_capture_speed, &clock_last_frame, last_read_frame_index, video_address, video_length, audio_address, audio_length, processed, last_frame_length);
+		ret = process_frame_and_read(capture_data, &is_device_capture_recv_data[0].buffer, curr_capture_type, curr_capture_speed, &clock_last_frame, last_read_frame_index, video_address, video_length, video_length_processed, audio_address, audio_length, audio_length_processed, processed, last_frame_length, reprocess);
+		if(ret < 0) {
+				capture_error_print(true, capture_data, "Frame Read: Error " + std::to_string(ret));
+				return;
+		}
+		if(processed) {
+			curr_capture_speed = capture_data->status.capture_speed;
+			ret = SetLastFrameInfo(handlers, video_address, video_length, audio_address, audio_length, usb_device_desc);
 			if(ret < 0) {
-					capture_error_print(true, capture_data, "Frame Read: Error " + std::to_string(ret));
-					return;
-			}
-			if(processed) {
-				//curr_capture_speed = capture_data->status.capture_speed;
-				ret = SetLastFrameInfo(handlers, video_address, video_length, audio_address, audio_length, usb_device_desc);
-				if(ret < 0) {
-					capture_error_print(true, capture_data, "Frame Info Set: Failed");
-					return;
-				}
+				capture_error_print(true, capture_data, "Frame Info Set: Failed");
+				return;
 			}
 		}
-		if(last_frame_length > 0)
-			default_sleep((last_frame_length * 1000) / SLEEP_FRAME_DIVIDER);
-		else
-			default_sleep(DEFAULT_FRAME_TIME_MS / SLEEP_FRAME_DIVIDER);
+		if(!reprocess) {
+			// Handle VRR, but also prevent issues with the console lid being closed
+			if((last_frame_length > 0) && (last_frame_length < CUTOFF_LAST_FRAME_TIME))
+				default_sleep((last_frame_length * 1000) / SLEEP_FRAME_DIVIDER);
+			else
+				default_sleep(DEFAULT_FRAME_TIME_MS / SLEEP_FRAME_DIVIDER);
+		}
 	}
 	if(!is_acquisition_off)
 		EndAcquisition(capture_data, is_device_capture_recv_data, true, 0, curr_capture_type);

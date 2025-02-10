@@ -36,8 +36,8 @@ static const ISNitroMenuOptionInfo is_nitro_speed_option = {
 .base_name = "Speed", .false_name = "", .is_selectable = true,
 .is_capture_valid = true, .is_emulator_valid = true,
 .is_nitro_valid = true, .is_twl_valid = true,
-.is_inc = true, .dec_str = "<", .inc_str = ">", .inc_out_action = ISN_MENU_SPEED_INC,
-.out_action = ISN_MENU_SPEED_DEC};
+.is_inc = true, .dec_str = "<", .inc_str = ">", .inc_out_action = ISN_MENU_SPEED_DEC,
+.out_action = ISN_MENU_SPEED_INC};
 
 static const ISNitroMenuOptionInfo is_nitro_reset_option = {
 .base_name = "Reset Hardware", .false_name = "", .is_selectable = true,
@@ -188,7 +188,7 @@ void ISNitroMenu::prepare(float menu_scaling_factor, int view_size_x, int view_s
 			case ISN_MENU_TYPE_DEC:
 				this->labels[index]->setText(this->setTextOptionString(real_index, get_capture_type_name(capture_status->capture_type)));
 				break;
-			case ISN_MENU_SPEED_DEC:
+			case ISN_MENU_SPEED_INC:
 				this->labels[index]->setText(this->setTextOptionString(real_index, get_capture_speed_name(capture_status->capture_speed)));
 				break;
 			default:
