@@ -851,6 +851,7 @@ int main(int argc, char **argv) {
 	delete capture_data;
 	end_extra_buttons_poll();
 	capture_close();
+	complete_threads();
 
 	return ret_val;
 }

@@ -3,6 +3,9 @@
 #if defined (__linux__) && defined(XLIB_BASED)
 #include <X11/Xlib.h>
 #endif
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -195,6 +198,19 @@ void init_threads(void) {
 	#if defined(__linux__) && defined(XLIB_BASED)
 	XInitThreads();
 	#endif
+	/*
+	#ifdef _WIN32
+	timeBeginPeriod(4);
+	#endif
+	*/
+}
+
+void complete_threads(void) {
+	/*
+	#ifdef _WIN32
+	timeEndPeriod(4);
+	#endif
+	*/
 }
 
 std::string get_version_string(bool get_letter) {

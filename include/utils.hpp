@@ -60,6 +60,7 @@ uint32_t ms_since_start();
 std::string to_hex(uint16_t value);
 std::string get_float_str_decimals(float value, int decimals);
 void init_threads(void);
+void complete_threads(void);
 
 class ConsumerMutex {
 public:
