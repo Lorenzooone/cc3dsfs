@@ -1,4 +1,5 @@
 #include "MainMenu.hpp"
+#include "usb_is_device_acquisition.hpp"
 
 #define NUM_TOTAL_MENU_OPTIONS (sizeof(pollable_options)/sizeof(pollable_options[0]))
 
@@ -131,11 +132,18 @@ static const MainMenuOptionInfo shutdown_option = {
 .out_action = MAIN_MENU_SHUTDOWN};
 
 static const MainMenuOptionInfo isn_settings_option = {
-.base_name = "Is Nitro Settings", .false_name = "",
+.base_name = "IS Nitro Settings", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = true,
 .out_action = MAIN_MENU_ISN_SETTINGS};
+
+static const MainMenuOptionInfo ist_settings_option = {
+.base_name = "IS TWL Settings", .false_name = "",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = true,
+.out_action = MAIN_MENU_IST_SETTINGS};
 
 static const MainMenuOptionInfo* pollable_options[] = {
 &connect_option,
@@ -151,6 +159,7 @@ static const MainMenuOptionInfo* pollable_options[] = {
 //&shortcut_option,
 &status_option,
 &isn_settings_option,
+&ist_settings_option,
 &licenses_option,
 &extra_settings_option,
 &quit_option,
@@ -183,13 +192,17 @@ void MainMenu::class_setup() {
 	this->show_title = true;
 }
 
-static bool check_cc_specific_option(const MainMenuOptionInfo* option, CaptureConnectionType cc_type) {
-	if((option->out_action == MAIN_MENU_ISN_SETTINGS) && (cc_type == CAPTURE_CONN_IS_NITRO))
+static bool check_cc_specific_option(const MainMenuOptionInfo* option, CaptureDevice* device) {
+	#ifdef USE_IS_DEVICES_USB
+	if((option->out_action == MAIN_MENU_ISN_SETTINGS) && is_device_is_nitro(device))
 		return true;
+	if((option->out_action == MAIN_MENU_IST_SETTINGS) && is_device_is_twl(device))
+		return true;
+	#endif
 	return false;
 }
 
-void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_mode, CaptureConnectionType cc_type, bool connected) {
+void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_mode, CaptureDevice* device, bool connected) {
 	this->num_enabled_options = 0;
 	for(int i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
 		bool valid = true;
@@ -208,7 +221,7 @@ void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_
 		else
 			valid = valid && pollable_options[i]->enabled_normal_mode;
 		if(pollable_options[i]->is_cc_specific)
-			valid = valid && connected && check_cc_specific_option(pollable_options[i], cc_type);
+			valid = valid && connected && check_cc_specific_option(pollable_options[i], device);
 		//if((pollable_options[i]->out_action == MAIN_MENU_SHORTCUT_SETTINGS) && (!enable_shortcut))
 		//	valid = false;
 		if(valid) {

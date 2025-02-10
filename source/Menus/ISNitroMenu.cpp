@@ -9,6 +9,8 @@ struct ISNitroMenuOptionInfo {
 	const bool is_selectable;
 	const bool is_capture_valid;
 	const bool is_emulator_valid;
+	const bool is_nitro_valid;
+	const bool is_twl_valid;
 	const bool is_inc;
 	const std::string dec_str;
 	const std::string inc_str;
@@ -19,24 +21,28 @@ struct ISNitroMenuOptionInfo {
 static const ISNitroMenuOptionInfo is_nitro_delay_option = {
 .base_name = "Delay", .false_name = "", .is_selectable = false,
 .is_capture_valid = false, .is_emulator_valid = true,
+.is_nitro_valid = true, .is_twl_valid = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = ISN_MENU_NO_ACTION,
 .out_action = ISN_MENU_DELAY};
 
 static const ISNitroMenuOptionInfo is_nitro_type_option = {
 .base_name = "Capture", .false_name = "", .is_selectable = true,
 .is_capture_valid = true, .is_emulator_valid = true,
+.is_nitro_valid = true, .is_twl_valid = false,
 .is_inc = true, .dec_str = "<", .inc_str = ">", .inc_out_action = ISN_MENU_TYPE_INC,
 .out_action = ISN_MENU_TYPE_DEC};
 
 static const ISNitroMenuOptionInfo is_nitro_speed_option = {
 .base_name = "Speed", .false_name = "", .is_selectable = true,
 .is_capture_valid = true, .is_emulator_valid = true,
+.is_nitro_valid = true, .is_twl_valid = true,
 .is_inc = true, .dec_str = "<", .inc_str = ">", .inc_out_action = ISN_MENU_SPEED_INC,
 .out_action = ISN_MENU_SPEED_DEC};
 
 static const ISNitroMenuOptionInfo is_nitro_reset_option = {
 .base_name = "Reset Hardware", .false_name = "", .is_selectable = true,
 .is_capture_valid = true, .is_emulator_valid = false,
+.is_nitro_valid = true, .is_twl_valid = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = ISN_MENU_NO_ACTION,
 .out_action = ISN_MENU_RESET};
 
@@ -75,8 +81,12 @@ void ISNitroMenu::class_setup() {
 
 void ISNitroMenu::insert_data(CaptureDevice* device) {
 	bool is_capture = false;
+	bool is_nitro = false;
+	bool is_twl = false;
 	#ifdef USE_IS_DEVICES_USB
 	is_capture = is_device_is_capture(device);
+	is_nitro = is_device_is_nitro(device);
+	is_twl = is_device_is_twl(device);
 	#endif
 	this->num_enabled_options = 0;
 	for(int i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
@@ -85,11 +95,19 @@ void ISNitroMenu::insert_data(CaptureDevice* device) {
 			valid = valid && pollable_options[i]->is_capture_valid;
 		else
 			valid = valid && pollable_options[i]->is_emulator_valid;
+		if(is_nitro)
+			valid = valid && pollable_options[i]->is_nitro_valid;
+		if(is_twl)
+			valid = valid && pollable_options[i]->is_twl_valid;
 		if(valid) {
 			this->options_indexes[this->num_enabled_options] = i;
 			this->num_enabled_options++;
 		}
 	}
+	if(is_nitro)
+		this->title = "IS Nitro Settings";
+	if(is_twl)
+		this->title = "IS TWL Settings";
 	this->prepare_options();
 }
 

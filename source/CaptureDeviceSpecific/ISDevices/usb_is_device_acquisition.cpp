@@ -475,13 +475,24 @@ void usb_is_device_acquisition_cleanup(CaptureData* capture_data) {
 }
 
 bool is_device_is_capture(CaptureDevice* device) {
+	if(device->cc_type != CAPTURE_CONN_IS_NITRO)
+		return false;
 	const is_device_usb_device* usb_device_info = (const is_device_usb_device*)device->descriptor;
-	return usb_device_info->device_type != IS_NITRO_EMULATOR_DEVICE;
+	return (usb_device_info->device_type == IS_TWL_CAPTURE_DEVICE) || (usb_device_info->device_type == IS_NITRO_CAPTURE_DEVICE);
 }
 
 bool is_device_is_nitro(CaptureDevice* device) {
+	if(device->cc_type != CAPTURE_CONN_IS_NITRO)
+		return false;
 	const is_device_usb_device* usb_device_info = (const is_device_usb_device*)device->descriptor;
 	return (usb_device_info->device_type == IS_NITRO_EMULATOR_DEVICE) || (usb_device_info->device_type == IS_NITRO_CAPTURE_DEVICE);
+}
+
+bool is_device_is_twl(CaptureDevice* device) {
+	if(device->cc_type != CAPTURE_CONN_IS_NITRO)
+		return false;
+	const is_device_usb_device* usb_device_info = (const is_device_usb_device*)device->descriptor;
+	return (usb_device_info->device_type == IS_TWL_CAPTURE_DEVICE);
 }
 
 void usb_is_device_init() {

@@ -684,7 +684,7 @@ void WindowScreen::setup_main_menu(bool reset_data, bool skip_setup_check) {
 		this->curr_menu = MAIN_MENU_TYPE;
 		if(reset_data)
 			this->main_menu->reset_data();
-		this->main_menu->insert_data(this->m_stype, this->m_info.is_fullscreen, this->display_data->mono_app_mode, this->capture_status->device.cc_type, this->capture_status->connected);
+		this->main_menu->insert_data(this->m_stype, this->m_info.is_fullscreen, this->display_data->mono_app_mode, &this->capture_status->device, this->capture_status->connected);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
 }
@@ -1346,6 +1346,7 @@ void WindowScreen::poll(bool do_everything) {
 							this->setup_input_menu();
 							done = true;
 							break;
+						case MAIN_MENU_IST_SETTINGS:
 						case MAIN_MENU_ISN_SETTINGS:
 							this->setup_is_nitro_menu();
 							done = true;

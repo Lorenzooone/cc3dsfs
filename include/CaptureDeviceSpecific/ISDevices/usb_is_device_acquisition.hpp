@@ -16,6 +16,7 @@ uint64_t usb_is_device_get_video_in_size(CaptureData* capture_data);
 uint64_t usb_is_device_get_video_in_size(CaptureStatus* capture_status);
 bool is_device_is_capture(CaptureDevice* device);
 bool is_device_is_nitro(CaptureDevice* device);
+bool is_device_is_twl(CaptureDevice* device);
 void usb_is_device_init();
 void usb_is_device_close();
 

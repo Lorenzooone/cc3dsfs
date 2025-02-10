@@ -26,6 +26,7 @@ enum MainMenuOutAction{
 	MAIN_MENU_SHUTDOWN,
 	//MAIN_MENU_SHORTCUT_SETTINGS,
 	MAIN_MENU_ISN_SETTINGS,
+	MAIN_MENU_IST_SETTINGS,
 	MAIN_MENU_INPUT_SETTINGS,
 };
 
@@ -34,7 +35,7 @@ public:
 	MainMenu(bool font_load_success, sf::Font &text_font);
 	~MainMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, bool connected);
-	void insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_mode, CaptureConnectionType cc_type, bool connected);
+	void insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_mode, CaptureDevice* device, bool connected);
 	MainMenuOutAction selected_index = MainMenuOutAction::MAIN_MENU_NO_ACTION;
 	void reset_output_option();
 protected:
