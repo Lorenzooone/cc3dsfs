@@ -94,6 +94,31 @@ static int process_frame_and_read(CaptureData* capture_data, CaptureReceived* ca
 	return 0;
 }
 
+static int CaptureResetHardware(CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_reset) {
+	is_device_device_handlers* handlers = (is_device_device_handlers*)capture_data->handle;
+	const is_device_usb_device* usb_device_desc = (const is_device_usb_device*)capture_data->status.device.descriptor;
+	bool reset_hardware = capture_data->status.reset_hardware;
+	capture_data->status.reset_hardware = false;
+	int ret = LIBUSB_SUCCESS;
+	if(!reset_hardware)
+		return ret;
+	const auto curr_time = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> diff = curr_time - clock_last_reset;
+	// Do not reset too fast... In general.
+	if(diff.count() < RESET_TIMEOUT)
+		return ret;
+	clock_last_reset = curr_time;
+
+	ret = ResetCPUStart(handlers, usb_device_desc);
+	if(ret < 0)
+		return ret;
+	ret = ResetCPUEnd(handlers, usb_device_desc);
+	if(ret < 0)
+		return ret;
+	default_sleep(SLEEP_RESET_TIME_MS);
+	return ret;
+}
+
 int initial_cleanup_twl_capture(const is_device_usb_device* usb_device_desc, is_device_device_handlers* handlers) {
 	//EndAcquisition(handlers, usb_device_desc, false, 0, CAPTURE_SCREENS_BOTH);
 	return LIBUSB_SUCCESS;
@@ -118,6 +143,7 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 	bool audio_enabled = true;
 	bool reprocess = false;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_frame = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_reset = std::chrono::high_resolution_clock::now();
 	float last_frame_length = 0.0;
 	int ret = 0;
 	uint32_t video_address = 0;
@@ -175,6 +201,11 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 				default_sleep((last_frame_length * 1000) / SLEEP_FRAME_DIVIDER);
 			else
 				default_sleep(DEFAULT_FRAME_TIME_MS / SLEEP_FRAME_DIVIDER);
+			ret = CaptureResetHardware(capture_data, clock_last_reset);
+			if(ret < 0) {
+				capture_error_print(true, capture_data, "Hardware Reset: Failed");
+				return;
+			}
 		}
 	}
 	if(!is_acquisition_off)

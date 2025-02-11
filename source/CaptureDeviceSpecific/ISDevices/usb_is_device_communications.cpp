@@ -98,7 +98,9 @@ enum is_twl_capture_command {
 	IS_TWL_CAP_CMD_GET_ENC_DEC_SEEDS = 0x04,
 	IS_TWL_CAP_CMD_GET_SERIAL = 0x13,
 	IS_TWL_CAP_CMD_UNLOCK_COMMS = 0x1C,
+	IS_TWL_CAP_CMD_GENERIC_INFO = 0x80,
 	IS_TWL_CAP_CMD_MNTR = 0x81,
+	IS_TWL_CAP_CMD_POWER_ON_OFF = 0x82,
 	IS_TWL_CAP_CMD_ASK_CAPTURE_INFORMATION = 0x83,
 	IS_TWL_CAP_CMD_SCTG = 0x84,
 	IS_TWL_CAP_CMD_TCZC = 0x85,
@@ -1076,6 +1078,8 @@ int ResetCPUStart(is_device_device_handlers* handlers, const is_device_usb_devic
 			return ResetCPUEmulatorGeneral(handlers, true, device_desc);
 		case IS_NITRO_CAPTURE_DEVICE:
 			return SendWriteCommand(handlers, IS_NITRO_CAP_CMD_SET_RESET_CPU_ON, NULL, 0, device_desc);
+		case IS_TWL_CAPTURE_DEVICE:
+			return SendWriteCommandU32(handlers, IS_TWL_CAP_CMD_POWER_ON_OFF, 0x00070082, device_desc);
 		default:
 			return 0;
 	}
@@ -1087,6 +1091,8 @@ int ResetCPUEnd(is_device_device_handlers* handlers, const is_device_usb_device*
 			return ResetCPUEmulatorGeneral(handlers, false, device_desc);
 		case IS_NITRO_CAPTURE_DEVICE:
 			return SendWriteCommand(handlers, IS_NITRO_CAP_CMD_SET_RESET_CPU_OFF, NULL, 0, device_desc);
+		case IS_TWL_CAPTURE_DEVICE:
+			return SendWriteCommandU32(handlers, IS_TWL_CAP_CMD_POWER_ON_OFF, 0x00000082, device_desc);
 		default:
 			return 0;
 	}
