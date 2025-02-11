@@ -107,8 +107,12 @@ enum is_twl_capture_command {
 	IS_TWL_CAP_CMD_STOP_FRAME_READS = 0x88,
 	IS_TWL_CAP_CMD_SET_LAST_FRAME_INFORMATION = 0x8B,
 	IS_TWL_CAP_CMD_ACTS = 0x8C,
+	IS_TWL_CAP_CMD_SET_BATTERY_PERCENTAGE = 0x8D,
+	IS_TWL_CAP_CMD_SET_AC_ADAPTER_ON_OFF = 0x8E,
 	IS_TWL_CAP_CMD_EPAC = 0x92,
 	IS_TWL_CAP_CMD_POST_EPAC = 0x93,
+	IS_TWL_CAP_CMD_GET_AC_ADAPTER_ON_OFF = 0x96,
+	IS_TWL_CAP_CMD_GET_BATTERY_PERCENTAGE= 0x97,
 };
 
 enum is_nitro_emulator_forward_bits {
@@ -695,6 +699,14 @@ int SendWriteCommandU32(is_device_device_handlers* handlers, uint16_t command, u
 	return SendWriteCommand(handlers, command, (uint8_t*)&buffer, sizeof(uint32_t), device_desc);
 }
 
+int SendReadWriteCommandU32(is_device_device_handlers* handlers, uint16_t command, uint32_t* out_value, uint32_t value, const is_device_usb_device* device_desc) {
+	uint32_t out_buf = to_le(value);
+	uint32_t in_buf = 0;
+	int ret = SendReadWriteCommand(handlers, command, (uint8_t*)&out_buf, sizeof(uint32_t), (uint8_t*)&in_buf, sizeof(uint32_t), device_desc);
+	*out_value = from_le(in_buf);
+	return ret;
+}
+
 static int AuthCtrlIn(is_device_device_handlers* handlers, const is_device_usb_device* device_desc) {
 	int ret = 0;
 	bool b_ret = true;
@@ -1079,7 +1091,7 @@ int ResetCPUStart(is_device_device_handlers* handlers, const is_device_usb_devic
 		case IS_NITRO_CAPTURE_DEVICE:
 			return SendWriteCommand(handlers, IS_NITRO_CAP_CMD_SET_RESET_CPU_ON, NULL, 0, device_desc);
 		case IS_TWL_CAPTURE_DEVICE:
-			return SendWriteCommandU32(handlers, IS_TWL_CAP_CMD_POWER_ON_OFF, 0x00070082, device_desc);
+			return SendWriteCommandU32(handlers, IS_TWL_CAP_CMD_POWER_ON_OFF, 0x00070000 | IS_TWL_CAP_CMD_POWER_ON_OFF, device_desc);
 		default:
 			return 0;
 	}
@@ -1092,7 +1104,7 @@ int ResetCPUEnd(is_device_device_handlers* handlers, const is_device_usb_device*
 		case IS_NITRO_CAPTURE_DEVICE:
 			return SendWriteCommand(handlers, IS_NITRO_CAP_CMD_SET_RESET_CPU_OFF, NULL, 0, device_desc);
 		case IS_TWL_CAPTURE_DEVICE:
-			return SendWriteCommandU32(handlers, IS_TWL_CAP_CMD_POWER_ON_OFF, 0x00000082, device_desc);
+			return SendWriteCommandU32(handlers, IS_TWL_CAP_CMD_POWER_ON_OFF, 0x00000000 | IS_TWL_CAP_CMD_POWER_ON_OFF, device_desc);
 		default:
 			return 0;
 	}
@@ -1107,6 +1119,68 @@ int ResetFullHardware(is_device_device_handlers* handlers, const is_device_usb_d
 			return SendWriteCommand(handlers, IS_NITRO_CAP_CMD_SET_RESTART_FULL, NULL, 0, device_desc);
 		default:
 			return 0;
+	}
+}
+
+int SetBatteryPercentage(is_device_device_handlers* handlers, const is_device_usb_device* device_desc, int percentage) {
+	int ret = 0;
+	uint32_t out = 0;
+	if(percentage < 1)
+		percentage = 1;
+	if(percentage > 100)
+		percentage = 100;
+	switch(device_desc->device_type) {
+		case IS_TWL_CAPTURE_DEVICE:
+			// Careful - 1 resets the DSi continuously (but the official software uses it), so...
+			ret = SendReadWriteCommandU32(handlers, IS_TWL_CAP_CMD_SET_BATTERY_PERCENTAGE, &out, (percentage << 8) | IS_TWL_CAP_CMD_SET_BATTERY_PERCENTAGE, device_desc);
+			if(out != 1)
+				return -1;
+			return ret;
+		default:
+			return ret;
+	}
+}
+
+int SetACAdapterConnected(is_device_device_handlers* handlers, const is_device_usb_device* device_desc, bool connected) {
+	int ret = 0;
+	uint32_t out = 0;
+	int value = connected ? 1 : 0;
+	switch(device_desc->device_type) {
+		case IS_TWL_CAPTURE_DEVICE:
+			ret = SendReadWriteCommandU32(handlers, IS_TWL_CAP_CMD_SET_AC_ADAPTER_ON_OFF, &out, (value << 8) | IS_TWL_CAP_CMD_SET_AC_ADAPTER_ON_OFF, device_desc);
+			if(out != 1)
+				return -1;
+			return ret;
+		default:
+			return ret;
+	}
+}
+
+int GetBatteryPercentageValues(is_device_device_handlers* handlers, const is_device_usb_device* device_desc, int* percentage_one, int* percentage_two) {
+	int ret = 0;
+	uint32_t out = 0;
+	switch(device_desc->device_type) {
+		case IS_TWL_CAPTURE_DEVICE:
+			ret = SendReadCommandU32(handlers, IS_TWL_CAP_CMD_GET_BATTERY_PERCENTAGE, &out, device_desc);
+			*percentage_one = out & 0xFF;
+			*percentage_two = (out >> 8) & 0xFF;
+			return ret;
+		default:
+			return ret;
+	}
+}
+
+int GetACAdapterConnectedValues(is_device_device_handlers* handlers, const is_device_usb_device* device_desc, bool* connected_one, bool* connected_two) {
+	int ret = 0;
+	uint32_t out = 0;
+	switch(device_desc->device_type) {
+		case IS_TWL_CAPTURE_DEVICE:
+			ret = SendReadCommandU32(handlers, IS_TWL_CAP_CMD_GET_AC_ADAPTER_ON_OFF, &out, device_desc);
+			*connected_one = (out & 0xFF) ? true : false;
+			*connected_two = ((out >> 8) & 0xFF) ? true : false;
+			return ret;
+		default:
+			return ret;
 	}
 }
 

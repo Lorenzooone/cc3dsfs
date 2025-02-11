@@ -46,10 +46,26 @@ static const ISNitroMenuOptionInfo is_nitro_reset_option = {
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = ISN_MENU_NO_ACTION,
 .out_action = ISN_MENU_RESET};
 
+static const ISNitroMenuOptionInfo is_nitro_battery_percentage_option = {
+.base_name = "Battery Percentage", .false_name = "", .is_selectable = true,
+.is_capture_valid = true, .is_emulator_valid = false,
+.is_nitro_valid = false, .is_twl_valid = true,
+.is_inc = true, .dec_str = "-", .inc_str = "+", .inc_out_action = ISN_MENU_BATTERY_INC,
+.out_action = ISN_MENU_BATTERY_DEC};
+
+static const ISNitroMenuOptionInfo is_nitro_ac_adapter_option = {
+.base_name = "Disconnect AC Adapter", .false_name = "Connect AC Adapter", .is_selectable = true,
+.is_capture_valid = true, .is_emulator_valid = false,
+.is_nitro_valid = false, .is_twl_valid = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = ISN_MENU_NO_ACTION,
+.out_action = ISN_MENU_AC_ADAPTER_TOGGLE};
+
 static const ISNitroMenuOptionInfo* pollable_options[] = {
 &is_nitro_delay_option,
 &is_nitro_type_option,
 &is_nitro_speed_option,
+&is_nitro_battery_percentage_option,
+&is_nitro_ac_adapter_option,
 &is_nitro_reset_option,
 };
 
@@ -190,6 +206,12 @@ void ISNitroMenu::prepare(float menu_scaling_factor, int view_size_x, int view_s
 				break;
 			case ISN_MENU_SPEED_INC:
 				this->labels[index]->setText(this->setTextOptionString(real_index, get_capture_speed_name(capture_status->capture_speed)));
+				break;
+			case ISN_MENU_BATTERY_DEC:
+				this->labels[index]->setText(this->setTextOptionInt(real_index, capture_status->battery_percentage));
+				break;
+			case ISN_MENU_AC_ADAPTER_TOGGLE:
+				this->labels[index]->setText(this->setTextOptionBool(real_index, capture_status->ac_adapter_connected));
 				break;
 			default:
 				break;

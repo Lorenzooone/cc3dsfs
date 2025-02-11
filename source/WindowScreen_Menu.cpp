@@ -5,6 +5,8 @@
 
 #define FPS_WINDOW_SIZE 64
 
+static const int battery_levels[] = {1, 5, 12, 25, 50, 100};
+
 static const sf::VideoMode default_fs_mode_4_5k_macos = sf::VideoMode({4480, 2520});
 static const sf::VideoMode default_fs_mode_4k_macos = sf::VideoMode({4096, 2304});
 static const sf::VideoMode default_fs_mode_4k = sf::VideoMode({3840, 2160});
@@ -205,6 +207,34 @@ void WindowScreen::is_nitro_capture_speed_change(bool positive) {
 
 void WindowScreen::is_nitro_capture_reset_hw() {
 	this->capture_status->reset_hardware = true;
+}
+
+void WindowScreen::is_nitro_battery_change(bool positive) {
+	if(this->capture_status->battery_percentage < 1)
+		this->capture_status->battery_percentage = 1;
+	if(this->capture_status->battery_percentage > 100)
+		this->capture_status->battery_percentage = 100;
+	int closest_level = 0;
+	int curr_diff = 100;
+	const int num_levels = sizeof(battery_levels) / sizeof(battery_levels[0]);
+	for(int i = 0; i < num_levels; i++) {
+		int level_diff = abs(battery_levels[i] - this->capture_status->battery_percentage);
+		if(level_diff < curr_diff) {
+			closest_level = i;
+			curr_diff = level_diff;
+		}
+	}
+	if((!positive) && (closest_level > 0))
+		closest_level -= 1;
+	if((positive) && (closest_level < (num_levels - 1)))
+		closest_level += 1;
+	if(battery_levels[closest_level] != this->capture_status->battery_percentage)
+		this->print_notification("Changing battery level...\nPlease wait...");
+	this->capture_status->battery_percentage = battery_levels[closest_level];
+}
+
+void WindowScreen::is_nitro_ac_adapter_change() {
+	this->capture_status->ac_adapter_connected = !this->capture_status->ac_adapter_connected;
 }
 
 void WindowScreen::padding_change() {
@@ -1920,6 +1950,15 @@ void WindowScreen::poll(bool do_everything) {
 							break;
 						case ISN_MENU_RESET:
 							this->is_nitro_capture_reset_hw();
+							break;
+						case ISN_MENU_BATTERY_DEC:
+							this->is_nitro_battery_change(false);
+							break;
+						case ISN_MENU_BATTERY_INC:
+							this->is_nitro_battery_change(true);
+							break;
+						case ISN_MENU_AC_ADAPTER_TOGGLE:
+							this->is_nitro_ac_adapter_change();
 							break;
 						default:
 							break;

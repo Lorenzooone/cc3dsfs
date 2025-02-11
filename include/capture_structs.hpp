@@ -206,6 +206,8 @@ struct CaptureStatus {
 	bool enabled_3d = false;
 	CaptureScreensType capture_type;
 	CaptureSpeedsType capture_speed;
+	int battery_percentage;
+	bool ac_adapter_connected;
 	ConsumerMutex video_wait;
 	ConsumerMutex audio_wait;
 };

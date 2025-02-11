@@ -18,6 +18,9 @@ enum ISNitroMenuOutAction{
 	ISN_MENU_RESET,
 	ISN_MENU_SPEED_INC,
 	ISN_MENU_SPEED_DEC,
+	ISN_MENU_BATTERY_INC,
+	ISN_MENU_BATTERY_DEC,
+	ISN_MENU_AC_ADAPTER_TOGGLE,
 };
 
 class ISNitroMenu : public OptionSelectionMenu {

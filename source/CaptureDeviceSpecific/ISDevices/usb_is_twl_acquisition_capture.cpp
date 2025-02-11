@@ -6,6 +6,7 @@
 // Code created by analyzing the USB packets sent and received by the IS TWL Capture device.
 
 #define RESET_TIMEOUT 4.0
+#define BATTERY_TIMEOUT 5.0
 #define SLEEP_RESET_TIME_MS 2000
 #define DEFAULT_FRAME_TIME_MS 16.7
 #define SLEEP_FRAME_DIVIDER 4
@@ -119,6 +120,37 @@ static int CaptureResetHardware(CaptureData* capture_data, std::chrono::time_poi
 	return ret;
 }
 
+static int CaptureBatteryHandleHardware(CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_battery_set, int &curr_battery_percentage, bool &curr_ac_adapter_connected) {
+	is_device_device_handlers* handlers = (is_device_device_handlers*)capture_data->handle;
+	const is_device_usb_device* usb_device_desc = (const is_device_usb_device*)capture_data->status.device.descriptor;
+	int loaded_battery_percentage = capture_data->status.battery_percentage;
+	bool loaded_ac_adapter_connected = capture_data->status.ac_adapter_connected;
+
+	const auto curr_time_battery = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> diff_battery = curr_time_battery - clock_last_battery_set;
+	if(diff_battery.count() > BATTERY_TIMEOUT) {
+		if(curr_battery_percentage != loaded_battery_percentage) {
+			int ret = SetBatteryPercentage(handlers, usb_device_desc, loaded_battery_percentage);
+			if(ret < 0) {
+				capture_error_print(true, capture_data, "Battery Set: Failed");
+				return ret;
+			}
+			loaded_ac_adapter_connected = curr_battery_percentage < loaded_battery_percentage;
+			clock_last_battery_set = curr_time_battery;
+			curr_battery_percentage = loaded_battery_percentage;
+		}
+		if(curr_ac_adapter_connected != loaded_ac_adapter_connected) {
+			int ret = SetACAdapterConnected(handlers, usb_device_desc, loaded_ac_adapter_connected);
+			if(ret < 0) {
+				capture_error_print(true, capture_data, "AC Adapter Set: Failed");
+				return ret;
+			}
+			curr_ac_adapter_connected = loaded_ac_adapter_connected;
+		}
+	}
+	return 0;
+}
+
 int initial_cleanup_twl_capture(const is_device_usb_device* usb_device_desc, is_device_device_handlers* handlers) {
 	//EndAcquisition(handlers, usb_device_desc, false, 0, CAPTURE_SCREENS_BOTH);
 	return LIBUSB_SUCCESS;
@@ -140,10 +172,13 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 	uint32_t last_read_frame_index = 0;
 	CaptureScreensType curr_capture_type = capture_data->status.capture_type;
 	CaptureSpeedsType curr_capture_speed = capture_data->status.capture_speed;
+	int curr_battery_percentage = capture_data->status.battery_percentage;
+	bool curr_ac_adapter_connected = capture_data->status.ac_adapter_connected;
 	bool audio_enabled = true;
 	bool reprocess = false;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_frame = std::chrono::high_resolution_clock::now();
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_reset = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_battery_set = std::chrono::high_resolution_clock::now();
 	float last_frame_length = 0.0;
 	int ret = 0;
 	uint32_t video_address = 0;
@@ -174,6 +209,16 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 		return;
 	}
 	default_sleep(DEFAULT_FRAME_TIME_MS / SLEEP_FRAME_DIVIDER);
+	ret = SetBatteryPercentage(handlers, usb_device_desc, curr_battery_percentage);
+	if(ret < 0) {
+		capture_error_print(true, capture_data, "Initial Battery Set: Failed");
+		return;
+	}
+	ret = SetACAdapterConnected(handlers, usb_device_desc, curr_ac_adapter_connected);
+	if(ret < 0) {
+		capture_error_print(true, capture_data, "Initial AC Adapter Set: Failed");
+		return;
+	}
 
 	while(capture_data->status.connected && capture_data->status.running) {
 		bool processed = false;
@@ -206,6 +251,9 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 				capture_error_print(true, capture_data, "Hardware Reset: Failed");
 				return;
 			}
+			ret = CaptureBatteryHandleHardware(capture_data, clock_last_battery_set, curr_battery_percentage, curr_ac_adapter_connected);
+			if(ret < 0)
+				return;
 		}
 	}
 	if(!is_acquisition_off)

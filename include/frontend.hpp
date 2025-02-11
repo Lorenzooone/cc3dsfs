@@ -233,6 +233,8 @@ private:
 	void is_nitro_capture_type_change(bool positive);
 	void is_nitro_capture_speed_change(bool positive);
 	void is_nitro_capture_reset_hw();
+	void is_nitro_battery_change(bool positive);
+	void is_nitro_ac_adapter_change();
 	void crop_value_change(int new_crop_value, bool do_print_notification = true, bool do_cycle = true);
 	void par_value_change(int new_par_value, bool is_top);
 	void offset_change(float &value, float change);

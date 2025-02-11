@@ -3,7 +3,9 @@
 cc3dsfs is a multi-platform capture and display program for [3dscapture's](https://3dscapture.com/) N3DSXL, 3DS and DS capture boards written in C++.
 The main goal is to offer the ability to use the Capture Card with a TV, via fullscreen mode.
 
-IS Nitro Emulator (newer revisions) and IS Nitro Capture support is also present. Though results may vary (and the amount of video delay may be significantly higher based on the cable used).
+IS Nitro Emulator (newer revisions), IS Nitro Capture and IS TWL Capture support is also present. Though results may vary (and the amount of video delay may be significantly higher based on the cable used).
+
+Support for a really old Optimize board is also present, used with Nisetro DS capture boards.
 
 ## Features
 
@@ -145,4 +147,4 @@ On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the
 - Enabling Slow Poll may slightly boost the FPS of the software, at the cost of an extremely slight decrease in frame latency, and slower reaction times of the software to key presses. Disabled by default (as when the FPS are greater than the CC's, it's not reccomended).
 - On MacOS, you may get a notice about Apple being unable to check for malware, or the developer being unknown. To open the program regardless of that, check the [Official Guide for "Opening Applications from Unknown Developers" from Apple, for your version of MacOS](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac).
 - Certain TVs/Monitors may add some audio delay for the purpose of video/lip syncing. If you're experiencing too much audio delay when using this software, try checking in the TV/Monitor settings whether you can reduce that added delay. One of the names used for that setting is "Lip Sync", or something along that line.
-- When using IS Nitro Emulator or IS Nitro Capture devices on Windows, cc3dsfs is compatible with both the official driver and WinUSB, with the latter being useful if you don't have access to the official driver. To install and use WinUSB, plug in your device, download a software to install drivers like [Zadig](https://zadig.akeo.ie/), select the device in question and select WinUSB. Then install the driver and wait for it to finish. The devices should now work properly with this application.
+- When using IS Nitro Emulator, IS Nitro Capture or IS TWL Capture devices on Windows, cc3dsfs is compatible with both the official driver and WinUSB, with the latter being useful if you don't have access to the official driver. To install and use WinUSB, plug in your device, download a software to install drivers like [Zadig](https://zadig.akeo.ie/), select the device in question and select WinUSB. Then install the driver and wait for it to finish. The devices should now work properly with this application.

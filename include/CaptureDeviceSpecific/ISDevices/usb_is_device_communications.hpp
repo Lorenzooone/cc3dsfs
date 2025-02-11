@@ -108,6 +108,10 @@ int ReadPowerButtonState(is_device_device_handlers* handlers, bool* out, const i
 int ResetCPUStart(is_device_device_handlers* handlers, const is_device_usb_device* device_desc);
 int ResetCPUEnd(is_device_device_handlers* handlers, const is_device_usb_device* device_desc);
 int ResetFullHardware(is_device_device_handlers* handlers, const is_device_usb_device* device_desc);
+int SetBatteryPercentage(is_device_device_handlers* handlers, const is_device_usb_device* device_desc, int percentage);
+int SetACAdapterConnected(is_device_device_handlers* handlers, const is_device_usb_device* device_desc, bool connected);
+int GetBatteryPercentageValues(is_device_device_handlers* handlers, const is_device_usb_device* device_desc, int* percentage_one, int* percentage_two);
+int GetACAdapterConnectedValues(is_device_device_handlers* handlers, const is_device_usb_device* device_desc, bool* connected_one, bool* connected_two);
 int AskFrameLengthPos(is_device_device_handlers* handlers, uint32_t* video_address, uint32_t* video_length, bool video_enabled, uint32_t* audio_address, uint32_t* audio_length, bool audio_enabled, const is_device_usb_device* device_desc);
 int SetLastFrameInfo(is_device_device_handlers* handlers, uint32_t video_address, uint32_t video_length, uint32_t audio_address, uint32_t audio_length, const is_device_usb_device* device_desc);
 int ReadFrame(is_device_device_handlers* handlers, uint8_t* buf, uint32_t address, uint32_t length, const is_device_usb_device* device_desc);

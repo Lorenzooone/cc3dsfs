@@ -194,6 +194,22 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 						continue;
 					}
 
+					if(key == "is_battery_percentage") {
+						capture_status->battery_percentage =  std::stoi(value);
+						// Even though 1 is allowed, it spam-resets the Hardware...
+						// So don't allow it as the initial value!
+						if(capture_status->battery_percentage <= 5)
+							capture_status->battery_percentage = 5;
+						if(capture_status->battery_percentage > 100)
+							capture_status->battery_percentage = 100;
+						continue;
+					}
+
+					if(key == "is_ac_adapter_connected") {
+						capture_status->ac_adapter_connected =  std::stoi(value);
+						continue;
+					}
+
 					if(audio_data->load_audio_data(key, value))
 						continue;
 				}
@@ -213,6 +229,8 @@ static void defaults_reload(FrontendData *frontend_data, AudioData* audio_data, 
 	capture_status->enabled_3d = false;
 	capture_status->capture_type = CAPTURE_SCREENS_BOTH;
 	capture_status->capture_speed = CAPTURE_SPEEDS_FULL;
+	capture_status->battery_percentage = 100;
+	capture_status->ac_adapter_connected = true;
 	reset_screen_info(frontend_data->top_screen->m_info);
 	reset_screen_info(frontend_data->bot_screen->m_info);
 	reset_screen_info(frontend_data->joint_screen->m_info);
@@ -293,6 +311,8 @@ static bool save(const std::string path, const std::string name, const std::stri
 	file << "last_connected_ds=" << display_data.last_connected_ds << std::endl;
 	file << "is_screen_capture_type=" << capture_status->capture_type << std::endl;
 	file << "is_speed_capture=" << capture_status->capture_speed << std::endl;
+	file << "is_battery_percentage=" << capture_status->battery_percentage << std::endl;
+	file << "is_ac_adapter_connected=" << capture_status->ac_adapter_connected << std::endl;
 	file << audio_data->save_audio_data();
 
 	file.close();
