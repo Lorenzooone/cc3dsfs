@@ -111,7 +111,8 @@ else()
 	endif()
 endif()
 
-set(FTD3XX_BASE_URL https://ftdichip.com/wp-content/uploads/)
+set(FTDI_BASE_URL file://${CMAKE_SOURCE_DIR}/ftdi_lib_files/)
+set(FTD3XX_BASE_URL ${FTDI_BASE_URL})
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 	set(FTD3XX_BUILD_COMMAND ${SETUP_SCRIPTS_DIR}/windows_setup_ftd3xx)
 	set(FTD3XX_URL_TIME 2024/01)
@@ -180,7 +181,7 @@ else()
 	set(FTD3XX_SUBFOLDER linux)
 endif()
 
-set(FTD2XX_BASE_URL https://ftdichip.com/wp-content/uploads/)
+set(FTD2XX_BASE_URL ${FTDI_BASE_URL})
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 	set(FTD2XX_BUILD_COMMAND ${SETUP_SCRIPTS_DIR}/windows_setup_ftd2xx)
 	set(FTD2XX_URL_TIME 2023/09)
@@ -259,29 +260,29 @@ else()
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-if(N3DSXL_LOOPY_SUPPORT)
-	FetchContent_Declare(FTD3XX
-		URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
-		DOWNLOAD_NO_EXTRACT TRUE
-	)
-endif()
-if(USE_FTD2XX_FOR_NEW_DS_LOOPY)
-	FetchContent_Declare(FTD2XX
-		URL ${FTD2XX_BASE_URL}${FTD2XX_URL_TIME}/${FTD2XX_ARCHIVE}
-		DOWNLOAD_NO_EXTRACT TRUE
-	)
-endif()
+	if(N3DSXL_LOOPY_SUPPORT)
+		FetchContent_Declare(FTD3XX
+			URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
+			DOWNLOAD_NO_EXTRACT TRUE
+		)
+	endif()
+	if(USE_FTD2XX_FOR_NEW_DS_LOOPY)
+		FetchContent_Declare(FTD2XX
+			URL ${FTD2XX_BASE_URL}${FTD2XX_URL_TIME}/${FTD2XX_ARCHIVE}
+			DOWNLOAD_NO_EXTRACT TRUE
+		)
+	endif()
 else()
-if(N3DSXL_LOOPY_SUPPORT)
-	FetchContent_Declare(FTD3XX
-		URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
-	)
-endif()
-if(USE_FTD2XX_FOR_NEW_DS_LOOPY)
-	FetchContent_Declare(FTD2XX
-		URL ${FTD2XX_BASE_URL}${FTD2XX_URL_TIME}/${FTD2XX_ARCHIVE}
-	)
-endif()
+	if(N3DSXL_LOOPY_SUPPORT)
+		FetchContent_Declare(FTD3XX
+			URL ${FTD3XX_BASE_URL}${FTD3XX_URL_TIME}/${FTD3XX_ARCHIVE}
+		)
+	endif()
+	if(USE_FTD2XX_FOR_NEW_DS_LOOPY)
+		FetchContent_Declare(FTD2XX
+			URL ${FTD2XX_BASE_URL}${FTD2XX_URL_TIME}/${FTD2XX_ARCHIVE}
+		)
+	endif()
 endif()
 
 set(TOOLS_DATA_DIR ${CMAKE_BINARY_DIR}/tools_and_data)

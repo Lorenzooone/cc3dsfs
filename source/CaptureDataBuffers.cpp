@@ -78,12 +78,14 @@ void CaptureDataBuffers::ReleaseWriterBuffer() {
 	access_mutex.unlock();
 }
 
-void CaptureDataBuffers::WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type) {
+void CaptureDataBuffers::WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type, size_t offset) {
+	if(offset >= read)
+		return;
 	CaptureDataSingleBuffer* target = this->GetWriterBuffer();
 	// How did we end here?!
 	if(target == NULL)
 		return;
-	memcpy(&target->capture_buf, buffer, read);
+	memcpy(&target->capture_buf, ((uint8_t*)buffer) + offset, read - offset);
 	// Make sure to also copy the extra needed data, if any
 	if((device->cc_type == CAPTURE_CONN_USB) && (!device->is_3ds))
 		memcpy(&target->capture_buf.usb_received_old_ds.frameinfo, &buffer->usb_received_old_ds.frameinfo, sizeof(buffer->usb_received_old_ds.frameinfo));
@@ -91,4 +93,8 @@ void CaptureDataBuffers::WriteToBuffer(CaptureReceived* buffer, uint64_t read, d
 	target->time_in_buf = time_in_buf;
 	target->capture_type = capture_type;
 	this->ReleaseWriterBuffer();
+}
+
+void CaptureDataBuffers::WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, size_t offset) {
+	return this->WriteToBuffer(buffer, read, time_in_buf, device, CAPTURE_SCREENS_BOTH, offset);
 }

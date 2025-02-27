@@ -3,6 +3,8 @@
 
 #include "devicecapture.hpp"
 
+#define DEFAULT_LIMIT_SIZE_TRANSFER 0x10000
+
 void list_devices_ftd2_compatibility(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list);
 void ftd2_capture_main_loop(CaptureData* capture_data);
 int ftd2_get_queue_status(void* handle, bool is_libftdi, size_t* bytes_in);

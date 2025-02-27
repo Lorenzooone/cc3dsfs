@@ -17,8 +17,8 @@
 
 #define LE16(x) ((x) & 0xff), (((x) >> 8) & 0xff)
 
-#define FTD2XX_IN_SIZE 0x10000
-#define FTD2XX_OUT_SIZE 0x10000
+#define FTD2XX_IN_SIZE DEFAULT_LIMIT_SIZE_TRANSFER
+#define FTD2XX_OUT_SIZE DEFAULT_LIMIT_SIZE_TRANSFER
 
 #define CLKRATE 6 // 1 - 25MHz
 #define CLKDIV ((30 / CLKRATE) - 1)
@@ -262,6 +262,13 @@ static bool init_MPSSE(void* handle, bool is_libftdi) {
 	if(ftd2_is_error(retval, is_libftdi))
 		return false;
 
+	//Try improving transfer rate
+	retval = ftd2_set_usb_parameters(handle, is_libftdi, ((sizeof(FTD2OldDSCaptureReceivedRaw) + DEFAULT_LIMIT_SIZE_TRANSFER - 1) / DEFAULT_LIMIT_SIZE_TRANSFER) * DEFAULT_LIMIT_SIZE_TRANSFER, FTD2XX_OUT_SIZE); //The programmer's guide lies?
+	if(ftd2_is_error(retval, is_libftdi))
+		retval = ftd2_set_usb_parameters(handle, is_libftdi, FTD2XX_IN_SIZE, FTD2XX_OUT_SIZE); //Backup to 64 bytes up to 64k, if more is not supported...
+	if(ftd2_is_error(retval, is_libftdi))
+		return false;
+
 	//MPSSE seems to choke on first write sometimes :/  Send, purge, resend.
 	size_t sent = 0;
 	retval = ftd2_write(handle, is_libftdi, cmd, 1, &sent); //enable MPSSE mode
@@ -358,8 +365,10 @@ bool synchronization_check(uint16_t* data_buffer, size_t size, uint16_t* next_da
 		samples++;
 
 	// Schedule a read to re-synchronize
-	if(next_data_buffer != NULL)
+	if(next_data_buffer != NULL) {
+		memset(next_data_buffer, 0, size_words * 2);
 		memcpy(&data_buffer[samples], next_data_buffer, (size_words - samples) * 2);
+	}
 	*next_size = samples * 2;
 	return false;
 }

@@ -225,7 +225,8 @@ public:
 	CaptureDataBuffers();
 	CaptureDataSingleBuffer* GetReaderBuffer(CaptureReaderType reader_type);
 	void ReleaseReaderBuffer(CaptureReaderType reader_type);
-	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type = CAPTURE_SCREENS_BOTH);
+	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type = CAPTURE_SCREENS_BOTH, size_t offset = 0);
+	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, size_t offset);
 	CaptureDataSingleBuffer* GetWriterBuffer();
 	void ReleaseWriterBuffer();
 private:

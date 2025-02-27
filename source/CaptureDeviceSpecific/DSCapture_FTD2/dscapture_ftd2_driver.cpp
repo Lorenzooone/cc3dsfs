@@ -61,11 +61,23 @@ int ftd2_driver_open_serial(CaptureDevice* device, void** handle) {
 	return FT_OpenEx(SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, handle);
 }
 
+static size_t get_initial_offset_buffer(uint16_t* in_u16, size_t real_length) {
+	if(real_length <= 0)
+		return 0;
+	// This is because the actual data seems to always start with a SYNCH
+	size_t ignored_halfwords = 0;
+	while((ignored_halfwords < (real_length / 2)) && (in_u16[ignored_halfwords] == FTD2_OLDDS_SYNCH_VALUES))
+		ignored_halfwords++;
+	return ignored_halfwords * 2;
+}
+
 static void data_output_update(CaptureReceived* buffer, CaptureData* capture_data, int read_amount, std::chrono::time_point<std::chrono::high_resolution_clock> &base_time) {
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - base_time;
 	base_time = curr_time;
-	capture_data->data_buffers.WriteToBuffer(buffer, remove_synch_from_final_length((uint32_t*)buffer, read_amount), diff.count(), &capture_data->status.device);
+	size_t buffer_real_len = remove_synch_from_final_length((uint32_t*)buffer, read_amount);
+	size_t initial_offset = get_initial_offset_buffer((uint16_t*) buffer, buffer_real_len);
+	capture_data->data_buffers.WriteToBuffer(buffer, buffer_real_len, diff.count(), &capture_data->status.device, initial_offset);
 
 	if(capture_data->status.cooldown_curr_in)
 		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
@@ -101,10 +113,11 @@ void ftd2_capture_main_loop_driver(CaptureData* capture_data) {
 		if(bytesIn < next_size)
 			continue;
 		next_data_buffer = (curr_data_buffer + 1) % NUM_CAPTURE_RECEIVED_DATA_BUFFERS;
-		bool has_synch_failed = !synchronization_check((uint16_t*)(&data_buffer[curr_data_buffer]), full_size, (uint16_t*)(&data_buffer[next_data_buffer]), &next_size);
-		if(has_synch_failed)
+		bool has_synch_failed = !synchronization_check((uint16_t*)(&data_buffer[curr_data_buffer]), full_size, (uint16_t*)(&data_buffer[next_data_buffer]), &next_size, true);
+		if(has_synch_failed) {
 			continue;
-		data_output_update(&data_buffer[curr_data_buffer], capture_data, bytesIn, clock_start);
+		}
+		data_output_update(&data_buffer[curr_data_buffer], capture_data, full_size, clock_start);
 	}
 	delete []data_buffer;
 }
