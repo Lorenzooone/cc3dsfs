@@ -427,7 +427,7 @@ void reset_screen_info(ScreenInfo &info) {
 	info.crop_kind = 0;
 	info.crop_kind_ds = 0;
 	info.allow_games_crops = false;
-	info.scaling = 1.0;
+	info.scaling = DEFAULT_WINDOW_SCALING_VALUE;
 	info.is_fullscreen = false;
 	info.bottom_pos = UNDER_TOP;
 	info.subscreen_offset = 0.5;
@@ -439,10 +439,10 @@ void reset_screen_info(ScreenInfo &info) {
 	info.show_mouse = true;
 	info.v_sync_enabled = false;
 	info.async = true;
-	info.top_scaling = -1;
-	info.bot_scaling = -1;
-	info.non_integer_top_scaling = -1.0;
-	info.non_integer_bot_scaling = -1.0;
+	info.top_scaling = DEFAULT_NO_SCALING_VALUE;
+	info.bot_scaling = DEFAULT_NO_SCALING_VALUE;
+	info.non_integer_top_scaling = DEFAULT_NO_SCALING_VALUE;
+	info.non_integer_bot_scaling = DEFAULT_NO_SCALING_VALUE;
 	info.bfi = false;
 	info.bfi_divider = 2;
 	info.bfi_amount = 1;
@@ -470,7 +470,7 @@ void override_set_data_to_screen_info(override_win_data &override_win, ScreenInf
 	info.initial_pos_y = override_win.pos_y;
 	if(override_win.enabled != DEFAULT_NO_ENABLED_VALUE)
 		info.window_enabled = override_win.enabled;
-	if((override_win.scaling != DEFAULT_NO_SCALING_VALUE) && (override_win.scaling > 0))
+	if((override_win.scaling != DEFAULT_NO_SCALING_VALUE) && (override_win.scaling >= MIN_WINDOW_SCALING_VALUE) && (override_win.scaling <= MAX_WINDOW_SCALING_VALUE))
 		info.scaling = override_win.scaling;
 }
 
@@ -513,10 +513,10 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 	}
 	if(key == (base + "scale")) {
 		info.scaling = std::stod(value);
-		if(info.scaling < 1.25)
-			info.scaling = 1.0;
-		if(info.scaling > 44.75)
-			info.scaling = 45.0;
+		if(info.scaling < MIN_WINDOW_SCALING_VALUE)
+			info.scaling = MIN_WINDOW_SCALING_VALUE;
+		if(info.scaling > MAX_WINDOW_SCALING_VALUE)
+			info.scaling = MAX_WINDOW_SCALING_VALUE;
 		return true;
 	}
 	if(key == (base + "fullscreen")) {

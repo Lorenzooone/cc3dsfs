@@ -1,4 +1,4 @@
-#include <iostream>
+#include <cmath>
 
 #include "frontend.hpp"
 #include "SFML/Audio/PlaybackDevice.hpp"
@@ -345,14 +345,22 @@ void WindowScreen::window_scaling_change(bool positive) {
 	if(this->m_info.is_fullscreen)
 		return;
 	double old_scaling = this->m_info.scaling;
+	double closest_foor_scaling = std::floor(old_scaling / WINDOW_SCALING_CHANGE) * WINDOW_SCALING_CHANGE;
+	double closest_ceil_scaling = std::ceil(old_scaling / WINDOW_SCALING_CHANGE) * WINDOW_SCALING_CHANGE;
+	double greater_scaling = old_scaling + WINDOW_SCALING_CHANGE;
+	double lower_scaling = old_scaling - WINDOW_SCALING_CHANGE;
+	if(closest_foor_scaling != closest_ceil_scaling) {
+		greater_scaling = closest_ceil_scaling;
+		lower_scaling = closest_foor_scaling;
+	}
 	if(positive)
-		this->m_info.scaling += 0.5;
+		this->m_info.scaling = greater_scaling;
 	else
-		this->m_info.scaling -= 0.5;
-	if (this->m_info.scaling < 1.25)
-		this->m_info.scaling = 1.0;
-	if (this->m_info.scaling > 44.75)
-		this->m_info.scaling = 45.0;
+		this->m_info.scaling = lower_scaling;
+	if (this->m_info.scaling < (MIN_WINDOW_SCALING_VALUE + (WINDOW_SCALING_CHANGE / 2)))
+		this->m_info.scaling = MIN_WINDOW_SCALING_VALUE;
+	if (this->m_info.scaling > (MAX_WINDOW_SCALING_VALUE - (WINDOW_SCALING_CHANGE / 2)))
+		this->m_info.scaling = MAX_WINDOW_SCALING_VALUE;
 	if(old_scaling != this->m_info.scaling) {
 		this->print_notification_float("Scaling", this->m_info.scaling, 1);
 		this->future_operations.call_screen_settings_update = true;

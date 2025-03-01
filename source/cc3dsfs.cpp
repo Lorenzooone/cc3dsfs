@@ -749,6 +749,20 @@ static bool parse_int_arg(int &index, int argc, char **argv, int &target, std::s
 	return true;
 }
 
+static bool parse_double_arg(int &index, int argc, char **argv, double &target, std::string to_check) {
+	if(argv[index] != to_check)
+		return false;
+	if((++index) >= argc)
+		return true;
+	try {
+		target = std::stod(argv[index]);
+	}
+	catch(...) {
+		std::cerr << "Error with input for: " << to_check << std::endl;
+	}
+	return true;
+}
+
 int main(int argc, char **argv) {
 	init_threads();
 	init_start_time();
@@ -768,7 +782,7 @@ int main(int argc, char **argv) {
 			continue;
 		if(parse_int_arg(i, argc, argv, override_data.override_top_bot_data.pos_y, "--pos_y_both"))
 			continue;
-		if(parse_int_arg(i, argc, argv, override_data.override_top_bot_data.scaling, "--scaling_both"))
+		if(parse_double_arg(i, argc, argv, override_data.override_top_bot_data.scaling, "--scaling_both"))
 			continue;
 		if(parse_int_arg(i, argc, argv, override_data.override_top_bot_data.enabled, "--enabled_both"))
 			continue;
@@ -776,7 +790,7 @@ int main(int argc, char **argv) {
 			continue;
 		if(parse_int_arg(i, argc, argv, override_data.override_top_data.pos_y, "--pos_y_top"))
 			continue;
-		if(parse_int_arg(i, argc, argv, override_data.override_top_data.scaling, "--scaling_top"))
+		if(parse_double_arg(i, argc, argv, override_data.override_top_data.scaling, "--scaling_top"))
 			continue;
 		if(parse_int_arg(i, argc, argv, override_data.override_top_data.enabled, "--enabled_top"))
 			continue;
@@ -784,7 +798,7 @@ int main(int argc, char **argv) {
 			continue;
 		if(parse_int_arg(i, argc, argv, override_data.override_bot_data.pos_y, "--pos_y_bot"))
 			continue;
-		if(parse_int_arg(i, argc, argv, override_data.override_bot_data.scaling, "--scaling_bot"))
+		if(parse_double_arg(i, argc, argv, override_data.override_bot_data.scaling, "--scaling_bot"))
 			continue;
 		if(parse_int_arg(i, argc, argv, override_data.override_bot_data.enabled, "--enabled_bot"))
 			continue;
