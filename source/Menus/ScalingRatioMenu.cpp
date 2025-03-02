@@ -33,11 +33,17 @@ static const ScalingRatioMenuOptionInfo ratio_algo_option = {
 .is_inc = true, .dec_str = "<", .inc_str = ">", .inc_out_action = SCALING_RATIO_MENU_ALGO_INC,
 .out_action = SCALING_RATIO_MENU_ALGO_DEC};
 
+static const ScalingRatioMenuOptionInfo force_same_scaling_option = {
+.base_name = "Allow Different Scaling", .false_name = "Force 50/50 Ratio",
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = SCALING_RATIO_MENU_NO_ACTION,
+.out_action = SCALING_RATIO_MENU_FORCE_SAME_SCALING};
+
 static const ScalingRatioMenuOptionInfo* pollable_options[] = {
 &ratio_option,
 &top_fill_option,
 &bot_fill_option,
 &ratio_algo_option,
+&force_same_scaling_option,
 };
 
 ScalingRatioMenu::ScalingRatioMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
@@ -143,6 +149,9 @@ void ScalingRatioMenu::prepare(float menu_scaling_factor, int view_size_x, int v
 				break;
 			case SCALING_RATIO_MENU_ALGO_DEC:
 				this->labels[index]->setText(this->setTextOptionString(real_index, get_name_non_int_mode(info->non_integer_mode)));
+				break;
+			case SCALING_RATIO_MENU_FORCE_SAME_SCALING:
+				this->labels[index]->setText(this->setTextOptionBool(real_index, info->force_same_scaling));
 				break;
 			default:
 				break;

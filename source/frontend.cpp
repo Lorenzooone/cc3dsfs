@@ -441,6 +441,7 @@ void reset_screen_info(ScreenInfo &info) {
 	info.async = true;
 	info.top_scaling = DEFAULT_NO_SCALING_VALUE;
 	info.bot_scaling = DEFAULT_NO_SCALING_VALUE;
+	info.force_same_scaling = false;
 	info.non_integer_top_scaling = DEFAULT_NO_SCALING_VALUE;
 	info.non_integer_bot_scaling = DEFAULT_NO_SCALING_VALUE;
 	info.bfi = false;
@@ -607,6 +608,10 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		info.rounded_corners_fix = std::stoi(value);
 		return true;
 	}
+	if(key == (base + "force_same_scaling")) {
+		info.force_same_scaling = std::stoi(value);
+		return true;
+	}
 	if(key == (base + "top_par")) {
 		info.top_par = std::stoi(value);
 		return true;
@@ -707,6 +712,7 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "frame_blending_top=" + std::to_string(info.frame_blending_top) + "\n";
 	out += base + "frame_blending_bot=" + std::to_string(info.frame_blending_bot) + "\n";
 	out += base + "window_enabled=" + std::to_string(info.window_enabled) + "\n";
+	out += base + "force_same_scaling=" + std::to_string(info.force_same_scaling) + "\n";
 	return out;
 }
 
@@ -720,6 +726,10 @@ void joystick_axis_poll(std::queue<SFEvent> &events_queue) {
 				events_queue.emplace(i, axis, sf::Joystick::getAxisPosition(i, axis));
 		}
 	}
+}
+
+const PARData* get_base_par() {
+	return basic_possible_pars[0];
 }
 
 void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor) {
@@ -740,6 +750,26 @@ void get_par_size(int &width, int &height, float multiplier_factor, const PARDat
 			width = ((width * correction_factor->width_multiplier) + correction_factor_approx_contribute) / correction_factor_divisor;
 		else
 			height = ((height * correction_factor->width_divisor) + correction_factor_approx_contribute) / correction_factor_divisor;
+	}
+}
+
+void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor) {
+	width *= multiplier_factor;
+	height *= multiplier_factor;
+	float correction_factor_divisor = correction_factor->width_multiplier;
+	if(correction_factor->is_width_main)
+		correction_factor_divisor = correction_factor->width_divisor;
+	if(correction_factor->is_fit) {
+		if(correction_factor->is_width_main)
+			width = (height * correction_factor->width_multiplier) / correction_factor_divisor;
+		else
+			height = (width * correction_factor->width_divisor) / correction_factor_divisor;
+	}
+	else {
+		if(correction_factor->is_width_main)
+			width = (width * correction_factor->width_multiplier) / correction_factor_divisor;
+		else
+			height = (height * correction_factor->width_divisor) / correction_factor_divisor;
 	}
 }
 

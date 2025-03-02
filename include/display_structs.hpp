@@ -44,6 +44,7 @@ struct ScreenInfo {
 	bool v_sync_enabled;
 	bool async;
 	int top_scaling, bot_scaling;
+	bool force_same_scaling;
 	float non_integer_top_scaling, non_integer_bot_scaling;
 	bool bfi;
 	int bfi_divider;

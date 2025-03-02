@@ -241,6 +241,7 @@ private:
 	void menu_scaling_change(bool positive);
 	void window_scaling_change(bool positive);
 	void rotation_change(int &value, bool right);
+	void force_same_scaling_change();
 	void ratio_change(bool top_priority, bool cycle = false);
 	void bfi_change();
 	void input_toggle_change(bool &target);
@@ -271,6 +272,7 @@ private:
 	void set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, bool do_work = true);
 	float get_max_float_screen_multiplier(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation);
 	int prepare_screen_ratio(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation);
+	float get_ratio_compared_other_screen(ResizingScreenData *own_screen, ResizingScreenData* other_screen, float other_scaling);
 	bool can_non_integerly_scale();
 	void calc_scaling_resize_screens(ResizingScreenData *own_screen, ResizingScreenData* other_screen, bool increase, bool mantain, bool set_to_zero, bool cycle);
 	void rescale_nonint_subscreen(ResizingScreenData *main_screen_resize_data, ResizingScreenData *sub_screen_resize_data);
@@ -278,6 +280,8 @@ private:
 	void non_int_scale_screens_with_main(ResizingScreenData *main_screen_resize_data, ResizingScreenData *sub_screen_resize_data, int sub_min_width, int sub_height_min);
 	void non_int_scale_screens_both(ResizingScreenData *main_screen_resize_data, ResizingScreenData *sub_screen_resize_data, int free_width, int free_height, float multiplier_main, int main_min_width, int main_height_min, int sub_min_width, int sub_height_min);
 	void non_integer_scale_screens(ResizingScreenData *top_screen_resize_data, ResizingScreenData *bot_screen_resize_data);
+	void merge_screens_data(ResizingScreenData* top_screen_resize_data, ResizingScreenData* bot_screen_resize_data, ResizingScreenData* merged_screen_resize_data, BottomRelativePosition bottom_pos);
+	bool prepare_screens_same_scaling_factor(ResizingScreenData* top_screen_resize_data, ResizingScreenData* bot_screen_resize_data);
 	void prepare_size_ratios(bool top_increase, bool bot_increase, bool cycle = false);
 	int get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height);
 	int get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height);
@@ -342,7 +346,9 @@ void override_set_data_to_screen_info(override_win_data &override_win, ScreenInf
 void reset_screen_info(ScreenInfo &info);
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
 std::string save_screen_info(std::string base, const ScreenInfo &info);
+const PARData* get_base_par();
 void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor);
+void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor);
 float get_par_mult_factor(float width, float height, float max_width, float max_height, const PARData *correction_factor, bool is_rotated);
 void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL);
 void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &old_cc_device, const CaptureDevice &new_cc_device);

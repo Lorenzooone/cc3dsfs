@@ -376,6 +376,12 @@ void WindowScreen::rotation_change(int &value, bool right) {
 	this->future_operations.call_rotate = true;
 }
 
+void WindowScreen::force_same_scaling_change() {
+	this->m_info.force_same_scaling = !this->m_info.force_same_scaling;
+	this->prepare_size_ratios(true, true, false);
+	this->future_operations.call_screen_settings_update = true;
+}
+
 void WindowScreen::ratio_change(bool top_priority, bool cycle) {
 	this->prepare_size_ratios(top_priority, !top_priority, cycle);
 	this->future_operations.call_screen_settings_update = true;
@@ -1925,6 +1931,9 @@ void WindowScreen::poll(bool do_everything) {
 							break;
 						case SCALING_RATIO_MENU_ALGO_INC:
 							this->non_int_mode_change(true);
+							break;
+						case SCALING_RATIO_MENU_FORCE_SAME_SCALING:
+							this->force_same_scaling_change();
 							break;
 						default:
 							break;
