@@ -15,6 +15,7 @@ Support for a really old Optimize board is also present, used with Nisetro DS ca
 - Many builtin crop options for the screens.
 - Many other settings, explained in [Controls](#Controls).
 - Prebuilt executables available in the [Releases](https://github.com/Lorenzooone/cc3dsfs/releases/latest) page for ease of use.
+- Various command line arguments to personalize how the software should behave. Use -h or --help as an argument to display the help message.
 
 _Note: On 3DS, DS, GBA, GBC and GB games boot in scaled resolution mode by default. Holding START or SELECT while launching these games will boot in native resolution mode._
 
