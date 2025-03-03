@@ -5,6 +5,8 @@ if [ "$(id -u)" -eq "0" ]; then
    exit 1;
 fi
 
+DEFAULT_SCRIPT_KIOSK_MODE=cc3dsfs_script_tv_kit_2.sh
+
 sudo apt update
 sudo apt -y install xterm gpiod xserver-xorg xinit libxcursor1 x11-xserver-utils pipewire pipewire-alsa
 
@@ -29,6 +31,7 @@ if [ $(getconf LONG_BIT) -eq 32 ]; then
 else
   $(cd ${HOME}/Desktop ; ln -s cc3dsfs_versions/cc3dsfs_64 cc3dsfs)
 fi
+$(cd ${HOME}/Desktop ; ln -s premade_scripts/${DEFAULT_SCRIPT_KIOSK_MODE} cc3dsfs_script.sh)
 chmod +x -R ${HOME}/Desktop/premade_scripts/
 chmod +x -R ${HOME}/Desktop/cc3dsfs_versions/
 chmod +x ${HOME}/Desktop/cc3dsfs
