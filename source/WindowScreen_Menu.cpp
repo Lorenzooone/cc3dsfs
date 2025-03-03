@@ -118,6 +118,7 @@ void WindowScreen::init_menus() {
 	this->video_effects_menu = new VideoEffectsMenu(this->font_load_success, this->text_font);
 	this->input_menu = new InputMenu(this->font_load_success, this->text_font);
 	this->audio_device_menu = new AudioDeviceMenu(this->font_load_success, this->text_font);
+	this->separator_menu = new SeparatorMenu(this->font_load_success, this->text_font);
 }
 
 void WindowScreen::destroy_menus() {
@@ -143,6 +144,7 @@ void WindowScreen::destroy_menus() {
 	delete this->video_effects_menu;
 	delete this->input_menu;
 	delete this->audio_device_menu;
+	delete this->separator_menu;
 }
 
 void WindowScreen::set_close(int ret_val) {
@@ -378,7 +380,7 @@ void WindowScreen::rotation_change(int &value, bool right) {
 
 void WindowScreen::force_same_scaling_change() {
 	this->m_info.force_same_scaling = !this->m_info.force_same_scaling;
-	this->prepare_size_ratios(true, true, false);
+	this->prepare_size_ratios(true, true);
 	this->future_operations.call_screen_settings_update = true;
 }
 
@@ -451,6 +453,51 @@ void WindowScreen::frame_blending_mode_change(bool positive) {
 		change = FRAME_BLENDING_END - 1;
 	this->m_info.frame_blending_top = static_cast<FrameBlendingMode>((this->m_info.frame_blending_top + change) % FRAME_BLENDING_END);
 	this->m_info.frame_blending_bot = this->m_info.frame_blending_top;
+}
+
+void WindowScreen::separator_size_change(int change) {
+	if(this->m_stype != ScreenType::JOINT)
+		return;
+	int new_size = this->m_info.separator_pixel_size + change;
+	if(new_size < 0)
+		new_size = 0;
+	if(new_size > MAX_SEP_SIZE)
+		new_size = MAX_SEP_SIZE;
+	if(new_size != this->m_info.separator_pixel_size) {
+		this->m_info.separator_pixel_size = new_size;
+		this->prepare_size_ratios(true, true);
+		this->future_operations.call_screen_settings_update = true;
+	}
+}
+
+void WindowScreen::separator_multiplier_change(bool positive, float& multiplier_to_check, float lower_limit, float upper_limit) {
+	if(this->m_stype != ScreenType::JOINT)
+		return;
+	float change = WINDOW_SCALING_CHANGE;
+	if(!positive)
+		change = -WINDOW_SCALING_CHANGE;
+	float new_value = multiplier_to_check + change;
+	if(new_value < lower_limit)
+		new_value = lower_limit;
+	if(new_value > upper_limit)
+		new_value = upper_limit;
+	if(new_value != multiplier_to_check) {
+		multiplier_to_check = new_value;
+		this->prepare_size_ratios(true, true);
+		this->future_operations.call_screen_settings_update = true;
+	}
+}
+
+void WindowScreen::separator_windowed_multiplier_change(bool positive) {
+	if(this->m_info.is_fullscreen)
+		return;
+	this->separator_multiplier_change(positive, this->m_info.separator_windowed_multiplier, SEP_WINDOW_SCALING_MIN_MULTIPLIER, MAX_WINDOW_SCALING_VALUE);
+}
+
+void WindowScreen::separator_fullscreen_multiplier_change(bool positive) {
+	if(!this->m_info.is_fullscreen)
+		return;
+	this->separator_multiplier_change(positive, this->m_info.separator_fullscreen_multiplier, SEP_FULLSCREEN_SCALING_MIN_MULTIPLIER, MAX_WINDOW_SCALING_VALUE);
 }
 
 bool WindowScreen::can_execute_cmd(const WindowCommand* window_cmd, bool is_extra, bool is_always) {
@@ -1056,6 +1103,18 @@ void WindowScreen::setup_video_effects_menu(bool reset_data) {
 	}
 }
 
+void WindowScreen::setup_separator_menu(bool reset_data) {
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != SEPARATOR_MENU_TYPE) {
+		this->curr_menu = SEPARATOR_MENU_TYPE;
+		if(reset_data)
+			this->separator_menu->reset_data();
+		this->separator_menu->insert_data(this->m_info.is_fullscreen);
+		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
+	}
+}
+
 void WindowScreen::update_save_menu() {
 	if(this->curr_menu == SAVE_MENU_TYPE) {
 		this->curr_menu = DEFAULT_MENU_TYPE;
@@ -1594,6 +1653,9 @@ void WindowScreen::poll(bool do_everything) {
 						case VIDEO_MENU_VIDEO_EFFECTS_SETTINGS:
 							this->setup_video_effects_menu();
 							break;
+						case VIDEO_MENU_SEPARATOR_SETTINGS:
+							this->setup_separator_menu();
+							break;
 						default:
 							break;
 					}
@@ -2070,6 +2132,46 @@ void WindowScreen::poll(bool do_everything) {
 					continue;
 				}
 				break;
+			case SEPARATOR_MENU_TYPE:
+				if(this->separator_menu->poll(event_data)) {
+					switch(this->separator_menu->selected_index) {
+						case SEPARATOR_MENU_BACK:
+							this->setup_video_menu(false);
+							done = true;
+							break;
+						case SEPARATOR_MENU_NO_ACTION:
+							break;
+						case SEPARATOR_MENU_SIZE_DEC_1:
+							this->separator_size_change(-1);
+							break;
+						case SEPARATOR_MENU_SIZE_INC_1:
+							this->separator_size_change(1);
+							break;
+						case SEPARATOR_MENU_SIZE_DEC_10:
+							this->separator_size_change(-10);
+							break;
+						case SEPARATOR_MENU_SIZE_INC_10:
+							this->separator_size_change(10);
+							break;
+						case SEPARATOR_MENU_WINDOW_MUL_DEC:
+							this->separator_windowed_multiplier_change(false);
+							break;
+						case SEPARATOR_MENU_WINDOW_MUL_INC:
+							this->separator_windowed_multiplier_change(true);
+							break;
+						case SEPARATOR_MENU_FULLSCREEN_MUL_DEC:
+							this->separator_fullscreen_multiplier_change(false);
+							break;
+						case SEPARATOR_MENU_FULLSCREEN_MUL_INC:
+							this->separator_fullscreen_multiplier_change(true);
+							break;
+						default:
+							break;
+					}
+					this->separator_menu->reset_output_option();
+					continue;
+				}
+				break;
 			default:
 				break;
 		}
@@ -2346,6 +2448,9 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 		case AUDIO_DEVICE_MENU_TYPE:
 			this->audio_device_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->audio_data->get_audio_output_device_data());
 			break;
+		case SEPARATOR_MENU_TYPE:
+			this->separator_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+			break;
 		default:
 			break;
 	}
@@ -2424,6 +2529,9 @@ void WindowScreen::execute_menu_draws() {
 			break;
 		case AUDIO_DEVICE_MENU_TYPE:
 			this->audio_device_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case SEPARATOR_MENU_TYPE:
+			this->separator_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

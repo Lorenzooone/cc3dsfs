@@ -31,6 +31,10 @@ struct shader_and_data {
 
 static std::vector<shader_and_data> usable_shaders;
 
+static bool is_size_valid(sf::Vector2f &size) {
+	return (size.x > 0.0) && (size.y > 0.0);
+}
+
 WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, SharedData* shared_data, AudioData* audio_data, ConsumerMutex *draw_lock, bool created_proper_folder) {
 	this->draw_lock = draw_lock;
 	this->m_stype = stype;
@@ -673,7 +677,39 @@ void WindowScreen::window_render_call() {
 	}
 }
 
-void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, bool do_work) {
+static bool should_have_separator(sf::Vector2f top_screen_size, sf::Vector2f bot_screen_size, float top_scaling, float bot_scaling, ScreenType stype) {
+	if(stype != ScreenType::JOINT)
+		return false;
+	if((!is_size_valid(top_screen_size)) || (!is_size_valid(bot_screen_size)))
+		return false;
+	if((top_scaling <= 0) || (bot_scaling <= 0))
+		return false;
+	return true;
+}
+
+static int get_separator_size_xy(float top_scaling, float bot_scaling, int separator_size, float separator_multiplier, bool is_fullscreen) {
+	if((!is_fullscreen) && (separator_multiplier == SEP_FOLLOW_SCALING_MULTIPLIER))
+		return separator_size * top_scaling;
+	return separator_size * separator_multiplier;
+}
+
+static int get_separator_size_x(sf::Vector2f top_screen_size, sf::Vector2f bot_screen_size, float top_scaling, float bot_scaling, ScreenType stype, BottomRelativePosition bottom_pos, int separator_size, float separator_multiplier, bool is_fullscreen) {
+	if(!should_have_separator(top_screen_size, bot_screen_size, top_scaling, bot_scaling, stype))
+		return 0;
+	if((bottom_pos != RIGHT_TOP) && (bottom_pos != LEFT_TOP))
+		return 0;
+	return get_separator_size_xy(top_scaling, bot_scaling, separator_size, separator_multiplier, is_fullscreen);
+}
+
+static int get_separator_size_y(sf::Vector2f top_screen_size, sf::Vector2f bot_screen_size, float top_scaling, float bot_scaling, ScreenType stype, BottomRelativePosition bottom_pos, int separator_size, float separator_multiplier, bool is_fullscreen) {
+	if(!should_have_separator(top_screen_size, bot_screen_size, top_scaling, bot_scaling, stype))
+		return 0;
+	if((bottom_pos != UNDER_TOP) && (bottom_pos != ABOVE_TOP))
+		return 0;
+	return get_separator_size_xy(top_scaling, bot_scaling, separator_size, separator_multiplier, is_fullscreen);
+}
+
+void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, int separator_size_x, int separator_size_y, bool do_work) {
 	int top_screen_x = 0, top_screen_y = 0;
 	int bot_screen_x = 0, bot_screen_y = 0;
 	int top_screen_width = curr_top_screen_size.x;
@@ -707,30 +743,30 @@ void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::
 			case UNDER_TOP:
 				bot_screen_x = (greatest_width - bot_screen_width) * this->loaded_info.subscreen_offset;
 				top_screen_x = (greatest_width - top_screen_width) * this->loaded_info.subscreen_offset;
-				bot_screen_y = top_screen_height;
+				bot_screen_y = top_screen_height + separator_size_y;
 				if(max_y > 0)
-					bot_screen_y += (max_y - bot_screen_height - top_screen_height - offset_y) * this->loaded_info.subscreen_attached_offset;
+					bot_screen_y += (max_y - bot_screen_height - separator_size_y - top_screen_height - offset_y) * this->loaded_info.subscreen_attached_offset;
 				break;
 			case RIGHT_TOP:
 				bot_screen_y = (greatest_height - bot_screen_height) * this->loaded_info.subscreen_offset;
 				top_screen_y = (greatest_height - top_screen_height) * this->loaded_info.subscreen_offset;
-				bot_screen_x = top_screen_width;
+				bot_screen_x = top_screen_width + separator_size_x;
 				if(max_x > 0)
-					bot_screen_x += (max_x - bot_screen_width - top_screen_width - offset_x) * this->loaded_info.subscreen_attached_offset;
+					bot_screen_x += (max_x - bot_screen_width - separator_size_x - top_screen_width - offset_x) * this->loaded_info.subscreen_attached_offset;
 				break;
 			case ABOVE_TOP:
 				bot_screen_x = (greatest_width - bot_screen_width) * this->loaded_info.subscreen_offset;
 				top_screen_x = (greatest_width - top_screen_width) * this->loaded_info.subscreen_offset;
-				top_screen_y = bot_screen_height;
+				top_screen_y = bot_screen_height + separator_size_y;
 				if(max_y > 0)
-					top_screen_y += (max_y - bot_screen_height - top_screen_height - offset_y) * this->loaded_info.subscreen_attached_offset;
+					top_screen_y += (max_y - bot_screen_height - separator_size_y - top_screen_height - offset_y) * this->loaded_info.subscreen_attached_offset;
 				break;
 			case LEFT_TOP:
 				bot_screen_y = (greatest_height - bot_screen_height) * this->loaded_info.subscreen_offset;
 				top_screen_y = (greatest_height - top_screen_height) * this->loaded_info.subscreen_offset;
-				top_screen_x = bot_screen_width;
+				top_screen_x = bot_screen_width + separator_size_x;
 				if(max_x > 0)
-					top_screen_x += (max_x - bot_screen_width - top_screen_width - offset_x) * this->loaded_info.subscreen_attached_offset;
+					top_screen_x += (max_x - bot_screen_width - separator_size_x - top_screen_width - offset_x) * this->loaded_info.subscreen_attached_offset;
 				break;
 			default:
 				break;
@@ -754,18 +790,17 @@ void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::
 		this->m_height = bot_end_y;
 }
 
-static bool is_size_valid(sf::Vector2f &size) {
-	return (size.x > 0.0) && (size.y > 0.0);
-}
-
-float WindowScreen::get_max_float_screen_multiplier(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation) {
+float WindowScreen::get_max_float_screen_multiplier(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation, bool is_two_screens_merged) {
 	if(!is_size_valid(own_screen->size))
 		return 0;
 
 	if((other_rotation / 10) % 2)
 		std::swap(width_limit, height_limit);
-	int desk_height = curr_desk_mode.size.y;
-	int desk_width = curr_desk_mode.size.x;
+	sf::Vector2f other_screen_size = sf::Vector2f(width_limit, height_limit);
+	if((!is_size_valid(other_screen_size)) && is_two_screens_merged)
+		other_screen_size = sf::Vector2f(1, 1);
+	int desk_height = curr_desk_mode.size.y - get_separator_size_y(own_screen->size, other_screen_size, 1.0, 1.0, this->m_stype, this->m_info.bottom_pos, this->m_info.separator_pixel_size, this->m_info.separator_fullscreen_multiplier, true);
+	int desk_width = curr_desk_mode.size.x - get_separator_size_x(own_screen->size, other_screen_size, 1.0, 1.0, this->m_stype, this->m_info.bottom_pos, this->m_info.separator_pixel_size, this->m_info.separator_fullscreen_multiplier, true);
 	int height_max = desk_height;
 	int width_max = desk_width;
 	switch(this->m_info.bottom_pos) {
@@ -781,7 +816,18 @@ float WindowScreen::get_max_float_screen_multiplier(ResizingScreenData *own_scre
 			break;
 	}
 
-	return get_par_mult_factor(own_screen->size.x, own_screen->size.y, width_max, height_max, own_screen->par, (own_screen->rotation / 10) % 2);
+	float own_width = own_screen->size.x;
+	float own_height = own_screen->size.y;
+	get_par_size(own_width, own_height, 1.0, own_screen->par);
+	if((own_screen->rotation / 10) % 2)
+		std::swap(own_width, own_height);
+	if((own_height == 0) || (own_width == 0))
+		return 0;
+	float factor_width = width_max / own_width;
+	float factor_height = height_max / own_height;
+	if(factor_height < factor_width)
+		return factor_height;
+	return factor_width;
 }
 
 int WindowScreen::prepare_screen_ratio(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation) {
@@ -992,7 +1038,7 @@ bool WindowScreen::prepare_screens_same_scaling_factor(ResizingScreenData* top_s
 	float non_int_scaling_merged = 1.0;
 	ResizingScreenData merged_screen_resize_data = {.size = {}, .scaling = &scaling_merged, .non_int_scaling = &non_int_scaling_merged, .use_non_int_scaling = false, .rotation = 0, .par = NULL};
 	merge_screens_data(top_screen_resize_data, bot_screen_resize_data, &merged_screen_resize_data, this->m_info.bottom_pos);
-	non_int_scaling_merged = this->get_max_float_screen_multiplier(&merged_screen_resize_data, 0, 0, 0);
+	non_int_scaling_merged = this->get_max_float_screen_multiplier(&merged_screen_resize_data, 0, 0, 0, true);
 	scaling_merged = non_int_scaling_merged;
 	if(non_int_scaling_merged < 1.0)
 		return false;
@@ -1047,14 +1093,12 @@ void WindowScreen::prepare_size_ratios(bool top_increase, bool bot_increase, boo
 	}
 }
 
-int WindowScreen::get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height) {
+int WindowScreen::get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height, int separator_contribute) {
 	if((this->loaded_info.top_rotation / 10) % 2)
 		std::swap(top_width, top_height);
 	if((this->loaded_info.bot_rotation / 10) % 2)
 		std::swap(bot_width, bot_height);
-	int greatest_width = top_width;
-	if(bot_width > top_width)
-		greatest_width = bot_width;
+	int greatest_width = std::max(top_width, bot_width);
 	int offset_contribute = 0;
 	switch(this->loaded_info.bottom_pos) {
 		case UNDER_TOP:
@@ -1063,7 +1107,7 @@ int WindowScreen::get_fullscreen_offset_x(int top_width, int top_height, int bot
 			break;
 		case LEFT_TOP:
 		case RIGHT_TOP:
-			offset_contribute = top_width + bot_width;
+			offset_contribute = top_width + bot_width + separator_contribute;
 			break;
 		default:
 			return 0;
@@ -1071,19 +1115,17 @@ int WindowScreen::get_fullscreen_offset_x(int top_width, int top_height, int bot
 	return (curr_desk_mode.size.x - offset_contribute) * this->loaded_info.total_offset_x;
 }
 
-int WindowScreen::get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height) {
+int WindowScreen::get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height, int separator_contribute) {
 	if((this->loaded_info.top_rotation / 10) % 2)
 		std::swap(top_width, top_height);
 	if((this->loaded_info.bot_rotation / 10) % 2)
 		std::swap(bot_width, bot_height);
-	int greatest_height = top_height;
-	if(bot_height > top_height)
-		greatest_height = bot_height;
+	int greatest_height = std::max(top_height, bot_height);
 	int offset_contribute = 0;
 	switch(this->loaded_info.bottom_pos) {
 		case UNDER_TOP:
 		case ABOVE_TOP:
-			offset_contribute = top_height + bot_height;
+			offset_contribute = top_height + bot_height + separator_contribute;
 			break;
 		case LEFT_TOP:
 		case RIGHT_TOP:
@@ -1108,10 +1150,14 @@ void WindowScreen::resize_window_and_out_rects(bool do_work) {
 	int offset_y = 0;
 	int max_x = 0;
 	int max_y = 0;
+	int separator_size_x = 0;
+	int separator_size_y = 0;
+	float sep_multiplier = this->loaded_info.separator_windowed_multiplier;
 
 	if(this->loaded_info.is_fullscreen) {
 		top_scaling = this->loaded_info.non_integer_top_scaling;
 		bot_scaling = this->loaded_info.non_integer_bot_scaling;
+		sep_multiplier = this->loaded_info.separator_fullscreen_multiplier;
 	}
 	if((this->loaded_info.top_par >= this->possible_pars.size()) || (this->loaded_info.top_par < 0))
 		this->loaded_info.top_par = 0;
@@ -1125,9 +1171,11 @@ void WindowScreen::resize_window_and_out_rects(bool do_work) {
 		offset_x = LEFT_ROUNDED_PADDING;
 	}
 
+	separator_size_x = get_separator_size_x(top_screen_size, bot_screen_size, top_scaling, bot_scaling, this->m_stype, this->loaded_info.bottom_pos, this->loaded_info.separator_pixel_size, sep_multiplier, this->loaded_info.is_fullscreen);
+	separator_size_y = get_separator_size_y(top_screen_size, bot_screen_size, top_scaling, bot_scaling, this->m_stype, this->loaded_info.bottom_pos, this->loaded_info.separator_pixel_size, sep_multiplier, this->loaded_info.is_fullscreen);
 	if(this->loaded_info.is_fullscreen) {
-		offset_x = get_fullscreen_offset_x(top_width, top_height, bot_width, bot_height);
-		offset_y = get_fullscreen_offset_y(top_width, top_height, bot_width, bot_height);
+		offset_x = get_fullscreen_offset_x(top_width, top_height, bot_width, bot_height, separator_size_x);
+		offset_y = get_fullscreen_offset_y(top_width, top_height, bot_width, bot_height, separator_size_y);
 		max_x = curr_desk_mode.size.x;
 		max_y = curr_desk_mode.size.y;
 	}
@@ -1139,7 +1187,7 @@ void WindowScreen::resize_window_and_out_rects(bool do_work) {
 		this->m_out_rect_bot.out_rect.setSize(new_bot_screen_size);
 		this->m_out_rect_bot.out_rect.setTextureRect(sf::IntRect({0, 0}, {(int)bot_screen_size.x, (int)bot_screen_size.y}));
 	}
-	this->set_position_screens(new_top_screen_size, new_bot_screen_size, offset_x, offset_y, max_x, max_y, do_work);
+	this->set_position_screens(new_top_screen_size, new_bot_screen_size, offset_x, offset_y, max_x, max_y, separator_size_x, separator_size_y, do_work);
 	if((!this->loaded_info.is_fullscreen) && this->loaded_info.rounded_corners_fix) {
 		this->m_height += BOTTOM_ROUNDED_PADDING;
 		this->m_width += RIGHT_ROUNDED_PADDING;

@@ -10,8 +10,8 @@ source to prevent build errors.
 Certain files which are not needed were removed from the libraries' archives
 to save on space.
 
-Feel free to contact me if you would like me to have the files removed,
-if an agreement about their availability is reached.
+Feel free to contact me if you would like the files to be removed,
+if an agreement about their availability can be reached.
 
 Changing FTDI\_BASE\_URL to https://ftdichip.com/wp-content/uploads will
 switch to automatic download during builds.

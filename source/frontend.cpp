@@ -1,5 +1,5 @@
 #include "frontend.hpp"
-#include <iostream>
+#include <cmath>
 #include <thread>
 #include <SFML/System.hpp>
 
@@ -464,6 +464,9 @@ void reset_screen_info(ScreenInfo &info) {
 	info.window_enabled = false;
 	info.initial_pos_x = DEFAULT_NO_POS_WINDOW_VALUE;
 	info.initial_pos_y = DEFAULT_NO_POS_WINDOW_VALUE;
+	info.separator_pixel_size = DEFAULT_SEP_SIZE;
+	info.separator_windowed_multiplier = SEP_FOLLOW_SCALING_MULTIPLIER;
+	info.separator_fullscreen_multiplier = DEFAULT_WINDOW_SCALING_VALUE;
 }
 
 void override_set_data_to_screen_info(override_win_data &override_win, ScreenInfo &info) {
@@ -612,6 +615,32 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		info.force_same_scaling = std::stoi(value);
 		return true;
 	}
+	if(key == (base + "separator_pixel_size")) {
+		info.separator_pixel_size = std::stoi(value);
+		if(info.separator_pixel_size > MAX_SEP_SIZE)
+			info.separator_pixel_size = MAX_SEP_SIZE;
+		if(info.separator_pixel_size < 0)
+			info.separator_pixel_size = 0;
+		return true;
+	}
+	if(key == (base + "separator_windowed_multiplier")) {
+		info.separator_windowed_multiplier = std::stof(value);
+		if(info.separator_windowed_multiplier < SEP_WINDOW_SCALING_MIN_MULTIPLIER)
+			info.separator_windowed_multiplier = SEP_WINDOW_SCALING_MIN_MULTIPLIER;
+		if(info.separator_windowed_multiplier > MAX_WINDOW_SCALING_VALUE)
+			info.separator_windowed_multiplier = MAX_WINDOW_SCALING_VALUE;
+		info.separator_windowed_multiplier = std::round(info.separator_windowed_multiplier / WINDOW_SCALING_CHANGE) * WINDOW_SCALING_CHANGE;
+		return true;
+	}
+	if(key == (base + "separator_fullscreen_multiplier")) {
+		info.separator_fullscreen_multiplier = std::stof(value);
+		if(info.separator_fullscreen_multiplier < SEP_FULLSCREEN_SCALING_MIN_MULTIPLIER)
+			info.separator_fullscreen_multiplier = SEP_FULLSCREEN_SCALING_MIN_MULTIPLIER;
+		if(info.separator_fullscreen_multiplier > MAX_WINDOW_SCALING_VALUE)
+			info.separator_fullscreen_multiplier = MAX_WINDOW_SCALING_VALUE;
+		info.separator_fullscreen_multiplier = std::round(info.separator_fullscreen_multiplier / WINDOW_SCALING_CHANGE) * WINDOW_SCALING_CHANGE;
+		return true;
+	}
 	if(key == (base + "top_par")) {
 		info.top_par = std::stoi(value);
 		return true;
@@ -713,6 +742,9 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "frame_blending_bot=" + std::to_string(info.frame_blending_bot) + "\n";
 	out += base + "window_enabled=" + std::to_string(info.window_enabled) + "\n";
 	out += base + "force_same_scaling=" + std::to_string(info.force_same_scaling) + "\n";
+	out += base + "separator_pixel_size=" + std::to_string(info.separator_pixel_size) + "\n";
+	out += base + "separator_windowed_multiplier=" + std::to_string(info.separator_windowed_multiplier) + "\n";
+	out += base + "separator_fullscreen_multiplier=" + std::to_string(info.separator_fullscreen_multiplier) + "\n";
 	return out;
 }
 
@@ -771,43 +803,6 @@ void get_par_size(float &width, float &height, float multiplier_factor, const PA
 		else
 			height = (height * correction_factor->width_divisor) / correction_factor_divisor;
 	}
-}
-
-float get_par_mult_factor(float width, float height, float max_width, float max_height, const PARData *correction_factor, bool is_rotated) {
-	float correction_factor_divisor = correction_factor->width_multiplier;
-	float correction_factor_multiplier = correction_factor->width_divisor;
-	if(correction_factor->is_width_main) {
-		correction_factor_divisor = correction_factor->width_divisor;
-		correction_factor_multiplier = correction_factor->width_multiplier;
-	}
-	if(correction_factor->is_fit) {
-		if(correction_factor->is_width_main)
-			width = height * correction_factor_multiplier;
-		else
-			height = width * correction_factor_multiplier;
-	}
-	else {
-		if(correction_factor->is_width_main)
-			width = width * correction_factor_multiplier;
-		else
-			height = height * correction_factor_multiplier;
-	}
-	bool apply_to_max_width = correction_factor->is_width_main;
-	if(is_rotated) {
-		std::swap(width, height);
-		apply_to_max_width = !apply_to_max_width;
-	}
-	if(apply_to_max_width)
-		max_width = max_width * correction_factor_divisor;
-	else
-		max_height = max_height * correction_factor_divisor;
-	if((height == 0) || (width == 0))
-		return 0;
-	float factor_width = max_width / width;
-	float factor_height = max_height / height;
-	if(factor_height < factor_width)
-		return factor_height;
-	return factor_width;
 }
 
 JoystickDirection get_joystick_direction(uint32_t joystickId, sf::Joystick::Axis axis, float position) {

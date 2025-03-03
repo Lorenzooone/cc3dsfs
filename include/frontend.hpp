@@ -34,6 +34,7 @@
 #include "VideoEffectsMenu.hpp"
 #include "InputMenu.hpp"
 #include "AudioDeviceMenu.hpp"
+#include "SeparatorMenu.hpp"
 #include "display_structs.hpp"
 #include "event_structs.hpp"
 #include "shaders_list.hpp"
@@ -155,6 +156,7 @@ private:
 	VideoEffectsMenu *video_effects_menu;
 	InputMenu *input_menu;
 	AudioDeviceMenu *audio_device_menu;
+	SeparatorMenu *separator_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const CropData*> possible_crops_ds;
 	std::vector<const CropData*> possible_crops_with_games;
@@ -251,6 +253,10 @@ private:
 	void titlebar_change();
 	void input_colorspace_mode_change(bool positive);
 	void frame_blending_mode_change(bool positive);
+	void separator_size_change(int change);
+	void separator_multiplier_change(bool positive, float& multiplier_to_check, float lower_limit, float upper_limit);
+	void separator_windowed_multiplier_change(bool positive);
+	void separator_fullscreen_multiplier_change(bool positive);
 	bool query_reset_request();
 	void reset_held_times(bool force = true);
 	void poll_window(bool do_everything);
@@ -269,8 +275,8 @@ private:
 	void window_bg_processing();
 	void display_data_to_window(bool actually_draw, bool is_debug = false);
 	void window_render_call();
-	void set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, bool do_work = true);
-	float get_max_float_screen_multiplier(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation);
+	void set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, int separator_size_x, int separator_size_y, bool do_work = true);
+	float get_max_float_screen_multiplier(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation, bool is_two_screens_merged = false);
 	int prepare_screen_ratio(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation);
 	float get_ratio_compared_other_screen(ResizingScreenData *own_screen, ResizingScreenData* other_screen, float other_scaling);
 	bool can_non_integerly_scale();
@@ -283,8 +289,8 @@ private:
 	void merge_screens_data(ResizingScreenData* top_screen_resize_data, ResizingScreenData* bot_screen_resize_data, ResizingScreenData* merged_screen_resize_data, BottomRelativePosition bottom_pos);
 	bool prepare_screens_same_scaling_factor(ResizingScreenData* top_screen_resize_data, ResizingScreenData* bot_screen_resize_data);
 	void prepare_size_ratios(bool top_increase, bool bot_increase, bool cycle = false);
-	int get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height);
-	int get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height);
+	int get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height, int separator_contribute);
+	int get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height, int separator_contribute);
 	void resize_window_and_out_rects(bool do_work = true);
 	void create_window(bool re_prepare_size, bool reset_text  = true);
 	std::string title_factory();
@@ -320,6 +326,7 @@ private:
 	void setup_is_nitro_menu(bool reset_data = true);
 	void setup_video_effects_menu(bool reset_data = true);
 	void setup_input_menu(bool reset_data = true);
+	void setup_separator_menu(bool reset_data = true);
 	void update_connection();
 };
 
@@ -349,7 +356,6 @@ std::string save_screen_info(std::string base, const ScreenInfo &info);
 const PARData* get_base_par();
 void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor);
 void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor);
-float get_par_mult_factor(float width, float height, float max_width, float max_height, const PARData *correction_factor, bool is_rotated);
 void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL);
 void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &old_cc_device, const CaptureDevice &new_cc_device);
 void update_connected_specific_settings(FrontendData* frontend_data, const CaptureDevice &cc_device);

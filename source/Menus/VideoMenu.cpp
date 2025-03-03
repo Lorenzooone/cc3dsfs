@@ -188,6 +188,13 @@ static const VideoMenuOptionInfo video_effects_settings_option = {
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_VIDEO_EFFECTS_SETTINGS};
 
+static const VideoMenuOptionInfo separator_settings_option = {
+.base_name = "Separator Settings", .false_name = "",
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
+.active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
+.out_action = VIDEO_MENU_SEPARATOR_SETTINGS};
+
 static const VideoMenuOptionInfo* pollable_options[] = {
 &crop_option,
 &window_scaling_option,
@@ -195,6 +202,7 @@ static const VideoMenuOptionInfo* pollable_options[] = {
 &scaling_ratio_settings_option,
 &menu_scaling_option,
 &bottom_screen_pos_option,
+&separator_settings_option,
 &vsync_option,
 &async_option,
 &blur_option,
