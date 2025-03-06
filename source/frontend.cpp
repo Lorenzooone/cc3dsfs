@@ -438,7 +438,11 @@ void reset_screen_info(ScreenInfo &info) {
 	info.bot_rotation = 0;
 	info.show_mouse = true;
 	info.v_sync_enabled = false;
+	#ifdef RASPI
+	info.async = false;
+	#else
 	info.async = true;
+	#endif
 	info.top_scaling = DEFAULT_NO_SCALING_VALUE;
 	info.bot_scaling = DEFAULT_NO_SCALING_VALUE;
 	info.force_same_scaling = false;
