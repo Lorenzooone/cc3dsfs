@@ -27,7 +27,7 @@ cc3dsfs has three build dependencies: CMake, g++ and git.
 Make sure all are installed.
 On MacOS, [Homebrew](https://brew.sh/) can be used to install both CMake and git. An automatic popup should appear to install g++ at Compile time.
 
-cc3dsfs has five library dependencies: [FTDI's D3XX driver](https://ftdichip.com/drivers/d3xx-drivers/), [FTDI's D2XX driver](https://ftdichip.com/drivers/d2xx-drivers/) (on Windows), [libusb](https://libusb.info/), [libftdi](https://www.intra2net.com/en/developer/libftdi/) and [SFML](https://www.sfml-dev.org/).
+cc3dsfs has five library dependencies: [FTDI's D3XX driver](https://ftdichip.com/drivers/d3xx-drivers/) (on Windows), [FTDI's D2XX driver](https://ftdichip.com/drivers/d2xx-drivers/) (on Windows), [libusb](https://libusb.info/), [libftdi](https://www.intra2net.com/en/developer/libftdi/) and [SFML](https://www.sfml-dev.org/).
 All of them should get downloaded automatically via CMake during the building process.
 
 Linux users who wish to compile this, will also need to install the SFML dependencies. Different distributions will require slightly different processes.

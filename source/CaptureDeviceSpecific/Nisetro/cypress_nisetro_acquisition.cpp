@@ -22,7 +22,7 @@ static cyni_device_device_handlers* usb_find_by_serial_number(const cyni_device_
 	int curr_serial_extra_id = 0;
 	final_handlers = cypress_libusb_serial_reconnection(usb_device_desc, wanted_serial_number, curr_serial_extra_id, new_device);
 
-	if (final_handlers == NULL)
+	if(final_handlers == NULL)
 		final_handlers = cypress_driver_find_by_serial_number(usb_device_desc, wanted_serial_number, curr_serial_extra_id, new_device);
 	return final_handlers;
 }

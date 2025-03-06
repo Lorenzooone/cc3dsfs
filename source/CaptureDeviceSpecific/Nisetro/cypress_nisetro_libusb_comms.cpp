@@ -103,7 +103,8 @@ int cypress_libusb_async_in_start(cyni_device_device_handlers* handlers, const c
 	return retval;
 }
 
-static bool cypress_libusb_setup_connection(libusb_device_handle* handle, const cyni_device_usb_device* usb_device_desc) {
+static bool cypress_libusb_setup_connection(libusb_device_handle* handle, const cyni_device_usb_device* usb_device_desc, bool *claimed) {
+	*claimed = false;
 	int result = libusb_kernel_driver_active(handle, usb_device_desc->default_interface);
 	if(result == 1)
 		libusb_detach_kernel_driver(handle, usb_device_desc->default_interface);
@@ -116,6 +117,7 @@ static bool cypress_libusb_setup_connection(libusb_device_handle* handle, const 
 	result = libusb_claim_interface(handle, usb_device_desc->default_interface);
 	if(result != LIBUSB_SUCCESS)
 		return false;
+	*claimed = true;
 	if(usb_device_desc->alt_interface != 0) {
 		result = libusb_set_interface_alt_setting(handle, usb_device_desc->default_interface, usb_device_desc->alt_interface);
 		if(result != LIBUSB_SUCCESS)
@@ -143,10 +145,12 @@ static int cypress_libusb_insert_device(std::vector<CaptureDevice> &devices_list
 	char manufacturer[0x100];
 	char serial[0x100];
 	read_strings(handle, usb_descriptor, manufacturer, serial);
-	bool result_setup = cypress_libusb_setup_connection(handle, usb_device_desc);
+	bool claimed = false;
+	bool result_setup = cypress_libusb_setup_connection(handle, usb_device_desc, &claimed);
 	if(result_setup)
 		cypress_insert_device(devices_list, usb_device_desc, (std::string)(serial), usb_descriptor->bcdDevice, curr_serial_extra_id);
-	libusb_release_interface(handle, usb_device_desc->default_interface);
+	if(claimed)
+		libusb_release_interface(handle, usb_device_desc->default_interface);
 	libusb_close(handle);
 	return result;
 }
@@ -167,19 +171,22 @@ cyni_device_device_handlers* cypress_libusb_serial_reconnection(const cyni_devic
 		if((usb_descriptor.idVendor != usb_device_desc->vid) || (usb_descriptor.idProduct != usb_device_desc->pid))
 			continue;
 		result = libusb_open(usb_devices[i], &handlers.usb_handle);
-		if(result || (handlers.usb_handle == NULL))
+		if((result < 0) || (handlers.usb_handle == NULL))
 			continue;
 		char manufacturer[0x100];
 		char serial[0x100];
 		read_strings(handlers.usb_handle, &usb_descriptor, manufacturer, serial);
 		std::string device_serial_number = get_serial(usb_device_desc, (std::string)(serial), usb_descriptor.bcdDevice, curr_serial_extra_id);
-		if((wanted_serial_number == device_serial_number) && (cypress_libusb_setup_connection(handlers.usb_handle, usb_device_desc))) {
+		bool claimed = false;
+		if((wanted_serial_number == device_serial_number) && (cypress_libusb_setup_connection(handlers.usb_handle, usb_device_desc, &claimed))) {
 			final_handlers = new cyni_device_device_handlers;
 			final_handlers->usb_handle = handlers.usb_handle;
 			if(new_device != NULL)
 				*new_device = cypress_create_device(usb_device_desc, wanted_serial_number);
 			break;
 		}
+		if(claimed)
+			libusb_release_interface(handlers.usb_handle, usb_device_desc->default_interface);
 		libusb_close(handlers.usb_handle);
 	}
 

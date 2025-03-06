@@ -297,24 +297,24 @@ int is_device_get_num_free_buffers(ISDeviceCaptureReceivedData* is_device_captur
 }
 
 static void close_all_reads_error(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data, bool &async_read_closed, bool &reset_usb_device, bool do_reset) {
-	if(get_is_device_status(is_device_capture_recv_data) < 0) {
-		if(!async_read_closed) {
-			for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
-				CloseAsyncRead((is_device_device_handlers*)capture_data->handle, &is_device_capture_recv_data[i].cb_data);
-			async_read_closed = true;
-		}
-		if(do_reset && (!reset_usb_device)) {
-			int ret = ResetUSBDevice((is_device_device_handlers*)capture_data->handle);
-			if((ret == LIBUSB_ERROR_NO_DEVICE) || (ret == LIBUSB_ERROR_NOT_FOUND)) {
-				for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++) {
-					is_device_capture_recv_data[i].cb_data.transfer_data_access.lock();
-					is_device_capture_recv_data[i].cb_data.transfer_data = NULL;
-					is_device_capture_recv_data[i].cb_data.transfer_data_access.unlock();
-					is_device_capture_recv_data[i].in_use = false;
-				}
+	if(get_is_device_status(is_device_capture_recv_data) >= 0)
+		return;
+	if(!async_read_closed) {
+		for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
+			CloseAsyncRead((is_device_device_handlers*)capture_data->handle, &is_device_capture_recv_data[i].cb_data);
+		async_read_closed = true;
+	}
+	if(do_reset && (!reset_usb_device)) {
+		int ret = ResetUSBDevice((is_device_device_handlers*)capture_data->handle);
+		if((ret == LIBUSB_ERROR_NO_DEVICE) || (ret == LIBUSB_ERROR_NOT_FOUND)) {
+			for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++) {
+				is_device_capture_recv_data[i].cb_data.transfer_data_access.lock();
+				is_device_capture_recv_data[i].cb_data.transfer_data = NULL;
+				is_device_capture_recv_data[i].cb_data.transfer_data_access.unlock();
+				is_device_capture_recv_data[i].in_use = false;
 			}
-			reset_usb_device = true;
 		}
+		reset_usb_device = true;
 	}
 }
 
@@ -424,9 +424,6 @@ void is_device_acquisition_main_loop(CaptureData* capture_data) {
 
 	uint32_t last_index = -1;
 	int status = 0;
-	isd_async_callback_data* cb_queue[NUM_CAPTURE_RECEIVED_DATA_BUFFERS];
-	int queue_elems = 0;
-	bool one_transfer_active = false;
 	SharedConsumerMutex is_buffer_free_shared_mutex(NUM_CAPTURE_RECEIVED_DATA_BUFFERS);
 	SharedConsumerMutex is_transfer_done_shared_mutex(NUM_CAPTURE_RECEIVED_DATA_BUFFERS);
 	SharedConsumerMutex is_transfer_data_ready_shared_mutex(NUM_CAPTURE_RECEIVED_DATA_BUFFERS);

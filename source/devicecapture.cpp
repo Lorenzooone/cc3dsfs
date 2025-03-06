@@ -1,5 +1,5 @@
 #include "devicecapture.hpp"
-#include "3dscapture_ftd3.hpp"
+#include "3dscapture_ftd3_shared.hpp"
 #include "dscapture_ftd2_shared.hpp"
 #include "usb_ds_3ds_capture.hpp"
 #include "usb_is_device_acquisition.hpp"

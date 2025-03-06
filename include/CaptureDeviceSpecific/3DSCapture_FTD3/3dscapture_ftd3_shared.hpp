@@ -1,5 +1,5 @@
-#ifndef __3DSCAPTURE_FTD3_HPP
-#define __3DSCAPTURE_FTD3_HPP
+#ifndef __3DSCAPTURE_FTD3_SHARED_HPP
+#define __3DSCAPTURE_FTD3_SHARED_HPP
 
 #include <vector>
 #include "utils.hpp"

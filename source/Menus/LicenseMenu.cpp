@@ -142,7 +142,7 @@ static const LicenseMenuOptionInfo* pollable_options[] = {
 &sfml_license_2_option,
 &sfml_license_3_option,
 &sfml_license_4_option,
-#if defined(USE_FTD3) || defined(USE_FTD2_DRIVER)
+#if defined(USE_FTD3XX) || defined(USE_FTD2_DRIVER)
 &ftd3xx_license_0_option,
 &ftd3xx_license_1_option,
 &ftd3xx_license_2_option,
@@ -156,7 +156,7 @@ static const LicenseMenuOptionInfo* pollable_options[] = {
 &libftdi_license_3_option,
 &libftdi_license_4_option,
 #endif
-#if defined(USE_LIBUSB) || defined(USE_FTD3) || defined(USE_FTD2_DRIVER)
+#if defined(USE_LIBUSB) || defined(USE_FTD3XX) || defined(USE_FTD2_DRIVER)
 &libusb_license_0_option,
 &libusb_license_1_option,
 &libusb_license_2_option,

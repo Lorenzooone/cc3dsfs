@@ -13,5 +13,5 @@ to save on space.
 Feel free to contact me if you would like the files to be removed,
 if an agreement about their availability can be reached.
 
-Changing FTDI\_BASE\_URL to https://ftdichip.com/wp-content/uploads will
+Changing FTDI\_BASE\_URL to https://ftdichip.com/wp-content/uploads/ will
 switch to automatic download during builds.
