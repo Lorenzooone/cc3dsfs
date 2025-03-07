@@ -27,7 +27,7 @@
 
 #define LOW_POLL_DIVISOR 6
 #define NO_DATA_CONSECUTIVE_THRESHOLD 4
-#define TIME_AUDIO_DEVICE_CHECK 0.1
+#define TIME_AUDIO_DEVICE_CHECK 0.25
 
 struct OutTextData {
 	std::string full_text;
