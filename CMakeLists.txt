@@ -32,6 +32,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(SFML_USE_STATIC_STD_LIBS TRUE)
+set(SFML_CLONE_USE_GIT_SHALLOW FALSE)
 set(CMAKE_HOST_CXX_COMPILER ${CMAKE_CXX_COMPILER} CACHE STRING "Host Compiler")
 if(FORCE_WINDOWS_FTD3XX_SHARED_LIB)
 	set(WINDOWS_FTD3XX_USE_SHARED_LIB 1)
@@ -80,10 +81,18 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
 endif()
 
 include(FetchContent)
-FetchContent_Declare(SFML
-	GIT_REPOSITORY https://github.com/SFML/SFML.git
-	GIT_TAG master
-	GIT_SHALLOW ON)
+# Git shallow clone isn't shallow in cmake... This is bad. :/
+# Replace this if they ever fix it.
+if(SFML_CLONE_USE_GIT_SHALLOW)
+	FetchContent_Declare(SFML
+		GIT_REPOSITORY https://github.com/SFML/SFML.git
+		GIT_TAG master
+		GIT_SHALLOW ON)
+else()
+	FetchContent_Declare(SFML
+		URL https://github.com/SFML/SFML/archive/refs/heads/master.zip
+	)
+endif()
 
 if(USE_LIBUSB_SUPPORT)
 	FetchContent_Declare(LibUSB
@@ -95,6 +104,7 @@ endif()
 if(USE_LIBFTDI_FOR_NEW_DS_LOOPY)
 	FetchContent_Declare(libftdi1
 		GIT_REPOSITORY git://developer.intra2net.com/libftdi
+		GIT_TAG master
 		)
 endif()
 
