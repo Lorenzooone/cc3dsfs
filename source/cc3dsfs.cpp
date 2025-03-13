@@ -855,7 +855,7 @@ int main(int argc, char **argv) {
 		std::cout << "                   even if multiple are present." << std::endl;
 		std::cout << "  --failure_close  Automatically closes the software if the first connection" << std::endl;
 		std::cout << "                   doesn't succeed." << std::endl;
-		std::cout << "  --auto_close  Automatically closes the software on disconnect." << std::endl;
+		std::cout << "  --auto_close     Automatically closes the software on disconnect." << std::endl;
 		std::cout << "  --profile        Loads the profile with the specified ID at startup" << std::endl;
 		std::cout << "                   instead of the default one. When the program closes," << std::endl;
 		std::cout << "                   the data is also saved to the specified profile." << std::endl;

@@ -208,7 +208,7 @@ const CropData top_gba_ds_pmd_rrt_crop = {
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
 .allowed_3ds = false, .allowed_ds = true, .is_game_specific = true,
-.name = "Top GBA"};
+.name = "Top PMD:RRT"};
 
 const CropData bottom_gba_ds_pmd_rrt_crop = {
 .top_width = 0, .top_height = 0,
@@ -217,7 +217,7 @@ const CropData bottom_gba_ds_pmd_rrt_crop = {
 .bot_x = (WIDTH_DS - WIDTH_GBA + 2) / 2, .bot_y = (HEIGHT_DS - HEIGHT_GBA) / 2,
 .allowed_joint = true, .allowed_top = false, .allowed_bottom = true,
 .allowed_3ds = false, .allowed_ds = true, .is_game_specific = true,
-.name = "Bottom GBA"};
+.name = "Bottom PMD:RRT"};
 
 static const CropData* basic_possible_crops[] = {
 &default_3ds_crop,
