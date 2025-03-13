@@ -94,6 +94,9 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 		}
 		loaded_samples = samples.size();
 		if((loaded_samples <= 0) && this->hasTooMuchTimeElapsedInside()) {
+			// This is needed by MacOS...
+			// But it also causes some trailing noise when
+			// closing the lid on the devices.
 			inside_onGetData = false;
 			return false;
 		}

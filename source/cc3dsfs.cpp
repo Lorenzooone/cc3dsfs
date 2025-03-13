@@ -577,10 +577,11 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 			if(no_data_consecutive > NO_DATA_CONSECUTIVE_THRESHOLD)
 				no_data_consecutive = NO_DATA_CONSECUTIVE_THRESHOLD;
 			capture_data->status.video_wait.update_time_multiplier(get_time_multiplier(capture_data, no_data_consecutive >= NO_DATA_CONSECUTIVE_THRESHOLD));
+
 			bool timed_out = !capture_data->status.video_wait.timed_lock();
+
 			bool data_processed = false;
 			CaptureDataSingleBuffer* data_buffer = capture_data->data_buffers.GetReaderBuffer(CAPTURE_READER_VIDEO);
-
 			if(data_buffer != NULL) {
 				last_frame_time = data_buffer->time_in_buf;
 				if(data_buffer->read >= get_video_in_size(capture_data)) {

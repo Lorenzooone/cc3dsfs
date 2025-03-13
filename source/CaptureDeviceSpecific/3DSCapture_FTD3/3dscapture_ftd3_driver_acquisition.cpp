@@ -17,7 +17,6 @@
 #include <chrono>
 
 struct FTD3XXReceivedDataBuffer {
-	CaptureReceived capture_buf;
 	OVERLAPPED overlap;
 	ULONG read_buffer;
 };
@@ -35,7 +34,9 @@ static void fast_capture_call(FTD3XXReceivedDataBuffer* received_buffer, Capture
 	}
 
 	for (inner_curr_in = 0; inner_curr_in < FTD3_CONCURRENT_BUFFERS - 1; ++inner_curr_in) {
-		ftStatus = FT_ASYNC_CALL(handle, fifo_channel, (UCHAR*)&received_buffer[inner_curr_in].capture_buf, ftd3_get_capture_size(capture_data), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
+		CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(inner_curr_in);
+		uint8_t* buffer = (uint8_t*)&data_buf->capture_buf;
+		ftStatus = FT_ASYNC_CALL(handle, fifo_channel, buffer, ftd3_get_capture_size(capture_data), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
 		if(ftStatus != FT_IO_PENDING) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");
 			return;
@@ -47,8 +48,9 @@ static void fast_capture_call(FTD3XXReceivedDataBuffer* received_buffer, Capture
 	auto clock_start = std::chrono::high_resolution_clock::now();
 
 	while (capture_data->status.connected && capture_data->status.running) {
-
-		ftStatus = FT_ASYNC_CALL(handle, fifo_channel, (UCHAR*)&received_buffer[inner_curr_in].capture_buf, ftd3_get_capture_size(capture_data), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
+		CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(inner_curr_in);
+		uint8_t* buffer = (uint8_t*)&data_buf->capture_buf;
+		ftStatus = FT_ASYNC_CALL(handle, fifo_channel, buffer, ftd3_get_capture_size(capture_data), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
 		if(ftStatus != FT_IO_PENDING) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");
 			return;
@@ -62,7 +64,7 @@ static void fast_capture_call(FTD3XXReceivedDataBuffer* received_buffer, Capture
 			return;
 		}
 
-		data_output_update(&received_buffer[inner_curr_in].capture_buf, received_buffer[inner_curr_in].read_buffer, capture_data, clock_start);
+		data_output_update(inner_curr_in, received_buffer[inner_curr_in].read_buffer, capture_data, clock_start);
 	}
 }
 
@@ -72,17 +74,19 @@ static bool safe_capture_call(FTD3XXReceivedDataBuffer* received_buffer, Capture
 
 	while(capture_data->status.connected && capture_data->status.running) {
 
+		CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(0);
+		uint8_t* buffer = (uint8_t*)&data_buf->capture_buf;
 		#ifdef _WIN32
-		FT_STATUS ftStatus = FT_ReadPipeEx(handle, fifo_channel, (UCHAR*)&received_buffer->capture_buf, ftd3_get_capture_size(capture_data), &received_buffer->read_buffer, NULL);
+		FT_STATUS ftStatus = FT_ReadPipeEx(handle, fifo_channel, buffer, ftd3_get_capture_size(capture_data), &received_buffer->read_buffer, NULL);
 		#else
-		FT_STATUS ftStatus = FT_ReadPipeEx(handle, fifo_channel, (UCHAR*)&received_buffer->capture_buf, ftd3_get_capture_size(capture_data), &received_buffer->read_buffer, 1000);
+		FT_STATUS ftStatus = FT_ReadPipeEx(handle, fifo_channel, buffer, ftd3_get_capture_size(capture_data), &received_buffer->read_buffer, 1000);
 		#endif
 		if(FT_FAILED(ftStatus)) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");
 			return true;
 		}
 
-		data_output_update(&received_buffer->capture_buf, received_buffer->read_buffer, capture_data, clock_start);
+		data_output_update(0, received_buffer->read_buffer, capture_data, clock_start);
 	}
 
 	return false;
@@ -97,6 +101,7 @@ static FTD3XXReceivedDataBuffer* init_received_buffer() {
 
 static void close_received_buffer(FTD3XXReceivedDataBuffer* received_buffer, CaptureData* capture_data) {
 	if(ftd3_driver_get_is_bad()) {
+		capture_data->data_buffers.ReleaseWriterBuffer(0, false);
 		delete received_buffer;
 		return;
 	}
@@ -107,6 +112,7 @@ static void close_received_buffer(FTD3XXReceivedDataBuffer* received_buffer, Cap
 		if(FT_ReleaseOverlapped(handle, &received_buffer[inner_curr_in].overlap)) {
 			capture_error_print(true, capture_data, "Disconnected: Release failed");
 		}
+		capture_data->data_buffers.ReleaseWriterBuffer(inner_curr_in, false);
 	}
 	delete []received_buffer;
 }

@@ -32,11 +32,11 @@ void list_devices_ftd3(std::vector<CaptureDevice> &devices_list, std::vector<no_
 	ftd3_list_devices_compat(devices_list, no_access_list, valid_3dscapture_descriptions);
 }
 
-void data_output_update(CaptureReceived* received_buffer, size_t read_data, CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &base_time) {
+void data_output_update(int inner_index, size_t read_data, CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &base_time) {
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - base_time;
 	base_time = curr_time;
-	capture_data->data_buffers.WriteToBuffer(received_buffer, read_data, diff.count(), &capture_data->status.device);
+	capture_data->data_buffers.WriteToBuffer(NULL, read_data, diff.count(), &capture_data->status.device, inner_index);
 
 	if(capture_data->status.cooldown_curr_in)
 		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;

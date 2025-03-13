@@ -4,7 +4,7 @@
 #include "capture_structs.hpp"
 #include "devicecapture.hpp"
 
-#define FTD3_CONCURRENT_BUFFERS 4
+#define FTD3_CONCURRENT_BUFFERS NUM_CONCURRENT_DATA_BUFFER_WRITERS
 
 struct ftd3_device_device_handlers {
 	void* usb_handle = NULL;

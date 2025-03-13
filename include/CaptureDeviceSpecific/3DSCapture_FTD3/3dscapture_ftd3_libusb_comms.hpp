@@ -13,7 +13,6 @@ struct ftd3_async_callback_data {
 	void* actual_user_data;
 	void* transfer_data;
 	std::mutex transfer_data_access;
-	int internal_index;
 };
 
 int ftd3_libusb_ctrl_in(ftd3_device_device_handlers* handlers, uint32_t timeout, uint8_t* buf, int length, uint8_t request, uint16_t value, uint16_t index, int* transferred);

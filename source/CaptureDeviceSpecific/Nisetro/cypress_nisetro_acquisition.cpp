@@ -175,44 +175,48 @@ static int find_first_vsync_byte(CaptureReceived* capture_buf, size_t read_size)
 	return pos;
 }
 
-void cypress_output_to_thread(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t read_size, size_t* scheduled_special_read, bool* recalibration_request) {
+void cypress_output_to_thread(CaptureData* capture_data, int internal_index, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t read_size, size_t* scheduled_special_read, bool* recalibration_request) {
 	// Output to the other threads...
-	int offset = find_first_vsync_byte(capture_buf, read_size);
+	CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(internal_index);
+	int offset = find_first_vsync_byte(&data_buf->capture_buf, read_size);
 	const cyni_device_usb_device* usb_device_info = (const cyni_device_usb_device*)capture_data->status.device.descriptor;
 	if(offset) {
 		if(offset % usb_device_info->max_usb_packet_size)
 			*recalibration_request = true;
 		else
 			*scheduled_special_read = offset;
+		capture_data->data_buffers.ReleaseWriterBuffer(internal_index, false);
 		return;
 	}
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - (*clock_start);
 	*clock_start = curr_time;
-	capture_data->data_buffers.WriteToBuffer(capture_buf, read_size, diff.count(), &capture_data->status.device, curr_capture_type);
+	capture_data->data_buffers.WriteToBuffer(NULL, read_size, diff.count(), &capture_data->status.device, internal_index);
 	if (capture_data->status.cooldown_curr_in)
 		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
 	capture_data->status.video_wait.unlock();
 	capture_data->status.audio_wait.unlock();
 }
 
-int cypress_device_read_frame_and_output(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_start, size_t* scheduled_special_read, bool* recalibration_request) {
+int cypress_device_read_frame_and_output(CaptureData* capture_data, int internal_index, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_start, size_t* scheduled_special_read, bool* recalibration_request) {
 	const cyni_device_usb_device* usb_device_info = (const cyni_device_usb_device*)capture_data->status.device.descriptor;
 	size_t read_size = cyni_device_get_video_in_size(usb_device_info->device_type);
 	if(*scheduled_special_read)
 		read_size = *scheduled_special_read;
-	int ret = ReadFrame((cyni_device_device_handlers*)capture_data->handle, (uint8_t*)capture_buf, read_size, usb_device_info);
+	CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(internal_index);
+	uint8_t* buffer = (uint8_t*)&data_buf->capture_buf;
+	int ret = ReadFrame((cyni_device_device_handlers*)capture_data->handle, buffer, read_size, usb_device_info);
 	if (ret < 0)
 		return ret;
 	if(*scheduled_special_read) {
 		*scheduled_special_read = 0;
 		return ret;
 	}
-	cypress_output_to_thread(capture_data, capture_buf, curr_capture_type, &clock_start, read_size, scheduled_special_read, recalibration_request);
+	cypress_output_to_thread(capture_data, internal_index, &clock_start, read_size, scheduled_special_read, recalibration_request);
 	return ret;
 }
 
-int cypress_device_read_frame_request(CaptureData* capture_data, CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data, CaptureScreensType curr_capture_type, uint32_t index) {
+int cypress_device_read_frame_request(CaptureData* capture_data, CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data, uint32_t index) {
 	if(cypress_device_capture_recv_data == NULL)
 		return LIBUSB_SUCCESS;
 	if((*cypress_device_capture_recv_data->status) < 0) {
@@ -221,7 +225,6 @@ int cypress_device_read_frame_request(CaptureData* capture_data, CypressDeviceCa
 	}
 	const cyni_device_usb_device* usb_device_info = (const cyni_device_usb_device*)capture_data->status.device.descriptor;
 	cypress_device_capture_recv_data->index = index;
-	cypress_device_capture_recv_data->curr_capture_type = curr_capture_type;
 	cypress_device_capture_recv_data->cb_data.function = cypress_device_read_frame_cb;
 	size_t read_size = cyni_device_get_video_in_size(usb_device_info->device_type);
 	if(*cypress_device_capture_recv_data->scheduled_special_read) {
@@ -230,10 +233,14 @@ int cypress_device_read_frame_request(CaptureData* capture_data, CypressDeviceCa
 		*cypress_device_capture_recv_data->is_active_special_read = true;
 		*cypress_device_capture_recv_data->scheduled_special_read = 0;
 	}
-	return ReadFrameAsync((cyni_device_device_handlers*)capture_data->handle, (uint8_t*)&cypress_device_capture_recv_data->buffer, read_size, usb_device_info, &cypress_device_capture_recv_data->cb_data);
+	CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(cypress_device_capture_recv_data->cb_data.internal_index);
+	uint8_t* buffer = (uint8_t*)&data_buf->capture_buf;
+	return ReadFrameAsync((cyni_device_device_handlers*)capture_data->handle, buffer, read_size, usb_device_info, &cypress_device_capture_recv_data->cb_data);
 }
 
-static void end_cypress_device_read_frame_cb(CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data) {
+static void end_cypress_device_read_frame_cb(CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data, bool early_release) {
+	if(early_release)
+		cypress_device_capture_recv_data->capture_data->data_buffers.ReleaseWriterBuffer(cypress_device_capture_recv_data->cb_data.internal_index, false);
 	cypress_device_capture_recv_data->in_use = false;
 	cypress_device_capture_recv_data->is_buffer_free_shared_mutex->specific_unlock(cypress_device_capture_recv_data->cb_data.internal_index);
 }
@@ -241,7 +248,7 @@ static void end_cypress_device_read_frame_cb(CypressDeviceCaptureReceivedData* c
 static void cypress_device_read_frame_cb(void* user_data, int transfer_length, int transfer_status) {
 	CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data = (CypressDeviceCaptureReceivedData*)user_data;
 	if((*cypress_device_capture_recv_data->status) < 0)
-		return end_cypress_device_read_frame_cb(cypress_device_capture_recv_data);
+		return end_cypress_device_read_frame_cb(cypress_device_capture_recv_data, true);
 	if(transfer_status != LIBUSB_TRANSFER_COMPLETED) {
 		int error = LIBUSB_ERROR_OTHER;
 		if(transfer_status == LIBUSB_TRANSFER_TIMED_OUT)
@@ -251,12 +258,12 @@ static void cypress_device_read_frame_cb(void* user_data, int transfer_length, i
 			*cypress_device_capture_recv_data->consecutive_output_to_thread = 0;
 		}
 		*cypress_device_capture_recv_data->status = error;
-		return end_cypress_device_read_frame_cb(cypress_device_capture_recv_data);
+		return end_cypress_device_read_frame_cb(cypress_device_capture_recv_data, true);
 	}
 
 	if(((int32_t)(cypress_device_capture_recv_data->index - (*cypress_device_capture_recv_data->last_index))) <= 0) {
 		//*cypress_device_capture_recv_data->status = LIBUSB_ERROR_INTERRUPTED;
-		return end_cypress_device_read_frame_cb(cypress_device_capture_recv_data);
+		return end_cypress_device_read_frame_cb(cypress_device_capture_recv_data, true);
 	}
 	*cypress_device_capture_recv_data->consecutive_output_to_thread += 1;
 	if((*cypress_device_capture_recv_data->consecutive_output_to_thread) > NUM_CONSECUTIVE_NEEDED_OUTPUT)
@@ -266,14 +273,14 @@ static void cypress_device_read_frame_cb(void* user_data, int transfer_length, i
 	// Realign, with multiple of max_usb_packet_size
 	if((*cypress_device_capture_recv_data->is_active_special_read) && (((int32_t)(cypress_device_capture_recv_data->index - (*cypress_device_capture_recv_data->active_special_read_index))) >= 0)) {
 		*cypress_device_capture_recv_data->is_active_special_read = false;
-		return end_cypress_device_read_frame_cb(cypress_device_capture_recv_data);
+		return end_cypress_device_read_frame_cb(cypress_device_capture_recv_data, true);
 	}
 
 	if((*cypress_device_capture_recv_data->scheduled_special_read) || (*cypress_device_capture_recv_data->is_active_special_read) || (*cypress_device_capture_recv_data->recalibration_request))
-		return end_cypress_device_read_frame_cb(cypress_device_capture_recv_data);
+		return end_cypress_device_read_frame_cb(cypress_device_capture_recv_data, true);
 
-	cypress_output_to_thread(cypress_device_capture_recv_data->capture_data, &cypress_device_capture_recv_data->buffer, cypress_device_capture_recv_data->curr_capture_type, cypress_device_capture_recv_data->clock_start, transfer_length, cypress_device_capture_recv_data->scheduled_special_read, cypress_device_capture_recv_data->recalibration_request);
-	end_cypress_device_read_frame_cb(cypress_device_capture_recv_data);
+	cypress_output_to_thread(cypress_device_capture_recv_data->capture_data, cypress_device_capture_recv_data->cb_data.internal_index, cypress_device_capture_recv_data->clock_start, transfer_length, cypress_device_capture_recv_data->scheduled_special_read, cypress_device_capture_recv_data->recalibration_request);
+	end_cypress_device_read_frame_cb(cypress_device_capture_recv_data, false);
 }
 
 int cypress_device_get_num_free_buffers(CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data) {
@@ -395,7 +402,7 @@ void reset_cypress_device_status(CypressDeviceCaptureReceivedData* cypress_devic
 	error_cypress_device_status(cypress_device_capture_recv_data, 0);
 }
 
-void recalibration_reads(cyni_device_device_handlers* handlers, const cyni_device_usb_device* usb_device_desc, CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data, CypressDeviceCaptureReceivedData* chosen_buffer, uint32_t &index, CaptureScreensType curr_capture_type) {
+void recalibration_reads(cyni_device_device_handlers* handlers, const cyni_device_usb_device* usb_device_desc, CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data, CypressDeviceCaptureReceivedData* chosen_buffer, uint32_t &index) {
 	// Enforce properly synchronized reads.
 	// Reduces complexity and latency, at the cost of some extra
 	// time between lid reopening and visible video output.
@@ -415,12 +422,12 @@ void recalibration_reads(cyni_device_device_handlers* handlers, const cyni_devic
 		default_sleep();
 		*chosen_buffer->recalibration_request = false;
 		chosen_buffer->in_use = true;
-		int ret = cypress_device_read_frame_request(capture_data, chosen_buffer, curr_capture_type, index++);
+		int ret = cypress_device_read_frame_request(capture_data, chosen_buffer, index++);
 		if(ret < 0) {
 			error_cypress_device_status(cypress_device_capture_recv_data, ret);
 			return;
 		}
-		ret = cypress_device_read_frame_request(capture_data, next_buffer, curr_capture_type, index++);
+		ret = cypress_device_read_frame_request(capture_data, next_buffer, index++);
 		if(ret < 0) {
 			next_buffer->in_use = false;
 			error_cypress_device_status(cypress_device_capture_recv_data, ret);
@@ -437,8 +444,6 @@ static bool cyni_device_acquisition_loop(CaptureData* capture_data, CypressDevic
 	cyni_device_device_handlers* handlers = (cyni_device_device_handlers*)capture_data->handle;
 	const cyni_device_usb_device* usb_device_desc = (const cyni_device_usb_device*)capture_data->status.device.descriptor;
 	uint32_t index = 0;
-	CaptureScreensType curr_capture_type = capture_data->status.capture_type;
-	CaptureSpeedsType curr_capture_speed = capture_data->status.capture_speed;
 	int ret = capture_start(handlers, usb_device_desc);
 	if (ret < 0) {
 		capture_error_print(true, capture_data, "Capture Start: Failed");
@@ -448,7 +453,7 @@ static bool cyni_device_acquisition_loop(CaptureData* capture_data, CypressDevic
 	auto clock_last_reset = std::chrono::high_resolution_clock::now();
 	for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++) {
 		CypressDeviceCaptureReceivedData* chosen_buffer = cypress_device_get_free_buffer(capture_data, cypress_device_capture_recv_data);
-		ret = cypress_device_read_frame_request(capture_data, chosen_buffer, curr_capture_type, index++);
+		ret = cypress_device_read_frame_request(capture_data, chosen_buffer, index++);
 		if(ret < 0) {
 			chosen_buffer->in_use = false;
 			error_cypress_device_status(cypress_device_capture_recv_data, ret);
@@ -478,9 +483,9 @@ static bool cyni_device_acquisition_loop(CaptureData* capture_data, CypressDevic
 			error_cypress_device_status(cypress_device_capture_recv_data, LIBUSB_ERROR_TIMEOUT);
 		if(chosen_buffer && (*chosen_buffer->recalibration_request)) {
 			*chosen_buffer->recalibration_request = false;
-			recalibration_reads(handlers, usb_device_desc, cypress_device_capture_recv_data, chosen_buffer, index, curr_capture_type);
+			recalibration_reads(handlers, usb_device_desc, cypress_device_capture_recv_data, chosen_buffer, index);
 		}
-		ret = cypress_device_read_frame_request(capture_data, chosen_buffer, curr_capture_type, index++);
+		ret = cypress_device_read_frame_request(capture_data, chosen_buffer, index++);
 		if(ret < 0) {
 			chosen_buffer->in_use = false;
 			error_cypress_device_status(cypress_device_capture_recv_data, ret);
@@ -549,6 +554,8 @@ void cyni_device_acquisition_main_loop(CaptureData* capture_data) {
 void usb_cyni_device_acquisition_cleanup(CaptureData* capture_data) {
 	if(!usb_is_initialized())
 		return;
+	for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
+		capture_data->data_buffers.ReleaseWriterBuffer(i, false);
 	cypress_nisetro_connection_end((cyni_device_device_handlers*)capture_data->handle, (const cyni_device_usb_device*)capture_data->status.device.descriptor);
 	capture_data->handle = NULL;
 }

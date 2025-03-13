@@ -26,12 +26,13 @@ enum CaptureScreensType { CAPTURE_SCREENS_BOTH, CAPTURE_SCREENS_TOP, CAPTURE_SCR
 enum CaptureSpeedsType { CAPTURE_SPEEDS_FULL, CAPTURE_SPEEDS_HALF, CAPTURE_SPEEDS_THIRD, CAPTURE_SPEEDS_QUARTER, CAPTURE_SPEEDS_ENUM_END };
 
 // Readers are Audio and Video. So 2.
-// Use 2 extra buffers. One for writing in case the other 2 are busy,
+// Use 6 extra buffers. 5 for async writing in case the other 2 are busy,
 // and the other for writing without overwriting the latest stuff in
 // a worst case scenario...
 enum CaptureReaderType { CAPTURE_READER_VIDEO, CAPTURE_READER_AUDIO, CAPTURE_READER_ENUM_END };
+#define NUM_CONCURRENT_DATA_BUFFER_WRITERS 5
 #define NUM_CONCURRENT_DATA_BUFFER_READERS ((int)CAPTURE_READER_ENUM_END)
-#define NUM_CONCURRENT_DATA_BUFFERS (NUM_CONCURRENT_DATA_BUFFER_READERS + 2)
+#define NUM_CONCURRENT_DATA_BUFFERS (NUM_CONCURRENT_DATA_BUFFER_READERS + 1 + NUM_CONCURRENT_DATA_BUFFER_WRITERS)
 
 #pragma pack(push, 1)
 
@@ -149,6 +150,11 @@ struct ALIGNED(16) PACKED ISTWLCaptureReceived {
 
 #pragma pack(pop)
 
+struct ALIGNED(16) FTD2OldDSCaptureReceivedNormalPlusRaw {
+	FTD2OldDSCaptureReceived data;
+	FTD2OldDSCaptureReceivedRaw raw_data;
+};
+
 union CaptureReceived {
 	FTD3_3DSCaptureReceived ftd3_received;
 	FTD3_3DSCaptureReceived_3D ftd3_received_3d;
@@ -156,7 +162,7 @@ union CaptureReceived {
 	USB3DSCaptureReceived_3D usb_received_3ds_3d;
 	USBOldDSCaptureReceived usb_received_old_ds;
 	FTD2OldDSCaptureReceived ftd2_received_old_ds;
-	FTD2OldDSCaptureReceivedRaw ftd2_received_old_ds_raw;
+	FTD2OldDSCaptureReceivedNormalPlusRaw ftd2_received_old_ds_normal_plus_raw;
 	ISNitroCaptureReceived is_nitro_capture_received;
 	ISTWLCaptureReceived is_twl_capture_received;
 	CypressNisetroDSCaptureReceived cypress_nisetro_capture_received;
@@ -215,6 +221,7 @@ struct CaptureStatus {
 struct CaptureDataSingleBuffer {
 	CaptureScreensType capture_type;
 	uint64_t read;
+	size_t unused_offset;
 	CaptureReceived capture_buf;
 	double time_in_buf;
 	uint32_t inner_index;
@@ -225,16 +232,18 @@ public:
 	CaptureDataBuffers();
 	CaptureDataSingleBuffer* GetReaderBuffer(CaptureReaderType reader_type);
 	void ReleaseReaderBuffer(CaptureReaderType reader_type);
-	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type = CAPTURE_SCREENS_BOTH, size_t offset = 0);
-	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, size_t offset);
-	CaptureDataSingleBuffer* GetWriterBuffer();
-	void ReleaseWriterBuffer();
+	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type, size_t offset, int index);
+	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type, int index);
+	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, size_t offset, int index);
+	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, int index);
+	CaptureDataSingleBuffer* GetWriterBuffer(int index = 0);
+	void ReleaseWriterBuffer(int index = 0, bool update_last_curr_in = true);
 private:
-	uint32_t inner_index = 0;
 	std::mutex access_mutex;
 	int last_curr_in;
-	int curr_writer_pos;
+	int curr_writer_pos[NUM_CONCURRENT_DATA_BUFFER_WRITERS];
 	int curr_reader_pos[NUM_CONCURRENT_DATA_BUFFER_READERS];
+	bool is_being_written_to[NUM_CONCURRENT_DATA_BUFFERS];
 	int num_readers[NUM_CONCURRENT_DATA_BUFFERS];
 	bool has_read_data[NUM_CONCURRENT_DATA_BUFFERS][NUM_CONCURRENT_DATA_BUFFER_READERS];
 	CaptureDataSingleBuffer buffers[NUM_CONCURRENT_DATA_BUFFERS];

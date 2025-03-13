@@ -271,7 +271,7 @@ static void usb_is_device_convertVideoToOutput(CaptureReceived *p_in, VideoOutpu
 }
 
 bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status) {
-	CaptureReceived *p_in = &data_buffer->capture_buf;
+	CaptureReceived* p_in = (CaptureReceived*)(((uint8_t*)&data_buffer->capture_buf) + data_buffer->unused_offset);
 	bool converted = false;
 	CaptureDevice* chosen_device = &status->device;
 	#ifdef USE_FTD3
@@ -310,7 +310,7 @@ bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, Capt
 bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status) {
 	if(!status->device.has_audio)
 		return true;
-	CaptureReceived *p_in = &data_buffer->capture_buf;
+	CaptureReceived* p_in = (CaptureReceived*)(((uint8_t*)&data_buffer->capture_buf) + data_buffer->unused_offset);
 	uint8_t* base_ptr = NULL;
 	#ifdef USE_FTD3
 	if(status->device.cc_type == CAPTURE_CONN_FTD3) {

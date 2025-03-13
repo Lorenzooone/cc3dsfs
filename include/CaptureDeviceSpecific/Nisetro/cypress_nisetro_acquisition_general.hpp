@@ -3,12 +3,11 @@
 
 #include "cypress_nisetro_communications.hpp"
 
-#define NUM_CAPTURE_RECEIVED_DATA_BUFFERS 4
+#define NUM_CAPTURE_RECEIVED_DATA_BUFFERS NUM_CONCURRENT_DATA_BUFFER_WRITERS
 
 struct CypressDeviceCaptureReceivedData {
 	volatile bool in_use;
 	uint32_t index;
-	CaptureReceived buffer;
 	SharedConsumerMutex* is_buffer_free_shared_mutex;
 	size_t* scheduled_special_read;
 	uint32_t* active_special_read_index;
@@ -20,7 +19,6 @@ struct CypressDeviceCaptureReceivedData {
 	int* consecutive_output_to_thread;
 	CaptureData* capture_data;
 	std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start;
-	CaptureScreensType curr_capture_type;
 	cyni_async_callback_data cb_data;
 };
 

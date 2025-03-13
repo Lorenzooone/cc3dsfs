@@ -8,14 +8,11 @@
 #include <chrono>
 
 // Sometimes the CC returns a 2 length packet, if you're too fast
-#define BASE_NUM_CAPTURE_RECEIVED_DATA_BUFFERS 4
-#define NUM_CAPTURE_RECEIVED_DATA_0_MULTIPLIER 2
-#define NUM_CAPTURE_RECEIVED_DATA_BUFFERS (BASE_NUM_CAPTURE_RECEIVED_DATA_BUFFERS * NUM_CAPTURE_RECEIVED_DATA_0_MULTIPLIER)
+#define NUM_CAPTURE_RECEIVED_DATA_BUFFERS NUM_CONCURRENT_DATA_BUFFER_WRITERS
 
 typedef void (*fdt2_async_callback_function)(void* user_data, int transfer_length, int transfer_status);
 
 struct ftd2_async_callback_data {
-	FTD2OldDSCaptureReceivedRaw buffer_raw;
 	fdt2_async_callback_function function;
 	void* actual_user_data;
 	void* transfer_data;
@@ -34,6 +31,8 @@ struct FTD2CaptureReceivedData {
 	int* status;
 	uint32_t index;
 	uint32_t* last_used_index;
+	uint8_t* buffer_raw;
+	uint32_t* buffer_target;
 	size_t* curr_offset;
 	CaptureData* capture_data;
 	std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start;

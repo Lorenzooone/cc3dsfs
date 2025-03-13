@@ -23,8 +23,8 @@
 struct FTD3LibusbCaptureReceivedData {
 	bool in_use;
 	uint32_t index;
+	int internal_index;
 	CaptureData* capture_data;
-	CaptureReceived buffer;
 	uint32_t* last_index;
 	std::chrono::time_point<std::chrono::high_resolution_clock> *clock_start;
 	SharedConsumerMutex *is_buffer_free_shared_mutex;
@@ -78,31 +78,35 @@ static void ftd3_libusb_read_frame_request(CaptureData* capture_data, FTD3Libusb
 		return;
 	ftd3_libusb_capture_recv_data->index = index;
 	ftd3_libusb_capture_recv_data->cb_data.function = ftd3_libusb_read_frame_cb;
-	ftd3_libusb_async_in_start((ftd3_device_device_handlers*)capture_data->handle, pipe, MAX_TIME_WAIT * 1000, (uint8_t*)&ftd3_libusb_capture_recv_data->buffer, ftd3_get_capture_size(capture_data), &ftd3_libusb_capture_recv_data->cb_data);
+	CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(ftd3_libusb_capture_recv_data->internal_index);
+	uint8_t* buffer = (uint8_t*)&data_buf->capture_buf;
+	ftd3_libusb_async_in_start((ftd3_device_device_handlers*)capture_data->handle, pipe, MAX_TIME_WAIT * 1000, buffer, ftd3_get_capture_size(capture_data), &ftd3_libusb_capture_recv_data->cb_data);
 }
 
-static void end_ftd3_libusb_read_frame_cb(FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data) {
+static void end_ftd3_libusb_read_frame_cb(FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data, bool early_release) {
+	if(early_release)
+		ftd3_libusb_capture_recv_data->capture_data->data_buffers.ReleaseWriterBuffer(ftd3_libusb_capture_recv_data->internal_index, false);
 	ftd3_libusb_capture_recv_data->in_use = false;
-	ftd3_libusb_capture_recv_data->is_buffer_free_shared_mutex->specific_unlock(ftd3_libusb_capture_recv_data->cb_data.internal_index);
+	ftd3_libusb_capture_recv_data->is_buffer_free_shared_mutex->specific_unlock(ftd3_libusb_capture_recv_data->internal_index);
 }
 
 static void ftd3_libusb_read_frame_cb(void* user_data, int transfer_length, int transfer_status) {
 	FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data = (FTD3LibusbCaptureReceivedData*)user_data;
 	if((*ftd3_libusb_capture_recv_data->status) < 0)
-		return end_ftd3_libusb_read_frame_cb(ftd3_libusb_capture_recv_data);
+		return end_ftd3_libusb_read_frame_cb(ftd3_libusb_capture_recv_data, true);
 	if(transfer_status != LIBUSB_TRANSFER_COMPLETED) {
 		*ftd3_libusb_capture_recv_data->status = LIBUSB_ERROR_OTHER;
-		return end_ftd3_libusb_read_frame_cb(ftd3_libusb_capture_recv_data);
+		return end_ftd3_libusb_read_frame_cb(ftd3_libusb_capture_recv_data, true);
 	}
 
 	if(((int32_t)(ftd3_libusb_capture_recv_data->index - (*ftd3_libusb_capture_recv_data->last_index))) <= 0) {
 		//*ftd3_libusb_capture_recv_data->status = LIBUSB_ERROR_INTERRUPTED;
-		return end_ftd3_libusb_read_frame_cb(ftd3_libusb_capture_recv_data);
+		return end_ftd3_libusb_read_frame_cb(ftd3_libusb_capture_recv_data, true);
 	}
 	*ftd3_libusb_capture_recv_data->last_index = ftd3_libusb_capture_recv_data->index;
 
-	data_output_update(&ftd3_libusb_capture_recv_data->buffer, transfer_length, ftd3_libusb_capture_recv_data->capture_data, *ftd3_libusb_capture_recv_data->clock_start);
-	end_ftd3_libusb_read_frame_cb(ftd3_libusb_capture_recv_data);
+	data_output_update(ftd3_libusb_capture_recv_data->internal_index, transfer_length, ftd3_libusb_capture_recv_data->capture_data, *ftd3_libusb_capture_recv_data->clock_start);
+	end_ftd3_libusb_read_frame_cb(ftd3_libusb_capture_recv_data, false);
 }
 
 static int ftd3_libusb_get_num_free_buffers(FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data) {
@@ -216,6 +220,7 @@ void ftd3_libusb_capture_main_loop(CaptureData* capture_data, int pipe) {
 	for(int i = 0; i < FTD3_CONCURRENT_BUFFERS; i++) {
 		ftd3_libusb_capture_recv_data[i].in_use = false;
 		ftd3_libusb_capture_recv_data[i].index = i;
+		ftd3_libusb_capture_recv_data[i].internal_index = i;
 		ftd3_libusb_capture_recv_data[i].capture_data = capture_data;
 		ftd3_libusb_capture_recv_data[i].last_index = &last_index;
 		ftd3_libusb_capture_recv_data[i].clock_start = &clock_start;
@@ -223,7 +228,6 @@ void ftd3_libusb_capture_main_loop(CaptureData* capture_data, int pipe) {
 		ftd3_libusb_capture_recv_data[i].status = &status;
 		ftd3_libusb_capture_recv_data[i].cb_data.actual_user_data = &ftd3_libusb_capture_recv_data[i];
 		ftd3_libusb_capture_recv_data[i].cb_data.transfer_data = NULL;
-		ftd3_libusb_capture_recv_data[i].cb_data.internal_index = i;
 	}
 	ftd3_libusb_start_thread(&async_processing_thread, &is_done_thread);
 	ftd3_libusb_capture_main_loop_processing(ftd3_libusb_capture_recv_data, pipe);

@@ -15,18 +15,18 @@
 #define AUDIO_ADDRESS_RING_BUFFER_END 0x01880000
 #define VIDEO_ADDRESS_RING_BUFFER_END 0x01000000
 
-static void output_to_thread_reset_processed_data(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t video_processed_size, size_t &video_length_processed, size_t &audio_length_processed) {
-	output_to_thread(capture_data, capture_buf, curr_capture_type, clock_start, video_processed_size + ((audio_length_processed / sizeof(ISTWLCaptureAudioReceived)) * sizeof(ISTWLCaptureSoundData)));
+static void output_to_thread_reset_processed_data(CaptureData* capture_data, int internal_index, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t video_processed_size, size_t &video_length_processed, size_t &audio_length_processed) {
+	output_to_thread(capture_data, internal_index, curr_capture_type, clock_start, video_processed_size + ((audio_length_processed / sizeof(ISTWLCaptureAudioReceived)) * sizeof(ISTWLCaptureSoundData)));
 	video_length_processed = 0;
 	audio_length_processed = 0;
 }
 
-static int process_frame_and_read(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, CaptureSpeedsType curr_capture_speed, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, uint32_t &last_read_frame_index, uint32_t video_address, uint32_t video_length, size_t &video_length_processed, uint32_t audio_address, uint32_t audio_length, size_t &audio_length_processed, bool &processed, float &last_frame_length, bool &reprocess) {
+static int process_frame_and_read(CaptureData* capture_data, int internal_index, CaptureScreensType curr_capture_type, CaptureSpeedsType curr_capture_speed, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, uint32_t &last_read_frame_index, uint32_t video_address, uint32_t video_length, size_t &video_length_processed, uint32_t audio_address, uint32_t audio_length, size_t &audio_length_processed, bool &processed, float &last_frame_length, bool &reprocess) {
 	const size_t video_processed_size = usb_is_device_get_video_in_size(curr_capture_type, IS_TWL_CAPTURE_DEVICE);
 	processed = false;
 	if((video_length == 0) && (audio_length == 0)) {
 		if(reprocess)
-			output_to_thread_reset_processed_data(capture_data, capture_buf, curr_capture_type, clock_start, video_processed_size, video_length_processed, audio_length_processed);
+			output_to_thread_reset_processed_data(capture_data, internal_index, curr_capture_type, clock_start, video_processed_size, video_length_processed, audio_length_processed);
 		reprocess = false;
 		return 0;
 	}
@@ -63,6 +63,8 @@ static int process_frame_and_read(CaptureData* capture_data, CaptureReceived* ca
 		audio_processed_diff_from_max = 0;
 	else
 		audio_length_processed = max_audio_length - audio_length;
+	CaptureDataSingleBuffer* target = capture_data->data_buffers.GetWriterBuffer(internal_index);
+	CaptureReceived* capture_buf = &target->capture_buf;
 	int ret = ReadFrame(handlers, ((uint8_t*)&capture_buf->is_twl_capture_received.audio_capture_in) + audio_length_processed, audio_address, audio_length, usb_device_desc);
 	if(ret < 0)
 		return ret;
@@ -91,7 +93,7 @@ static int process_frame_and_read(CaptureData* capture_data, CaptureReceived* ca
 		reprocess = true;
 		return 0;
 	}
-	output_to_thread_reset_processed_data(capture_data, capture_buf, curr_capture_type, clock_start, video_processed_size, video_length_processed, audio_length_processed);
+	output_to_thread_reset_processed_data(capture_data, internal_index, curr_capture_type, clock_start, video_processed_size, video_length_processed, audio_length_processed);
 	return 0;
 }
 
@@ -227,10 +229,10 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 			capture_error_print(true, capture_data, "Frame Info Read: Failed");
 			return;
 		}
-		ret = process_frame_and_read(capture_data, &is_device_capture_recv_data[0].buffer, curr_capture_type, curr_capture_speed, &clock_last_frame, last_read_frame_index, video_address, video_length, video_length_processed, audio_address, audio_length, audio_length_processed, processed, last_frame_length, reprocess);
+		ret = process_frame_and_read(capture_data, 0, curr_capture_type, curr_capture_speed, &clock_last_frame, last_read_frame_index, video_address, video_length, video_length_processed, audio_address, audio_length, audio_length_processed, processed, last_frame_length, reprocess);
 		if(ret < 0) {
-				capture_error_print(true, capture_data, "Frame Read: Error " + std::to_string(ret));
-				return;
+			capture_error_print(true, capture_data, "Frame Read: Error " + std::to_string(ret));
+			return;
 		}
 		if(processed) {
 			curr_capture_speed = capture_data->status.capture_speed;

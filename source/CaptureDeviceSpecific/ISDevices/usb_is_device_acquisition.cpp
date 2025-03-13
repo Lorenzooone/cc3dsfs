@@ -210,27 +210,13 @@ int EndAcquisition(const is_device_usb_device* usb_device_desc, is_device_device
 	}
 }
 
-void output_to_thread(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t read_size) {
+void output_to_thread(CaptureData* capture_data, int internal_index, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t read_size) {
 	// Output to the other threads...
 	const is_device_usb_device* usb_device_info = (const is_device_usb_device*)capture_data->status.device.descriptor;
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - (*clock_start);
 	*clock_start = curr_time;
-	if(usb_device_info->device_type == IS_TWL_CAPTURE_DEVICE) {
-		CaptureDataSingleBuffer* target = capture_data->data_buffers.GetWriterBuffer();
-		// Copy data to buffer, with special memcpy which accounts for ftd2 header data and skips synch bytes
-		size_t video_size = usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type);
-		memcpy(&target->capture_buf.is_twl_capture_received.video_capture_in, &capture_buf->is_twl_capture_received.video_capture_in, video_size);
-		if(read_size > video_size) {
-			size_t audio_size = ((read_size - video_size) / sizeof(ISTWLCaptureSoundData)) * sizeof(ISTWLCaptureAudioReceived);
-			memcpy(&target->capture_buf.is_twl_capture_received.audio_capture_in, &capture_buf->is_twl_capture_received.audio_capture_in, audio_size);
-		}
-		target->read = read_size;
-		target->time_in_buf = diff.count();
-		capture_data->data_buffers.ReleaseWriterBuffer();
-	}
-	else
-		capture_data->data_buffers.WriteToBuffer(capture_buf, read_size, diff.count(), &capture_data->status.device, curr_capture_type);
+	capture_data->data_buffers.WriteToBuffer(NULL, read_size, diff.count(), &capture_data->status.device, curr_capture_type, internal_index);
 
 	if (capture_data->status.cooldown_curr_in)
 		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
@@ -238,17 +224,21 @@ void output_to_thread(CaptureData* capture_data, CaptureReceived* capture_buf, C
 	capture_data->status.audio_wait.unlock();
 }
 
-static void output_to_thread(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start) {
+static void output_to_thread(CaptureData* capture_data, int internal_index, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start) {
 	const is_device_usb_device* usb_device_info = (const is_device_usb_device*)capture_data->status.device.descriptor;
-	output_to_thread(capture_data, capture_buf, curr_capture_type, clock_start, usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type));
+	output_to_thread(capture_data, internal_index, curr_capture_type, clock_start, usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type));
 }
 
-int is_device_read_frame_and_output(CaptureData* capture_data, CaptureReceived* capture_buf, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_start) {
+int is_device_read_frame_and_output(CaptureData* capture_data, int internal_index, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_start) {
 	const is_device_usb_device* usb_device_info = (const is_device_usb_device*)capture_data->status.device.descriptor;
-	int ret = ReadFrame((is_device_device_handlers*)capture_data->handle, (uint8_t*)capture_buf, usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type), usb_device_info);
-	if (ret < 0)
+	CaptureDataSingleBuffer* target = capture_data->data_buffers.GetWriterBuffer(internal_index);
+	CaptureReceived* buffer = &target->capture_buf;
+	int ret = ReadFrame((is_device_device_handlers*)capture_data->handle, (uint8_t*)buffer, usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type), usb_device_info);
+	if (ret < 0) {
+		capture_data->data_buffers.ReleaseWriterBuffer(internal_index, false);
 		return ret;
-	output_to_thread(capture_data, capture_buf, curr_capture_type, &clock_start);
+	}
+	output_to_thread(capture_data, internal_index, curr_capture_type, &clock_start);
 	return ret;
 }
 
@@ -261,10 +251,14 @@ void is_device_read_frame_request(CaptureData* capture_data, ISDeviceCaptureRece
 	is_device_capture_recv_data->index = index;
 	is_device_capture_recv_data->curr_capture_type = curr_capture_type;
 	is_device_capture_recv_data->cb_data.function = is_device_read_frame_cb;
-	ReadFrameAsync((is_device_device_handlers*)capture_data->handle, (uint8_t*)&is_device_capture_recv_data->buffer, usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type), usb_device_info, &is_device_capture_recv_data->cb_data);
+	CaptureDataSingleBuffer* target = capture_data->data_buffers.GetWriterBuffer(is_device_capture_recv_data->cb_data.internal_index);
+	CaptureReceived* buffer = &target->capture_buf;
+	ReadFrameAsync((is_device_device_handlers*)capture_data->handle, (uint8_t*)buffer, usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type), usb_device_info, &is_device_capture_recv_data->cb_data);
 }
 
-static void end_is_device_read_frame_cb(ISDeviceCaptureReceivedData* is_device_capture_recv_data) {
+static void end_is_device_read_frame_cb(ISDeviceCaptureReceivedData* is_device_capture_recv_data, bool pre_release) {
+	if(pre_release)
+		is_device_capture_recv_data->capture_data->data_buffers.ReleaseWriterBuffer(is_device_capture_recv_data->cb_data.internal_index, false);
 	is_device_capture_recv_data->in_use = false;
 	is_device_capture_recv_data->is_buffer_free_shared_mutex->specific_unlock(is_device_capture_recv_data->cb_data.internal_index);
 }
@@ -272,20 +266,20 @@ static void end_is_device_read_frame_cb(ISDeviceCaptureReceivedData* is_device_c
 static void is_device_read_frame_cb(void* user_data, int transfer_length, int transfer_status) {
 	ISDeviceCaptureReceivedData* is_device_capture_recv_data = (ISDeviceCaptureReceivedData*)user_data;
 	if((*is_device_capture_recv_data->status) < 0)
-		return end_is_device_read_frame_cb(is_device_capture_recv_data);
+		return end_is_device_read_frame_cb(is_device_capture_recv_data, true);
 	if(transfer_status != LIBUSB_TRANSFER_COMPLETED) {
 		*is_device_capture_recv_data->status = LIBUSB_ERROR_OTHER;
-		return end_is_device_read_frame_cb(is_device_capture_recv_data);
+		return end_is_device_read_frame_cb(is_device_capture_recv_data, true);
 	}
 
 	if(((int32_t)(is_device_capture_recv_data->index - (*is_device_capture_recv_data->last_index))) <= 0) {
 		//*is_device_capture_recv_data->status = LIBUSB_ERROR_INTERRUPTED;
-		return end_is_device_read_frame_cb(is_device_capture_recv_data);
+		return end_is_device_read_frame_cb(is_device_capture_recv_data, true);
 	}
 	*is_device_capture_recv_data->last_index = is_device_capture_recv_data->index;
 
-	output_to_thread(is_device_capture_recv_data->capture_data, &is_device_capture_recv_data->buffer, is_device_capture_recv_data->curr_capture_type, is_device_capture_recv_data->clock_start);
-	end_is_device_read_frame_cb(is_device_capture_recv_data);
+	output_to_thread(is_device_capture_recv_data->capture_data, is_device_capture_recv_data->cb_data.internal_index, is_device_capture_recv_data->curr_capture_type, is_device_capture_recv_data->clock_start);
+	end_is_device_read_frame_cb(is_device_capture_recv_data, false);
 }
 
 int is_device_get_num_free_buffers(ISDeviceCaptureReceivedData* is_device_capture_recv_data) {
@@ -467,6 +461,8 @@ void is_device_acquisition_main_loop(CaptureData* capture_data) {
 void usb_is_device_acquisition_cleanup(CaptureData* capture_data) {
 	if(!usb_is_initialized())
 		return;
+	for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
+		capture_data->data_buffers.ReleaseWriterBuffer(i, false);
 	is_device_connection_end((is_device_device_handlers*)capture_data->handle, (const is_device_usb_device*)capture_data->status.device.descriptor);
 	capture_data->handle = NULL;
 }

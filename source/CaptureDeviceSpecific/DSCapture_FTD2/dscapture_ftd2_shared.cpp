@@ -375,10 +375,16 @@ bool synchronization_check(uint16_t* data_buffer, size_t size, uint16_t* next_da
 
 size_t remove_synch_from_final_length(uint32_t* out_buffer, size_t real_length) {
 	// Ignore synch for final length
-	const uint32_t check_value = FTD2_OLDDS_SYNCH_VALUES | (FTD2_OLDDS_SYNCH_VALUES << 16);
-	while((real_length >= 4) && ((out_buffer)[(real_length / 4) - 1] == check_value))
-		real_length -= 4;
-	if((real_length < 4) && (out_buffer[0] == check_value))
+	uint32_t check_value = FTD2_OLDDS_SYNCH_VALUES | (FTD2_OLDDS_SYNCH_VALUES << 16);
+	size_t check_size = sizeof(uint32_t);
+	while((real_length >= check_size) && (out_buffer[(real_length / check_size) - 1] == check_value))
+		real_length -= check_size;
+	check_value = FTD2_OLDDS_SYNCH_VALUES;
+	uint16_t* u16_buffer = (uint16_t*)out_buffer;
+	check_size = sizeof(uint16_t);
+	while((real_length >= check_size) && (u16_buffer[(real_length / check_size) - 1] == check_value))
+		real_length -= check_size;
+	if((real_length < check_size) && (u16_buffer[0] == check_value))
 		real_length = 0;
 	return real_length;
 }
@@ -393,6 +399,8 @@ void ftd2_capture_main_loop_shared(CaptureData* capture_data) {
 }
 
 void ftd2_capture_cleanup_shared(CaptureData* capture_data) {
+	for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
+		capture_data->data_buffers.ReleaseWriterBuffer(i, false);
 	bool is_libftdi = capture_data->status.device.descriptor != NULL;
 	if(ftd2_close(capture_data->handle, is_libftdi)) {
 		capture_error_print(true, capture_data, "Disconnected: Close failed");
