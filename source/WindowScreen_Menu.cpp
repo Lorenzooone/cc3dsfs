@@ -1493,6 +1493,12 @@ void WindowScreen::poll(bool do_everything) {
 						case AUDIO_MENU_OUTPUT_INC:
 							this->audio_data->change_audio_output_type(true);
 							break;
+						case AUDIO_MENU_MODE_DEC:
+							this->audio_data->change_audio_mode_output(false);
+							break;
+						case AUDIO_MENU_MODE_INC:
+							this->audio_data->change_audio_mode_output(true);
+							break;
 						case AUDIO_MENU_MUTE:
 							this->audio_data->change_audio_mute();
 							break;

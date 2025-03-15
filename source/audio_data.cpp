@@ -15,6 +15,7 @@ void AudioData::reset() {
 	this->mute = false;
 	this->max_audio_latency = 2;
 	this->output_type = AUDIO_OUTPUT_STEREO;
+	this->mode_output = AUDIO_MODE_LOW_LATENCY;
 	this->restart_request = false;
 	this->text_updated = false;
 	this->output_device.preference_requested = false;
@@ -38,7 +39,17 @@ void AudioData::change_audio_output_type(bool is_change_positive) {
 	AudioOutputType initial_audio_output_type = this->output_type;
 	this->set_audio_output_type(this->output_type + change);
 	if(this->output_type != initial_audio_output_type)
-		this->update_text("Audio Output: " + this->get_audio_output_name());
+		this->update_text("Sound: " + this->get_audio_output_name());
+}
+
+void AudioData::change_audio_mode_output(bool is_change_positive) {
+	int change = 1;
+	if(!is_change_positive)
+		change = -1;
+	AudioMode initial_audio_mode_output = this->mode_output;
+	this->set_audio_mode_output(this->mode_output + change);
+	if(this->mode_output != initial_audio_mode_output)
+		this->update_text("Audio Priority: " + this->get_audio_mode_name());
 }
 
 void AudioData::change_audio_volume(bool is_change_positive) {
@@ -110,6 +121,10 @@ AudioOutputType AudioData::get_audio_output_type() {
 	return this->output_type;
 }
 
+AudioMode AudioData::get_audio_mode_output() {
+	return this->mode_output;
+}
+
 std::string AudioData::get_audio_output_name() {
 	std::string chosen_str = "";
 	switch(this->output_type) {
@@ -122,6 +137,23 @@ std::string AudioData::get_audio_output_name() {
 		default:
 			this->output_type = AUDIO_OUTPUT_STEREO;
 			chosen_str = "Stereo";
+			break;
+	}
+	return chosen_str;
+}
+
+std::string AudioData::get_audio_mode_name() {
+	std::string chosen_str = "";
+	switch(this->mode_output) {
+		case AUDIO_MODE_LOW_LATENCY:
+			chosen_str = "Low Latency";
+			break;
+		case AUDIO_MODE_STABLE:
+			chosen_str = "Stability";
+			break;
+		default:
+			this->mode_output = AUDIO_MODE_LOW_LATENCY;
+			chosen_str = "Low Latency";
 			break;
 	}
 	return chosen_str;
@@ -172,6 +204,10 @@ bool AudioData::load_audio_data(std::string key, std::string value) {
 		this->set_audio_output_type(std::stoi(value));
 		return true;
 	}
+	if (key == this->audio_mode_output_str) {
+		this->set_audio_mode_output(std::stoi(value));
+		return true;
+	}
 	if (key == this->device_request_str) {
 		this->output_device.preference_requested = std::stoi(value);
 		return true;
@@ -189,6 +225,7 @@ std::string AudioData::save_audio_data() {
 	out_str += this->volume_str + "=" + std::to_string(this->volume) + "\n";
 	out_str += this->max_audio_latency_str + "=" + std::to_string(this->max_audio_latency) + "\n";
 	out_str += this->output_type_str + "=" + std::to_string(this->output_type) + "\n";
+	out_str += this->audio_mode_output_str + "=" + std::to_string(this->mode_output) + "\n";
 	out_str += this->device_request_str + "=" + std::to_string(this->output_device.preference_requested) + "\n";
 	out_str += this->device_name_str + "=" + this->output_device.preferred + "\n";
 	return out_str;
@@ -208,6 +245,14 @@ void AudioData::set_audio_output_type(int new_value) {
 	if(new_value < 0)
 		new_value = AUDIO_OUTPUT_END - 1;
 	this->output_type = static_cast<AudioOutputType>(new_value);
+}
+
+void AudioData::set_audio_mode_output(int new_value) {
+	if(new_value >= AUDIO_MODE_END)
+		new_value = 0;
+	if(new_value < 0)
+		new_value = AUDIO_MODE_END - 1;
+	this->mode_output = static_cast<AudioMode>(new_value);
 }
 
 void AudioData::set_audio_volume(int new_volume) {

@@ -87,18 +87,27 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 	inside_onGetData = true;
 	int loaded_samples = samples.size();
 	while(loaded_samples <= 0) {
-		samples_wait.timed_lock();
-		if(terminate) {
-			inside_onGetData = false;
-			return false;
-		}
-		loaded_samples = samples.size();
-		if((loaded_samples <= 0) && this->hasTooMuchTimeElapsedInside()) {
-			// This is needed by MacOS...
-			// But it also causes some trailing noise when
-			// closing the lid on the devices.
-			inside_onGetData = false;
-			return false;
+		switch(this->audio_data->get_audio_mode_output()) {
+			case AUDIO_MODE_STABLE:
+				inside_onGetData = false;
+				return false;
+			case AUDIO_MODE_LOW_LATENCY:
+				samples_wait.timed_lock();
+				if(terminate) {
+					inside_onGetData = false;
+					return false;
+				}
+				loaded_samples = samples.size();
+				if((loaded_samples <= 0) && this->hasTooMuchTimeElapsedInside()) {
+					// This is needed by MacOS...
+					// But it also causes some trailing noise when
+					// closing the lid on the devices.
+					inside_onGetData = false;
+					return false;
+				}
+				break;
+			default:
+				break;
 		}
 	}
 	data.samples = (const std::int16_t*)buffer;
