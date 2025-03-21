@@ -279,6 +279,8 @@ bool get_device_3d_implemented(CaptureStatus* capture_status) {
 	if(!capture_status->connected)
 		return false;
 	switch(capture_status->device.cc_type) {
+		case CAPTURE_CONN_FTD3:
+			return true;
 		default:
 			return false;
 	}
