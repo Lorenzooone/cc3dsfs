@@ -10,6 +10,7 @@ enum StatusMenuID {
 	STATUS_MENU_FPS_POLL,
 	STATUS_MENU_FPS_DRAW,
 	STATUS_MENU_CONNECTION,
+	STATUS_MENU_USB_CONNECTION,
 };
 
 struct StatusMenuOptionInfo {
@@ -42,9 +43,14 @@ static const StatusMenuOptionInfo status_curr_device_option = {
 .base_name = "", .is_inc = false,
 .id = STATUS_MENU_CONNECTION};
 
+static const StatusMenuOptionInfo status_usb_connection_option = {
+.base_name = "", .is_inc = false,
+.id = STATUS_MENU_USB_CONNECTION};
+
 static const StatusMenuOptionInfo* pollable_options[] = {
 &status_name_version_option,
 &status_curr_device_option,
+&status_usb_connection_option,
 &status_url_option,
 &status_fps_in_option,
 &status_fps_poll_option,
@@ -64,7 +70,7 @@ StatusMenu::~StatusMenu() {
 }
 
 void StatusMenu::class_setup() {
-	this->num_options_per_screen = 5;
+	this->num_options_per_screen = 6;
 	this->min_elements_text_scaling_factor = num_options_per_screen + 2;
 	this->width_factor_menu = 16;
 	this->width_divisor_menu = 9;
@@ -119,6 +125,12 @@ bool StatusMenu::is_option_selectable(int index, int action) {
 	return false;
 }
 
+static std::string get_usb_speed_text(int usb_speed) {
+	if(usb_speed <= 0)
+		return "";
+	return "Connection: USB " + std::to_string(usb_speed);
+}
+
 void StatusMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, double in_fps, double poll_fps, double draw_fps, CaptureStatus* capture_status) {
 	if(!this->do_update) {
 		auto curr_time = std::chrono::high_resolution_clock::now();
@@ -144,6 +156,9 @@ void StatusMenu::prepare(float menu_scaling_factor, int view_size_x, int view_si
 					break;
 				case STATUS_MENU_CONNECTION:
 					this->labels[index]->setText(get_name_of_device(capture_status, true));
+					break;
+				case STATUS_MENU_USB_CONNECTION:
+					this->labels[index]->setText(get_usb_speed_text(get_usb_speed_of_device(capture_status)));
 					break;
 				case STATUS_MENU_FPS_IN:
 					this->labels[index + INC_ACTION]->setText(get_float_str_decimals(in_fps, 2));

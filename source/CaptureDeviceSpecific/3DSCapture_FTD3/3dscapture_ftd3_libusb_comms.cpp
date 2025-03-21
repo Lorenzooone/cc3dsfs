@@ -225,8 +225,12 @@ static int ftd3_libusb_insert_device(std::vector<CaptureDevice> &devices_list, l
 	bool claimed_cmd = false;
 	bool claimed_bulk = false;
 	bool result_setup = ftd3_libusb_setup_connection(handle, &claimed_cmd, &claimed_bulk);
+	uint32_t usb_speed = 0x200;
+	libusb_speed read_speed = (libusb_speed)libusb_get_device_speed(usb_device);
+	if((read_speed >= LIBUSB_SPEED_SUPER) || ((read_speed == LIBUSB_SPEED_UNKNOWN) && (usb_descriptor->bcdUSB >= 0x300)))
+		usb_speed = 0x300;
 	if(result_setup)
-		ftd3_insert_device(devices_list, (std::string)(serial), curr_serial_extra_id, false);
+		ftd3_insert_device(devices_list, (std::string)(serial), curr_serial_extra_id, usb_speed, false);
 	if(claimed_cmd)
 		libusb_release_interface(handle, FTD3_COMMAND_INTERFACE);
 	if(claimed_bulk)

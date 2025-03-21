@@ -261,6 +261,12 @@ std::string get_name_of_device(CaptureStatus* capture_status, bool use_long) {
 	return capture_status->device.long_name + " - " + capture_status->device.serial_number;
 }
 
+int get_usb_speed_of_device(CaptureStatus* capture_status) {
+	if(!capture_status->connected)
+		return 0;
+	return capture_status->device.usb_speed >> 8;
+}
+
 void capture_init() {
 	#ifdef USE_DS_3DS_USB
 	usb_ds_3ds_init();

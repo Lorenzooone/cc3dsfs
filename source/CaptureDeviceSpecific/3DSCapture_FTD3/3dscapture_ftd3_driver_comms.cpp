@@ -95,7 +95,7 @@ void ftd3_driver_list_devices(std::vector<CaptureDevice> &devices_list, int *cur
 				ftStatus = FT_Create(SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, &ftHandle);
 				if(FT_FAILED(ftStatus))
 					break;
-				ftd3_insert_device(devices_list, std::string(SerialNumber), *curr_serial_extra_id_ftd3, true);
+				ftd3_insert_device(devices_list, std::string(SerialNumber), *curr_serial_extra_id_ftd3, (Flags & FT_FLAGS_SUPERSPEED) ? 0x300 : 0x200, true);
 				FT_Close(ftHandle);
 				break;
 			}

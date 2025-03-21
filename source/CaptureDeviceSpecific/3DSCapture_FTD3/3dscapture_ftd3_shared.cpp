@@ -18,14 +18,14 @@ std::string ftd3_get_serial(std::string serial_string, int &curr_serial_extra_id
 	return std::to_string(curr_serial_extra_id++);
 }
 
-void ftd3_insert_device(std::vector<CaptureDevice> &devices_list, std::string serial_string, int &curr_serial_extra_id, bool is_driver) {
+void ftd3_insert_device(std::vector<CaptureDevice> &devices_list, std::string serial_string, int &curr_serial_extra_id, uint32_t usb_speed, bool is_driver) {
 	std::string short_name = "N3DSXL";
 	std::string long_name = short_name;
 	if(is_driver)
 		long_name += ".d";
 	else
 		long_name += ".l";
-	devices_list.emplace_back(ftd3_get_serial(serial_string, curr_serial_extra_id), short_name, long_name, CAPTURE_CONN_FTD3, (void*)NULL, true, true, true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, N3DSXL_SAMPLES_IN, 90, 0, 0, TOP_WIDTH_3DS, 0, VIDEO_DATA_RGB);
+	devices_list.emplace_back(ftd3_get_serial(serial_string, curr_serial_extra_id), short_name, long_name, CAPTURE_CONN_FTD3, (void*)NULL, true, true, true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, N3DSXL_SAMPLES_IN, 90, 0, 0, TOP_WIDTH_3DS, 0, VIDEO_DATA_RGB, usb_speed);
 }
 
 void list_devices_ftd3(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list) {
