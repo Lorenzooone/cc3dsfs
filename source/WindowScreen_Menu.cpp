@@ -119,6 +119,7 @@ void WindowScreen::init_menus() {
 	this->input_menu = new InputMenu(this->font_load_success, this->text_font);
 	this->audio_device_menu = new AudioDeviceMenu(this->font_load_success, this->text_font);
 	this->separator_menu = new SeparatorMenu(this->font_load_success, this->text_font);
+	this->color_correction_menu = new ColorCorrectionMenu(this->font_load_success, this->text_font);
 }
 
 void WindowScreen::destroy_menus() {
@@ -145,6 +146,7 @@ void WindowScreen::destroy_menus() {
 	delete this->input_menu;
 	delete this->audio_device_menu;
 	delete this->separator_menu;
+	delete this->color_correction_menu;
 }
 
 void WindowScreen::set_close(int ret_val) {
@@ -297,6 +299,22 @@ void WindowScreen::par_value_change(int new_par_value, bool is_top) {
 		this->future_operations.call_screen_settings_update = true;
 		this->print_notification(setting_name + this->possible_pars[par_index]->name);
 	}
+}
+
+void WindowScreen::color_correction_value_change(int new_color_correction_value) {
+	int color_correction_index = new_color_correction_value % this->possible_color_profiles.size();
+	if(color_correction_index < 0)
+		color_correction_index = 0;
+	std::string setting_name = "Color Correction: ";
+	bool updated = false;
+	if(this->m_info.top_color_correction != color_correction_index)
+		updated = true;
+	this->m_info.top_color_correction = color_correction_index;
+	if(this->m_info.bot_color_correction != color_correction_index)
+		updated = true;
+	this->m_info.bot_color_correction = color_correction_index;
+	if(updated)
+		this->print_notification(setting_name + this->possible_color_profiles[color_correction_index]->name);
 }
 
 void WindowScreen::offset_change(float &value, float change) {
@@ -1111,6 +1129,18 @@ void WindowScreen::setup_separator_menu(bool reset_data) {
 		if(reset_data)
 			this->separator_menu->reset_data();
 		this->separator_menu->insert_data(this->m_info.is_fullscreen);
+		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
+	}
+}
+
+void WindowScreen::setup_color_correction_menu(bool reset_data) {
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != COLOR_CORRECTION_MENU_TYPE) {
+		this->curr_menu = COLOR_CORRECTION_MENU_TYPE;
+		if(reset_data)
+			this->color_correction_menu->reset_data();
+		this->color_correction_menu->insert_data(&this->possible_color_profiles);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
 }
@@ -2073,6 +2103,10 @@ void WindowScreen::poll(bool do_everything) {
 						case VIDEO_EFFECTS_MENU_FRAME_BLENDING_DEC:
 							this->frame_blending_mode_change(false);
 							break;
+						case VIDEO_EFFECTS_MENU_COLOR_CORRECTION_MENU:
+							this->setup_color_correction_menu();
+							done = true;
+							break;
 						default:
 							break;
 					}
@@ -2175,6 +2209,23 @@ void WindowScreen::poll(bool do_everything) {
 							break;
 					}
 					this->separator_menu->reset_output_option();
+					continue;
+				}
+				break;
+			case COLOR_CORRECTION_MENU_TYPE:
+				if(this->color_correction_menu->poll(event_data)) {
+					switch(this->color_correction_menu->selected_index) {
+						case COLORCORRECTION_MENU_BACK:
+							this->setup_video_effects_menu(false);
+							done = true;
+							break;
+						case COLORCORRECTION_MENU_NO_ACTION:
+							break;
+						default:
+							this->color_correction_value_change(this->color_correction_menu->selected_index);
+							break;
+					}
+					this->color_correction_menu->reset_output_option();
 					continue;
 				}
 				break;
@@ -2457,6 +2508,9 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 		case SEPARATOR_MENU_TYPE:
 			this->separator_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
 			break;
+		case COLOR_CORRECTION_MENU_TYPE:
+			this->color_correction_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.top_color_correction);
+			break;
 		default:
 			break;
 	}
@@ -2538,6 +2592,9 @@ void WindowScreen::execute_menu_draws() {
 			break;
 		case SEPARATOR_MENU_TYPE:
 			this->separator_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case COLOR_CORRECTION_MENU_TYPE:
+			this->color_correction_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

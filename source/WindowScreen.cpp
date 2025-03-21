@@ -3,6 +3,7 @@
 #define GL_SILENCE_DEPRECATION
 #include <SFML/OpenGL.hpp>
 #include <cstring>
+#include <cmath>
 #include "font_ttf.h"
 #include "shaders_list.hpp"
 #include "devicecapture.hpp"
@@ -43,6 +44,8 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	insert_basic_crops(this->possible_crops_with_games, this->m_stype, false, true);
 	insert_basic_crops(this->possible_crops_ds_with_games, this->m_stype, true, true);
 	insert_basic_pars(this->possible_pars);
+	insert_basic_color_profiles(this->possible_color_profiles);
+	this->sent_shader_color_data = NULL;
 	this->m_prepare_save = 0;
 	this->m_prepare_load = 0;
 	this->m_prepare_open = false;
@@ -510,13 +513,62 @@ void WindowScreen::pre_texture_conversion_processing() {
 	this->draw_lock->unlock();
 }
 
-int WindowScreen::_choose_shader(bool is_input, bool is_top) {
-	if(!is_input)
-		return NO_EFFECT_FRAGMENT_SHADER;
-	if(this->was_last_frame_null) {
-		this->was_last_frame_null = false;
-		return NO_EFFECT_FRAGMENT_SHADER;
-	}
+static void transpose_matrix_to_new_one(float target[3][3], const float source[3][3]) {
+	for(int i = 0; i < 3; i++)
+		for(int j = 0; j < 3; j++)
+			target[i][j] = source[j][i];
+}
+
+int WindowScreen::_choose_color_emulation_shader(bool is_top) {
+	int color_profile_index = this->loaded_info.top_color_correction;
+	if(!is_top)
+		color_profile_index = this->loaded_info.bot_color_correction;
+	if((color_profile_index >= possible_color_profiles.size()) || (color_profile_index < 0))
+		color_profile_index = 0;
+
+	const ShaderColorEmulationData* shader_color_data = possible_color_profiles[color_profile_index];
+
+	if(!shader_color_data->is_valid)
+		return -1;
+
+	int shader_index = COLOR_EMULATION_FRAGMENT_SHADER;
+	if(sent_shader_color_data == shader_color_data)
+		return shader_index;
+
+	const float contrast = 1.0;
+	const float brightness = 0.0;
+	const float saturation = 1.0;
+	// Calculate saturation weights.
+	// Note: We are using the Rec. 709 luminance vector here.
+	// From Open AGB Firm, thanks to profi200
+	const float rwgt  = (1.f - saturation) * 0.2126f;
+	const float gwgt  = (1.f - saturation) * 0.7152f;
+	const float bwgt  = (1.f - saturation) * 0.0722f;
+	float saturation_matrix[3][3] = {
+		{rwgt + saturation, gwgt, bwgt},
+		{rwgt, gwgt + saturation, bwgt},
+		{rwgt, gwgt, bwgt + saturation}
+	};
+	// OpenGL is column major... Do the transpose of the matrixes
+	float saturation_matrix_transposed[3][3];
+	float color_corr_matrix_transposed[3][3];
+	transpose_matrix_to_new_one(color_corr_matrix_transposed, shader_color_data->rgb_mod);
+	transpose_matrix_to_new_one(saturation_matrix_transposed, saturation_matrix);
+
+	usable_shaders[shader_index].shader.setUniform("targetContrast", (float)(pow(contrast, shader_color_data->targetGamma)));
+	usable_shaders[shader_index].shader.setUniform("targetBrightness", brightness / contrast);
+	usable_shaders[shader_index].shader.setUniform("targetLuminance", shader_color_data->lum);
+	usable_shaders[shader_index].shader.setUniform("targetGamma", shader_color_data->targetGamma);
+	usable_shaders[shader_index].shader.setUniform("displayGamma", shader_color_data->displayGamma);
+	usable_shaders[shader_index].shader.setUniform("color_corr_mat",  
+sf::Glsl::Mat3((float*)color_corr_matrix_transposed));
+	usable_shaders[shader_index].shader.setUniform("saturation_mat", sf::Glsl::Mat3((float*)saturation_matrix_transposed));
+
+	sent_shader_color_data = shader_color_data;
+	return shader_index;
+}
+
+int WindowScreen::_choose_base_input_shader(bool is_top) {
 	InputColorspaceMode *in_colorspace = &this->loaded_info.in_colorspace_top;
 	FrameBlendingMode *frame_blending = &this->loaded_info.frame_blending_top;
 	if(!is_top) {
@@ -558,11 +610,58 @@ int WindowScreen::_choose_shader(bool is_input, bool is_top) {
 	}
 }
 
-int WindowScreen::choose_shader(bool is_input, bool is_top) {
-	int chosen_shader = _choose_shader(is_input, is_top);
+int WindowScreen::_choose_shader(PossibleShaderTypes shader_type, bool is_top) {
+	if(this->was_last_frame_null) {
+		this->was_last_frame_null = false;
+		return NO_EFFECT_FRAGMENT_SHADER;
+	}
+	switch(shader_type) {
+		case BASE_FINAL_OUTPUT_SHADER_TYPE:
+			return NO_EFFECT_FRAGMENT_SHADER;
+		case BASE_INPUT_SHADER_TYPE:
+			return _choose_base_input_shader(is_top);
+		case COLOR_PROCESSING_SHADER_TYPE:
+			return _choose_color_emulation_shader(is_top);
+		default:
+			return NO_EFFECT_FRAGMENT_SHADER;
+	}
+}
+
+int WindowScreen::choose_shader(PossibleShaderTypes shader_type, bool is_top) {
+	int chosen_shader = _choose_shader(shader_type, is_top);
 	if((chosen_shader >= 0) && (chosen_shader < usable_shaders.size()) && usable_shaders[chosen_shader].is_valid)
 		return chosen_shader;
 	return -1;
+}
+
+bool WindowScreen::apply_shaders_to_input(out_rect_data &rect_data, const sf::RectangleShape &final_in_rect, bool is_top) {
+	if(!sf::Shader::isAvailable())
+	return false;
+
+	int chosen_shader = choose_shader(BASE_INPUT_SHADER_TYPE, is_top);
+	if(chosen_shader < 0)
+		return false;
+
+	float old_frame_pos_x = ((float)(NUM_FRAMES_BLENDED - 1)) / NUM_FRAMES_BLENDED;
+	if(this->curr_frame_texture_pos > 0)
+		old_frame_pos_x = -1.0 / NUM_FRAMES_BLENDED;
+	sf::Glsl::Vec2 old_pos = {old_frame_pos_x, 0.0};
+	usable_shaders[chosen_shader].shader.setUniform("old_frame_offset", old_pos);
+	rect_data.out_tex.draw(final_in_rect, &usable_shaders[chosen_shader].shader);
+
+	chosen_shader = choose_shader(COLOR_PROCESSING_SHADER_TYPE, is_top);
+	if(chosen_shader < 0)
+		return true;
+	sf::RectangleShape new_final_in_rect = final_in_rect;
+	new_final_in_rect.setTexture(&rect_data.out_tex.getTexture());
+	const sf::IntRect texture_rect = rect_data.out_rect.getTextureRect();
+	new_final_in_rect.setTextureRect(texture_rect);
+	new_final_in_rect.setSize({(float)texture_rect.size.x, (float)texture_rect.size.y});
+	new_final_in_rect.setPosition({(float)texture_rect.position.x, (float)texture_rect.position.y});
+	new_final_in_rect.setOrigin({0, 0});
+	rect_data.out_tex.draw(new_final_in_rect, &usable_shaders[chosen_shader].shader);
+	return true;
+
 }
 
 void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug) {
@@ -584,19 +683,7 @@ void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, 
 		text_coords_rect.position.x += this->curr_frame_texture_pos * MAX_IN_VIDEO_WIDTH;
 		final_in_rect.setTextureRect(text_coords_rect);
 		if(this->capture_status->connected && actually_draw) {
-			bool use_default_shader = true;
-			if(sf::Shader::isAvailable()) {
-				int chosen_shader = choose_shader(true, is_top);
-				if(chosen_shader >= 0) {
-					float old_frame_pos_x = ((float)(NUM_FRAMES_BLENDED - 1)) / NUM_FRAMES_BLENDED;
-					if(this->curr_frame_texture_pos > 0)
-						old_frame_pos_x = -1.0 / NUM_FRAMES_BLENDED;
-					sf::Glsl::Vec2 old_pos = {old_frame_pos_x, 0.0};
-					usable_shaders[chosen_shader].shader.setUniform("old_frame_offset", old_pos);
-					rect_data.out_tex.draw(final_in_rect, &usable_shaders[chosen_shader].shader);
-					use_default_shader = false;
-				}
-			}
+			bool use_default_shader = !(this->apply_shaders_to_input(rect_data, final_in_rect, is_top));
 			if(use_default_shader)
 				rect_data.out_tex.draw(final_in_rect);
 			//Place postprocessing effects here
@@ -613,7 +700,7 @@ void WindowScreen::draw_rect_to_window(const sf::RectangleShape &out_rect, bool 
 
 	bool use_default_shader = true;
 	if(sf::Shader::isAvailable()) {
-		int chosen_shader = choose_shader(false, is_top);
+		int chosen_shader = choose_shader(BASE_FINAL_OUTPUT_SHADER_TYPE, is_top);
 		if(chosen_shader >= 0) {
 			this->m_win.draw(out_rect, &usable_shaders[chosen_shader].shader);
 			use_default_shader = false;

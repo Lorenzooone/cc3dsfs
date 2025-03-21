@@ -35,6 +35,7 @@
 #include "InputMenu.hpp"
 #include "AudioDeviceMenu.hpp"
 #include "SeparatorMenu.hpp"
+#include "ColorCorrectionMenu.hpp"
 #include "display_structs.hpp"
 #include "event_structs.hpp"
 #include "shaders_list.hpp"
@@ -81,6 +82,7 @@ public:
 	int get_ret_val();
 
 private:
+	enum PossibleShaderTypes { BASE_INPUT_SHADER_TYPE, BASE_FINAL_OUTPUT_SHADER_TYPE, COLOR_PROCESSING_SHADER_TYPE };
 	struct ScreenOperations {
 		bool call_create;
 		bool call_close;
@@ -157,11 +159,13 @@ private:
 	InputMenu *input_menu;
 	AudioDeviceMenu *audio_device_menu;
 	SeparatorMenu *separator_menu;
+	ColorCorrectionMenu *color_correction_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const CropData*> possible_crops_ds;
 	std::vector<const CropData*> possible_crops_with_games;
 	std::vector<const CropData*> possible_crops_ds_with_games;
 	std::vector<const PARData*> possible_pars;
+	std::vector<const ShaderColorEmulationData*> possible_color_profiles;
 	std::vector<sf::VideoMode> possible_resolutions;
 	std::vector<std::string> possible_audio_devices;
 	std::vector<FileData> possible_files;
@@ -191,6 +195,8 @@ private:
 	sf::RectangleShape m_in_rect_top, m_in_rect_bot;
 	out_rect_data m_out_rect_top, m_out_rect_bot;
 	ScreenType m_stype;
+
+	const ShaderColorEmulationData* sent_shader_color_data;
 
 	std::queue<SFEvent> events_queue;
 
@@ -257,6 +263,7 @@ private:
 	void separator_multiplier_change(bool positive, float& multiplier_to_check, float lower_limit, float upper_limit);
 	void separator_windowed_multiplier_change(bool positive);
 	void separator_fullscreen_multiplier_change(bool positive);
+	void color_correction_value_change(int new_color_correction_value);
 	bool query_reset_request();
 	void reset_held_times(bool force = true);
 	void poll_window(bool do_everything);
@@ -267,8 +274,11 @@ private:
 	bool window_needs_work();
 	void window_factory(bool is_main_thread);
 	void update_texture();
-	int _choose_shader(bool is_input, bool is_top);
-	int choose_shader(bool is_input, bool is_top);
+	int _choose_base_input_shader(bool is_top);
+	int _choose_color_emulation_shader(bool is_top);
+	int _choose_shader(PossibleShaderTypes shader_type, bool is_top);
+	int choose_shader(PossibleShaderTypes shader_type, bool is_top);
+	bool apply_shaders_to_input(out_rect_data &rect_data, const sf::RectangleShape &final_in_rect, bool is_top);
 	void pre_texture_conversion_processing();
 	void post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug);
 	void draw_rect_to_window(const sf::RectangleShape &out_rect, bool is_top);
@@ -327,6 +337,7 @@ private:
 	void setup_video_effects_menu(bool reset_data = true);
 	void setup_input_menu(bool reset_data = true);
 	void setup_separator_menu(bool reset_data = true);
+	void setup_color_correction_menu(bool reset_data = true);
 	void update_connection();
 };
 
@@ -344,6 +355,7 @@ void FPSArrayDestroy(FPSArray *array);
 void FPSArrayInsertElement(FPSArray *array, double frame_time);
 void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type, bool is_ds, bool allow_game_specific);
 void insert_basic_pars(std::vector<const PARData*> &par_vector);
+void insert_basic_color_profiles(std::vector<const ShaderColorEmulationData*> &color_profiles_vector);
 void reset_display_data(DisplayData *display_data);
 void reset_input_data(InputData* input_data);
 void reset_shared_data(SharedData* shared_data);

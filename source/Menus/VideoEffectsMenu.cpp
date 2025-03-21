@@ -24,9 +24,15 @@ static const VideoEffectsMenuOptionInfo frame_blending_option = {
 .is_inc = true, .dec_str = "<", .inc_str = ">", .inc_out_action = VIDEO_EFFECTS_MENU_FRAME_BLENDING_INC,
 .out_action = VIDEO_EFFECTS_MENU_FRAME_BLENDING_DEC};
 
+static const VideoEffectsMenuOptionInfo color_correction_menu_option = {
+.base_name = "Color Correction", .false_name = "", .is_selectable = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_EFFECTS_MENU_NO_ACTION,
+.out_action = VIDEO_EFFECTS_MENU_COLOR_CORRECTION_MENU};
+
 static const VideoEffectsMenuOptionInfo* pollable_options[] = {
 &input_colorspace_option,
 &frame_blending_option,
+&color_correction_menu_option,
 };
 
 VideoEffectsMenu::VideoEffectsMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){

@@ -363,6 +363,142 @@ static const PARData* basic_possible_pars[] = {
 &fit_wide_vertical_par,
 };
 
+// libretro shader values. Credits: hunterk and Pokefan531.
+// Based on profi200's open_agb_firm implementation.
+// https://github.com/libretro/slang-shaders/tree/master/handheld/shaders/color
+const ShaderColorEmulationData color_profile_identity = {
+.targetGamma = 1.f, .lum = 1.f,
+.rgb_mod = {
+{1.f, 0.f, 0.f},
+{0.f, 1.f, 0.f},
+{0.f, 0.f, 1.f}
+},
+.displayGamma = 1.f / 1.f,
+.is_valid = false,
+.name = "No Correction"
+};
+
+const ShaderColorEmulationData color_profile_libretro_gba = {
+.targetGamma = 2.2f, .lum = 0.91f,
+.rgb_mod = {
+{0.905f,  0.195f,  -0.1f},
+{0.1f,    0.65f,    0.25f},
+{0.1575f, 0.1425f,  0.7f}
+},
+.displayGamma = 1.f / 2.2f,
+.is_valid = true,
+.name = "GBA"
+};
+
+const ShaderColorEmulationData color_profile_libretro_gb_micro = {
+.targetGamma = 2.2f, .lum = 0.9f,
+.rgb_mod = {
+{0.8025f, 0.31f,   -0.1125f},
+{0.1f,    0.6875f,  0.2125f},
+{0.1225f, 0.1125f,  0.765f}
+},
+.displayGamma = 1.f / 2.2f,
+.is_valid = true,
+.name = "GB Micro"
+};
+
+const ShaderColorEmulationData color_profile_libretro_gba_sp_101 = {
+.targetGamma = 2.2f, .lum = 0.935f,
+.rgb_mod = {
+{0.96f,    0.11f, -0.07f},
+{0.0325f,  0.89f,  0.0775f},
+{0.001f,  -0.03f,  1.029f}
+},
+.displayGamma = 1.f / 2.2f,
+.is_valid = true,
+.name = "GBA SP 101"
+};
+
+const ShaderColorEmulationData color_profile_libretro_nds = {
+.targetGamma = 2.2f, .lum = 0.905f,
+.rgb_mod = {
+{0.835f, 0.27f,   -0.105f},
+{0.1f,   0.6375f,  0.2625f},
+{0.105f, 0.175f,   0.72f}
+},
+.displayGamma = 1.f / 2.2f,
+.is_valid = true,
+.name = "Nintendo DS"
+};
+
+const ShaderColorEmulationData color_profile_libretro_nds_lite = {
+.targetGamma = 2.2f, .lum = 0.935f,
+.rgb_mod = {
+{0.93f,   0.14f, -0.07f},
+{0.025f,  0.9f,   0.075f},
+{0.008f, -0.03f,  1.022f}
+},
+.displayGamma = 1.f / 2.2f,
+.is_valid = true,
+.name = "Nintendo DS Lite"
+};
+
+const ShaderColorEmulationData color_profile_libretro_nso_gba = {
+.targetGamma = 2.2f, .lum = 1.f,
+.rgb_mod = {
+{0.865f,  0.1225f, 0.0125f},
+{0.0575f, 0.925f,  0.0125f},
+{0.0575f, 0.1225f, 0.82f}
+},
+.displayGamma = 1.f / 2.2f,
+.is_valid = true,
+.name = "NSO GBA"
+};
+
+const ShaderColorEmulationData color_profile_libretro_emulators_gba = {
+.targetGamma = 1.45f, .lum = 1.f,
+.rgb_mod = {
+{0.73f,   0.27f,   0.f},
+{0.0825f, 0.6775f, 0.24f},
+{0.0825f, 0.24f,   0.6775f}
+},
+.displayGamma = 1.f / 1.45f,
+.is_valid = true,
+.name = "Emulators GBA"
+};
+
+const ShaderColorEmulationData color_profile_libretro_gbc = {
+.targetGamma = 2.2f, .lum = 0.91f,
+.rgb_mod = {
+{0.905f,   0.195f,   -0.1f},
+{0.1f,      0.65f,   0.25f},
+{0.1575f, 0.1425f,    0.7f}
+},
+.displayGamma = 1.f / 2.2f,
+.is_valid = true,
+.name = "GBC"
+};
+
+const ShaderColorEmulationData color_profile_nso_gbc = {
+.targetGamma = 2.2f, .lum = 0.85f,
+.rgb_mod = {
+{0.84f,  0.265f, 0.f},
+{0.105f, 0.67f,  0.24f},
+{0.15f,  0.30f,  0.525f}
+},
+.displayGamma = 1.f / 2.2f,
+.is_valid = true,
+.name = "NSO GBC"
+};
+
+static const ShaderColorEmulationData* basic_possible_color_profiles[] = {
+&color_profile_identity,
+&color_profile_libretro_nds,
+&color_profile_libretro_nds_lite,
+&color_profile_libretro_gba,
+&color_profile_libretro_gb_micro,
+&color_profile_libretro_gba_sp_101,
+&color_profile_libretro_nso_gba,
+&color_profile_libretro_emulators_gba,
+&color_profile_libretro_gbc,
+&color_profile_nso_gbc,
+};
+
 static bool is_allowed_crop(const CropData* crop_data, ScreenType s_type, bool is_ds, bool allow_game_specific) {
 	if(is_ds && (!crop_data->allowed_ds))
 		return false;
@@ -389,6 +525,12 @@ void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_
 void insert_basic_pars(std::vector<const PARData*> &par_vector) {
 	for(int i = 0; i < (sizeof(basic_possible_pars) / sizeof(basic_possible_pars[0])); i++) {
 		par_vector.push_back(basic_possible_pars[i]);
+	}
+}
+
+void insert_basic_color_profiles(std::vector<const ShaderColorEmulationData*> &color_profiles_vector) {
+	for(int i = 0; i < (sizeof(basic_possible_color_profiles) / sizeof(basic_possible_color_profiles[0])); i++) {
+		color_profiles_vector.push_back(basic_possible_color_profiles[i]);
 	}
 }
 
@@ -461,6 +603,8 @@ void reset_screen_info(ScreenInfo &info) {
 	info.use_non_integer_scaling_bottom = false;
 	info.failed_fullscreen = false;
 	info.have_titlebar = true;
+	info.top_color_correction = 0;
+	info.bot_color_correction = 0;
 	info.in_colorspace_top = FULL_COLORSPACE;
 	info.in_colorspace_bot = FULL_COLORSPACE;
 	info.frame_blending_top = NO_FRAME_BLENDING;
@@ -684,6 +828,14 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		info.have_titlebar = std::stoi(value);
 		return true;
 	}
+	if(key == (base + "top_color_correction")) {
+		info.top_color_correction = std::stoi(value);
+		return true;
+	}
+	if(key == (base + "bot_color_correction")) {
+		info.bot_color_correction = std::stoi(value);
+		return true;
+	}
 	if(key == (base + "in_colorspace_top")) {
 		info.in_colorspace_top = input_colorspace_sanitization(std::stoi(value));
 		return true;
@@ -740,6 +892,8 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "use_non_integer_scaling_top=" + std::to_string(info.use_non_integer_scaling_top) + "\n";
 	out += base + "use_non_integer_scaling_bottom=" + std::to_string(info.use_non_integer_scaling_bottom) + "\n";
 	out += base + "have_titlebar=" + std::to_string(info.have_titlebar) + "\n";
+	out += base + "top_color_correction=" + std::to_string(info.top_color_correction) + "\n";
+	out += base + "bot_color_correction=" + std::to_string(info.bot_color_correction) + "\n";
 	out += base + "in_colorspace_top=" + std::to_string(info.in_colorspace_top) + "\n";
 	out += base + "in_colorspace_bot=" + std::to_string(info.in_colorspace_bot) + "\n";
 	out += base + "frame_blending_top=" + std::to_string(info.frame_blending_top) + "\n";
