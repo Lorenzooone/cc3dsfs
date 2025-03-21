@@ -276,7 +276,7 @@ bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, Capt
 	CaptureDevice* chosen_device = &status->device;
 	#ifdef USE_FTD3
 	if(chosen_device->cc_type == CAPTURE_CONN_FTD3) {
-		ftd3_convertVideoToOutput(p_in, p_out, status->enabled_3d);
+		ftd3_convertVideoToOutput(p_in, p_out, get_3d_enabled(status));
 		converted = true;
 	}
 	#endif
@@ -288,7 +288,7 @@ bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, Capt
 	#endif
 	#ifdef USE_DS_3DS_USB
 	if(chosen_device->cc_type == CAPTURE_CONN_USB) {
-		usb_convertVideoToOutput(p_in, p_out, chosen_device, status->enabled_3d, is_big_endian);
+		usb_convertVideoToOutput(p_in, p_out, chosen_device, get_3d_enabled(status), is_big_endian);
 		converted = true;
 	}
 	#endif
@@ -314,7 +314,7 @@ bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, const bool i
 	uint8_t* base_ptr = NULL;
 	#ifdef USE_FTD3
 	if(status->device.cc_type == CAPTURE_CONN_FTD3) {
-		if(!status->enabled_3d)
+		if(!get_3d_enabled(status))
 			base_ptr = (uint8_t*)p_in->ftd3_received.audio_data;
 		else
 			base_ptr = (uint8_t*)p_in->ftd3_received_3d.audio_data;
@@ -326,7 +326,7 @@ bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, const bool i
 	#endif
 	#ifdef USE_DS_3DS_USB
 	if(status->device.cc_type == CAPTURE_CONN_USB) {
-		if(!status->enabled_3d)
+		if(!get_3d_enabled(status))
 			base_ptr = (uint8_t*)p_in->usb_received_3ds.audio_data;
 		else
 			base_ptr = (uint8_t*)p_in->usb_received_3ds_3d.audio_data;

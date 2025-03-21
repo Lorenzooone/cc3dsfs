@@ -179,6 +179,11 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 						continue;
 					}
 
+					if(key == "requested_3d") {
+						capture_status->requested_3d = std::stoi(value);
+						continue;
+					}
+
 					if(key == "last_connected_ds") {
 						display_data.last_connected_ds = std::stoi(value);
 						continue;
@@ -226,7 +231,7 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 }
 
 static void defaults_reload(FrontendData *frontend_data, AudioData* audio_data, CaptureStatus* capture_status) {
-	capture_status->enabled_3d = false;
+	capture_status->requested_3d = false;
 	capture_status->capture_type = CAPTURE_SCREENS_BOTH;
 	capture_status->capture_speed = CAPTURE_SPEEDS_FULL;
 	capture_status->battery_percentage = 100;
@@ -308,6 +313,7 @@ static bool save(const std::string path, const std::string name, const std::stri
 	file << save_screen_info("bot_", bottom_info);
 	file << save_screen_info("joint_", joint_info);
 	file << save_screen_info("top_", top_info);
+	file << "requested_3d=" << capture_status->requested_3d << std::endl;
 	file << "last_connected_ds=" << display_data.last_connected_ds << std::endl;
 	file << "is_screen_capture_type=" << capture_status->capture_type << std::endl;
 	file << "is_speed_capture=" << capture_status->capture_speed << std::endl;

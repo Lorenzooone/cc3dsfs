@@ -46,13 +46,13 @@ void data_output_update(int inner_index, size_t read_data, CaptureData* capture_
 }
 
 uint64_t ftd3_get_video_in_size(CaptureData* capture_data) {
-	if(!capture_data->status.enabled_3d)
+	if(!get_3d_enabled(&capture_data->status))
 		return sizeof(RGB83DSVideoInputData);
 	return sizeof(RGB83DSVideoInputData_3D);
 }
 
 uint64_t ftd3_get_capture_size(CaptureData* capture_data) {
-	if(!capture_data->status.enabled_3d)
+	if(!get_3d_enabled(&capture_data->status))
 		return sizeof(FTD3_3DSCaptureReceived) & (~(EXTRA_DATA_BUFFER_FTD3XX_SIZE - 1));
 	return sizeof(FTD3_3DSCaptureReceived_3D) & (~(EXTRA_DATA_BUFFER_FTD3XX_SIZE - 1));
 }

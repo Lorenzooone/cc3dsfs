@@ -211,7 +211,7 @@ struct CaptureStatus {
 	volatile bool close_success = true;
 	volatile int curr_delay = 0;
 	volatile bool reset_hardware = false;
-	bool enabled_3d = false;
+	bool requested_3d = false;
 	CaptureScreensType capture_type;
 	CaptureSpeedsType capture_speed;
 	int battery_percentage;

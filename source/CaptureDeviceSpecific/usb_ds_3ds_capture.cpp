@@ -217,7 +217,7 @@ static usb_capture_status capture_read_oldds_3ds(CaptureData* capture_data, size
 	CaptureReceived* data_buffer = &full_data_buf->capture_buf;
 	libusb_device_handle* handle = (libusb_device_handle*)capture_data->handle;
 	const usb_device* usb_device_desc = get_usb_device_desc(capture_data);
-	const bool enabled_3d = capture_data->status.enabled_3d;
+	const bool enabled_3d = get_3d_enabled(&capture_data->status);
 	int bytesIn = 0;
 	int transferred = 0;
 	int result = 0;
@@ -378,7 +378,7 @@ bool connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* de
 }
 
 uint64_t usb_get_video_in_size(CaptureData* capture_data) {
-	return _usb_get_video_in_size(get_usb_device_desc(capture_data), capture_data->status.enabled_3d);
+	return _usb_get_video_in_size(get_usb_device_desc(capture_data), get_3d_enabled(&capture_data->status));
 }
 
 void usb_capture_main_loop(CaptureData* capture_data) {

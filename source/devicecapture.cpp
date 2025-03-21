@@ -267,6 +267,41 @@ int get_usb_speed_of_device(CaptureStatus* capture_status) {
 	return capture_status->device.usb_speed >> 8;
 }
 
+bool get_device_can_do_3d(CaptureStatus* capture_status) {
+	if(!capture_status->connected)
+		return false;
+	if(!capture_status->device.is_3ds)
+		return false;
+	return capture_status->device.has_3d;
+}
+
+bool get_device_3d_implemented(CaptureStatus* capture_status) {
+	if(!capture_status->connected)
+		return false;
+	switch(capture_status->device.cc_type) {
+		default:
+			return false;
+	}
+}
+
+bool get_3d_enabled(CaptureStatus* capture_status) {
+	if(!capture_status->requested_3d)
+		return false;
+	if(!capture_status->connected)
+		return false;
+	if(!get_device_can_do_3d(capture_status))
+		return false;
+	if(!get_device_3d_implemented(capture_status))
+		return false;
+	switch(capture_status->device.cc_type) {
+		default:
+			if(get_usb_speed_of_device(capture_status) < 3)
+				return false;
+			break;
+	}
+	return true;
+}
+
 void capture_init() {
 	#ifdef USE_DS_3DS_USB
 	usb_ds_3ds_init();
