@@ -658,6 +658,7 @@ bool WindowScreen::apply_shaders_to_input(out_rect_data &rect_data, const sf::Re
 	new_final_in_rect.setTextureRect(texture_rect);
 	new_final_in_rect.setSize({(float)texture_rect.size.x, (float)texture_rect.size.y});
 	new_final_in_rect.setPosition({(float)texture_rect.position.x, (float)texture_rect.position.y});
+	new_final_in_rect.setRotation(sf::degrees(0));
 	new_final_in_rect.setOrigin({0, 0});
 	rect_data.out_tex.draw(new_final_in_rect, &usable_shaders[chosen_shader].shader);
 	return true;
