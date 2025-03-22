@@ -278,6 +278,7 @@ private:
 	int _choose_color_emulation_shader(bool is_top);
 	int _choose_shader(PossibleShaderTypes shader_type, bool is_top);
 	int choose_shader(PossibleShaderTypes shader_type, bool is_top);
+	void apply_shader_to_texture(out_rect_data &rect_data, PossibleShaderTypes shader_type, bool is_top);
 	bool apply_shaders_to_input(out_rect_data &rect_data, const sf::RectangleShape &final_in_rect, bool is_top);
 	void pre_texture_conversion_processing();
 	void post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug);

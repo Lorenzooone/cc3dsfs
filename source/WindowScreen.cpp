@@ -560,8 +560,7 @@ int WindowScreen::_choose_color_emulation_shader(bool is_top) {
 	usable_shaders[shader_index].shader.setUniform("targetLuminance", shader_color_data->lum);
 	usable_shaders[shader_index].shader.setUniform("targetGamma", shader_color_data->targetGamma);
 	usable_shaders[shader_index].shader.setUniform("displayGamma", shader_color_data->displayGamma);
-	usable_shaders[shader_index].shader.setUniform("color_corr_mat",  
-sf::Glsl::Mat3((float*)color_corr_matrix_transposed));
+	usable_shaders[shader_index].shader.setUniform("color_corr_mat", sf::Glsl::Mat3((float*)color_corr_matrix_transposed));
 	usable_shaders[shader_index].shader.setUniform("saturation_mat", sf::Glsl::Mat3((float*)saturation_matrix_transposed));
 
 	sent_shader_color_data = shader_color_data;
@@ -634,9 +633,24 @@ int WindowScreen::choose_shader(PossibleShaderTypes shader_type, bool is_top) {
 	return -1;
 }
 
+void WindowScreen::apply_shader_to_texture(out_rect_data &rect_data, PossibleShaderTypes shader_type, bool is_top) {
+	int chosen_shader = choose_shader(COLOR_PROCESSING_SHADER_TYPE, is_top);
+	if(chosen_shader < 0)
+		return;
+	sf::RectangleShape in_rect;
+	in_rect.setTexture(&rect_data.out_tex.getTexture());
+	const sf::IntRect texture_rect = rect_data.out_rect.getTextureRect();
+	in_rect.setTextureRect(texture_rect);
+	in_rect.setSize({(float)texture_rect.size.x, (float)texture_rect.size.y});
+	in_rect.setPosition({(float)texture_rect.position.x, (float)texture_rect.position.y});
+	in_rect.setRotation(sf::degrees(0));
+	in_rect.setOrigin({0, 0});
+	rect_data.out_tex.draw(in_rect, &usable_shaders[chosen_shader].shader);
+}
+
 bool WindowScreen::apply_shaders_to_input(out_rect_data &rect_data, const sf::RectangleShape &final_in_rect, bool is_top) {
 	if(!sf::Shader::isAvailable())
-	return false;
+		return false;
 
 	int chosen_shader = choose_shader(BASE_INPUT_SHADER_TYPE, is_top);
 	if(chosen_shader < 0)
@@ -649,20 +663,8 @@ bool WindowScreen::apply_shaders_to_input(out_rect_data &rect_data, const sf::Re
 	usable_shaders[chosen_shader].shader.setUniform("old_frame_offset", old_pos);
 	rect_data.out_tex.draw(final_in_rect, &usable_shaders[chosen_shader].shader);
 
-	chosen_shader = choose_shader(COLOR_PROCESSING_SHADER_TYPE, is_top);
-	if(chosen_shader < 0)
-		return true;
-	sf::RectangleShape new_final_in_rect = final_in_rect;
-	new_final_in_rect.setTexture(&rect_data.out_tex.getTexture());
-	const sf::IntRect texture_rect = rect_data.out_rect.getTextureRect();
-	new_final_in_rect.setTextureRect(texture_rect);
-	new_final_in_rect.setSize({(float)texture_rect.size.x, (float)texture_rect.size.y});
-	new_final_in_rect.setPosition({(float)texture_rect.position.x, (float)texture_rect.position.y});
-	new_final_in_rect.setRotation(sf::degrees(0));
-	new_final_in_rect.setOrigin({0, 0});
-	rect_data.out_tex.draw(new_final_in_rect, &usable_shaders[chosen_shader].shader);
+	this->apply_shader_to_texture(rect_data, COLOR_PROCESSING_SHADER_TYPE, is_top);
 	return true;
-
 }
 
 void WindowScreen::post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug) {
