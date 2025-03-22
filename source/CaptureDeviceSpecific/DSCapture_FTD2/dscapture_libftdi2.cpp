@@ -140,7 +140,7 @@ void list_devices_libftdi(std::vector<CaptureDevice> &devices_list, std::vector<
 		for(int j = 0; j < get_num_ftd2_device_types(); j++) {
 			if(description == get_ftd2_fw_desc(j)) {
 				for(int u = 0; u < debug_multiplier; u++)
-					devices_list.emplace_back(serial_number, "DS.2", "DS.2.l565", std::string(description), CAPTURE_CONN_FTD2, (void*)curr_descriptor, false, false, ENABLE_AUDIO, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, get_max_samples(false), 0, 0, 0, 0, HEIGHT_DS, VIDEO_DATA_RGB16, get_ftd2_fw_index(j), false);
+					devices_list.emplace_back(serial_number, "DS.2", "DS.2.l565", CAPTURE_CONN_FTD2, (void*)curr_descriptor, false, false, ENABLE_AUDIO, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, get_max_samples(false), 0, 0, 0, 0, HEIGHT_DS, VIDEO_DATA_RGB16, get_ftd2_fw_index(j), false, std::string(description));
 				break;
 			}
 		}

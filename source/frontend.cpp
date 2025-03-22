@@ -536,6 +536,7 @@ void insert_basic_color_profiles(std::vector<const ShaderColorEmulationData*> &c
 
 void reset_display_data(DisplayData* display_data) {
 	display_data->last_connected_ds = false;
+	display_data->interleaved_3d = false;
 }
 
 void reset_input_data(InputData* input_data) {

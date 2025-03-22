@@ -184,6 +184,11 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 						continue;
 					}
 
+					if(key == "interleaved_3d") {
+						display_data.interleaved_3d = std::stoi(value);
+						continue;
+					}
+
 					if(key == "last_connected_ds") {
 						display_data.last_connected_ds = std::stoi(value);
 						continue;
@@ -314,6 +319,7 @@ static bool save(const std::string path, const std::string name, const std::stri
 	file << save_screen_info("joint_", joint_info);
 	file << save_screen_info("top_", top_info);
 	file << "requested_3d=" << capture_status->requested_3d << std::endl;
+	file << "interleaved_3d=" << display_data.interleaved_3d << std::endl;
 	file << "last_connected_ds=" << display_data.last_connected_ds << std::endl;
 	file << "is_screen_capture_type=" << capture_status->capture_type << std::endl;
 	file << "is_speed_capture=" << capture_status->capture_speed << std::endl;
@@ -594,7 +600,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 					if(capture_data->status.cooldown_curr_in || (!capture_data->status.connected))
 						blank_out = true;
 					else {
-						bool conversion_success = convertVideoToOutput(out_buf, endianness, data_buffer, &capture_data->status);
+						bool conversion_success = convertVideoToOutput(out_buf, endianness, data_buffer, &capture_data->status, frontend_data.display_data.interleaved_3d);
 						if(!conversion_success)
 							UpdateOutText(out_text_data, "", "Video conversion failed...", TEXT_KIND_NORMAL);
 					}

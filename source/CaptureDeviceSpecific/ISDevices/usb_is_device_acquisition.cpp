@@ -70,11 +70,11 @@ std::string get_serial(const is_device_usb_device* usb_device_desc, is_device_de
 }
 
 void is_device_insert_device(std::vector<CaptureDevice>& devices_list, is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, int& curr_serial_extra_id_is_device, std::string path) {
-	devices_list.emplace_back(get_serial(usb_device_desc, handlers, curr_serial_extra_id_is_device), usb_device_desc->name, usb_device_desc->long_name, path, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, usb_device_desc->audio_enabled, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, usb_device_desc->max_audio_samples_size, 0, 0, 0, 0, HEIGHT_DS, usb_device_desc->video_data_type);
+	devices_list.emplace_back(get_serial(usb_device_desc, handlers, curr_serial_extra_id_is_device), usb_device_desc->name, usb_device_desc->long_name, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, usb_device_desc->audio_enabled, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, usb_device_desc->max_audio_samples_size, 0, 0, 0, 0, HEIGHT_DS, usb_device_desc->video_data_type, path);
 }
 
 void is_device_insert_device(std::vector<CaptureDevice>& devices_list, is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, int& curr_serial_extra_id_is_device) {
-	devices_list.emplace_back(get_serial(usb_device_desc, handlers, curr_serial_extra_id_is_device), usb_device_desc->name, usb_device_desc->long_name, CAPTURE_CONN_IS_NITRO, (void*)usb_device_desc, false, false, usb_device_desc->audio_enabled, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, usb_device_desc->max_audio_samples_size, 0, 0, 0, 0, HEIGHT_DS, usb_device_desc->video_data_type);
+	is_device_insert_device(devices_list, handlers, usb_device_desc, curr_serial_extra_id_is_device, "");
 }
 
 static is_device_device_handlers* usb_find_by_serial_number(const is_device_usb_device* usb_device_desc, CaptureDevice* device) {

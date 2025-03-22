@@ -84,6 +84,7 @@ struct ScreenInfo {
 struct DisplayData {
 	bool mono_app_mode;
 	bool last_connected_ds;
+	bool interleaved_3d;
 	bool force_disable_mouse;
 };
 

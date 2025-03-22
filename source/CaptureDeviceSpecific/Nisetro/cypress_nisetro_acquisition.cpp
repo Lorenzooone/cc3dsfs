@@ -71,11 +71,11 @@ static void cypress_nisetro_connection_end(cyni_device_device_handlers* handlers
 }
 
 CaptureDevice cypress_create_device(const cyni_device_usb_device* usb_device_desc, std::string serial, std::string path) {
-	return CaptureDevice(serial, usb_device_desc->name, usb_device_desc->long_name, path, CAPTURE_CONN_CYPRESS_NISETRO, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS, usb_device_desc->video_data_type);
+	return CaptureDevice(serial, usb_device_desc->name, usb_device_desc->long_name, CAPTURE_CONN_CYPRESS_NISETRO, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS, usb_device_desc->video_data_type, path);
 }
 
 CaptureDevice cypress_create_device(const cyni_device_usb_device* usb_device_desc, std::string serial) {
-	return CaptureDevice(serial, usb_device_desc->name, usb_device_desc->long_name, CAPTURE_CONN_CYPRESS_NISETRO, (void*)usb_device_desc, false, false, false, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, 0, 0, 0, 0, 0, HEIGHT_DS, usb_device_desc->video_data_type);;
+	return cypress_create_device(usb_device_desc, serial, "");
 }
 
 void cypress_insert_device(std::vector<CaptureDevice>& devices_list, const cyni_device_usb_device* usb_device_desc, std::string serial, uint16_t bcd_device, int& curr_serial_extra_id, std::string path) {

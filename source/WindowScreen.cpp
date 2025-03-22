@@ -122,7 +122,7 @@ WindowScreen::~WindowScreen() {
 }
 
 void WindowScreen::build() {
-	sf::Vector2f top_screen_size = {(float)TOP_WIDTH_3DS, (float)HEIGHT_3DS};
+	sf::Vector2f top_screen_size = {(float)TOP_WIDTH_3DS * 2, (float)HEIGHT_3DS};
 	sf::Vector2f bot_screen_size = {(float)BOT_WIDTH_3DS, (float)HEIGHT_3DS};
 
 	int width = TOP_WIDTH_3DS;
@@ -493,7 +493,13 @@ void WindowScreen::update_texture() {
 			type =  GL_UNSIGNED_SHORT_5_6_5;
 		if(this->capture_status->device.video_data_type == VIDEO_DATA_BGR16)
 			type =  GL_UNSIGNED_SHORT_5_6_5_REV;
-		glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(this->curr_frame_texture_pos * MAX_IN_VIDEO_WIDTH), static_cast<GLint>(0), static_cast<GLsizei>(this->capture_status->device.width), static_cast<GLsizei>(this->capture_status->device.height), format, type, this->saved_buf);
+		size_t width = this->capture_status->device.width;
+		size_t height = this->capture_status->device.height;
+		if(get_3d_enabled(this->capture_status)) {
+			width = this->capture_status->device.width_3d;
+			height = this->capture_status->device.height_3d;
+		}
+		glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(this->curr_frame_texture_pos * MAX_IN_VIDEO_WIDTH), static_cast<GLint>(0), static_cast<GLsizei>(width), static_cast<GLsizei>(height), format, type, this->saved_buf);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 		// Force an OpenGL flush, so that the texture data will appear updated
