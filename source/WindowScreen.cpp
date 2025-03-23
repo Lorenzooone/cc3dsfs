@@ -1534,8 +1534,12 @@ void WindowScreen::crop() {
 		this->resize_in_rect(this->m_in_rect_top, left_top_screen_x + (*crops)[*crop_value]->top_x, left_top_screen_y + (*crops)[*crop_value]->top_y, top_screen_size.x, top_screen_size.y);
 		this->resize_in_rect(this->m_in_rect_top_right, right_top_screen_x + (*crops)[*crop_value]->top_x, right_top_screen_y + (*crops)[*crop_value]->top_y, top_screen_size.x, top_screen_size.y);
 	}
-	else
-		this->resize_in_rect(this->m_in_rect_top, this->capture_status->device.top_screen_x + (*crops)[*crop_value]->top_x, this->capture_status->device.top_screen_y + (*crops)[*crop_value]->top_y, top_screen_size.x, top_screen_size.y);
+	else {
+		float x_multiplier = 1.0;
+		if(get_3d_enabled(this->capture_status) && this->display_data->interleaved_3d)
+			x_multiplier = 2.0;
+		this->resize_in_rect(this->m_in_rect_top, this->capture_status->device.top_screen_x + ((*crops)[*crop_value]->top_x * x_multiplier), this->capture_status->device.top_screen_y + (*crops)[*crop_value]->top_y, top_screen_size.x, top_screen_size.y);
+	}
 	this->loaded_operations.call_screen_settings_update = true;
 }
 
