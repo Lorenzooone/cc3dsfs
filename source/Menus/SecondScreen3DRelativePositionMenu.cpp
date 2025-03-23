@@ -12,6 +12,7 @@ struct SecondScreen3DRelativePositionMenuOptionInfo {
 	const SecondScreen3DRelPosMenuOutAction out_action;
 	const SecondScreen3DRelativePosition out_position;
 	int divisor_x;
+	const bool exists_non_joint;
 };
 
 static const SecondScreen3DRelativePositionMenuOptionInfo above_option = {
@@ -21,7 +22,7 @@ static const SecondScreen3DRelativePositionMenuOptionInfo above_option = {
 .text_factor_multiplier = 1.0,
 .out_action = SECOND_SCREEN_3D_REL_POS_MENU_CONFIRM,
 .out_position = ABOVE_FIRST,
-.divisor_x = 3};
+.divisor_x = 3, .exists_non_joint = true};
 
 static const SecondScreen3DRelativePositionMenuOptionInfo left_option = {
 .base_name = "Left", .false_name = "",
@@ -30,7 +31,7 @@ static const SecondScreen3DRelativePositionMenuOptionInfo left_option = {
 .text_factor_multiplier = 1.0,
 .out_action = SECOND_SCREEN_3D_REL_POS_MENU_CONFIRM,
 .out_position = LEFT_FIRST,
-.divisor_x = 3};
+.divisor_x = 3, .exists_non_joint = true};
 
 static const SecondScreen3DRelativePositionMenuOptionInfo right_option = {
 .base_name = "Right", .false_name = "",
@@ -39,7 +40,7 @@ static const SecondScreen3DRelativePositionMenuOptionInfo right_option = {
 .text_factor_multiplier = 1.0,
 .out_action = SECOND_SCREEN_3D_REL_POS_MENU_CONFIRM,
 .out_position = RIGHT_FIRST,
-.divisor_x = 3};
+.divisor_x = 3, .exists_non_joint = true};
 
 static const SecondScreen3DRelativePositionMenuOptionInfo below_option = {
 .base_name = "Below", .false_name = "",
@@ -48,7 +49,7 @@ static const SecondScreen3DRelativePositionMenuOptionInfo below_option = {
 .text_factor_multiplier = 1.0,
 .out_action = SECOND_SCREEN_3D_REL_POS_MENU_CONFIRM,
 .out_position = UNDER_FIRST,
-.divisor_x = 3};
+.divisor_x = 3, .exists_non_joint = true};
 
 static const SecondScreen3DRelativePositionMenuOptionInfo desc_option = {
 .base_name = "3D Screen", .false_name = "",
@@ -57,7 +58,7 @@ static const SecondScreen3DRelativePositionMenuOptionInfo desc_option = {
 .text_factor_multiplier = 0.95,
 .out_action = SECOND_SCREEN_3D_REL_POS_MENU_NO_ACTION,
 .out_position = SECOND_SCREEN_3D_REL_POS_END,
-.divisor_x = 3};
+.divisor_x = 3, .exists_non_joint = true};
 
 static const SecondScreen3DRelativePositionMenuOptionInfo desc2_option = {
 .base_name = "Position", .false_name = "",
@@ -66,7 +67,7 @@ static const SecondScreen3DRelativePositionMenuOptionInfo desc2_option = {
 .text_factor_multiplier = 0.95,
 .out_action = SECOND_SCREEN_3D_REL_POS_MENU_NO_ACTION,
 .out_position = SECOND_SCREEN_3D_REL_POS_END,
-.divisor_x = 3};
+.divisor_x = 3, .exists_non_joint = true};
 
 static const SecondScreen3DRelativePositionMenuOptionInfo match_option = {
 .base_name = "Set Manual 3D Screen Pos.", .false_name = "Set Automatic 3D Screen Pos.",
@@ -75,7 +76,7 @@ static const SecondScreen3DRelativePositionMenuOptionInfo match_option = {
 .text_factor_multiplier = 1.0,
 .out_action = SECOND_SCREEN_3D_REL_POS_MENU_TOGGLE_MATCH,
 .out_position = SECOND_SCREEN_3D_REL_POS_END,
-.divisor_x = 1};
+.divisor_x = 1, .exists_non_joint = false};
 
 static const SecondScreen3DRelativePositionMenuOptionInfo* pollable_options[] = {
 &match_option,
@@ -113,9 +114,14 @@ void SecondScreen3DRelativePositionMenu::class_setup() {
 	this->title = "3D Screen Placement";
 }
 
-void SecondScreen3DRelativePositionMenu::insert_data(ScreenType stype) {
+void SecondScreen3DRelativePositionMenu::insert_data(ScreenType stype_out) {
+	this->stype = stype_out;
 	this->pos_y_subtractor = 0;
 	this->num_vertical_slices = 5;
+	if(this->stype != ScreenType::JOINT) {
+		this->pos_y_subtractor += 1;
+		this->num_vertical_slices -= 1;
+	}
 	this->prepare_options();
 }
 
@@ -133,6 +139,8 @@ void SecondScreen3DRelativePositionMenu::set_output_option(int index) {
 }
 
 bool SecondScreen3DRelativePositionMenu::is_option_selectable(int index) {
+	if((this->stype != ScreenType::JOINT) && (!pollable_options[index]->exists_non_joint))
+		return false;
 	return pollable_options[index]->is_selectable;
 }
 
@@ -145,7 +153,10 @@ std::string SecondScreen3DRelativePositionMenu::get_false_option(int index) {
 }
 
 void SecondScreen3DRelativePositionMenu::option_slice_prepare(int i, int index, int num_vertical_slices, float text_scaling_factor) {
-	this->prepare_text_slices(pollable_options[i]->position_x, pollable_options[i]->divisor_x, pollable_options[i]->position_y - this->pos_y_subtractor + (1 * pollable_options[i]->multiplier_y), num_vertical_slices * pollable_options[i]->multiplier_y, index, text_scaling_factor * pollable_options[i]->text_factor_multiplier);
+	if((this->stype != ScreenType::JOINT) && (!pollable_options[i]->exists_non_joint))
+		return;
+	int pos_y = pollable_options[i]->position_y - (this->pos_y_subtractor * pollable_options[i]->multiplier_y);
+	this->prepare_text_slices(pollable_options[i]->position_x, pollable_options[i]->divisor_x, pos_y + (1 * pollable_options[i]->multiplier_y), num_vertical_slices * pollable_options[i]->multiplier_y, index, text_scaling_factor * pollable_options[i]->text_factor_multiplier);
 }
 
 bool SecondScreen3DRelativePositionMenu::is_option_element(int option) {

@@ -44,5 +44,6 @@ private:
 	std::string setTextOptionBool(int index, bool value);
 	std::string get_false_option(int index);
 	int pos_y_subtractor;
+	ScreenType stype;
 };
 #endif
