@@ -146,6 +146,7 @@ static bool load_shared(const std::string path, const std::string name, SharedDa
 static bool load(const std::string path, const std::string name, ScreenInfo &top_info, ScreenInfo &bottom_info, ScreenInfo &joint_info, DisplayData &display_data, AudioData *audio_data, OutTextData &out_text_data, CaptureStatus* capture_status) {
 	std::ifstream file(path + name);
 	std::string line;
+	bool loaded_3d_request = false;
 
 	if((!file) || (!file.is_open()) || (!file.good())) {
 		UpdateOutText(out_text_data, "File " + path + name + " load failed.\nDefaults re-loaded.", "Load failed\nDefaults re-loaded", TEXT_KIND_ERROR);
@@ -180,7 +181,8 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 					}
 
 					if(key == "requested_3d") {
-						capture_status->requested_3d = std::stoi(value);
+						set_3d_enabled(capture_status, std::stoi(value));
+						loaded_3d_request = true;
 						continue;
 					}
 
@@ -225,6 +227,8 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 				}
 			}
 		}
+		if(!loaded_3d_request)
+			set_3d_enabled(capture_status, false);
 	}
 	catch(...) {
 		UpdateOutText(out_text_data, "File " + path + name + " load failed.\nDefaults re-loaded.", "Load failed\nDefaults re-loaded", TEXT_KIND_ERROR);
@@ -236,7 +240,6 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 }
 
 static void defaults_reload(FrontendData *frontend_data, AudioData* audio_data, CaptureStatus* capture_status) {
-	capture_status->requested_3d = false;
 	capture_status->capture_type = CAPTURE_SCREENS_BOTH;
 	capture_status->capture_speed = CAPTURE_SPEEDS_FULL;
 	capture_status->battery_percentage = 100;
@@ -259,6 +262,7 @@ static void load_layout_file(int load_index, FrontendData *frontend_data, AudioD
 	defaults_reload(frontend_data, audio_data, capture_status);
 
 	if(load_index == SIMPLE_RESET_DATA_INDEX) {
+		set_3d_enabled(capture_status, false);
 		reset_shared_data(&frontend_data->shared_data);
 		UpdateOutText(out_text_data, "Reset detected. Defaults re-loaded", "Reset detected\nDefaults re-loaded", TEXT_KIND_WARNING);
 		return;
@@ -274,8 +278,10 @@ static void load_layout_file(int load_index, FrontendData *frontend_data, AudioD
 		std::string load_name = load_layout_name(load_index, created_proper_folder, name_load_success);
 		UpdateOutText(out_text_data, "Layout loaded from: " + layout_path + layout_name, "Layout " + load_name + " loaded", TEXT_KIND_SUCCESS);
 	}
-	else if(!op_success)
+	else if(!op_success) {
 		defaults_reload(frontend_data, audio_data, capture_status);
+		set_3d_enabled(capture_status, false);
+	}
 	sanitize_enabled_info(frontend_data->joint_screen->m_info, frontend_data->top_screen->m_info, frontend_data->bot_screen->m_info);
 	if(!is_first_load)
 		return;

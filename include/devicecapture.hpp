@@ -30,4 +30,5 @@ bool get_device_3d_implemented(CaptureStatus* capture_status);
 bool is_usb_speed_of_device_enough_3d(CaptureStatus* capture_status);
 bool get_3d_enabled(CaptureStatus* capture_status, bool skip_requested_3d_check = false);
 bool update_3d_enabled(CaptureStatus* capture_status);
+bool set_3d_enabled(CaptureStatus* capture_status, bool new_value);
 #endif

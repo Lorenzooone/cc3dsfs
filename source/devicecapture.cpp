@@ -315,12 +315,16 @@ bool get_3d_enabled(CaptureStatus* capture_status, bool skip_requested_3d_check)
 	return true;
 }
 
-bool update_3d_enabled(CaptureStatus* capture_status) {
+bool set_3d_enabled(CaptureStatus* capture_status, bool new_value) {
 	bool would_3d_be_enabled = get_3d_enabled(capture_status, true);
-	if(would_3d_be_enabled && (capture_status->cooldown_curr_in < FIX_PARTIAL_FIRST_FRAME_NUM))
+	if(would_3d_be_enabled && (new_value != capture_status->requested_3d) && (capture_status->cooldown_curr_in < FIX_PARTIAL_FIRST_FRAME_NUM))
 		capture_status->cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
-	capture_status->requested_3d = !capture_status->requested_3d;
+	capture_status->requested_3d = new_value;
 	return would_3d_be_enabled;
+}
+
+bool update_3d_enabled(CaptureStatus* capture_status) {
+	return set_3d_enabled(capture_status, !capture_status->requested_3d);
 }
 
 void capture_init() {
