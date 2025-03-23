@@ -226,6 +226,7 @@ std::string OptionSelectionMenu::setTextOptionBool(int index, bool value) {
 		return this->get_string_option(index, DEFAULT_ACTION);
 	return this->get_string_option(index, FALSE_ACTION);
 }
+
 std::string OptionSelectionMenu::setTextOptionFloat(int index, float value, int num_decimals) {
 	std::string out = this->get_string_option(index, DEFAULT_ACTION) + ": " + get_float_str_decimals(value, num_decimals);
 	return out;

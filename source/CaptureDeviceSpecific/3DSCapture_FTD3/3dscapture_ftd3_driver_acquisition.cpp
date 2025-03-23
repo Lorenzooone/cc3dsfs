@@ -21,9 +21,44 @@ struct FTD3XXReceivedDataBuffer {
 	ULONG read_buffer;
 };
 
+static bool wait_all_fast_capture_call_async_transfers(FTD3XXReceivedDataBuffer* received_buffer, CaptureData* capture_data) {
+	void* handle = ((ftd3_device_device_handlers*)capture_data->handle)->driver_handle;
+	for(int inner_curr_in = 0; inner_curr_in < FTD3_CONCURRENT_BUFFERS; ++inner_curr_in) {
+		FT_STATUS ftStatus = FT_GetOverlappedResult(handle, &received_buffer[inner_curr_in].overlap, &received_buffer[inner_curr_in].read_buffer, true);
+		if(FT_FAILED(ftStatus)) {
+			capture_error_print(true, capture_data, "Disconnected: USB error");
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool fast_capture_call_init_async_transfers(FTD3XXReceivedDataBuffer* received_buffer, CaptureData* capture_data, int fifo_channel, int &inner_curr_in, bool could_use_3d, bool stored_3d_status) {
+	void* handle = ((ftd3_device_device_handlers*)capture_data->handle)->driver_handle;
+	for(inner_curr_in = 0; inner_curr_in < FTD3_CONCURRENT_BUFFERS - 1; ++inner_curr_in) {
+		CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(inner_curr_in);
+		uint8_t* buffer = (uint8_t*)&data_buf->capture_buf;
+		FT_STATUS ftStatus = FT_ASYNC_CALL(handle, fifo_channel, buffer, ftd3_get_capture_size(could_use_3d && stored_3d_status), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
+		if(ftStatus != FT_IO_PENDING) {
+			capture_error_print(true, capture_data, "Disconnected: Read failed");
+			return false;
+		}
+	}
+
+	inner_curr_in = FTD3_CONCURRENT_BUFFERS - 1;
+	return true;
+}
+
 static void fast_capture_call(FTD3XXReceivedDataBuffer* received_buffer, CaptureData* capture_data, int fifo_channel) {
 	int inner_curr_in = 0;
 	FT_STATUS ftStatus;
+
+	bool could_use_3d = get_3d_enabled(&capture_data->status, true);
+	bool stored_3d_status = true;
+	bool result_3d_setup = ftd3_capture_3d_setup(capture_data, true, stored_3d_status);
+	if(!result_3d_setup)
+		return;
+
 	void* handle = ((ftd3_device_device_handlers*)capture_data->handle)->driver_handle;
 	for (inner_curr_in = 0; inner_curr_in < FTD3_CONCURRENT_BUFFERS; ++inner_curr_in) {
 		ftStatus = FT_InitializeOverlapped(handle, &received_buffer[inner_curr_in].overlap);
@@ -33,24 +68,29 @@ static void fast_capture_call(FTD3XXReceivedDataBuffer* received_buffer, Capture
 		}
 	}
 
-	for (inner_curr_in = 0; inner_curr_in < FTD3_CONCURRENT_BUFFERS - 1; ++inner_curr_in) {
-		CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(inner_curr_in);
-		uint8_t* buffer = (uint8_t*)&data_buf->capture_buf;
-		ftStatus = FT_ASYNC_CALL(handle, fifo_channel, buffer, ftd3_get_capture_size(capture_data), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
-		if(ftStatus != FT_IO_PENDING) {
-			capture_error_print(true, capture_data, "Disconnected: Read failed");
-			return;
-		}
-	}
-
-	inner_curr_in = FTD3_CONCURRENT_BUFFERS - 1;
+	if(!fast_capture_call_init_async_transfers(received_buffer, capture_data, fifo_channel, inner_curr_in, could_use_3d, stored_3d_status))
+		return;
 
 	auto clock_start = std::chrono::high_resolution_clock::now();
 
 	while (capture_data->status.connected && capture_data->status.running) {
+		if(could_use_3d && (stored_3d_status != capture_data->status.requested_3d)) {
+			if(!wait_all_fast_capture_call_async_transfers(received_buffer, capture_data))
+				return;
+
+			result_3d_setup = ftd3_capture_3d_setup(capture_data, false, stored_3d_status);
+			if(!result_3d_setup)
+				return;
+
+			if(!fast_capture_call_init_async_transfers(received_buffer, capture_data, fifo_channel, inner_curr_in, could_use_3d, stored_3d_status))
+				return;
+
+			clock_start = std::chrono::high_resolution_clock::now();
+		}
+
 		CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(inner_curr_in);
 		uint8_t* buffer = (uint8_t*)&data_buf->capture_buf;
-		ftStatus = FT_ASYNC_CALL(handle, fifo_channel, buffer, ftd3_get_capture_size(capture_data), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
+		ftStatus = FT_ASYNC_CALL(handle, fifo_channel, buffer, ftd3_get_capture_size(could_use_3d && stored_3d_status), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
 		if(ftStatus != FT_IO_PENDING) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");
 			return;
@@ -71,15 +111,25 @@ static void fast_capture_call(FTD3XXReceivedDataBuffer* received_buffer, Capture
 static bool safe_capture_call(FTD3XXReceivedDataBuffer* received_buffer, CaptureData* capture_data, int fifo_channel) {
 	auto clock_start = std::chrono::high_resolution_clock::now();
 	void* handle = ((ftd3_device_device_handlers*)capture_data->handle)->driver_handle;
+	bool could_use_3d = get_3d_enabled(&capture_data->status, true);
+	bool stored_3d_status = true;
+	bool result_3d_setup = ftd3_capture_3d_setup(capture_data, true, stored_3d_status);
+	if(!result_3d_setup)
+		return true;
 
 	while(capture_data->status.connected && capture_data->status.running) {
+		if(could_use_3d && (stored_3d_status != capture_data->status.requested_3d)) {
+			result_3d_setup = ftd3_capture_3d_setup(capture_data, false, stored_3d_status);
+			if(!result_3d_setup)
+				return true;
+		}
 
 		CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(0);
 		uint8_t* buffer = (uint8_t*)&data_buf->capture_buf;
 		#ifdef _WIN32
-		FT_STATUS ftStatus = FT_ReadPipeEx(handle, fifo_channel, buffer, ftd3_get_capture_size(capture_data), &received_buffer->read_buffer, NULL);
+		FT_STATUS ftStatus = FT_ReadPipeEx(handle, fifo_channel, buffer, ftd3_get_capture_size(could_use_3d && stored_3d_status), &received_buffer->read_buffer, NULL);
 		#else
-		FT_STATUS ftStatus = FT_ReadPipeEx(handle, fifo_channel, buffer, ftd3_get_capture_size(capture_data), &received_buffer->read_buffer, 1000);
+		FT_STATUS ftStatus = FT_ReadPipeEx(handle, fifo_channel, buffer, ftd3_get_capture_size(could_use_3d && stored_3d_status), &received_buffer->read_buffer, 1000);
 		#endif
 		if(FT_FAILED(ftStatus)) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");

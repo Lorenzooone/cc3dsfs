@@ -69,38 +69,40 @@ static void ftd3_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_
 		}
 	}
 	else {
+		size_t last_line_index = ((IN_VIDEO_SIZE_3DS_3D - IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D) / (IN_VIDEO_WIDTH_3DS_3D * 3)) - 1;
+		size_t top_left_last_line_out_pos = 0;
+		size_t top_right_last_line_out_pos = 0;
 		if(!interleaved_3d) {
+			// Optimize for speed
 			for(int i = 0; i < (IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D / (IN_VIDEO_WIDTH_3DS_3D * 2)); i++) {
 				convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, ((i * 2) + 0) * IN_VIDEO_WIDTH_3DS_3D, BOT_SIZE_3DS + TOP_SIZE_3DS + (i * IN_VIDEO_WIDTH_3DS_3D));
 				convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, ((i * 2) + 1) * IN_VIDEO_WIDTH_3DS_3D, BOT_SIZE_3DS + (i * IN_VIDEO_WIDTH_3DS_3D));
 			}
 
-			for(int i = 0; i < ((IN_VIDEO_SIZE_3DS_3D - IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D) / (IN_VIDEO_WIDTH_3DS_3D * 3)) - 1; i++) {
+			for(int i = 0; i < last_line_index; i++) {
 				convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, (((i * 3) + 0) * IN_VIDEO_WIDTH_3DS_3D) + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, BOT_SIZE_3DS + TOP_SIZE_3DS + (IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D / 2) + (i * IN_VIDEO_WIDTH_3DS_3D));
 				convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, (((i * 3) + 1) * IN_VIDEO_WIDTH_3DS_3D) + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, BOT_SIZE_3DS + (IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D / 2) + (i * IN_VIDEO_WIDTH_3DS_3D));
 				convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, (((i * 3) + 2) * IN_VIDEO_WIDTH_3DS_3D) + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, i * IN_VIDEO_WIDTH_3DS_3D);
 			}
-			// For some weird reason, the last one is the opposite for bottom and
-			// second top screen
-			int i = ((IN_VIDEO_SIZE_3DS_3D - IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D) / (IN_VIDEO_WIDTH_3DS_3D * 3)) - 1;
-			convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, (((i * 3) + 0) * IN_VIDEO_WIDTH_3DS_3D) + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, BOT_SIZE_3DS + TOP_SIZE_3DS + (IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D / 2) + (i * IN_VIDEO_WIDTH_3DS_3D));
-			convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, (((i * 3) + 2) * IN_VIDEO_WIDTH_3DS_3D) + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, BOT_SIZE_3DS + (IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D / 2) + (i * IN_VIDEO_WIDTH_3DS_3D));
-			convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, (((i * 3) + 1) * IN_VIDEO_WIDTH_3DS_3D) + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, i * IN_VIDEO_WIDTH_3DS_3D);
+			top_left_last_line_out_pos = BOT_SIZE_3DS + TOP_SIZE_3DS + (IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D / 2) + (last_line_index * IN_VIDEO_WIDTH_3DS_3D);
+			top_right_last_line_out_pos = BOT_SIZE_3DS + (IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D / 2) + (last_line_index * IN_VIDEO_WIDTH_3DS_3D);
 		}
 		else {
+			// Optimize for speed
 			convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, 0, BOT_SIZE_3DS);
 
-			for(int i = 0; i < ((IN_VIDEO_SIZE_3DS_3D - IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D) / (IN_VIDEO_WIDTH_3DS_3D * 3)) - 1; i++) {
+			for(int i = 0; i < last_line_index; i++) {
 				convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D * 2, (((i * 3) + 0) * IN_VIDEO_WIDTH_3DS_3D) + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, BOT_SIZE_3DS + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D + (i * IN_VIDEO_WIDTH_3DS_3D * 2));
 				convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, (((i * 3) + 2) * IN_VIDEO_WIDTH_3DS_3D) + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, i * IN_VIDEO_WIDTH_3DS_3D);
 			}
-			// For some weird reason, the last one is the opposite for bottom and
-			// second top screen
-			int i = ((IN_VIDEO_SIZE_3DS_3D - IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D) / (IN_VIDEO_WIDTH_3DS_3D * 3)) - 1;
-			convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, (((i * 3) + 0) * IN_VIDEO_WIDTH_3DS_3D) + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, BOT_SIZE_3DS + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D + (i * IN_VIDEO_WIDTH_3DS_3D * 2));
-			convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, (((i * 3) + 2) * IN_VIDEO_WIDTH_3DS_3D) + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, BOT_SIZE_3DS + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D + (i * IN_VIDEO_WIDTH_3DS_3D * 2) + IN_VIDEO_WIDTH_3DS_3D);
-			convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, (((i * 3) + 1) * IN_VIDEO_WIDTH_3DS_3D) + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, i * IN_VIDEO_WIDTH_3DS_3D);
+			top_left_last_line_out_pos = BOT_SIZE_3DS + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D + (last_line_index * IN_VIDEO_WIDTH_3DS_3D * 2);
+			top_right_last_line_out_pos = BOT_SIZE_3DS + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D + (last_line_index * IN_VIDEO_WIDTH_3DS_3D * 2) + IN_VIDEO_WIDTH_3DS_3D;
 		}
+		// For some weird reason, the last one is the opposite for bottom and
+		// second top screen
+		convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, (((last_line_index * 3) + 0) * IN_VIDEO_WIDTH_3DS_3D) + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, top_left_last_line_out_pos);
+		convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, (((last_line_index * 3) + 2) * IN_VIDEO_WIDTH_3DS_3D) + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, top_right_last_line_out_pos);
+		convertVideoToOutputChunk_3D(&p_in->ftd3_received_3d.video_in, p_out, IN_VIDEO_WIDTH_3DS_3D, (((last_line_index * 3) + 1) * IN_VIDEO_WIDTH_3DS_3D) + IN_VIDEO_NO_BOTTOM_SIZE_3DS_3D, last_line_index * IN_VIDEO_WIDTH_3DS_3D);
 	}
 }
 

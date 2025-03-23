@@ -36,6 +36,8 @@
 #include "AudioDeviceMenu.hpp"
 #include "SeparatorMenu.hpp"
 #include "ColorCorrectionMenu.hpp"
+#include "Main3DMenu.hpp"
+#include "SecondScreen3DRelativePositionMenu.hpp"
 #include "display_structs.hpp"
 #include "event_structs.hpp"
 #include "shaders_list.hpp"
@@ -99,16 +101,20 @@ private:
 		bool use_non_int_scaling;
 		int rotation;
 		const PARData *par;
+		bool divide_3d_par;
 	};
 	bool created_proper_folder;
 	CaptureStatus* capture_status;
 	std::string win_title;
 	sf::RenderWindow m_win;
 	int m_width, m_height;
+	int m_width_no_manip, m_height_no_manip;
 	int m_window_width, m_window_height;
 	int m_prepare_load;
 	int m_prepare_save;
 	bool last_connected_status;
+	bool last_enabled_3d;
+	bool last_interleaved_3d;
 	bool m_prepare_open;
 	bool m_prepare_quit;
 	bool m_scheduled_split;
@@ -160,6 +166,8 @@ private:
 	AudioDeviceMenu *audio_device_menu;
 	SeparatorMenu *separator_menu;
 	ColorCorrectionMenu *color_correction_menu;
+	Main3DMenu *main_3d_menu;
+	SecondScreen3DRelativePositionMenu *second_screen_3d_relpos_menu;
 	std::vector<const CropData*> possible_crops;
 	std::vector<const CropData*> possible_crops_ds;
 	std::vector<const CropData*> possible_crops_with_games;
@@ -192,8 +200,8 @@ private:
 	volatile bool is_thread_done;
 
 	bool was_last_frame_null;
-	sf::RectangleShape m_in_rect_top, m_in_rect_bot;
-	out_rect_data m_out_rect_top, m_out_rect_bot;
+	sf::RectangleShape m_in_rect_top, m_in_rect_bot, m_in_rect_top_right;
+	out_rect_data m_out_rect_top, m_out_rect_bot, m_out_rect_top_right;
 	ScreenType m_stype;
 
 	const ShaderColorEmulationData* sent_shader_color_data;
@@ -237,6 +245,9 @@ private:
 	void fast_poll_change();
 	void padding_change();
 	void game_crop_enable_change();
+	void request_3d_change();
+	void interleaved_3d_change();
+	void squish_3d_change(bool is_top);
 	void audio_device_change(audio_output_device_data new_device_data);
 	void is_nitro_capture_type_change(bool positive);
 	void is_nitro_capture_speed_change(bool positive);
@@ -264,6 +275,8 @@ private:
 	void separator_windowed_multiplier_change(bool positive);
 	void separator_fullscreen_multiplier_change(bool positive);
 	void color_correction_value_change(int new_color_correction_value);
+	void second_screen_3d_pos_change(int new_second_screen_3d_pos);
+	void second_screen_3d_match_bottom_pos_change();
 	bool query_reset_request();
 	void reset_held_times(bool force = true);
 	void poll_window(bool do_everything);
@@ -278,16 +291,20 @@ private:
 	int _choose_color_emulation_shader(bool is_top);
 	int _choose_shader(PossibleShaderTypes shader_type, bool is_top);
 	int choose_shader(PossibleShaderTypes shader_type, bool is_top);
-	void apply_shader_to_texture(out_rect_data &rect_data, PossibleShaderTypes shader_type, bool is_top);
-	bool apply_shaders_to_input(out_rect_data &rect_data, const sf::RectangleShape &final_in_rect, bool is_top);
+	void apply_shader_to_texture(sf::RectangleShape &rect_data, sf::RenderTexture &tex_data, PossibleShaderTypes shader_type, bool is_top);
+	bool apply_shaders_to_input(sf::RectangleShape &rect_data, sf::RenderTexture &tex_data, const sf::RectangleShape &final_in_rect, bool is_top);
 	void pre_texture_conversion_processing();
-	void post_texture_conversion_processing(out_rect_data &rect_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug);
+	void post_texture_conversion_processing(sf::RectangleShape &rect_data, sf::RenderTexture &tex_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug);
 	void draw_rect_to_window(const sf::RectangleShape &out_rect, bool is_top);
 	void window_bg_processing();
 	void display_data_to_window(bool actually_draw, bool is_debug = false);
 	void window_render_call();
 	void set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, int separator_size_x, int separator_size_y, bool do_work = true);
 	float get_max_float_screen_multiplier(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation, bool is_two_screens_merged = false);
+	bool get_divide_3d_par(bool is_top, ScreenInfo* info);
+	sf::Vector2u get_3d_size_multiplier(ScreenInfo* info);
+	sf::Vector2u get_desk_mode_3d_multiplied(ScreenInfo* info);
+	sf::Vector2f get_3d_offset_out_rect(ScreenInfo* info, bool is_second_screen);
 	int prepare_screen_ratio(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation);
 	float get_ratio_compared_other_screen(ResizingScreenData *own_screen, ResizingScreenData* other_screen, float other_scaling);
 	bool can_non_integerly_scale();
@@ -339,6 +356,8 @@ private:
 	void setup_input_menu(bool reset_data = true);
 	void setup_separator_menu(bool reset_data = true);
 	void setup_color_correction_menu(bool reset_data = true);
+	void setup_main_3d_menu(bool reset_data = true);
+	void setup_second_screen_3d_relpos_menu(bool reset_data = true);
 	void update_connection();
 };
 
@@ -367,8 +386,9 @@ void reset_screen_info(ScreenInfo &info);
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
 std::string save_screen_info(std::string base, const ScreenInfo &info);
 const PARData* get_base_par();
-void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor);
-void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor);
+void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor, bool divide_3d_par);
+void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor, bool divide_3d_par);
+SecondScreen3DRelativePosition get_second_screen_pos(ScreenInfo* info, ScreenType stype);
 void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL);
 void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &old_cc_device, const CaptureDevice &new_cc_device);
 void update_connected_specific_settings(FrontendData* frontend_data, const CaptureDevice &cc_device);

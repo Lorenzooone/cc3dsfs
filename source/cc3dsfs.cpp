@@ -615,6 +615,8 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 					num_allowed_blanks--;
 				else 
 					blank_out = true;
+				if(capture_data->status.cooldown_curr_in || (!capture_data->status.connected))
+					blank_out = true;
 				no_data_consecutive++;
 			}
 		}

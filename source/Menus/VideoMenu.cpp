@@ -195,12 +195,20 @@ static const VideoMenuOptionInfo separator_settings_option = {
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_SEPARATOR_SETTINGS};
 
+static const VideoMenuOptionInfo main_menu_3d_settings_option = {
+.base_name = "3D Settings", .false_name = "",
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
+.out_action = VIDEO_MENU_3D_SETTINGS};
+
 static const VideoMenuOptionInfo* pollable_options[] = {
 &crop_option,
 &window_scaling_option,
 &allow_fill_scaling_option,
 &scaling_ratio_settings_option,
 &menu_scaling_option,
+&main_menu_3d_settings_option,
 &bottom_screen_pos_option,
 &separator_settings_option,
 &vsync_option,

@@ -22,6 +22,7 @@
 
 struct FTD3LibusbCaptureReceivedData {
 	bool in_use;
+	bool* pause_output;
 	uint32_t index;
 	int internal_index;
 	CaptureData* capture_data;
@@ -104,6 +105,9 @@ static void ftd3_libusb_read_frame_cb(void* user_data, int transfer_length, int 
 		return end_ftd3_libusb_read_frame_cb(ftd3_libusb_capture_recv_data, true);
 	}
 	*ftd3_libusb_capture_recv_data->last_index = ftd3_libusb_capture_recv_data->index;
+
+	if(*ftd3_libusb_capture_recv_data->pause_output)
+		return end_ftd3_libusb_read_frame_cb(ftd3_libusb_capture_recv_data, true);
 
 	data_output_update(ftd3_libusb_capture_recv_data->internal_index, transfer_length, ftd3_libusb_capture_recv_data->capture_data, *ftd3_libusb_capture_recv_data->clock_start);
 	end_ftd3_libusb_read_frame_cb(ftd3_libusb_capture_recv_data, false);
@@ -193,10 +197,34 @@ static void ftd3_libusb_capture_main_loop_processing(FTD3LibusbCaptureReceivedDa
 	int index = 0;
 	CaptureData* capture_data = ftd3_libusb_capture_recv_data[0].capture_data;
 
+	bool could_use_3d = get_3d_enabled(&capture_data->status, true);
+	bool stored_3d_status = true;
+	bool result_3d_setup = ftd3_capture_3d_setup(capture_data, true, stored_3d_status);
+	if(!result_3d_setup)
+		return;
+
 	for(int i = 0; i < FTD3_CONCURRENT_BUFFERS; i++)
 		ftd3_libusb_read_frame_request(capture_data, ftd3_libusb_get_free_buffer(ftd3_libusb_capture_recv_data), index++, pipe);
 
 	while(capture_data->status.connected && capture_data->status.running) {
+		if(could_use_3d && (stored_3d_status != capture_data->status.requested_3d)) {
+			*ftd3_libusb_capture_recv_data->pause_output = true;
+			wait_all_ftd3_libusb_buffers_free(ftd3_libusb_capture_recv_data);
+			if(get_ftd3_libusb_status(ftd3_libusb_capture_recv_data) < 0) {
+				capture_error_print(true, capture_data, "Disconnected: Read failed");
+				return;
+			}
+
+			result_3d_setup = ftd3_capture_3d_setup(capture_data, false, stored_3d_status);
+			if(!result_3d_setup)
+				return;
+
+			*ftd3_libusb_capture_recv_data->pause_output = false;
+			for(int i = 0; i < FTD3_CONCURRENT_BUFFERS; i++)
+				ftd3_libusb_read_frame_request(capture_data, ftd3_libusb_get_free_buffer(ftd3_libusb_capture_recv_data), index++, pipe);
+
+			*ftd3_libusb_capture_recv_data[0].clock_start = std::chrono::high_resolution_clock::now();
+		}
 		if(get_ftd3_libusb_status(ftd3_libusb_capture_recv_data) < 0) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");
 			return;
@@ -214,12 +242,14 @@ void ftd3_libusb_capture_main_loop(CaptureData* capture_data, int pipe) {
 
 	uint32_t last_index = -1;
 	int status = 0;
+	bool pause_output = false;
 	SharedConsumerMutex is_buffer_free_shared_mutex(FTD3_CONCURRENT_BUFFERS);
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_start = std::chrono::high_resolution_clock::now();
 	FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data = new FTD3LibusbCaptureReceivedData[FTD3_CONCURRENT_BUFFERS];
 	for(int i = 0; i < FTD3_CONCURRENT_BUFFERS; i++) {
 		ftd3_libusb_capture_recv_data[i].in_use = false;
 		ftd3_libusb_capture_recv_data[i].index = i;
+		ftd3_libusb_capture_recv_data[i].pause_output = &pause_output;
 		ftd3_libusb_capture_recv_data[i].internal_index = i;
 		ftd3_libusb_capture_recv_data[i].capture_data = capture_data;
 		ftd3_libusb_capture_recv_data[i].last_index = &last_index;

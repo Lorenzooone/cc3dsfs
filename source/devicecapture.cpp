@@ -57,6 +57,10 @@ void capture_error_print(bool print_failed, CaptureData* capture_data, std::stri
 }
 
 void capture_error_print(bool print_failed, CaptureData* capture_data, std::string graphical_string, std::string detailed_string) {
+	if(capture_data->status.connected) {
+		capture_data->status.close_success = false;
+		capture_data->status.connected = false;
+	}
 	if(print_failed) {
 		capture_data->status.graphical_error_text = graphical_string;
 		capture_data->status.detailed_error_text = detailed_string;
@@ -70,12 +74,13 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 		capture_data->status.close_success = false;
 		return false;
 	}
-	
+
 	if(!capture_data->status.close_success) {
 		capture_error_print(print_failed, capture_data, "Previous device still closing...");
 		return false;
 	}
 
+	capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
 	// Device Listing
 	std::vector<CaptureDevice> devices_list;
 	std::vector<no_access_recap_data> no_access_list;
@@ -267,6 +272,16 @@ int get_usb_speed_of_device(CaptureStatus* capture_status) {
 	return capture_status->device.usb_speed >> 8;
 }
 
+bool is_usb_speed_of_device_enough_3d(CaptureStatus* capture_status) {
+	switch(capture_status->device.cc_type) {
+		default:
+			if(get_usb_speed_of_device(capture_status) < 3)
+				return false;
+			break;
+	}
+	return true;
+}
+
 bool get_device_can_do_3d(CaptureStatus* capture_status) {
 	if(!capture_status->connected)
 		return false;
@@ -286,8 +301,8 @@ bool get_device_3d_implemented(CaptureStatus* capture_status) {
 	}
 }
 
-bool get_3d_enabled(CaptureStatus* capture_status) {
-	if(!capture_status->requested_3d)
+bool get_3d_enabled(CaptureStatus* capture_status, bool skip_requested_3d_check) {
+	if((!skip_requested_3d_check) && (!capture_status->requested_3d))
 		return false;
 	if(!capture_status->connected)
 		return false;
@@ -295,13 +310,17 @@ bool get_3d_enabled(CaptureStatus* capture_status) {
 		return false;
 	if(!get_device_3d_implemented(capture_status))
 		return false;
-	switch(capture_status->device.cc_type) {
-		default:
-			if(get_usb_speed_of_device(capture_status) < 3)
-				return false;
-			break;
-	}
+	if(!is_usb_speed_of_device_enough_3d(capture_status))
+		return false;
 	return true;
+}
+
+bool update_3d_enabled(CaptureStatus* capture_status) {
+	bool would_3d_be_enabled = get_3d_enabled(capture_status, true);
+	if(would_3d_be_enabled && (capture_status->cooldown_curr_in < FIX_PARTIAL_FIRST_FRAME_NUM))
+		capture_status->cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
+	capture_status->requested_3d = !capture_status->requested_3d;
+	return would_3d_be_enabled;
 }
 
 void capture_init() {

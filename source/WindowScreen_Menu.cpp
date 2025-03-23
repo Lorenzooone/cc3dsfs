@@ -2,6 +2,7 @@
 
 #include "frontend.hpp"
 #include "SFML/Audio/PlaybackDevice.hpp"
+#include "devicecapture.hpp"
 
 #define FPS_WINDOW_SIZE 64
 
@@ -120,6 +121,8 @@ void WindowScreen::init_menus() {
 	this->audio_device_menu = new AudioDeviceMenu(this->font_load_success, this->text_font);
 	this->separator_menu = new SeparatorMenu(this->font_load_success, this->text_font);
 	this->color_correction_menu = new ColorCorrectionMenu(this->font_load_success, this->text_font);
+	this->main_3d_menu = new Main3DMenu(this->font_load_success, this->text_font);
+	this->second_screen_3d_relpos_menu = new SecondScreen3DRelativePositionMenu(this->font_load_success, this->text_font);
 }
 
 void WindowScreen::destroy_menus() {
@@ -147,6 +150,8 @@ void WindowScreen::destroy_menus() {
 	delete this->audio_device_menu;
 	delete this->separator_menu;
 	delete this->color_correction_menu;
+	delete this->main_3d_menu;
+	delete this->second_screen_3d_relpos_menu;
 }
 
 void WindowScreen::set_close(int ret_val) {
@@ -317,6 +322,35 @@ void WindowScreen::color_correction_value_change(int new_color_correction_value)
 		this->print_notification(setting_name + this->possible_color_profiles[color_correction_index]->name);
 }
 
+void WindowScreen::request_3d_change() {
+	bool updated = update_3d_enabled(this->capture_status);
+	if(updated) {
+		this->prepare_size_ratios(false, false);
+		this->future_operations.call_crop = true;
+	}
+}
+
+void WindowScreen::interleaved_3d_change() {
+	this->display_data->interleaved_3d = !this->display_data->interleaved_3d;
+	bool updated = get_3d_enabled(this->capture_status);
+	if(updated) {
+		this->prepare_size_ratios(false, false);
+		this->future_operations.call_crop = true;
+	}
+}
+
+void WindowScreen::squish_3d_change(bool is_top) {
+	if(is_top)
+		this->m_info.squish_3d_top = !this->m_info.squish_3d_top;
+	else
+		this->m_info.squish_3d_bot = !this->m_info.squish_3d_bot;
+	bool updated = get_3d_enabled(this->capture_status);
+	if(updated) {
+		this->prepare_size_ratios(false, false);
+		this->future_operations.call_screen_settings_update = true;
+	}
+}
+
 void WindowScreen::offset_change(float &value, float change) {
 	if(change >= 1.0)
 		return;
@@ -422,8 +456,33 @@ void WindowScreen::input_toggle_change(bool &target) {
 
 void WindowScreen::bottom_pos_change(int new_bottom_pos) {
 	BottomRelativePosition cast_new_bottom_pos = static_cast<BottomRelativePosition>(new_bottom_pos % BottomRelativePosition::BOT_REL_POS_END);
-	if(cast_new_bottom_pos != this->m_info.bottom_pos) {
-		this->m_info.bottom_pos = cast_new_bottom_pos;
+	bool updated = cast_new_bottom_pos != this->m_info.bottom_pos;
+	this->m_info.bottom_pos = cast_new_bottom_pos;
+	if(updated) {
+		this->prepare_size_ratios(false, false);
+		this->future_operations.call_screen_settings_update = true;
+	}
+}
+
+void WindowScreen::second_screen_3d_pos_change(int new_second_screen_3d_pos) {
+	SecondScreen3DRelativePosition cast_new_pos = static_cast<SecondScreen3DRelativePosition>(new_second_screen_3d_pos % SecondScreen3DRelativePosition::SECOND_SCREEN_3D_REL_POS_END);
+	SecondScreen3DRelativePosition prev_pos = get_second_screen_pos(&this->m_info, this->m_stype);
+	this->m_info.second_screen_pos = cast_new_pos;
+	SecondScreen3DRelativePosition curr_pos = get_second_screen_pos(&this->m_info, this->m_stype);
+	bool updated = get_3d_enabled(this->capture_status) && (prev_pos != curr_pos);
+
+	if(updated) {
+		this->prepare_size_ratios(false, false);
+		this->future_operations.call_screen_settings_update = true;
+	}
+}
+
+void WindowScreen::second_screen_3d_match_bottom_pos_change() {
+	SecondScreen3DRelativePosition prev_pos = get_second_screen_pos(&this->m_info, this->m_stype);
+	this->m_info.match_bottom_pos_and_second_screen_pos = !this->m_info.match_bottom_pos_and_second_screen_pos;
+	SecondScreen3DRelativePosition curr_pos = get_second_screen_pos(&this->m_info, this->m_stype);
+	bool updated = get_3d_enabled(this->capture_status) && (prev_pos != curr_pos);
+	if(updated) {
 		this->prepare_size_ratios(false, false);
 		this->future_operations.call_screen_settings_update = true;
 	}
@@ -1145,6 +1204,30 @@ void WindowScreen::setup_color_correction_menu(bool reset_data) {
 	}
 }
 
+void WindowScreen::setup_main_3d_menu(bool reset_data) {
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != MAIN_3D_MENU_TYPE) {
+		this->curr_menu = MAIN_3D_MENU_TYPE;
+		if(reset_data)
+			this->main_3d_menu->reset_data();
+		this->main_3d_menu->insert_data(this->m_stype);
+		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
+	}
+}
+
+void WindowScreen::setup_second_screen_3d_relpos_menu(bool reset_data) {
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != SECOND_SCREEN_RELATIVE_POS_MENU_TYPE) {
+		this->curr_menu = SECOND_SCREEN_RELATIVE_POS_MENU_TYPE;
+		if(reset_data)
+			this->second_screen_3d_relpos_menu->reset_data();
+		this->second_screen_3d_relpos_menu->insert_data(this->m_stype);
+		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
+	}
+}
+
 void WindowScreen::update_save_menu() {
 	if(this->curr_menu == SAVE_MENU_TYPE) {
 		this->curr_menu = DEFAULT_MENU_TYPE;
@@ -1692,6 +1775,9 @@ void WindowScreen::poll(bool do_everything) {
 						case VIDEO_MENU_SEPARATOR_SETTINGS:
 							this->setup_separator_menu();
 							break;
+						case VIDEO_MENU_3D_SETTINGS:
+							this->setup_main_3d_menu();
+							break;
 						default:
 							break;
 					}
@@ -2229,6 +2315,60 @@ void WindowScreen::poll(bool do_everything) {
 					continue;
 				}
 				break;
+			case MAIN_3D_MENU_TYPE:
+				if(this->main_3d_menu->poll(event_data)) {
+					switch(this->main_3d_menu->selected_index) {
+						case MAIN_3D_MENU_BACK:
+							this->setup_video_menu(false);
+							done = true;
+							break;
+						case MAIN_3D_MENU_NO_ACTION:
+							break;
+						case MAIN_3D_MENU_REQUEST_3D_TOGGLE:
+							this->request_3d_change();
+							break;
+						case MAIN_3D_MENU_INTERLEAVED_TOGGLE:
+							this->interleaved_3d_change();
+							break;
+						case MAIN_3D_MENU_SQUISH_TOP_TOGGLE:
+							this->squish_3d_change(true);
+							break;
+						case MAIN_3D_MENU_SQUISH_BOTTOM_TOGGLE:
+							this->squish_3d_change(false);
+							break;
+						case MAIN_3D_MENU_SECOND_SCREEN_POSITION_SETTINGS:
+							this->setup_second_screen_3d_relpos_menu();
+							done = true;
+							break;
+						default:
+							break;
+					}
+					this->main_3d_menu->reset_output_option();
+					continue;
+				}
+				break;
+			case SECOND_SCREEN_RELATIVE_POS_MENU_TYPE:
+				if(this->second_screen_3d_relpos_menu->poll(event_data)) {
+					switch(this->second_screen_3d_relpos_menu->selected_index) {
+						case SECOND_SCREEN_3D_REL_POS_MENU_BACK:
+							this->setup_main_3d_menu(false);
+							done = true;
+							break;
+						case SECOND_SCREEN_3D_REL_POS_MENU_NO_ACTION:
+							break;
+						case SECOND_SCREEN_3D_REL_POS_MENU_CONFIRM:
+							this->second_screen_3d_pos_change(this->second_screen_3d_relpos_menu->selected_confirm_value);
+							break;
+						case SECOND_SCREEN_3D_REL_POS_MENU_TOGGLE_MATCH:
+							this->second_screen_3d_match_bottom_pos_change();
+							break;
+						default:
+							break;
+					}
+					this->second_screen_3d_relpos_menu->reset_output_option();
+					continue;
+				}
+				break;
 			default:
 				break;
 		}
@@ -2511,6 +2651,12 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 		case COLOR_CORRECTION_MENU_TYPE:
 			this->color_correction_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.top_color_correction);
 			break;
+		case MAIN_3D_MENU_TYPE:
+			this->main_3d_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info, this->display_data, this->capture_status);
+			break;
+		case SECOND_SCREEN_RELATIVE_POS_MENU_TYPE:
+			this->second_screen_3d_relpos_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+			break;
 		default:
 			break;
 	}
@@ -2595,6 +2741,12 @@ void WindowScreen::execute_menu_draws() {
 			break;
 		case COLOR_CORRECTION_MENU_TYPE:
 			this->color_correction_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case MAIN_3D_MENU_TYPE:
+			this->main_3d_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			break;
+		case SECOND_SCREEN_RELATIVE_POS_MENU_TYPE:
+			this->second_screen_3d_relpos_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

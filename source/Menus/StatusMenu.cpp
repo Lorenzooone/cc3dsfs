@@ -71,7 +71,7 @@ StatusMenu::~StatusMenu() {
 
 void StatusMenu::class_setup() {
 	this->num_options_per_screen = 6;
-	this->min_elements_text_scaling_factor = num_options_per_screen + 2;
+	this->min_elements_text_scaling_factor = num_options_per_screen + 1;
 	this->width_factor_menu = 16;
 	this->width_divisor_menu = 9;
 	this->base_height_factor_menu = 12;

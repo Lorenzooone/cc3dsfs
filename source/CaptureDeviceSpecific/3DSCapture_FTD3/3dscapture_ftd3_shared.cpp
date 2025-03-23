@@ -54,14 +54,14 @@ uint64_t ftd3_get_video_in_size(CaptureData* capture_data) {
 	return sizeof(RGB83DSVideoInputData_3D);
 }
 
-static uint64_t ftd3_get_capture_size(CaptureStatus* capture_status) {
-	if(!get_3d_enabled(capture_status))
+uint64_t ftd3_get_capture_size(bool is_3d_enabled) {
+	if(!is_3d_enabled)
 		return sizeof(FTD3_3DSCaptureReceived) & (~(EXTRA_DATA_BUFFER_FTD3XX_SIZE - 1));
 	return sizeof(FTD3_3DSCaptureReceived_3D) & (~(EXTRA_DATA_BUFFER_FTD3XX_SIZE - 1));
 }
 
 uint64_t ftd3_get_capture_size(CaptureData* capture_data) {
-	return ftd3_get_capture_size(&capture_data->status);
+	return ftd3_get_capture_size(get_3d_enabled(&capture_data->status));
 }
 
 static void preemptive_close_connection(CaptureData* capture_data) {
@@ -180,8 +180,6 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 		capture_error_print(print_failed, capture_data, "Second Create failed");
 		return false;
 	}
-
-	ftd3_device_device_handlers* handlers = (ftd3_device_device_handlers*)capture_data->handle;
 	
 	if(!reset_3ds_state(print_failed, capture_data))
 		return false;
@@ -201,19 +199,47 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 	if(!read_3ds_config_3d(print_failed, capture_data, device))
 		return false;
 
-	CaptureStatus tmp_status;
-	tmp_status.device = *device;
-	tmp_status.connected = true;
-	tmp_status.requested_3d = capture_data->status.requested_3d;
-	if(!get_3d_enabled(&tmp_status)) {
-		if(!set_3ds_state(print_failed, capture_data, 0x42))
-			return false;
+	return true;
+}
 
+bool ftd3_capture_3d_setup(CaptureData* capture_data, bool first_pass, bool& stored_3d_status) {
+	CaptureStatus tmp_status;
+	tmp_status.device = capture_data->status.device;
+	tmp_status.connected = capture_data->status.connected;
+	tmp_status.requested_3d = capture_data->status.requested_3d;
+
+	if(first_pass)
+		stored_3d_status = true;
+
+	if((!first_pass) && ((stored_3d_status == tmp_status.requested_3d) || (!get_3d_enabled(&tmp_status, true)))) {
+		stored_3d_status = tmp_status.requested_3d;
+		return true;
+	}
+
+	ftd3_device_device_handlers* handlers = (ftd3_device_device_handlers*)capture_data->handle;
+	bool print_failed = true;
+
+	if(!first_pass) {
+		if(ftd3_is_error_compat(handlers, ftd3_abort_pipe_compat(handlers, BULK_IN))) {
+			capture_error_print(print_failed, capture_data, "Abort failed");
+			preemptive_close_connection(capture_data);
+			return false;
+		}
+	}
+
+	bool _3d_enabled_result = get_3d_enabled(&tmp_status);
+	bool update_state = stored_3d_status != _3d_enabled_result;
+	if(update_state) {
+		int state_to_set = 0x42;
+		if(_3d_enabled_result)
+			state_to_set = 0x43;
+		if(!set_3ds_state(print_failed, capture_data, state_to_set))
+			return false;
 		if(!set_3ds_state(print_failed, capture_data, 0x40))
 			return false;
 	}
 
-	if(ftd3_is_error_compat(handlers, ftd3_set_stream_pipe_compat(handlers, BULK_IN, ftd3_get_capture_size(&tmp_status)))) {
+	if(ftd3_is_error_compat(handlers, ftd3_set_stream_pipe_compat(handlers, BULK_IN, ftd3_get_capture_size(_3d_enabled_result)))) {
 		capture_error_print(print_failed, capture_data, "Stream failed");
 		preemptive_close_connection(capture_data);
 		return false;
@@ -226,16 +252,18 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 			return false;
 		}
 
-		if(ftd3_is_error_compat(handlers, ftd3_set_stream_pipe_compat(handlers, BULK_IN, ftd3_get_capture_size(&tmp_status)))) {
+		if(ftd3_is_error_compat(handlers, ftd3_set_stream_pipe_compat(handlers, BULK_IN, ftd3_get_capture_size(_3d_enabled_result)))) {
 			capture_error_print(print_failed, capture_data, "Stream failed");
 			preemptive_close_connection(capture_data);
 			return false;
 		}
 	}
+	stored_3d_status = tmp_status.requested_3d;
 	return true;
 }
 
 void ftd3_capture_main_loop(CaptureData* capture_data) {
+	bool could_have_3d = get_3d_enabled(&capture_data->status, true);
 	ftd3_main_loop_compat(capture_data, BULK_IN);
 }
 

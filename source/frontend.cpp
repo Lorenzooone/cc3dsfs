@@ -573,6 +573,7 @@ void reset_screen_info(ScreenInfo &info) {
 	info.scaling = DEFAULT_WINDOW_SCALING_VALUE;
 	info.is_fullscreen = false;
 	info.bottom_pos = UNDER_TOP;
+	info.second_screen_pos = RIGHT_FIRST;
 	info.subscreen_offset = 0.5;
 	info.subscreen_attached_offset = 0.0;
 	info.total_offset_x = 0.5;
@@ -616,6 +617,9 @@ void reset_screen_info(ScreenInfo &info) {
 	info.separator_pixel_size = DEFAULT_SEP_SIZE;
 	info.separator_windowed_multiplier = SEP_FOLLOW_SCALING_MULTIPLIER;
 	info.separator_fullscreen_multiplier = DEFAULT_WINDOW_SCALING_VALUE;
+	info.squish_3d_top = false;
+	info.squish_3d_bot = false;
+	info.match_bottom_pos_and_second_screen_pos = false;
 }
 
 void override_set_data_to_screen_info(override_win_data &override_win, ScreenInfo &info) {
@@ -854,7 +858,23 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		return true;
 	}
 	if(key == (base + "window_enabled")) {
-		info.window_enabled = frame_blending_sanitization(std::stoi(value));
+		info.window_enabled = std::stoi(value);
+		return true;
+	}
+	if(key == (base + "second_screen_pos")) {
+		info.second_screen_pos = static_cast<SecondScreen3DRelativePosition>(std::stoi(value) % SecondScreen3DRelativePosition::SECOND_SCREEN_3D_REL_POS_END);
+		return true;
+	}
+	if(key == (base + "squish_3d_top")) {
+		info.squish_3d_top = std::stoi(value);
+		return true;
+	}
+	if(key == (base + "squish_3d_bot")) {
+		info.squish_3d_bot = std::stoi(value);
+		return true;
+	}
+	if(key == (base + "match_bottom_pos_and_second_screen_pos")) {
+		info.match_bottom_pos_and_second_screen_pos = std::stoi(value);
 		return true;
 	}
 	return false;
@@ -904,6 +924,10 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "separator_pixel_size=" + std::to_string(info.separator_pixel_size) + "\n";
 	out += base + "separator_windowed_multiplier=" + std::to_string(info.separator_windowed_multiplier) + "\n";
 	out += base + "separator_fullscreen_multiplier=" + std::to_string(info.separator_fullscreen_multiplier) + "\n";
+	out += base + "second_screen_pos=" + std::to_string(info.second_screen_pos) + "\n";
+	out += base + "squish_3d_top=" + std::to_string(info.squish_3d_top) + "\n";
+	out += base + "squish_3d_bot=" + std::to_string(info.squish_3d_bot) + "\n";
+	out += base + "match_bottom_pos_and_second_screen_pos=" + std::to_string(info.match_bottom_pos_and_second_screen_pos) + "\n";
 	return out;
 }
 
@@ -923,9 +947,12 @@ const PARData* get_base_par() {
 	return basic_possible_pars[0];
 }
 
-void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor) {
+void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor, bool divide_3d_par) {
 	width *= multiplier_factor;
 	height *= multiplier_factor;
+	float correction_factor_3d = 1.0;
+	if(divide_3d_par)
+		correction_factor_3d = 2.0;
 	float correction_factor_divisor = correction_factor->width_multiplier;
 	if(correction_factor->is_width_main)
 		correction_factor_divisor = correction_factor->width_divisor;
@@ -933,35 +960,62 @@ void get_par_size(int &width, int &height, float multiplier_factor, const PARDat
 	if(correction_factor->is_fit) {
 		if(correction_factor->is_width_main)
 			width = ((height * correction_factor->width_multiplier) + correction_factor_approx_contribute) / correction_factor_divisor;
-		else
+		else {
+			width /= correction_factor_3d;
 			height = ((width * correction_factor->width_divisor) + correction_factor_approx_contribute) / correction_factor_divisor;
+		}
 	}
 	else {
 		if(correction_factor->is_width_main)
 			width = ((width * correction_factor->width_multiplier) + correction_factor_approx_contribute) / correction_factor_divisor;
 		else
 			height = ((height * correction_factor->width_divisor) + correction_factor_approx_contribute) / correction_factor_divisor;
+		width /= correction_factor_3d;
 	}
 }
 
-void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor) {
+void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor, bool divide_3d_par) {
 	width *= multiplier_factor;
 	height *= multiplier_factor;
+	float correction_factor_3d = 1.0;
+	if(divide_3d_par)
+		correction_factor_3d = 2.0;
 	float correction_factor_divisor = correction_factor->width_multiplier;
 	if(correction_factor->is_width_main)
 		correction_factor_divisor = correction_factor->width_divisor;
 	if(correction_factor->is_fit) {
 		if(correction_factor->is_width_main)
 			width = (height * correction_factor->width_multiplier) / correction_factor_divisor;
-		else
+		else {
+			width /= correction_factor_3d;
 			height = (width * correction_factor->width_divisor) / correction_factor_divisor;
+		}
 	}
 	else {
 		if(correction_factor->is_width_main)
 			width = (width * correction_factor->width_multiplier) / correction_factor_divisor;
 		else
 			height = (height * correction_factor->width_divisor) / correction_factor_divisor;
+		width /= correction_factor_3d;
 	}
+}
+
+SecondScreen3DRelativePosition get_second_screen_pos(ScreenInfo* info, ScreenType stype) {
+	if(info->match_bottom_pos_and_second_screen_pos && (stype == ScreenType::JOINT)) {
+		switch(info->bottom_pos) {
+			case UNDER_TOP:
+				return RIGHT_FIRST;
+			case ABOVE_TOP:
+				return LEFT_FIRST;
+			case RIGHT_TOP:
+				return UNDER_FIRST;
+			case LEFT_TOP:
+				return ABOVE_FIRST;
+			default:
+				return RIGHT_FIRST;
+		}
+	}
+	return info->second_screen_pos;
 }
 
 JoystickDirection get_joystick_direction(uint32_t joystickId, sf::Joystick::Axis axis, float position) {
