@@ -46,21 +46,6 @@ static const LicenseMenuOptionInfo ftd3xx_license_3_option = {
 static const LicenseMenuOptionInfo ftd3xx_license_4_option = {
 .base_name = "driver-licence-terms-details/"};
 
-static const LicenseMenuOptionInfo libftdi_license_0_option = {
-.base_name = "This software makes use of"};
-
-static const LicenseMenuOptionInfo libftdi_license_1_option = {
-.base_name = "libftdi1."};
-
-static const LicenseMenuOptionInfo libftdi_license_2_option = {
-.base_name = "For its license, check:"};
-
-static const LicenseMenuOptionInfo libftdi_license_3_option = {
-.base_name = "http://developer.intra2net.com/git/?p="};
-
-static const LicenseMenuOptionInfo libftdi_license_4_option = {
-.base_name = "libftdi;a=blob_plain;f=LICENSE;hb=HEAD/"};
-
 static const LicenseMenuOptionInfo libusb_license_0_option = {
 .base_name = "This software makes use of"};
 
@@ -148,13 +133,6 @@ static const LicenseMenuOptionInfo* pollable_options[] = {
 &ftd3xx_license_2_option,
 &ftd3xx_license_3_option,
 &ftd3xx_license_4_option,
-#endif
-#ifdef USE_FTD2_LIBFTDI
-&libftdi_license_0_option,
-&libftdi_license_1_option,
-&libftdi_license_2_option,
-&libftdi_license_3_option,
-&libftdi_license_4_option,
 #endif
 #if defined(USE_LIBUSB) || defined(USE_FTD3XX) || defined(USE_FTD2_DRIVER)
 &libusb_license_0_option,

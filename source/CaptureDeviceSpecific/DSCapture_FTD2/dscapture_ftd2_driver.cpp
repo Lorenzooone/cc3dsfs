@@ -89,9 +89,9 @@ static void data_output_update(int curr_data_buffer_index, CaptureData* capture_
 }
 
 void ftd2_capture_main_loop_driver(CaptureData* capture_data) {
-	bool is_libftdi = false;
+	bool is_ftd2_libusb = false;
 	// Separate Capture Enable and put it here, for better control
-	if(!enable_capture(capture_data->handle, is_libftdi)) {
+	if(!enable_capture(capture_data->handle, is_ftd2_libusb)) {
 		capture_error_print(true, capture_data, "Capture enable error");
 		return;
 	}
@@ -108,8 +108,8 @@ void ftd2_capture_main_loop_driver(CaptureData* capture_data) {
 		curr_data_buffer_index = next_data_buffer_index;
 		CaptureDataSingleBuffer* curr_full_data_buf = capture_data->data_buffers.GetWriterBuffer(curr_data_buffer_index);
 		CaptureReceived* curr_data_buffer = &curr_full_data_buf->capture_buf;
-		retval = ftd2_read(capture_data->handle, is_libftdi, ((uint8_t*)curr_data_buffer) + (full_size - next_size), next_size, &bytesIn);
-		if(ftd2_is_error(retval, is_libftdi)) {
+		retval = ftd2_read(capture_data->handle, is_ftd2_libusb, ((uint8_t*)curr_data_buffer) + (full_size - next_size), next_size, &bytesIn);
+		if(ftd2_is_error(retval, is_ftd2_libusb)) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");
 			break;
 		}

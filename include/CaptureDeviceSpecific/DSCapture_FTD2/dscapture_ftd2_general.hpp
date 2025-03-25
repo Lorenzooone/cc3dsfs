@@ -45,7 +45,7 @@ const int get_ftd2_fw_index(int index);
 uint64_t get_max_samples(bool is_rgb888);
 uint64_t get_capture_size(bool is_rgb888);
 size_t remove_synch_from_final_length(uint32_t* out_buffer, size_t real_length);
-bool enable_capture(void* handle, bool is_libftdi);
+bool enable_capture(void* handle, bool is_ftd2_libusb);
 bool synchronization_check(uint16_t* data_buffer, size_t size, uint16_t* next_data_buffer, size_t* next_size, bool special_check = false);
 
 #endif

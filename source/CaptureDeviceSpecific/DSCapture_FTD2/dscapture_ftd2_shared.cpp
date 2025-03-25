@@ -1,7 +1,7 @@
 #include "dscapture_ftd2_shared.hpp"
 #include "dscapture_ftd2_driver.hpp"
 #include "dscapture_ftd2_general.hpp"
-#include "dscapture_libftdi2.hpp"
+#include "dscapture_ftd2_libusb.hpp"
 #include "dscapture_ftd2_compatibility.hpp"
 #include "devicecapture.hpp"
 #include "usb_generic.hpp"
@@ -79,42 +79,42 @@ uint64_t get_max_samples(bool is_rgb888) {
 	return ((get_capture_size(is_rgb888) - _ftd2_get_video_in_size(is_rgb888)) / 2) - 4; // The last 4 bytes should never be different from 0x43214321
 }
 
-static bool pass_if_FT_queue_empty(void* handle, bool is_libftdi) {
+static bool pass_if_FT_queue_empty(void* handle, bool is_ftd2_libusb) {
 	size_t bytesIn = 0;
-	int retval = ftd2_get_queue_status(handle, is_libftdi, &bytesIn);
-	if(ftd2_is_error(retval, is_libftdi) || (bytesIn != 0)) //should be empty
+	int retval = ftd2_get_queue_status(handle, is_ftd2_libusb, &bytesIn);
+	if(ftd2_is_error(retval, is_ftd2_libusb) || (bytesIn != 0)) //should be empty
 		return false;
 	return true;
 }
 
-static bool ftd2_write_all_check(void* handle, bool is_libftdi, const uint8_t* data, size_t size) {
+static bool ftd2_write_all_check(void* handle, bool is_ftd2_libusb, const uint8_t* data, size_t size) {
 	size_t sent = 0;
-	int retval = ftd2_write(handle, is_libftdi, data, size, &sent);
-	if(ftd2_is_error(retval, is_libftdi) || (sent != size))
+	int retval = ftd2_write(handle, is_ftd2_libusb, data, size, &sent);
+	if(ftd2_is_error(retval, is_ftd2_libusb) || (sent != size))
 		return false;
 	return true;
 }
 
-static bool full_ftd2_write(void* handle, bool is_libftdi, const uint8_t* data, size_t size) {
-	if(!pass_if_FT_queue_empty(handle, is_libftdi)) // maybe MPSSE error?
+static bool full_ftd2_write(void* handle, bool is_ftd2_libusb, const uint8_t* data, size_t size) {
+	if(!pass_if_FT_queue_empty(handle, is_ftd2_libusb)) // maybe MPSSE error?
 		return false;
-	return ftd2_write_all_check(handle, is_libftdi, data, size);
+	return ftd2_write_all_check(handle, is_ftd2_libusb, data, size);
 }
 
 //verify CDONE==val
-static bool check_cdone(void* handle, bool is_libftdi, bool want_active) {
+static bool check_cdone(void* handle, bool is_ftd2_libusb, bool want_active) {
 	static const uint8_t cmd[] = {
 		0x81,	//read D
 		0x83,	//read C
 	};
 	uint8_t buf[2];
 
-	if(!full_ftd2_write(handle, is_libftdi, cmd, sizeof(cmd)))
+	if(!full_ftd2_write(handle, is_ftd2_libusb, cmd, sizeof(cmd)))
 		return false;
 
 	size_t bytesIn = 0;
-	int retval = ftd2_read(handle, is_libftdi, buf, 2, &bytesIn);
-	if(ftd2_is_error(retval, is_libftdi) || (bytesIn != 2) || (buf[0] == 0xFA))
+	int retval = ftd2_read(handle, is_ftd2_libusb, buf, 2, &bytesIn);
+	if(ftd2_is_error(retval, is_ftd2_libusb) || (bytesIn != 2) || (buf[0] == 0xFA))
 		return false;
 
 	if(want_active)
@@ -127,7 +127,7 @@ static int end_spi_tx(uint8_t *txBuf, int retval) {
 	return retval;
 }
 
-static int ftd2_spi_tx(void* handle, bool is_libftdi, const uint8_t* buf, int size) {
+static int ftd2_spi_tx(void* handle, bool is_ftd2_libusb, const uint8_t* buf, int size) {
 	uint8_t *txBuf = new uint8_t[TX_SPI_SIZE + TX_SPI_OFFSET];
 	int retval = 0;
 	int len;
@@ -135,7 +135,7 @@ static int ftd2_spi_tx(void* handle, bool is_libftdi, const uint8_t* buf, int si
 	size_t bytesIn;
 	size_t wrote = 0;
 
-	if(!pass_if_FT_queue_empty(handle, is_libftdi))
+	if(!pass_if_FT_queue_empty(handle, is_ftd2_libusb))
 		return end_spi_tx(txBuf, -1);
 
 	while(size > 0) {
@@ -148,13 +148,13 @@ static int ftd2_spi_tx(void* handle, bool is_libftdi, const uint8_t* buf, int si
 		txBuf[1] = (len - 1) & 0xFF;
 		txBuf[2] = ((len - 1) >> 8) & 0xFF;
 
-		retval = ftd2_write(handle, is_libftdi, txBuf, len + TX_SPI_OFFSET, &sent);
-		if(ftd2_is_error(retval, is_libftdi))
+		retval = ftd2_write(handle, is_ftd2_libusb, txBuf, len + TX_SPI_OFFSET, &sent);
+		if(ftd2_is_error(retval, is_ftd2_libusb))
 			return end_spi_tx(txBuf, retval);
 		if(sent != (len + TX_SPI_OFFSET))
 			return end_spi_tx(txBuf, -2);
 
-		if(!pass_if_FT_queue_empty(handle, is_libftdi))
+		if(!pass_if_FT_queue_empty(handle, is_ftd2_libusb))
 			return end_spi_tx(txBuf, -1);
 
 		wrote += sent - TX_SPI_OFFSET;
@@ -163,7 +163,7 @@ static int ftd2_spi_tx(void* handle, bool is_libftdi, const uint8_t* buf, int si
 	return end_spi_tx(txBuf, 0);
 }
 
-static bool fpga_config(void* handle, bool is_libftdi, const uint8_t* bitstream, int size) {
+static bool fpga_config(void* handle, bool is_ftd2_libusb, const uint8_t* bitstream, int size) {
 	//D6=CDONE (in)
 	//D3=SS (out)
 	//D2=TDO (in)
@@ -195,19 +195,19 @@ static bool fpga_config(void* handle, bool is_libftdi, const uint8_t* bitstream,
 	};
 
 	int retval = 0;
-	retval = ftd2_set_timeouts(handle, is_libftdi, 300, 300);
-	if(ftd2_is_error(retval, is_libftdi))
+	retval = ftd2_set_timeouts(handle, is_ftd2_libusb, 300, 300);
+	if(ftd2_is_error(retval, is_ftd2_libusb))
 		return false;
-	if(!full_ftd2_write(handle, is_libftdi, cmd0, sizeof(cmd0)))
+	if(!full_ftd2_write(handle, is_ftd2_libusb, cmd0, sizeof(cmd0)))
 		return false;
 
 	//verify CDONE=0
-	if(!check_cdone(handle, is_libftdi, false))
+	if(!check_cdone(handle, is_ftd2_libusb, false))
 		return false;
 
 	//send configuration
-	retval = ftd2_spi_tx(handle, is_libftdi, bitstream, size);
-	if(ftd2_is_error(retval, is_libftdi))
+	retval = ftd2_spi_tx(handle, is_ftd2_libusb, bitstream, size);
+	if(ftd2_is_error(retval, is_ftd2_libusb))
 		return false;
 
 	//finish up
@@ -217,17 +217,17 @@ static bool fpga_config(void* handle, bool is_libftdi, const uint8_t* bitstream,
 		0x80, 0x00, 0x00,		   //float Dx
 		0x82, 0x00, 0x00,		   //float Cx
 	};
-	if(!full_ftd2_write(handle, is_libftdi, cmd1, sizeof(cmd1)))
+	if(!full_ftd2_write(handle, is_ftd2_libusb, cmd1, sizeof(cmd1)))
 		return false;
 
 	//verify CDONE=1
-	if(!check_cdone(handle, is_libftdi, true))
+	if(!check_cdone(handle, is_ftd2_libusb, true))
 		return false;
 
 	return true;
 }
 
-static bool init_MPSSE(void* handle, bool is_libftdi) {
+static bool init_MPSSE(void* handle, bool is_ftd2_libusb) {
 	static const uint8_t cmd[] = {
 		0x85,					//no loopback
 		0x8d,					//disable 3-phase clocking
@@ -237,111 +237,111 @@ static bool init_MPSSE(void* handle, bool is_libftdi) {
 	};
 
 	int retval = 0;
-	retval = ftd2_reset_device(handle, is_libftdi);
-	if(ftd2_is_error(retval, is_libftdi))
+	retval = ftd2_reset_device(handle, is_ftd2_libusb);
+	if(ftd2_is_error(retval, is_ftd2_libusb))
 		return false;
-	retval = ftd2_set_usb_parameters(handle, is_libftdi, FTD2XX_IN_SIZE, FTD2XX_OUT_SIZE); //Multiple of 64 bytes up to 64k
-	if(ftd2_is_error(retval, is_libftdi))
+	retval = ftd2_set_usb_parameters(handle, is_ftd2_libusb, FTD2XX_IN_SIZE, FTD2XX_OUT_SIZE); //Multiple of 64 bytes up to 64k
+	if(ftd2_is_error(retval, is_ftd2_libusb))
 		return false;
-	retval = ftd2_set_chars(handle, is_libftdi, 0, 0, 0, 0);
-	if(ftd2_is_error(retval, is_libftdi))
+	retval = ftd2_set_chars(handle, is_ftd2_libusb, 0, 0, 0, 0);
+	if(ftd2_is_error(retval, is_ftd2_libusb))
 		return false;
-	retval = ftd2_set_timeouts(handle, is_libftdi, 300, 300); //read,write timeout (ms)
-	if(ftd2_is_error(retval, is_libftdi))
+	retval = ftd2_set_timeouts(handle, is_ftd2_libusb, 300, 300); //read,write timeout (ms)
+	if(ftd2_is_error(retval, is_ftd2_libusb))
 		return false;
-	retval = ftd2_set_latency_timer(handle, is_libftdi, 3); //time to wait before incomplete packet is sent (default=16ms). MPSSE read seems to fail on 2 sometimes, too fast?
-	if(ftd2_is_error(retval, is_libftdi))
+	retval = ftd2_set_latency_timer(handle, is_ftd2_libusb, 3); //time to wait before incomplete packet is sent (default=16ms). MPSSE read seems to fail on 2 sometimes, too fast?
+	if(ftd2_is_error(retval, is_ftd2_libusb))
 		return false;
-	retval = ftd2_set_flow_ctrl_rts_cts(handle, is_libftdi); //turn on flow control to synchronize IN requests
-	if(ftd2_is_error(retval, is_libftdi))
+	retval = ftd2_set_flow_ctrl_rts_cts(handle, is_ftd2_libusb); //turn on flow control to synchronize IN requests
+	if(ftd2_is_error(retval, is_ftd2_libusb))
 		return false;
-	retval = ftd2_reset_bitmode(handle, is_libftdi); //performs a general reset on MPSSE
-	if(ftd2_is_error(retval, is_libftdi))
+	retval = ftd2_reset_bitmode(handle, is_ftd2_libusb); //performs a general reset on MPSSE
+	if(ftd2_is_error(retval, is_ftd2_libusb))
 		return false;
-	retval = ftd2_set_mpsse_bitmode(handle, is_libftdi); //enable MPSSE mode
-	if(ftd2_is_error(retval, is_libftdi))
+	retval = ftd2_set_mpsse_bitmode(handle, is_ftd2_libusb); //enable MPSSE mode
+	if(ftd2_is_error(retval, is_ftd2_libusb))
 		return false;
 
 	//Try improving transfer rate
-	retval = ftd2_set_usb_parameters(handle, is_libftdi, ((sizeof(FTD2OldDSCaptureReceivedRaw) + DEFAULT_LIMIT_SIZE_TRANSFER - 1) / DEFAULT_LIMIT_SIZE_TRANSFER) * DEFAULT_LIMIT_SIZE_TRANSFER, FTD2XX_OUT_SIZE); //The programmer's guide lies?
-	if(ftd2_is_error(retval, is_libftdi))
-		retval = ftd2_set_usb_parameters(handle, is_libftdi, FTD2XX_IN_SIZE, FTD2XX_OUT_SIZE); //Backup to 64 bytes up to 64k, if more is not supported...
-	if(ftd2_is_error(retval, is_libftdi))
+	retval = ftd2_set_usb_parameters(handle, is_ftd2_libusb, ((sizeof(FTD2OldDSCaptureReceivedRaw) + DEFAULT_LIMIT_SIZE_TRANSFER - 1) / DEFAULT_LIMIT_SIZE_TRANSFER) * DEFAULT_LIMIT_SIZE_TRANSFER, FTD2XX_OUT_SIZE); //The programmer's guide lies?
+	if(ftd2_is_error(retval, is_ftd2_libusb))
+		retval = ftd2_set_usb_parameters(handle, is_ftd2_libusb, FTD2XX_IN_SIZE, FTD2XX_OUT_SIZE); //Backup to 64 bytes up to 64k, if more is not supported...
+	if(ftd2_is_error(retval, is_ftd2_libusb))
 		return false;
 
 	//MPSSE seems to choke on first write sometimes :/  Send, purge, resend.
 	size_t sent = 0;
-	retval = ftd2_write(handle, is_libftdi, cmd, 1, &sent); //enable MPSSE mode
-	if(ftd2_is_error(retval, is_libftdi))
+	retval = ftd2_write(handle, is_ftd2_libusb, cmd, 1, &sent); //enable MPSSE mode
+	if(ftd2_is_error(retval, is_ftd2_libusb))
 		return false;
 	default_sleep();
-	retval = ftd2_purge_all(handle, is_libftdi);
-	if(ftd2_is_error(retval, is_libftdi))
+	retval = ftd2_purge_all(handle, is_ftd2_libusb);
+	if(ftd2_is_error(retval, is_ftd2_libusb))
 		return false;
-	return full_ftd2_write(handle, is_libftdi, cmd, sizeof(cmd));
+	return full_ftd2_write(handle, is_ftd2_libusb, cmd, sizeof(cmd));
 }
 
-static bool preemptive_close_connection(CaptureData* capture_data, bool is_libftdi) {
-	ftd2_reset_device(capture_data->handle, is_libftdi);
-	ftd2_close(capture_data->handle, is_libftdi);
+static bool preemptive_close_connection(CaptureData* capture_data, bool is_ftd2_libusb) {
+	ftd2_reset_device(capture_data->handle, is_ftd2_libusb);
+	ftd2_close(capture_data->handle, is_ftd2_libusb);
 	return false;
 }
 
 bool connect_ftd2_shared(bool print_failed, CaptureData* capture_data, CaptureDevice* device) {
-	bool is_libftdi = device->descriptor != NULL;
-	if(ftd2_open(device, &capture_data->handle, is_libftdi)) {
+	bool is_ftd2_libusb = device->descriptor != NULL;
+	if(ftd2_open(device, &capture_data->handle, is_ftd2_libusb)) {
 		capture_error_print(print_failed, capture_data, "Create failed");
 		return false;
 	}
 
-	if(!init_MPSSE(capture_data->handle, is_libftdi)) {
+	if(!init_MPSSE(capture_data->handle, is_ftd2_libusb)) {
 		capture_error_print(print_failed, capture_data, "MPSSE init failed");
-		return preemptive_close_connection(capture_data, is_libftdi);
+		return preemptive_close_connection(capture_data, is_ftd2_libusb);
 	}
 
-	if(!fpga_config(capture_data->handle, is_libftdi, ftd2_ds2_fws[device->firmware_id - 1], ftd2_ds2_sizes[device->firmware_id - 1])) {
+	if(!fpga_config(capture_data->handle, is_ftd2_libusb, ftd2_ds2_fws[device->firmware_id - 1], ftd2_ds2_sizes[device->firmware_id - 1])) {
 		capture_error_print(print_failed, capture_data, "FPGA config failed");
-		return preemptive_close_connection(capture_data, is_libftdi);
+		return preemptive_close_connection(capture_data, is_ftd2_libusb);
 	}
 
 	int retval = 0;
 	int val = 0;
-	retval = ftd2_read_ee(capture_data->handle, is_libftdi, 1, &val);
-	if(ftd2_is_error(retval, is_libftdi) || (val != 0x0403)) { //=85A8: something went wrong (fpga is configured but FT chip detected wrong eeprom size)
+	retval = ftd2_read_ee(capture_data->handle, is_ftd2_libusb, 1, &val);
+	if(ftd2_is_error(retval, is_ftd2_libusb) || (val != 0x0403)) { //=85A8: something went wrong (fpga is configured but FT chip detected wrong eeprom size)
 		capture_error_print(print_failed, capture_data, "EEPROM read error");
-		return preemptive_close_connection(capture_data, is_libftdi);
+		return preemptive_close_connection(capture_data, is_ftd2_libusb);
 	}
 
 	/*
 	int Firmware = 0;
 	int Hardware = 0;
-	retval = ftd2_read_ee(capture_data->handle, is_libftdi, 0x10, &Firmware);
-	if(ftd2_is_error(retval, is_libftdi)) {
+	retval = ftd2_read_ee(capture_data->handle, is_ftd2_libusb, 0x10, &Firmware);
+	if(ftd2_is_error(retval, is_ftd2_libusb)) {
 		capture_error_print(print_failed, capture_data, "Firmware ID read error");
-		return preemptive_close_connection(capture_data, is_libftdi);
+		return preemptive_close_connection(capture_data, is_ftd2_libusb);
 	}
-	retval = ftd2_read_ee(capture_data->handle, is_libftdi, 0x11, &Hardware);
-	if(ftd2_is_error(retval, is_libftdi)) {
+	retval = ftd2_read_ee(capture_data->handle, is_ftd2_libusb, 0x11, &Hardware);
+	if(ftd2_is_error(retval, is_ftd2_libusb)) {
 		capture_error_print(print_failed, capture_data, "Hardware ID read error");
-		return preemptive_close_connection(capture_data, is_libftdi);
+		return preemptive_close_connection(capture_data, is_ftd2_libusb);
 	}
 	*/
 
-	retval = ftd2_set_fifo_bitmode(capture_data->handle, is_libftdi);   //to FIFO mode. This takes over port B, pins shouldn't get modified though
-	if(ftd2_is_error(retval, is_libftdi)) {
+	retval = ftd2_set_fifo_bitmode(capture_data->handle, is_ftd2_libusb);   //to FIFO mode. This takes over port B, pins shouldn't get modified though
+	if(ftd2_is_error(retval, is_ftd2_libusb)) {
 		capture_error_print(print_failed, capture_data, "Bitmode setup error");
-		return preemptive_close_connection(capture_data, is_libftdi);
+		return preemptive_close_connection(capture_data, is_ftd2_libusb);
 	}
 
-	retval = ftd2_set_timeouts(capture_data->handle, is_libftdi, 50, 50);
-	if(ftd2_is_error(retval, is_libftdi)) {
+	retval = ftd2_set_timeouts(capture_data->handle, is_ftd2_libusb, 50, 50);
+	if(ftd2_is_error(retval, is_ftd2_libusb)) {
 		capture_error_print(print_failed, capture_data, "Timeouts setup error");
-		return preemptive_close_connection(capture_data, is_libftdi);
+		return preemptive_close_connection(capture_data, is_ftd2_libusb);
 	}
 
-	if(!pass_if_FT_queue_empty(capture_data->handle, is_libftdi)) {// maybe MPSSE error?
+	if(!pass_if_FT_queue_empty(capture_data->handle, is_ftd2_libusb)) {// maybe MPSSE error?
 		capture_error_print(print_failed, capture_data, "Intermediate error");
-		return preemptive_close_connection(capture_data, is_libftdi);
+		return preemptive_close_connection(capture_data, is_ftd2_libusb);
 	}
 
 	return true;
@@ -389,9 +389,9 @@ size_t remove_synch_from_final_length(uint32_t* out_buffer, size_t real_length) 
 	return real_length;
 }
 
-bool enable_capture(void* handle, bool is_libftdi) {
+bool enable_capture(void* handle, bool is_ftd2_libusb) {
 	static const uint8_t cmd[]={ 0x80, 0x01 }; //enable capture
-	return ftd2_write_all_check(handle, is_libftdi, cmd, sizeof(cmd));
+	return ftd2_write_all_check(handle, is_ftd2_libusb, cmd, sizeof(cmd));
 }
 
 void ftd2_capture_main_loop_shared(CaptureData* capture_data) {
@@ -401,8 +401,8 @@ void ftd2_capture_main_loop_shared(CaptureData* capture_data) {
 void ftd2_capture_cleanup_shared(CaptureData* capture_data) {
 	for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
 		capture_data->data_buffers.ReleaseWriterBuffer(i, false);
-	bool is_libftdi = capture_data->status.device.descriptor != NULL;
-	if(ftd2_close(capture_data->handle, is_libftdi)) {
+	bool is_ftd2_libusb = capture_data->status.device.descriptor != NULL;
+	if(ftd2_close(capture_data->handle, is_ftd2_libusb)) {
 		capture_error_print(true, capture_data, "Disconnected: Close failed");
 	}
 }
