@@ -125,6 +125,11 @@ static int init_handle_and_populate_device_info_ftd2_libusb(libusb_device_handle
 	int retval = libusb_get_device_descriptor(dev, &desc);
 	if(retval < 0)
 		return retval;
+	*curr_descriptor = NULL;
+	*curr_descriptor = get_device_descriptor(desc.idVendor, desc.idProduct);
+	if((desc.bcdUSB < 0x0200) || ((*curr_descriptor) == NULL))
+		return LIBUSB_ERROR_OTHER;
+
 	retval = libusb_open(dev, dev_handle);
 	if(retval || ((*dev_handle) == NULL))
 		return retval;
@@ -133,26 +138,15 @@ static int init_handle_and_populate_device_info_ftd2_libusb(libusb_device_handle
 		close_handle_ftd2_libusb(*dev_handle, false);
 		return retval;
 	}
-	retval = libusb_kernel_driver_active(*dev_handle, DEFAULT_INTERFACE);
-	if(retval == 1)
-		libusb_detach_kernel_driver(*dev_handle, DEFAULT_INTERFACE);
-	retval = libusb_set_configuration(*dev_handle, DEFAULT_CONFIGURATION);
+	libusb_check_and_detach_kernel_driver(*dev_handle, DEFAULT_INTERFACE);
+	retval = libusb_check_and_set_configuration(*dev_handle, DEFAULT_CONFIGURATION);
 	if(retval != LIBUSB_SUCCESS)
-		return false;
-	retval = libusb_kernel_driver_active(*dev_handle, DEFAULT_INTERFACE);
-	if(retval == 1)
-		libusb_detach_kernel_driver(*dev_handle, DEFAULT_INTERFACE);
+		return retval;
+	libusb_check_and_detach_kernel_driver(*dev_handle, DEFAULT_INTERFACE);
 	retval = libusb_claim_interface(*dev_handle, DEFAULT_INTERFACE);
 	if(retval != LIBUSB_SUCCESS) {
 		close_handle_ftd2_libusb(*dev_handle, false);
 		return retval;
-	}
-	*curr_descriptor = NULL;
-	if(retval >= 0)
-		*curr_descriptor = get_device_descriptor(desc.idVendor, desc.idProduct);
-	if((desc.bcdUSB < 0x0200) || ((*curr_descriptor) == NULL)) {
-		close_handle_ftd2_libusb(*dev_handle, true);
-		return LIBUSB_ERROR_OTHER;
 	}
 	return LIBUSB_SUCCESS;
 }

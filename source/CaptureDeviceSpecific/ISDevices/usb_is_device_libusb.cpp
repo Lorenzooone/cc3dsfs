@@ -50,8 +50,11 @@ void is_device_libusb_close_thread(std::thread* thread_ptr, bool* usb_thread_run
 }
 
 static bool is_device_libusb_setup_connection(libusb_device_handle* handle, const is_device_usb_device* usb_device_desc) {
-	if (libusb_set_configuration(handle, usb_device_desc->default_config) != LIBUSB_SUCCESS)
+	libusb_check_and_detach_kernel_driver(handle, usb_device_desc->default_interface);
+	int result = libusb_check_and_set_configuration(handle, usb_device_desc->default_config);
+	if(result != LIBUSB_SUCCESS)
 		return false;
+	libusb_check_and_detach_kernel_driver(handle, usb_device_desc->default_interface);
 	if(libusb_claim_interface(handle, usb_device_desc->default_interface) != LIBUSB_SUCCESS)
 		return false;
 	if(usb_device_desc->do_pipe_clear_reset) {

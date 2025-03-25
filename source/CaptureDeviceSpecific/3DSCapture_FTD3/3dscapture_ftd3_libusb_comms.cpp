@@ -23,6 +23,8 @@
 
 #define FTD3_COMMAND_TIMEOUT 500
 
+#define DEFAULT_CONFIGURATION 1
+
 #define FTD3_COMMAND_INTERFACE 0
 #define FTD3_BULK_INTERFACE 1
 
@@ -177,7 +179,14 @@ int ftd3_libusb_set_stream_pipe(ftd3_device_device_handlers* handlers, int pipe,
 static bool ftd3_libusb_setup_connection(libusb_device_handle* handle, bool* claimed_cmd, bool* claimed_bulk) {
 	*claimed_cmd = false;
 	*claimed_bulk = false;
-	int result = libusb_claim_interface(handle, FTD3_COMMAND_INTERFACE);
+	libusb_check_and_detach_kernel_driver(handle, FTD3_COMMAND_INTERFACE);
+	libusb_check_and_detach_kernel_driver(handle, FTD3_BULK_INTERFACE);
+	int result = libusb_check_and_set_configuration(handle, DEFAULT_CONFIGURATION);
+	if(result != LIBUSB_SUCCESS)
+		return false;
+	libusb_check_and_detach_kernel_driver(handle, FTD3_COMMAND_INTERFACE);
+	libusb_check_and_detach_kernel_driver(handle, FTD3_BULK_INTERFACE);
+	result = libusb_claim_interface(handle, FTD3_COMMAND_INTERFACE);
 	if(result != LIBUSB_SUCCESS)
 		return false;
 	*claimed_cmd = true;

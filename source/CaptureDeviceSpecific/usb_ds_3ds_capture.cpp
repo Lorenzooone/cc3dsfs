@@ -132,6 +132,15 @@ static std::string get_serial(libusb_device_handle *handle, libusb_device_descri
 	return serial_str;
 }
 
+static int do_usb_config_device(libusb_device_handle *handle, const usb_device* usb_device_desc) {
+	libusb_check_and_detach_kernel_driver(handle, usb_device_desc->capture_interface);
+	int result = libusb_check_and_set_configuration(handle, usb_device_desc->default_config);
+	if(result != LIBUSB_SUCCESS)
+		return result;
+	libusb_check_and_detach_kernel_driver(handle, usb_device_desc->capture_interface);
+	return result;
+}
+
 static int insert_device(std::vector<CaptureDevice> &devices_list, const usb_device* usb_device_desc, libusb_device *usb_device, libusb_device_descriptor *usb_descriptor, int &curr_serial_extra_id) {
 	libusb_device_handle *handle = NULL;
 	uint8_t data[SERIAL_NUMBER_SIZE];
@@ -140,6 +149,11 @@ static int insert_device(std::vector<CaptureDevice> &devices_list, const usb_dev
 	int result = libusb_open(usb_device, &handle);
 	if(result || (handle == NULL))
 		return result;
+	result = do_usb_config_device(handle, usb_device_desc);
+	if(result != LIBUSB_SUCCESS) {
+		libusb_close(handle);
+		return result;
+	}
 	result = libusb_claim_interface(handle, usb_device_desc->capture_interface);
 	if(result == LIBUSB_SUCCESS)
 		libusb_release_interface(handle, usb_device_desc->capture_interface);
@@ -354,7 +368,7 @@ bool connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* de
 		capture_error_print(true, capture_data, "Device not found");
 		return false;
 	}
-	if(libusb_set_configuration(dev, usb_device_desc->default_config) != LIBUSB_SUCCESS) {
+	if(do_usb_config_device(dev, usb_device_desc) != LIBUSB_SUCCESS) {
 		capture_error_print(true, capture_data, "Configuration failed");
 		capture_end(dev, usb_device_desc, false);
 		return false;

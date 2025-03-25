@@ -105,15 +105,11 @@ int cypress_libusb_async_in_start(cyni_device_device_handlers* handlers, const c
 
 static bool cypress_libusb_setup_connection(libusb_device_handle* handle, const cyni_device_usb_device* usb_device_desc, bool *claimed) {
 	*claimed = false;
-	int result = libusb_kernel_driver_active(handle, usb_device_desc->default_interface);
-	if(result == 1)
-		libusb_detach_kernel_driver(handle, usb_device_desc->default_interface);
-	result = libusb_set_configuration(handle, usb_device_desc->default_config);
+	libusb_check_and_detach_kernel_driver(handle, usb_device_desc->default_interface);
+	int result = libusb_check_and_set_configuration(handle, usb_device_desc->default_config);
 	if(result != LIBUSB_SUCCESS)
 		return false;
-	result = libusb_kernel_driver_active(handle, usb_device_desc->default_interface);
-	if(result == 1)
-		libusb_detach_kernel_driver(handle, usb_device_desc->default_interface);
+	libusb_check_and_detach_kernel_driver(handle, usb_device_desc->default_interface);
 	result = libusb_claim_interface(handle, usb_device_desc->default_interface);
 	if(result != LIBUSB_SUCCESS)
 		return false;

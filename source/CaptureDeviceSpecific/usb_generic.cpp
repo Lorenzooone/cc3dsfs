@@ -65,3 +65,25 @@ int get_usb_total_filtered_devices(const uint16_t valid_vids[], size_t num_vids,
 
 	return num_devices_found;
 }
+
+void libusb_check_and_detach_kernel_driver(void* handle, int interface) {
+	if(handle == NULL)
+		return;
+	libusb_device_handle* in_handle = (libusb_device_handle*)handle;
+	int retval = libusb_kernel_driver_active(in_handle, interface);
+	if(retval == 1)
+		libusb_detach_kernel_driver(in_handle, interface);
+}
+
+int libusb_check_and_set_configuration(void* handle, int wanted_configuration) {
+	if(handle == NULL)
+		return LIBUSB_ERROR_OTHER;
+	libusb_device_handle* in_handle = (libusb_device_handle*)handle;
+	int curr_configuration = 0;
+	int result = libusb_get_configuration(in_handle, &curr_configuration);
+	if(result != LIBUSB_SUCCESS)
+		return result;
+	if(curr_configuration != wanted_configuration)
+		result = libusb_set_configuration(in_handle, wanted_configuration);
+	return result;
+}
