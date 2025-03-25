@@ -395,6 +395,10 @@ uint64_t usb_get_video_in_size(CaptureData* capture_data) {
 	return _usb_get_video_in_size(get_usb_device_desc(capture_data), get_3d_enabled(&capture_data->status));
 }
 
+uint64_t usb_get_video_in_size(CaptureData* capture_data, bool override_3d) {
+	return _usb_get_video_in_size(get_usb_device_desc(capture_data), override_3d);
+}
+
 void usb_capture_main_loop(CaptureData* capture_data) {
 	if(!usb_is_initialized())
 		return;

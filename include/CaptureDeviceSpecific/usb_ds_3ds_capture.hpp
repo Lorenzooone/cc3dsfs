@@ -15,6 +15,7 @@ bool connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* de
 void usb_capture_main_loop(CaptureData* capture_data);
 void usb_capture_cleanup(CaptureData* capture_data);
 uint64_t usb_get_video_in_size(CaptureData* capture_data);
+uint64_t usb_get_video_in_size(CaptureData* capture_data, bool override_3d);
 void usb_ds_3ds_init();
 void usb_ds_3ds_close();
 

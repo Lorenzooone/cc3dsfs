@@ -27,6 +27,7 @@ struct FTD3LibusbCaptureReceivedData {
 	int internal_index;
 	CaptureData* capture_data;
 	uint32_t* last_index;
+	bool is_3d;
 	std::chrono::time_point<std::chrono::high_resolution_clock> *clock_start;
 	SharedConsumerMutex *is_buffer_free_shared_mutex;
 	int* status;
@@ -72,7 +73,7 @@ static void reset_ftd3_libusb_status(FTD3LibusbCaptureReceivedData* ftd3_libusb_
 	error_ftd3_libusb_status(ftd3_libusb_capture_recv_data, 0);
 }
 
-static void ftd3_libusb_read_frame_request(CaptureData* capture_data, FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data, uint32_t index, int pipe) {
+static void ftd3_libusb_read_frame_request(CaptureData* capture_data, FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data, uint32_t index, int pipe, bool is_3d) {
 	if(ftd3_libusb_capture_recv_data == NULL)
 		return;
 	if((*ftd3_libusb_capture_recv_data->status) < 0)
@@ -81,7 +82,8 @@ static void ftd3_libusb_read_frame_request(CaptureData* capture_data, FTD3Libusb
 	ftd3_libusb_capture_recv_data->cb_data.function = ftd3_libusb_read_frame_cb;
 	CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(ftd3_libusb_capture_recv_data->internal_index);
 	uint8_t* buffer = (uint8_t*)&data_buf->capture_buf;
-	ftd3_libusb_async_in_start((ftd3_device_device_handlers*)capture_data->handle, pipe, MAX_TIME_WAIT * 1000, buffer, ftd3_get_capture_size(capture_data), &ftd3_libusb_capture_recv_data->cb_data);
+	ftd3_libusb_capture_recv_data->is_3d = is_3d;
+	ftd3_libusb_async_in_start((ftd3_device_device_handlers*)capture_data->handle, pipe, MAX_TIME_WAIT * 1000, buffer, ftd3_get_capture_size(is_3d), &ftd3_libusb_capture_recv_data->cb_data);
 }
 
 static void end_ftd3_libusb_read_frame_cb(FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data, bool early_release) {
@@ -109,7 +111,7 @@ static void ftd3_libusb_read_frame_cb(void* user_data, int transfer_length, int 
 	if(*ftd3_libusb_capture_recv_data->pause_output)
 		return end_ftd3_libusb_read_frame_cb(ftd3_libusb_capture_recv_data, true);
 
-	data_output_update(ftd3_libusb_capture_recv_data->internal_index, transfer_length, ftd3_libusb_capture_recv_data->capture_data, *ftd3_libusb_capture_recv_data->clock_start);
+	data_output_update(ftd3_libusb_capture_recv_data->internal_index, transfer_length, ftd3_libusb_capture_recv_data->capture_data, *ftd3_libusb_capture_recv_data->clock_start, ftd3_libusb_capture_recv_data->is_3d);
 	end_ftd3_libusb_read_frame_cb(ftd3_libusb_capture_recv_data, false);
 }
 
@@ -204,7 +206,7 @@ static void ftd3_libusb_capture_main_loop_processing(FTD3LibusbCaptureReceivedDa
 		return;
 
 	for(int i = 0; i < FTD3_CONCURRENT_BUFFERS; i++)
-		ftd3_libusb_read_frame_request(capture_data, ftd3_libusb_get_free_buffer(ftd3_libusb_capture_recv_data), index++, pipe);
+		ftd3_libusb_read_frame_request(capture_data, ftd3_libusb_get_free_buffer(ftd3_libusb_capture_recv_data), index++, pipe, could_use_3d && stored_3d_status);
 
 	while(capture_data->status.connected && capture_data->status.running) {
 		if(could_use_3d && (stored_3d_status != capture_data->status.requested_3d)) {
@@ -221,7 +223,7 @@ static void ftd3_libusb_capture_main_loop_processing(FTD3LibusbCaptureReceivedDa
 
 			*ftd3_libusb_capture_recv_data->pause_output = false;
 			for(int i = 0; i < FTD3_CONCURRENT_BUFFERS; i++)
-				ftd3_libusb_read_frame_request(capture_data, ftd3_libusb_get_free_buffer(ftd3_libusb_capture_recv_data), index++, pipe);
+				ftd3_libusb_read_frame_request(capture_data, ftd3_libusb_get_free_buffer(ftd3_libusb_capture_recv_data), index++, pipe, could_use_3d && stored_3d_status);
 
 			*ftd3_libusb_capture_recv_data[0].clock_start = std::chrono::high_resolution_clock::now();
 		}
@@ -230,7 +232,7 @@ static void ftd3_libusb_capture_main_loop_processing(FTD3LibusbCaptureReceivedDa
 			return;
 		}
 		FTD3LibusbCaptureReceivedData* free_buffer = ftd3_libusb_get_free_buffer(ftd3_libusb_capture_recv_data);
-		ftd3_libusb_read_frame_request(capture_data, free_buffer, index++, pipe);
+		ftd3_libusb_read_frame_request(capture_data, free_buffer, index++, pipe, could_use_3d && stored_3d_status);
 	}
 }
 

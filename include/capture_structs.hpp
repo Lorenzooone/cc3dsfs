@@ -231,6 +231,7 @@ struct CaptureDataSingleBuffer {
 	CaptureReceived capture_buf;
 	double time_in_buf;
 	uint32_t inner_index;
+	bool is_3d;
 };
 
 class CaptureDataBuffers {
@@ -238,10 +239,10 @@ public:
 	CaptureDataBuffers();
 	CaptureDataSingleBuffer* GetReaderBuffer(CaptureReaderType reader_type);
 	void ReleaseReaderBuffer(CaptureReaderType reader_type);
-	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type, size_t offset, int index);
-	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type, int index);
-	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, size_t offset, int index);
-	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, int index);
+	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type, size_t offset, int index, bool is_3d = false);
+	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type, int index, bool is_3d = false);
+	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, size_t offset, int index, bool is_3d = false);
+	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, int index, bool is_3d = false);
 	CaptureDataSingleBuffer* GetWriterBuffer(int index = 0);
 	void ReleaseWriterBuffer(int index = 0, bool update_last_curr_in = true);
 private:

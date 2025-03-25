@@ -13,5 +13,6 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 void ftd3_capture_main_loop(CaptureData* capture_data);
 void ftd3_capture_cleanup(CaptureData* capture_data);
 uint64_t ftd3_get_video_in_size(CaptureData* capture_data);
+uint64_t ftd3_get_video_in_size(CaptureData* capture_data, bool override_3d);
 
 #endif

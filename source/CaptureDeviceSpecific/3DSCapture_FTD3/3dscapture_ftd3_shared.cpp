@@ -35,23 +35,18 @@ void list_devices_ftd3(std::vector<CaptureDevice> &devices_list, std::vector<no_
 	ftd3_list_devices_compat(devices_list, no_access_list, valid_3dscapture_descriptions);
 }
 
-void data_output_update(int inner_index, size_t read_data, CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &base_time) {
-	const auto curr_time = std::chrono::high_resolution_clock::now();
-	const std::chrono::duration<double> diff = curr_time - base_time;
-	base_time = curr_time;
-	capture_data->data_buffers.WriteToBuffer(NULL, read_data, diff.count(), &capture_data->status.device, inner_index);
-
-	if(capture_data->status.cooldown_curr_in)
-		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
-	// Signal that there is data available
-	capture_data->status.video_wait.unlock();
-	capture_data->status.audio_wait.unlock();
+static uint64_t ftd3_get_video_in_size(bool is_3d_enabled) {
+	if(!is_3d_enabled)
+		return sizeof(RGB83DSVideoInputData);
+	return sizeof(RGB83DSVideoInputData_3D);
 }
 
 uint64_t ftd3_get_video_in_size(CaptureData* capture_data) {
-	if(!get_3d_enabled(&capture_data->status))
-		return sizeof(RGB83DSVideoInputData);
-	return sizeof(RGB83DSVideoInputData_3D);
+	return ftd3_get_video_in_size(get_3d_enabled(&capture_data->status));
+}
+
+uint64_t ftd3_get_video_in_size(CaptureData* capture_data, bool override_3d) {
+	return ftd3_get_video_in_size(override_3d);
 }
 
 uint64_t ftd3_get_capture_size(bool is_3d_enabled) {
@@ -62,6 +57,21 @@ uint64_t ftd3_get_capture_size(bool is_3d_enabled) {
 
 uint64_t ftd3_get_capture_size(CaptureData* capture_data) {
 	return ftd3_get_capture_size(get_3d_enabled(&capture_data->status));
+}
+
+void data_output_update(int inner_index, size_t read_data, CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &base_time, bool is_3d) {
+	if(is_3d && (read_data < ftd3_get_video_in_size(is_3d)) && (read_data >= ftd3_get_video_in_size(false)))
+		is_3d = false;
+	const auto curr_time = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> diff = curr_time - base_time;
+	base_time = curr_time;
+	capture_data->data_buffers.WriteToBuffer(NULL, read_data, diff.count(), &capture_data->status.device, inner_index, is_3d);
+
+	if(capture_data->status.cooldown_curr_in)
+		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
+	// Signal that there is data available
+	capture_data->status.video_wait.unlock();
+	capture_data->status.audio_wait.unlock();
 }
 
 static void preemptive_close_connection(CaptureData* capture_data) {

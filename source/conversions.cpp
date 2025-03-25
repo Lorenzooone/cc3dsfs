@@ -59,13 +59,22 @@ static inline void convertVideoToOutputChunk_3D(RGB83DSVideoInputData_3D *p_in, 
 	memcpy(&p_out->screen_data[start_out], &p_in->screen_data[start_in], iters * 3);
 }
 
-static void ftd3_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, bool enabled_3d, bool interleaved_3d) {
+static void ftd3_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, bool enabled_3d, bool interleaved_3d, bool requested_3d) {
 	if(!enabled_3d) {
 		convertVideoToOutputChunk(&p_in->ftd3_received.video_in, p_out, IN_VIDEO_NO_BOTTOM_SIZE_3DS, 0, BOT_SIZE_3DS);
 
 		for(int i = 0; i < ((IN_VIDEO_SIZE_3DS - IN_VIDEO_NO_BOTTOM_SIZE_3DS) / (IN_VIDEO_WIDTH_3DS * 2)); i++) {
 			convertVideoToOutputChunk(&p_in->ftd3_received.video_in, p_out, IN_VIDEO_WIDTH_3DS, (((i * 2) + 0) * IN_VIDEO_WIDTH_3DS) + IN_VIDEO_NO_BOTTOM_SIZE_3DS, i * IN_VIDEO_WIDTH_3DS);
 			convertVideoToOutputChunk(&p_in->ftd3_received.video_in, p_out, IN_VIDEO_WIDTH_3DS, (((i * 2) + 1) * IN_VIDEO_WIDTH_3DS) + IN_VIDEO_NO_BOTTOM_SIZE_3DS, BOT_SIZE_3DS + IN_VIDEO_NO_BOTTOM_SIZE_3DS + (i * IN_VIDEO_WIDTH_3DS));
+		}
+		if(requested_3d && interleaved_3d) {
+			for(int i = TOP_WIDTH_3DS - 1; i >= 0; i--) {
+				memcpy(&p_out->screen_data[BOT_SIZE_3DS + (((2 * i) + 1) * HEIGHT_3DS)], &p_out->screen_data[BOT_SIZE_3DS + (i * HEIGHT_3DS)], HEIGHT_3DS * 3);
+				memcpy(&p_out->screen_data[BOT_SIZE_3DS + ((2 * i) * HEIGHT_3DS)], &p_out->screen_data[BOT_SIZE_3DS + (i * HEIGHT_3DS)], HEIGHT_3DS * 3);
+			}
+		}
+		else if(requested_3d) {
+			memcpy(&p_out->screen_data[BOT_SIZE_3DS + TOP_SIZE_3DS], &p_out->screen_data[BOT_SIZE_3DS], TOP_SIZE_3DS * 3);
 		}
 	}
 	else {
@@ -206,7 +215,7 @@ static void usb_3DSconvertVideoToOutput(USB3DSCaptureReceived *p_in, VideoOutput
 	memcpy(p_out->screen_data, p_in->video_in.screen_data, IN_VIDEO_HEIGHT_3DS * IN_VIDEO_WIDTH_3DS * 3);
 }
 
-static void usb_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureDevice* capture_device, bool enabled_3d, const bool is_big_endian, bool interleaved_3d) {
+static void usb_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, CaptureDevice* capture_device, bool enabled_3d, const bool is_big_endian, bool interleaved_3d, bool requested_3d) {
 	if(capture_device->is_3ds) {
 		if(!enabled_3d)
 			usb_3DSconvertVideoToOutput(&p_in->usb_received_3ds, p_out);
@@ -288,13 +297,14 @@ static void usb_is_device_convertVideoToOutput(CaptureReceived *p_in, VideoOutpu
 	}
 }
 
-bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status, bool interleaved_3d) {
+bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status, bool interleaved_3d, bool is_data_3d) {
 	CaptureReceived* p_in = (CaptureReceived*)(((uint8_t*)&data_buffer->capture_buf) + data_buffer->unused_offset);
 	bool converted = false;
 	CaptureDevice* chosen_device = &status->device;
+	bool is_3d_requested = get_3d_enabled(status);
 	#ifdef USE_FTD3
 	if(chosen_device->cc_type == CAPTURE_CONN_FTD3) {
-		ftd3_convertVideoToOutput(p_in, p_out, get_3d_enabled(status), interleaved_3d);
+		ftd3_convertVideoToOutput(p_in, p_out, is_data_3d, interleaved_3d, is_3d_requested);
 		converted = true;
 	}
 	#endif
@@ -306,7 +316,7 @@ bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, Capt
 	#endif
 	#ifdef USE_DS_3DS_USB
 	if(chosen_device->cc_type == CAPTURE_CONN_USB) {
-		usb_convertVideoToOutput(p_in, p_out, chosen_device, get_3d_enabled(status), is_big_endian, interleaved_3d);
+		usb_convertVideoToOutput(p_in, p_out, chosen_device, is_data_3d, is_big_endian, interleaved_3d, is_3d_requested);
 		converted = true;
 	}
 	#endif
@@ -325,14 +335,14 @@ bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, Capt
 	return converted;
 }
 
-bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status) {
+bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status, bool is_data_3d) {
 	if(!status->device.has_audio)
 		return true;
 	CaptureReceived* p_in = (CaptureReceived*)(((uint8_t*)&data_buffer->capture_buf) + data_buffer->unused_offset);
 	uint8_t* base_ptr = NULL;
 	#ifdef USE_FTD3
 	if(status->device.cc_type == CAPTURE_CONN_FTD3) {
-		if(!get_3d_enabled(status))
+		if(!is_data_3d)
 			base_ptr = (uint8_t*)p_in->ftd3_received.audio_data;
 		else
 			base_ptr = (uint8_t*)p_in->ftd3_received_3d.audio_data;
@@ -344,7 +354,7 @@ bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, const bool i
 	#endif
 	#ifdef USE_DS_3DS_USB
 	if(status->device.cc_type == CAPTURE_CONN_USB) {
-		if(!get_3d_enabled(status))
+		if(!is_data_3d)
 			base_ptr = (uint8_t*)p_in->usb_received_3ds.audio_data;
 		else
 			base_ptr = (uint8_t*)p_in->usb_received_3ds_3d.audio_data;

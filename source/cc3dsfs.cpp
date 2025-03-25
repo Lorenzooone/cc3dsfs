@@ -419,10 +419,10 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 				CaptureDataSingleBuffer* data_buffer = capture_data->data_buffers.GetReaderBuffer(CAPTURE_READER_AUDIO);
 				if(data_buffer != NULL) {
 					loaded_samples = audio.samples.size();
-					if((data_buffer->read > get_video_in_size(capture_data)) && (loaded_samples < MAX_MAX_AUDIO_LATENCY) && capture_data->status.connected) {
-						uint64_t n_samples = get_audio_n_samples(capture_data, data_buffer->read);
+					if((data_buffer->read > get_video_in_size(capture_data, data_buffer->is_3d)) && (loaded_samples < MAX_MAX_AUDIO_LATENCY) && capture_data->status.connected) {
+						uint64_t n_samples = get_audio_n_samples(capture_data, data_buffer->read, data_buffer->is_3d);
 						double out_time = data_buffer->time_in_buf;
-						bool conversion_success = convertAudioToOutput(out_buf[audio_buf_counter], n_samples, endianness, data_buffer, &capture_data->status);
+						bool conversion_success = convertAudioToOutput(out_buf[audio_buf_counter], n_samples, endianness, data_buffer, &capture_data->status, data_buffer->is_3d);
 						if(!conversion_success)
 							audio_data->signal_conversion_error();
 						audio.samples.emplace(out_buf[audio_buf_counter], n_samples, out_time);
@@ -602,11 +602,11 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 			CaptureDataSingleBuffer* data_buffer = capture_data->data_buffers.GetReaderBuffer(CAPTURE_READER_VIDEO);
 			if(data_buffer != NULL) {
 				last_frame_time = data_buffer->time_in_buf;
-				if(data_buffer->read >= get_video_in_size(capture_data)) {
+				if(data_buffer->read >= get_video_in_size(capture_data, data_buffer->is_3d)) {
 					if(capture_data->status.cooldown_curr_in || (!capture_data->status.connected))
 						blank_out = true;
 					else {
-						bool conversion_success = convertVideoToOutput(out_buf, endianness, data_buffer, &capture_data->status, frontend_data.display_data.interleaved_3d);
+						bool conversion_success = convertVideoToOutput(out_buf, endianness, data_buffer, &capture_data->status, frontend_data.display_data.interleaved_3d, data_buffer->is_3d);
 						if(!conversion_success)
 							UpdateOutText(out_text_data, "", "Video conversion failed...", TEXT_KIND_NORMAL);
 					}

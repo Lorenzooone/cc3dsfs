@@ -222,10 +222,10 @@ void captureCall(CaptureData* capture_data) {
 	}
 }
 
-uint64_t get_audio_n_samples(CaptureData* capture_data, uint64_t read) {
+uint64_t get_audio_n_samples(CaptureData* capture_data, uint64_t read, bool is_3d) {
 	if(!capture_data->status.device.has_audio)
 		return 0;
-	uint64_t n_samples = (read - get_video_in_size(capture_data)) / 2;
+	uint64_t n_samples = (read - get_video_in_size(capture_data, is_3d)) / 2;
 	if(n_samples > capture_data->status.device.max_samples_in)
 		n_samples = capture_data->status.device.max_samples_in;
 	// Avoid entering a glitched state due to a partial packet or something
@@ -234,14 +234,14 @@ uint64_t get_audio_n_samples(CaptureData* capture_data, uint64_t read) {
 	return n_samples;
 }
 
-uint64_t get_video_in_size(CaptureData* capture_data) {
+uint64_t get_video_in_size(CaptureData* capture_data, bool is_3d) {
 	#ifdef USE_CYNI_USB
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_NISETRO)
 		return cyni_device_get_video_in_size(capture_data);
 	#endif
 	#ifdef USE_FTD3
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
-		return ftd3_get_video_in_size(capture_data);
+		return ftd3_get_video_in_size(capture_data, is_3d);
 	#endif
 	#ifdef USE_FTD2
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD2)
@@ -249,7 +249,7 @@ uint64_t get_video_in_size(CaptureData* capture_data) {
 	#endif
 	#ifdef USE_DS_3DS_USB
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_USB)
-		return usb_get_video_in_size(capture_data);
+		return usb_get_video_in_size(capture_data, is_3d);
 	#endif
 	#ifdef USE_IS_DEVICES_USB
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_IS_NITRO)

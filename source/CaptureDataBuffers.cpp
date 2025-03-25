@@ -95,7 +95,7 @@ void CaptureDataBuffers::ReleaseWriterBuffer(int index, bool update_last_curr_in
 	access_mutex.unlock();
 }
 
-void CaptureDataBuffers::WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type, size_t offset, int index) {
+void CaptureDataBuffers::WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type, size_t offset, int index, bool is_3d) {
 	if(offset >= read)
 		return;
 	if(!is_writer_index_valid(index))
@@ -116,17 +116,18 @@ void CaptureDataBuffers::WriteToBuffer(CaptureReceived* buffer, uint64_t read, d
 	target->read = read - offset;
 	target->time_in_buf = time_in_buf;
 	target->capture_type = capture_type;
+	target->is_3d = is_3d;
 	this->ReleaseWriterBuffer(index);
 }
 
-void CaptureDataBuffers::WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type, int index) {
-	return this->WriteToBuffer(buffer, read, time_in_buf, device, capture_type, 0, index);
+void CaptureDataBuffers::WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type, int index, bool is_3d) {
+	return this->WriteToBuffer(buffer, read, time_in_buf, device, capture_type, 0, index, is_3d);
 }
 
-void CaptureDataBuffers::WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, size_t offset, int index) {
-	return this->WriteToBuffer(buffer, read, time_in_buf, device, CAPTURE_SCREENS_BOTH, offset, index);
+void CaptureDataBuffers::WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, size_t offset, int index, bool is_3d) {
+	return this->WriteToBuffer(buffer, read, time_in_buf, device, CAPTURE_SCREENS_BOTH, offset, index, is_3d);
 }
 
-void CaptureDataBuffers::WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, int index) {
-	return this->WriteToBuffer(buffer, read, time_in_buf, device, CAPTURE_SCREENS_BOTH, 0, index);
+void CaptureDataBuffers::WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, int index, bool is_3d) {
+	return this->WriteToBuffer(buffer, read, time_in_buf, device, CAPTURE_SCREENS_BOTH, 0, index, is_3d);
 }
