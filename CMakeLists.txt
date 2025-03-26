@@ -24,7 +24,6 @@ if(NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Windows"))
 	#Just avoid using it, when possible...
 	set(USE_FTD3XX_FOR_N3DSXL_LOOPY 0)
 endif()
-set(FTDI_EEPROM OFF)
 set(WINDOWS_ARM64 0)
 set(WINDOWS_x86_32 0)
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON)

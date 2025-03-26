@@ -39,6 +39,7 @@ struct FTD2CaptureReceivedData {
 	ftd2_async_callback_data cb_data;
 };
 
+void insert_device_ftd2_shared(std::vector<CaptureDevice> &devices_list, char* description, int debug_multiplier, std::string serial_number, void* descriptor, std::string path, std::string extra_particle);
 int get_num_ftd2_device_types();
 const std::string get_ftd2_fw_desc(int index);
 const int get_ftd2_fw_index(int index);

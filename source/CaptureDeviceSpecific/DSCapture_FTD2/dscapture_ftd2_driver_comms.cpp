@@ -18,8 +18,6 @@
 #define REAL_SERIAL_NUMBER_SIZE 16
 #define SERIAL_NUMBER_SIZE (REAL_SERIAL_NUMBER_SIZE+1)
 
-#define ENABLE_AUDIO true
-
 void list_devices_ftd2_driver(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list) {
 	FT_STATUS ftStatus;
 	DWORD numDevs = 0;
@@ -39,15 +37,7 @@ void list_devices_ftd2_driver(std::vector<CaptureDevice> &devices_list, std::vec
 			ftStatus = FT_GetDeviceInfoDetail(i, &Flags, &Type, &ID, NULL,
 			SerialNumber, Description, &ftHandle);
 			if((!FT_FAILED(ftStatus)) && (Flags & FT_FLAGS_HISPEED) && (Type == FT_DEVICE_232H))
-			{
-				for(int j = 0; j < get_num_ftd2_device_types(); j++) {
-					if(Description == get_ftd2_fw_desc(j)) {
-						for(int u = 0; u < debug_multiplier; u++)
-							devices_list.emplace_back(std::string(SerialNumber), "DS.2", "DS.2.d565", CAPTURE_CONN_FTD2, (void*)NULL, false, false, ENABLE_AUDIO, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, get_max_samples(false), 0, 0, 0, 0, HEIGHT_DS, VIDEO_DATA_RGB16, get_ftd2_fw_index(j), false);
-						break;
-					}
-				}
-			}
+				insert_device_ftd2_shared(devices_list, Description, debug_multiplier, std::string(SerialNumber), NULL, "", "d");
 		}
 	}
 }

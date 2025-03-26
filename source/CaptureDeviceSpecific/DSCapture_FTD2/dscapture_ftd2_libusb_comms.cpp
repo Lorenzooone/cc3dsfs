@@ -13,8 +13,6 @@
 #define DESCRIPTION_SIZE 128
 #define SERIAL_NUMBER_SIZE 128
 
-#define ENABLE_AUDIO true
-
 #define FTDI_VID 0x0403
 #define FT232H_PID 0x6014
 
@@ -158,13 +156,7 @@ void list_devices_ftd2_libusb(std::vector<CaptureDevice> &devices_list, std::vec
 		}
 		if(is_already_inserted && (!insert_anyway))
 			continue;
-		for(int j = 0; j < get_num_ftd2_device_types(); j++) {
-			if(description == get_ftd2_fw_desc(j)) {
-				for(int u = 0; u < debug_multiplier; u++)
-					devices_list.emplace_back(serial_number, "DS.2", "DS.2.l565", CAPTURE_CONN_FTD2, (void*)curr_descriptor, false, false, ENABLE_AUDIO, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, get_max_samples(false), 0, 0, 0, 0, HEIGHT_DS, VIDEO_DATA_RGB16, get_ftd2_fw_index(j), false, std::string(description));
-				break;
-			}
-		}
+		insert_device_ftd2_shared(devices_list, description, debug_multiplier, serial_number, (void*)curr_descriptor, std::string(description), "l");
 	}
 	if(perm_error)
 		no_access_list.emplace_back("ftd2_libusb");

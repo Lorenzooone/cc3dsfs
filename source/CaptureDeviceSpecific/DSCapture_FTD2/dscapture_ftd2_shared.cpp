@@ -26,6 +26,8 @@
 #define TX_SPI_SIZE (1 << 16)
 #define TX_SPI_OFFSET 3
 
+#define ENABLE_AUDIO true
+
 const uint8_t* ftd2_ds2_fws[] = {
 ftd2_ds2_fw_1,
 ftd2_ds2_fw_2,
@@ -55,6 +57,16 @@ const int get_ftd2_fw_index(int index) {
 	if((index < 0) || (index >= get_num_ftd2_device_types()))
 		return 0;
 	return descriptions_firmware_ids[index];
+}
+
+void insert_device_ftd2_shared(std::vector<CaptureDevice> &devices_list, char* description, int debug_multiplier, std::string serial_number, void* descriptor, std::string path, std::string extra_particle) {
+	for(int j = 0; j < get_num_ftd2_device_types(); j++) {
+		if(description == get_ftd2_fw_desc(j)) {
+			for(int u = 0; u < debug_multiplier; u++)
+				devices_list.emplace_back(serial_number, "DS.2", "DS.2." + extra_particle + "565", CAPTURE_CONN_FTD2, descriptor, false, false, ENABLE_AUDIO, WIDTH_DS, HEIGHT_DS + HEIGHT_DS, get_max_samples(false), 0, 0, 0, 0, HEIGHT_DS, VIDEO_DATA_RGB16, get_ftd2_fw_index(j), false, path);
+			break;
+		}
+	}
 }
 
 void list_devices_ftd2_shared(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list) {
