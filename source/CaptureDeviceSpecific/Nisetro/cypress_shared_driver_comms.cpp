@@ -1,5 +1,4 @@
-#include "cypress_nisetro_driver_comms.hpp"
-#include "cypress_nisetro_acquisition_general.hpp"
+#include "cypress_shared_driver_comms.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -140,26 +139,19 @@ struct PACKED CYPRESS_SET_TRANSFER_SIZE_INFO {
 
 static GUID cypress_driver_guid = {.Data1 = 0xae18aa60, .Data2 = 0x7f6a, .Data3 = 0x11d4, .Data4 = {0x97, 0xdd, 0x0, 0x1, 0x2, 0x29, 0xb9, 0x59}};
 
-static void cypress_driver_wait_async_transfers(CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data) {
-	HANDLE to_wait_array[NUM_CAPTURE_RECEIVED_DATA_BUFFERS];
-	for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
-		to_wait_array[i] = ((OVERLAPPED*)cypress_device_capture_recv_data[i].cb_data.base_transfer_data)->hEvent;
-	WaitForMultipleObjects(NUM_CAPTURE_RECEIVED_DATA_BUFFERS, to_wait_array, false, 300);
-}
-
-static bool cypress_driver_process_async_transfers(CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data, cyni_device_device_handlers* handlers) {
+static bool cypress_driver_process_async_transfers(std::vector<cy_async_callback_data*> *cb_data_vector, cy_device_device_handlers* handlers) {
 	bool found = false;
-	for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++) {
-		cyni_async_callback_data* cb_data = (cyni_async_callback_data*)&cypress_device_capture_recv_data[i].cb_data;
+	for (int i = 0; i < cb_data_vector->size(); i++) {
+		cy_async_callback_data* cb_data = cb_data_vector->at(i);
 		bool possible_result = false;
 		bool is_data_ready = false;
 		cb_data->transfer_data_access.lock();
 		possible_result = cb_data->transfer_data != NULL;
 		is_data_ready = cb_data->is_data_ready;
 		cb_data->transfer_data_access.unlock();
-		if(cypress_device_capture_recv_data[i].in_use && is_data_ready)
+		if((*cb_data->in_use_ptr) && is_data_ready)
 			found = true;
-		if(cypress_device_capture_recv_data[i].in_use && possible_result) {
+		if((*cb_data->in_use_ptr) && possible_result) {
 			DWORD bytes_transferred = 0;
 			int error = 0;
 			if(!GetOverlappedResult(handlers->read_handle, (OVERLAPPED*)cb_data->transfer_data, &bytes_transferred, false))
@@ -168,7 +160,7 @@ static bool cypress_driver_process_async_transfers(CypressDeviceCaptureReceivedD
 				const auto curr_time = std::chrono::high_resolution_clock::now();
 				const std::chrono::duration<double> diff = curr_time - cb_data->start_request;
 				if(diff.count() > cb_data->timeout_s)
-					error_cypress_device_status(cypress_device_capture_recv_data, LIBUSB_ERROR_TIMEOUT);
+					cb_data->error_function(cb_data->actual_user_data, LIBUSB_ERROR_TIMEOUT);
 			}
 			if(error != ERROR_IO_INCOMPLETE) {
 				CYPRESS_SINGLE_TRANSFER* transfer_info = (CYPRESS_SINGLE_TRANSFER*)cb_data->extra_transfer_data;
@@ -188,25 +180,30 @@ static bool cypress_driver_process_async_transfers(CypressDeviceCaptureReceivedD
 	return found;
 }
 
-static void cypress_driver_function(bool* usb_thread_run, CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data, cyni_device_device_handlers* handlers) {
+static void cypress_driver_function(bool* usb_thread_run, std::vector<cy_async_callback_data*> *cb_data_vector, cy_device_device_handlers* handlers) {
 	int ret = 0;
+	HANDLE* to_wait_array = new HANDLE[cb_data_vector->size()];
+	for(int i = 0; i < cb_data_vector->size(); i++)
+		to_wait_array[i] = ((OVERLAPPED*)cb_data_vector->at(i)->base_transfer_data)->hEvent;
+
 	while(*usb_thread_run) {
-		if(cypress_driver_process_async_transfers(cypress_device_capture_recv_data, handlers)) {
-			for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++) {
-				cyni_async_callback_data* cb_data = (cyni_async_callback_data*)&cypress_device_capture_recv_data[i].cb_data;
+		if(cypress_driver_process_async_transfers(cb_data_vector, handlers)) {
+			for (int i = 0; i < cb_data_vector->size(); i++) {
+				cy_async_callback_data* cb_data = cb_data_vector->at(i);
 				bool is_data_ready = false;
 				cb_data->transfer_data_access.lock();
 				is_data_ready = cb_data->is_data_ready;
 				cb_data->transfer_data_access.unlock();
-				if(cypress_device_capture_recv_data[i].in_use && is_data_ready) {
+				if((*cb_data->in_use_ptr) && is_data_ready) {
 					cb_data->is_data_ready = false;
-					cb_data->function(&cypress_device_capture_recv_data[i], cb_data->actual_length, cb_data->status_value);
+					cb_data->function(cb_data->actual_user_data, cb_data->actual_length, cb_data->status_value);
 				}
 			}
 		}
 		else
-			cypress_driver_wait_async_transfers(cypress_device_capture_recv_data);
+			WaitForMultipleObjects(cb_data_vector->size(), to_wait_array, false, 300);
 	}
+	delete []to_wait_array;
 }
 
 static bool cypress_driver_bulk_async_start(HANDLE handle, uint8_t* buffer, size_t size, DWORD* num_read, uint8_t ep_num, OVERLAPPED* overlap, CYPRESS_SINGLE_TRANSFER* single_transfer) {
@@ -298,7 +295,7 @@ static bool cypress_driver_get_string_info(HANDLE handle, UCHAR string_index, US
 			bytes = num_read;
 		uint8_t signature = buffer[1];
 		if((signature == 3) && (bytes > 2))
-			out_str = read_string(buffer, bytes - 2);
+			out_str = read_string(buffer + 2, bytes - 2);
 	}
 	delete []buffer;
 	return retval;
@@ -359,7 +356,7 @@ static bool cypress_driver_get_device_pid_vid_manufacturer_serial_number(std::st
 	return true;
 }
 
-static bool cypress_nisetro_driver_setup_connection(cyni_device_device_handlers* handlers, std::string path, bool do_pipe_clear_reset) {
+static bool cypress_nisetro_driver_setup_connection(cy_device_device_handlers* handlers, std::string path, bool do_pipe_clear_reset) {
 	handlers->usb_handle = NULL;
 	handlers->mutex = NULL;
 	handlers->write_handle = INVALID_HANDLE_VALUE;
@@ -407,14 +404,14 @@ static void cypress_driver_pipe_reset(HANDLE handle, uint8_t endpoint) {
 
 #endif
 
-cyni_device_device_handlers* cypress_driver_serial_reconnection(CaptureDevice* device) {
-	cyni_device_device_handlers* final_handlers = NULL;
+cy_device_device_handlers* cypress_driver_serial_reconnection(CaptureDevice* device) {
+	cy_device_device_handlers* final_handlers = NULL;
 	#ifdef _WIN32
 	if(device->path != "") {
-		cyni_device_device_handlers handlers;
-		const cyni_device_usb_device* usb_device_info = (const cyni_device_usb_device*)device->descriptor;
+		cy_device_device_handlers handlers;
+		const cy_device_usb_device* usb_device_info = (const cy_device_usb_device*)device->descriptor;
 		if(cypress_nisetro_driver_setup_connection(&handlers, device->path, usb_device_info->do_pipe_clear_reset)) {
-			final_handlers = new cyni_device_device_handlers;
+			final_handlers = new cy_device_device_handlers;
 			final_handlers->usb_handle = NULL;
 			final_handlers->mutex = handlers.mutex;
 			final_handlers->read_handle = handlers.read_handle;
@@ -428,7 +425,7 @@ cyni_device_device_handlers* cypress_driver_serial_reconnection(CaptureDevice* d
 	return final_handlers;
 }
 
-void cypress_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool* not_supported_elems, int *curr_serial_extra_id_cypress, const size_t num_cypress_desc) {
+void cypress_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool* not_supported_elems, int *curr_serial_extra_id_cypress, std::vector<const cy_device_usb_device*> &device_descriptions) {
 	#ifdef _WIN32
 	HDEVINFO DeviceInfoSet = SetupDiGetClassDevs(
 		&cypress_driver_guid,
@@ -451,10 +448,10 @@ void cypress_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool*
 		std::string serial;
 		if(!cypress_driver_get_device_pid_vid_manufacturer_serial_number(path, vid, pid, manufacturer, serial, bcd_device))
 			continue;
-		for (int j = 0; j < num_cypress_desc; j++) {
-			const cyni_device_usb_device* usb_device_desc = GetCyNiDeviceDesc(j);
+		for (int j = 0; j < device_descriptions.size(); j++) {
+			const cy_device_usb_device* usb_device_desc = device_descriptions[j];
 			if(not_supported_elems[j] && (usb_device_desc->vid == vid) && (usb_device_desc->pid == pid)) {
-				cyni_device_device_handlers handlers;
+				cy_device_device_handlers handlers;
 				bool result_conn_check = cypress_nisetro_driver_setup_connection(&handlers, path, usb_device_desc->do_pipe_clear_reset);
 				cypress_nisetro_driver_end_connection(&handlers);
 				if(result_conn_check)
@@ -469,8 +466,8 @@ void cypress_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool*
 	#endif
 }
 
-cyni_device_device_handlers* cypress_driver_find_by_serial_number(const cyni_device_usb_device* usb_device_desc, std::string wanted_serial_number, int &curr_serial_extra_id, CaptureDevice* new_device) {
-	cyni_device_device_handlers* final_handlers = NULL;
+cy_device_device_handlers* cypress_driver_find_by_serial_number(const cy_device_usb_device* usb_device_desc, std::string wanted_serial_number, int &curr_serial_extra_id, CaptureDevice* new_device) {
+	cy_device_device_handlers* final_handlers = NULL;
 	#ifdef _WIN32
 	HDEVINFO DeviceInfoSet = SetupDiGetClassDevs(
 		&cypress_driver_guid,
@@ -493,11 +490,11 @@ cyni_device_device_handlers* cypress_driver_find_by_serial_number(const cyni_dev
 		std::string serial;
 		if(!cypress_driver_get_device_pid_vid_manufacturer_serial_number(path, vid, pid, manufacturer, serial, bcd_device))
 			continue;
-		std::string read_serial = get_serial(usb_device_desc, serial, bcd_device, curr_serial_extra_id);
+		std::string read_serial = cypress_get_serial(usb_device_desc, serial, bcd_device, curr_serial_extra_id);
 		if((usb_device_desc->vid == vid) && (usb_device_desc->pid == pid) && (wanted_serial_number == read_serial)) {
-			cyni_device_device_handlers handlers;
+			cy_device_device_handlers handlers;
 			if(cypress_nisetro_driver_setup_connection(&handlers, path, usb_device_desc->do_pipe_clear_reset)) {
-				final_handlers = new cyni_device_device_handlers;
+				final_handlers = new cy_device_device_handlers;
 				final_handlers->usb_handle = NULL;
 				final_handlers->mutex = handlers.mutex;
 				final_handlers->read_handle = handlers.read_handle;
@@ -518,7 +515,7 @@ cyni_device_device_handlers* cypress_driver_find_by_serial_number(const cyni_dev
 	return final_handlers;
 }
 
-int cypress_driver_ctrl_transfer_in(cyni_device_device_handlers* handlers, uint8_t* buffer, size_t inner_size, uint16_t value, uint16_t index, uint16_t request_code, int* num_read) {
+int cypress_driver_ctrl_transfer_in(cy_device_device_handlers* handlers, uint8_t* buffer, size_t inner_size, uint16_t value, uint16_t index, uint16_t request_code, int* num_read) {
 	#ifdef _WIN32
 	DWORD dummy = 0;
 	bool retval = cypress_driver_generic_ctrl_transfer(handlers->read_handle, buffer, inner_size, (value >> 8) & 0xFF, value & 0xFF, index, 1, TARGET_DEVICE, REQUEST_VENDOR, DIR_DEVICE_TO_HOST, request_code, &dummy);
@@ -529,7 +526,7 @@ int cypress_driver_ctrl_transfer_in(cyni_device_device_handlers* handlers, uint8
 	#endif
 }
 
-int cypress_driver_ctrl_transfer_out(cyni_device_device_handlers* handlers, uint8_t* buffer, size_t inner_size, uint16_t value, uint16_t index, uint16_t request_code, int* num_read) {
+int cypress_driver_ctrl_transfer_out(cy_device_device_handlers* handlers, uint8_t* buffer, size_t inner_size, uint16_t value, uint16_t index, uint16_t request_code, int* num_read) {
 	#ifdef _WIN32
 	DWORD dummy = 0;
 	bool retval = cypress_driver_generic_ctrl_transfer(handlers->write_handle, buffer, inner_size, (value >> 8) & 0xFF, value & 0xFF, index, 1, TARGET_DEVICE, REQUEST_VENDOR, DIR_HOST_TO_DEVICE, request_code, &dummy);
@@ -540,7 +537,7 @@ int cypress_driver_ctrl_transfer_out(cyni_device_device_handlers* handlers, uint
 	#endif
 }
 
-void cypress_nisetro_driver_end_connection(cyni_device_device_handlers* handlers) {
+void cypress_nisetro_driver_end_connection(cy_device_device_handlers* handlers) {
 	#ifdef _WIN32
 	cypress_nisetro_driver_close_handle(&handlers->write_handle);
 	handlers->read_handle = handlers->write_handle;
@@ -548,7 +545,7 @@ void cypress_nisetro_driver_end_connection(cyni_device_device_handlers* handlers
 	#endif
 }
 
-int cypress_driver_bulk_in(cyni_device_device_handlers* handlers, const cyni_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
+int cypress_driver_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
 	int result = LIBUSB_SUCCESS;
 	#ifdef _WIN32
 	DWORD inner_transfered = 0;
@@ -559,7 +556,7 @@ int cypress_driver_bulk_in(cyni_device_device_handlers* handlers, const cyni_dev
 	return result;
 }
 
-int cypress_driver_ctrl_bulk_in(cyni_device_device_handlers* handlers, const cyni_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
+int cypress_driver_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
 	int result = LIBUSB_SUCCESS;
 	#ifdef _WIN32
 	DWORD inner_transfered = 0;
@@ -570,7 +567,7 @@ int cypress_driver_ctrl_bulk_in(cyni_device_device_handlers* handlers, const cyn
 	return result;
 }
 
-int cypress_driver_ctrl_bulk_out(cyni_device_device_handlers* handlers, const cyni_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
+int cypress_driver_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
 	int result = LIBUSB_SUCCESS;
 	#ifdef _WIN32
 	DWORD inner_transfered = 0;
@@ -581,25 +578,25 @@ int cypress_driver_ctrl_bulk_out(cyni_device_device_handlers* handlers, const cy
 	return result;
 }
 
-void cypress_driver_pipe_reset_ctrl_bulk_in(cyni_device_device_handlers* handlers, const cyni_device_usb_device* usb_device_desc) {
+void cypress_driver_pipe_reset_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc) {
 	#ifdef _WIN32
 	cypress_driver_pipe_reset(handlers->read_handle, usb_device_desc->ep_ctrl_bulk_in);
 	#endif
 }
 
-void cypress_driver_pipe_reset_bulk_in(cyni_device_device_handlers* handlers, const cyni_device_usb_device* usb_device_desc) {
+void cypress_driver_pipe_reset_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc) {
 	#ifdef _WIN32
 	cypress_driver_pipe_reset(handlers->read_handle, usb_device_desc->ep_bulk_in);
 	#endif
 }
 
-void cypress_driver_pipe_reset_ctrl_bulk_out(cyni_device_device_handlers* handlers, const cyni_device_usb_device* usb_device_desc) {
+void cypress_driver_pipe_reset_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc) {
 	#ifdef _WIN32
 	cypress_driver_pipe_reset(handlers->read_handle, usb_device_desc->ep_ctrl_bulk_out);
 	#endif
 }
 
-void cypress_driver_find_used_serial(const cyni_device_usb_device* usb_device_desc, bool* found, size_t num_free_fw_ids, int &curr_serial_extra_id) {
+void cypress_driver_find_used_serial(const cy_device_usb_device* usb_device_desc, bool* found, size_t num_free_fw_ids, int &curr_serial_extra_id) {
 	#ifdef _WIN32
 	HDEVINFO DeviceInfoSet = SetupDiGetClassDevs(
 		&cypress_driver_guid,
@@ -622,7 +619,7 @@ void cypress_driver_find_used_serial(const cyni_device_usb_device* usb_device_de
 		std::string serial;
 		if(!cypress_driver_get_device_pid_vid_manufacturer_serial_number(path, vid, pid, manufacturer, serial, bcd_device))
 			continue;
-		std::string read_serial = get_serial(usb_device_desc, serial, bcd_device, curr_serial_extra_id);
+		std::string read_serial = cypress_get_serial(usb_device_desc, serial, bcd_device, curr_serial_extra_id);
 		if((usb_device_desc->vid == vid) && (usb_device_desc->pid == pid)) {
 			try {
 				int pos = std::stoi(read_serial);
@@ -641,7 +638,7 @@ void cypress_driver_find_used_serial(const cyni_device_usb_device* usb_device_de
 	#endif
 }
 
-int cypress_driver_async_in_start(cyni_device_device_handlers* handlers, const cyni_device_usb_device* usb_device_desc, uint8_t* buf, int length, cyni_async_callback_data* cb_data) {
+int cypress_driver_async_in_start(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, cy_async_callback_data* cb_data) {
 	#ifdef _WIN32
 	cb_data->transfer_data_access.lock();
 	cb_data->transfer_data = cb_data->base_transfer_data;
@@ -663,31 +660,31 @@ int cypress_driver_async_in_start(cyni_device_device_handlers* handlers, const c
 	return LIBUSB_SUCCESS;
 }
 
-void cypress_driver_start_thread(std::thread* thread_ptr, bool* usb_thread_run, CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data, cyni_device_device_handlers* handlers, ConsumerMutex* AsyncMutexPtr) {
+void cypress_driver_start_thread(std::thread* thread_ptr, bool* usb_thread_run, std::vector<cy_async_callback_data*> &cb_data_vector, cy_device_device_handlers* handlers) {
 	#ifdef _WIN32
 	*usb_thread_run = true;
-	for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++) {
-		cypress_device_capture_recv_data[i].cb_data.extra_transfer_data = new CYPRESS_SINGLE_TRANSFER;
-		cypress_device_capture_recv_data[i].cb_data.base_transfer_data = new OVERLAPPED;
-		((OVERLAPPED*)cypress_device_capture_recv_data[i].cb_data.base_transfer_data)->hEvent = CreateEvent(NULL, false, false, NULL);
+	for (int i = 0; i < cb_data_vector.size(); i++) {
+		cb_data_vector[i]->extra_transfer_data = new CYPRESS_SINGLE_TRANSFER;
+		cb_data_vector[i]->base_transfer_data = new OVERLAPPED;
+		((OVERLAPPED*)cb_data_vector[i]->base_transfer_data)->hEvent = CreateEvent(NULL, false, false, NULL);
 	}
-	*thread_ptr = std::thread(cypress_driver_function, usb_thread_run, cypress_device_capture_recv_data, handlers);
+	*thread_ptr = std::thread(cypress_driver_function, usb_thread_run, &cb_data_vector, handlers);
 	#endif
 }
 
-void cypress_driver_close_thread(std::thread* thread_ptr, bool* usb_thread_run, CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data) {
+void cypress_driver_close_thread(std::thread* thread_ptr, bool* usb_thread_run, std::vector<cy_async_callback_data*> cb_data_vector) {
 	#ifdef _WIN32
 	*usb_thread_run = false;
 	thread_ptr->join();
-	for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++) {
-		CloseHandle(((OVERLAPPED*)cypress_device_capture_recv_data[i].cb_data.base_transfer_data)->hEvent);
-		delete ((OVERLAPPED*)cypress_device_capture_recv_data[i].cb_data.base_transfer_data);
-		delete ((CYPRESS_SINGLE_TRANSFER*)cypress_device_capture_recv_data[i].cb_data.extra_transfer_data);
+	for (int i = 0; i < cb_data_vector.size(); i++) {
+		CloseHandle(((OVERLAPPED*)cb_data_vector[i]->base_transfer_data)->hEvent);
+		delete ((OVERLAPPED*)cb_data_vector[i]->base_transfer_data);
+		delete ((CYPRESS_SINGLE_TRANSFER*)cb_data_vector[i]->extra_transfer_data);
 	}
 	#endif
 }
 
-void cypress_driver_cancel_callback(cyni_device_device_handlers* handlers, const cyni_device_usb_device* usb_device_desc, cyni_async_callback_data* cb_data) {
+void cypress_driver_cancel_callback(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, cy_async_callback_data* cb_data) {
 	#ifdef _WIN32
     DWORD transferred = 0;
 	OVERLAPPED ov;
@@ -701,7 +698,7 @@ void cypress_driver_cancel_callback(cyni_device_device_handlers* handlers, const
 	#endif
 }
 
-void cypress_driver_set_transfer_size_bulk_in(cyni_device_device_handlers* handlers, const cyni_device_usb_device* usb_device_desc, size_t new_transfer_size) {
+void cypress_driver_set_transfer_size_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, size_t new_transfer_size) {
 	#ifdef _WIN32
     DWORD transferred;
     CYPRESS_SET_TRANSFER_SIZE_INFO SetTransferInfo;

@@ -121,7 +121,7 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 
 	for(int i = 0; i < loaded_samples; i++) {
 		const std::int16_t *data_samples = samples.front().bytes;
-		int count = samples.front().size;
+		uint64_t count = samples.front().size;
 		memcpy(buffer + data.sampleCount, data_samples, count * sizeof(std::int16_t));
 		// Unused, but could be useful info
 		//double real_sample_rate = (1.0 / samples.front().time) * count / 2;

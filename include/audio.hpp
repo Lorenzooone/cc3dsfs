@@ -7,10 +7,10 @@
 #include "utils.hpp"
 
 struct Sample {
-	Sample(std::int16_t *bytes, std::size_t size, double time) : bytes(bytes), size(size), time(time) {}
+	Sample(int16_t *bytes, uint64_t size, double time) : bytes(bytes), size(size), time(time) {}
 
-	std::int16_t *bytes;
-	std::size_t size;
+	int16_t *bytes;
+	uint64_t size;
 	double time;
 };
 
