@@ -1,7 +1,5 @@
 #include "dscapture_ftd2_shared.hpp"
-#include "dscapture_ftd2_driver.hpp"
 #include "dscapture_ftd2_general.hpp"
-#include "dscapture_ftd2_libusb.hpp"
 #include "dscapture_ftd2_compatibility.hpp"
 #include "devicecapture.hpp"
 #include "usb_generic.hpp"

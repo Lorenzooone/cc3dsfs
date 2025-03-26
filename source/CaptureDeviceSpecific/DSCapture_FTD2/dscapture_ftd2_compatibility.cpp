@@ -1,5 +1,7 @@
-#include "dscapture_ftd2_libusb.hpp"
-#include "dscapture_ftd2_driver.hpp"
+#include "dscapture_ftd2_libusb_acquisition.hpp"
+#include "dscapture_ftd2_libusb_comms.hpp"
+#include "dscapture_ftd2_driver_acquisition.hpp"
+#include "dscapture_ftd2_driver_comms.hpp"
 #include "devicecapture.hpp"
 #include "dscapture_ftd2_compatibility.hpp"
 
