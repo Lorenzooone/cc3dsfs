@@ -4,6 +4,7 @@
 #include "usb_is_device_is_driver.hpp"
 #include "is_twl_cap_init_seed_table.h"
 #include "is_twl_cap_crc32_table.h"
+#include "usb_generic.hpp"
 
 #include <libusb.h>
 #include <cstring>
@@ -1308,12 +1309,12 @@ int PrepareEncDecTable(is_device_device_handlers* handlers, is_device_twl_enc_de
 
 void SetupISDeviceAsyncThread(is_device_device_handlers* handlers, void* user_data, std::thread* thread_ptr, bool* keep_going, ConsumerMutex* is_data_ready) {
 	if(handlers->usb_handle)
-		return is_device_libusb_start_thread(thread_ptr, keep_going);
+		return libusb_register_to_event_thread();
 	return is_device_is_driver_start_thread(thread_ptr, keep_going, (ISDeviceCaptureReceivedData*)user_data, handlers, is_data_ready);
 }
 
 void EndISDeviceAsyncThread(is_device_device_handlers* handlers, void* user_data, std::thread* thread_ptr, bool* keep_going, ConsumerMutex* is_data_ready) {
 	if(handlers->usb_handle)
-		return is_device_libusb_close_thread(thread_ptr, keep_going);
+		return libusb_unregister_from_event_thread();
 	return is_device_is_driver_close_thread(thread_ptr, keep_going, (ISDeviceCaptureReceivedData*)user_data);
 }

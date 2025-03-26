@@ -25,30 +25,6 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-static void is_device_usb_thread_function(bool* usb_thread_run) {
-	if(!usb_is_initialized())
-		return;
-	struct timeval tv;
-	tv.tv_sec = 0;
-	tv.tv_usec = 300000;
-	while(*usb_thread_run)
-		libusb_handle_events_timeout_completed(get_usb_ctx(), &tv, NULL);
-}
-
-void is_device_libusb_start_thread(std::thread* thread_ptr, bool* usb_thread_run) {
-	if(!usb_is_initialized())
-		return;
-	*usb_thread_run = true;
-	*thread_ptr = std::thread(is_device_usb_thread_function, usb_thread_run);
-}
-
-void is_device_libusb_close_thread(std::thread* thread_ptr, bool* usb_thread_run) {
-	if(!usb_is_initialized())
-		return;
-	*usb_thread_run = false;
-	thread_ptr->join();
-}
-
 static bool is_device_libusb_setup_connection(libusb_device_handle* handle, const is_device_usb_device* usb_device_desc) {
 	libusb_check_and_detach_kernel_driver(handle, usb_device_desc->default_interface);
 	int result = libusb_check_and_set_configuration(handle, usb_device_desc->default_config);

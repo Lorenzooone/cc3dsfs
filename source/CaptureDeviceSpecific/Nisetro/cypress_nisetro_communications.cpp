@@ -4,6 +4,7 @@
 #include "cypress_nisetro_driver_comms.hpp"
 #include "cypress_nisetro_acquisition_general.hpp"
 #include "nisetro_ds_fw.h"
+#include "usb_generic.hpp"
 
 #include <libusb.h>
 #include <cstring>
@@ -245,12 +246,12 @@ void CloseAsyncRead(cyni_device_device_handlers* handlers, const cyni_device_usb
 
 void SetupCypressDeviceAsyncThread(cyni_device_device_handlers* handlers, void* user_data, std::thread* thread_ptr, bool* keep_going, ConsumerMutex* is_data_ready) {
 	if(handlers->usb_handle)
-		return cypress_libusb_start_thread(thread_ptr, keep_going);
+		return libusb_register_to_event_thread();
 	return cypress_driver_start_thread(thread_ptr, keep_going, (CypressDeviceCaptureReceivedData*)user_data, handlers, is_data_ready);
 }
 
 void EndCypressDeviceAsyncThread(cyni_device_device_handlers* handlers, void* user_data, std::thread* thread_ptr, bool* keep_going, ConsumerMutex* is_data_ready) {
 	if(handlers->usb_handle)
-		return cypress_libusb_close_thread(thread_ptr, keep_going);
+		return libusb_unregister_from_event_thread();
 	return cypress_driver_close_thread(thread_ptr, keep_going, (CypressDeviceCaptureReceivedData*)user_data);
 }

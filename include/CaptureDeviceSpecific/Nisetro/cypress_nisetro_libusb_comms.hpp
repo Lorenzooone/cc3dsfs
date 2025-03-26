@@ -5,8 +5,6 @@
 #include "capture_structs.hpp"
 #include "cypress_nisetro_communications.hpp"
 
-void cypress_libusb_start_thread(std::thread* thread_ptr, bool* usb_thread_run);
-void cypress_libusb_close_thread(std::thread* thread_ptr, bool* usb_thread_run);
 void cypress_libusb_list_devices(std::vector<CaptureDevice> &devices_list, bool* no_access_elems, bool* not_supported_elems, int *curr_serial_extra_id_cypress, const size_t num_cypress_desc);
 cyni_device_device_handlers* cypress_libusb_serial_reconnection(const cyni_device_usb_device* usb_device_desc, std::string wanted_serial_number, int &curr_serial_extra_id, CaptureDevice* new_device);
 void cypress_libusb_find_used_serial(const cyni_device_usb_device* usb_device_desc, bool* found, size_t num_free_fw_ids, int &curr_serial_extra_id);

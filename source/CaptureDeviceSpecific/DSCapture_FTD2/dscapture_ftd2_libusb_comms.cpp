@@ -61,30 +61,6 @@ void ftd2_libusb_end() {
 	usb_close();
 }
 
-static void ftd2_libusb_usb_thread_function(bool* usb_thread_run) {
-	if(!usb_is_initialized())
-		return;
-	struct timeval tv;
-	tv.tv_sec = 0;
-	tv.tv_usec = 300000;
-	while(*usb_thread_run)
-		libusb_handle_events_timeout_completed(get_usb_ctx(), &tv, NULL);
-}
-
-void ftd2_libusb_start_thread(std::thread* thread_ptr, bool* usb_thread_run) {
-	if(!usb_is_initialized())
-		return;
-	*usb_thread_run = true;
-	*thread_ptr = std::thread(ftd2_libusb_usb_thread_function, usb_thread_run);
-}
-
-void ftd2_libusb_close_thread(std::thread* thread_ptr, bool* usb_thread_run) {
-	if(!usb_is_initialized())
-		return;
-	*usb_thread_run = false;
-	thread_ptr->join();
-}
-
 static int read_strings(libusb_device_handle *handle, libusb_device_descriptor *usb_descriptor, char* manufacturer, char* description, char* serial) {
 	manufacturer[0] = 0;
 	description[0] = 0;

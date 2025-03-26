@@ -5,30 +5,6 @@
 #include <libusb.h>
 #include "usb_generic.hpp"
 
-static void cypress_device_usb_thread_function(bool* usb_thread_run) {
-	if(!usb_is_initialized())
-		return;
-	struct timeval tv;
-	tv.tv_sec = 0;
-	tv.tv_usec = 300000;
-	while(*usb_thread_run)
-		libusb_handle_events_timeout_completed(get_usb_ctx(), &tv, NULL);
-}
-
-void cypress_libusb_start_thread(std::thread* thread_ptr, bool* usb_thread_run) {
-	if(!usb_is_initialized())
-		return;
-	*usb_thread_run = true;
-	*thread_ptr = std::thread(cypress_device_usb_thread_function, usb_thread_run);
-}
-
-void cypress_libusb_close_thread(std::thread* thread_ptr, bool* usb_thread_run) {
-	if(!usb_is_initialized())
-		return;
-	*usb_thread_run = false;
-	thread_ptr->join();
-}
-
 // Read from ctrl_in
 int cypress_libusb_ctrl_in(cyni_device_device_handlers* handlers, const cyni_device_usb_device* usb_device_desc, uint8_t* buf, int length, uint8_t request, uint16_t value, uint16_t index, int* transferred) {
 	int ret = libusb_control_transfer(handlers->usb_handle, 0xC0, request, value, index, buf, length, usb_device_desc->bulk_timeout);

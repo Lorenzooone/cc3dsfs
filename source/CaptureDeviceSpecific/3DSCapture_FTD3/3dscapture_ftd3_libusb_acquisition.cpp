@@ -4,7 +4,6 @@
 #include "3dscapture_ftd3_shared_general.hpp"
 #include "devicecapture.hpp"
 
-#include <thread>
 #include <libusb.h>
 #include "usb_generic.hpp"
 
@@ -35,30 +34,6 @@ struct FTD3LibusbCaptureReceivedData {
 };
 
 static void ftd3_libusb_read_frame_cb(void* user_data, int transfer_length, int transfer_status);
-
-static void ftd3_device_usb_thread_function(bool* usb_thread_run) {
-	if(!usb_is_initialized())
-		return;
-	struct timeval tv;
-	tv.tv_sec = 0;
-	tv.tv_usec = 300000;
-	while(*usb_thread_run)
-		libusb_handle_events_timeout_completed(get_usb_ctx(), &tv, NULL);
-}
-
-static void ftd3_libusb_start_thread(std::thread* thread_ptr, bool* usb_thread_run) {
-	if(!usb_is_initialized())
-		return;
-	*usb_thread_run = true;
-	*thread_ptr = std::thread(ftd3_device_usb_thread_function, usb_thread_run);
-}
-
-static void ftd3_libusb_close_thread(std::thread* thread_ptr, bool* usb_thread_run) {
-	if(!usb_is_initialized())
-		return;
-	*usb_thread_run = false;
-	thread_ptr->join();
-}
 
 static int get_ftd3_libusb_status(FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data) {
 	return *ftd3_libusb_capture_recv_data[0].status;
@@ -239,8 +214,6 @@ static void ftd3_libusb_capture_main_loop_processing(FTD3LibusbCaptureReceivedDa
 void ftd3_libusb_capture_main_loop(CaptureData* capture_data, int pipe) {
 	if(!usb_is_initialized())
 		return;
-	bool is_done_thread;
-	std::thread async_processing_thread;
 
 	uint32_t last_index = -1;
 	int status = 0;
@@ -261,9 +234,9 @@ void ftd3_libusb_capture_main_loop(CaptureData* capture_data, int pipe) {
 		ftd3_libusb_capture_recv_data[i].cb_data.actual_user_data = &ftd3_libusb_capture_recv_data[i];
 		ftd3_libusb_capture_recv_data[i].cb_data.transfer_data = NULL;
 	}
-	ftd3_libusb_start_thread(&async_processing_thread, &is_done_thread);
+	libusb_register_to_event_thread();
 	ftd3_libusb_capture_main_loop_processing(ftd3_libusb_capture_recv_data, pipe);
 	wait_all_ftd3_libusb_buffers_free(ftd3_libusb_capture_recv_data);
-	ftd3_libusb_close_thread(&async_processing_thread, &is_done_thread);
+	libusb_unregister_from_event_thread();
 	delete []ftd3_libusb_capture_recv_data;
 }

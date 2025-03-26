@@ -319,9 +319,8 @@ void ftd2_capture_main_loop_libusb(CaptureData* capture_data) {
 	size_t curr_offset = 0;
 	const size_t full_size = get_capture_size(capture_data->status.device.is_rgb_888);
 	size_t bytesIn;
-	bool usb_thread_run = false;
-	std::thread processing_thread;
-	ftd2_libusb_start_thread(&processing_thread, &usb_thread_run);
+
+	libusb_register_to_event_thread();
 
 	SharedConsumerMutex is_buffer_free_shared_mutex(NUM_CAPTURE_RECEIVED_DATA_BUFFERS);
 	SharedConsumerMutex is_transfer_done_mutex(NUM_CAPTURE_RECEIVED_DATA_BUFFERS);
@@ -365,6 +364,6 @@ void ftd2_capture_main_loop_libusb(CaptureData* capture_data) {
 		resync_offset(received_data_buffers, index, full_size);
 	}
 	wait_all_ftd2_libusb_buffers_free(received_data_buffers);
-	ftd2_libusb_close_thread(&processing_thread, &usb_thread_run);
+	libusb_unregister_from_event_thread();
 	delete []received_data_buffers;
 }

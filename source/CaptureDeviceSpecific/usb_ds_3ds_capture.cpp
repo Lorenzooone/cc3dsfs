@@ -4,7 +4,6 @@
 
 #include <libusb.h>
 #include <cstring>
-#include <thread>
 #include <chrono>
 #include <iostream>
 

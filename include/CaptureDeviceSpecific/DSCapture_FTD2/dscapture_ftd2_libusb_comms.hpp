@@ -16,8 +16,6 @@ enum ftd2_flow_ctrls {
 
 void ftd2_libusb_init();
 void ftd2_libusb_end();
-void ftd2_libusb_start_thread(std::thread* thread_ptr, bool* usb_thread_run);
-void ftd2_libusb_close_thread(std::thread* thread_ptr, bool* usb_thread_run);
 
 // Generic functions
 void list_devices_ftd2_libusb(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list);
