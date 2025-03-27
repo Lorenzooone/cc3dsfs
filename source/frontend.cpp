@@ -379,7 +379,7 @@ const ShaderColorEmulationData color_profile_identity = {
 };
 
 const ShaderColorEmulationData color_profile_libretro_gba = {
-.targetGamma = 2.2f, .lum = 0.91f,
+.targetGamma = 2.2f + (0.28125 * 1.6), .lum = 0.91f,
 .rgb_mod = {
 {0.905f,  0.195f,  -0.1f},
 {0.1f,    0.65f,    0.25f},
@@ -463,7 +463,7 @@ const ShaderColorEmulationData color_profile_libretro_emulators_gba = {
 };
 
 const ShaderColorEmulationData color_profile_libretro_gbc = {
-.targetGamma = 2.2f, .lum = 0.91f,
+.targetGamma = 2.2f + (0.5 * (-1.0)), .lum = 0.91f,
 .rgb_mod = {
 {0.905f,   0.195f,   -0.1f},
 {0.1f,      0.65f,   0.25f},
