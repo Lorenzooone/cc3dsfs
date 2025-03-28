@@ -58,6 +58,58 @@ struct PACKED USBOldDSVideoInputData {
 	USBOldDSPixelData screen_data[IN_VIDEO_SIZE_DS];
 };
 
+#define OPTIMIZE_NEW_3DS_PIXEL_R_BITS 5
+#define OPTIMIZE_NEW_3DS_PIXEL_G_BITS 6
+#define OPTIMIZE_NEW_3DS_PIXEL_B_BITS 5
+
+struct PACKED USB565New3DSOptimizePixelData {
+	uint16_t r : OPTIMIZE_NEW_3DS_PIXEL_R_BITS;
+	uint16_t g : OPTIMIZE_NEW_3DS_PIXEL_G_BITS;
+	uint16_t b : OPTIMIZE_NEW_3DS_PIXEL_B_BITS;
+};
+
+struct PACKED USB888New3DSOptimizePixelData {
+	uint8_t r;
+	uint8_t g;
+	uint8_t b;
+};
+
+struct PACKED USBNew3DSOptimizeSingleSoundData {
+	uint16_t sample_index;
+	uint16_t sample_r;
+	uint16_t sample_l;
+};
+
+struct PACKED USBNew3DSOptimizeHeaderSoundData {
+	// Order is Little Endian
+	uint16_t magic;
+	uint16_t unk_fixed_1 : 1;
+	uint16_t buffer_num : 1;
+	uint16_t unk : 5;
+	uint16_t column_index : 9;
+	USBNew3DSOptimizeSingleSoundData samples[2];
+};
+
+struct PACKED USB565New3DSOptimizeInputColumnData {
+	USBNew3DSOptimizeHeaderSoundData header_sound;
+	USB565New3DSOptimizePixelData pixel[HEIGHT_3DS][2];
+};
+
+struct PACKED USB565New3DSOptimizeInputColumnData3D {
+	USBNew3DSOptimizeHeaderSoundData header_sound;
+	USB565New3DSOptimizePixelData pixel[HEIGHT_3DS][3];
+};
+
+struct PACKED USB888New3DSOptimizeInputColumnData {
+	USBNew3DSOptimizeHeaderSoundData header_sound;
+	USB888New3DSOptimizePixelData pixel[HEIGHT_3DS][2];
+};
+
+struct PACKED USB888New3DSOptimizeInputColumnData3D {
+	USBNew3DSOptimizeHeaderSoundData header_sound;
+	USB888New3DSOptimizePixelData pixel[HEIGHT_3DS][3];
+};
+
 struct PACKED ISNitroEmulatorVideoInputData {
 	uint8_t screen_data[IN_VIDEO_SIZE_DS][3];
 };
@@ -148,6 +200,22 @@ struct ALIGNED(16) PACKED ISTWLCaptureReceived {
 	ISTWLCaptureAudioReceived audio_capture_in[TWL_CAPTURE_MAX_SAMPLES_CHUNK_NUM];
 };
 
+struct ALIGNED(16) PACKED USB565New3DSOptimizeCaptureReceived {
+	USB565New3DSOptimizeInputColumnData columns_data[TOP_WIDTH_3DS + 1];
+};
+
+struct ALIGNED(16) PACKED USB565New3DSOptimizeCaptureReceived_3D {
+	USB565New3DSOptimizeInputColumnData3D columns_data[TOP_WIDTH_3DS + 1];
+};
+
+struct ALIGNED(16) PACKED USB888New3DSOptimizeCaptureReceived {
+	USB888New3DSOptimizeInputColumnData columns_data[TOP_WIDTH_3DS + 1];
+};
+
+struct ALIGNED(16) PACKED USB888New3DSOptimizeCaptureReceived_3D {
+	USB888New3DSOptimizeInputColumnData3D columns_data[TOP_WIDTH_3DS + 1];
+};
+
 #pragma pack(pop)
 
 struct ALIGNED(16) FTD2OldDSCaptureReceivedNormalPlusRaw {
@@ -166,6 +234,10 @@ union CaptureReceived {
 	ISNitroCaptureReceived is_nitro_capture_received;
 	ISTWLCaptureReceived is_twl_capture_received;
 	CypressNisetroDSCaptureReceived cypress_nisetro_capture_received;
+	USB565New3DSOptimizeCaptureReceived cypress_new_optimize_received_565;
+	USB565New3DSOptimizeCaptureReceived_3D cypress_new_optimize_received_565_3d;
+	USB888New3DSOptimizeCaptureReceived cypress_new_optimize_received_888;
+	USB888New3DSOptimizeCaptureReceived_3D cypress_new_optimize_received_888_3d;
 };
 
 struct CaptureDevice {
