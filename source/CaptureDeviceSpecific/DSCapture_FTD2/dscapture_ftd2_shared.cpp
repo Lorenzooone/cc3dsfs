@@ -377,7 +377,7 @@ bool synchronization_check(uint16_t* data_buffer, size_t size, uint16_t* next_da
 	// Schedule a read to re-synchronize
 	if(next_data_buffer != NULL) {
 		memset(next_data_buffer, 0, size_words * 2);
-		memcpy(&data_buffer[samples], next_data_buffer, (size_words - samples) * 2);
+		memcpy(next_data_buffer, &data_buffer[samples], (size_words - samples) * 2);
 	}
 	*next_size = samples * 2;
 	return false;
