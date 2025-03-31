@@ -405,6 +405,7 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 	std::int16_t (*out_buf)[MAX_SAMPLES_IN] = new std::int16_t[NUM_CONCURRENT_AUDIO_BUFFERS][MAX_SAMPLES_IN];
 	Audio audio(audio_data);
 	int audio_buf_counter = 0;
+	uint16_t last_buffer_index = -1;
 	const bool endianness = is_big_endian();
 	volatile int loaded_samples;
 	audio_output_device_data in_use_audio_output_device_data;
@@ -419,10 +420,10 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 				CaptureDataSingleBuffer* data_buffer = capture_data->data_buffers.GetReaderBuffer(CAPTURE_READER_AUDIO);
 				if(data_buffer != NULL) {
 					loaded_samples = audio.samples.size();
-					if((data_buffer->read > get_video_in_size(capture_data, data_buffer->is_3d)) && (loaded_samples < MAX_MAX_AUDIO_LATENCY) && capture_data->status.connected) {
-						uint64_t n_samples = get_audio_n_samples(capture_data, data_buffer->read, data_buffer->is_3d);
+					if((data_buffer->read >= get_video_in_size(capture_data, data_buffer->is_3d)) && (loaded_samples < MAX_MAX_AUDIO_LATENCY) && capture_data->status.connected) {
+						uint64_t n_samples = get_audio_n_samples(capture_data, data_buffer);
 						double out_time = data_buffer->time_in_buf;
-						bool conversion_success = convertAudioToOutput(out_buf[audio_buf_counter], n_samples, endianness, data_buffer, &capture_data->status, data_buffer->is_3d);
+						bool conversion_success = convertAudioToOutput(out_buf[audio_buf_counter], n_samples, last_buffer_index, endianness, data_buffer, &capture_data->status, data_buffer->is_3d);
 						if(!conversion_success)
 							audio_data->signal_conversion_error();
 						audio.samples.emplace(out_buf[audio_buf_counter], n_samples, out_time);
@@ -461,6 +462,7 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 			}
 		}
 		else {
+			last_buffer_index = -1;
 			audio.stop_audio();
 			audio.stop();
 			default_sleep();

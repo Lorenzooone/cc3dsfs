@@ -222,10 +222,14 @@ void captureCall(CaptureData* capture_data) {
 	}
 }
 
-uint64_t get_audio_n_samples(CaptureData* capture_data, uint64_t read, bool is_3d) {
+uint64_t get_audio_n_samples(CaptureData* capture_data, CaptureDataSingleBuffer* data_buffer) {
 	if(!capture_data->status.device.has_audio)
 		return 0;
-	uint64_t n_samples = (read - get_video_in_size(capture_data, is_3d)) / 2;
+	#ifdef USE_CYPRESS_NEW_OPTIMIZE
+	if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_NEW_OPTIMIZE)
+		return -1;
+	#endif
+	uint64_t n_samples = (data_buffer->read - get_video_in_size(capture_data, data_buffer->is_3d)) / 2;
 	if(n_samples > capture_data->status.device.max_samples_in)
 		n_samples = capture_data->status.device.max_samples_in;
 	// Avoid entering a glitched state due to a partial packet or something

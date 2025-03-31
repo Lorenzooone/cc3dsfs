@@ -20,7 +20,7 @@
 #define FTD2_INTRA_PACKET_HEADER_SIZE 2
 #define MAX_PACKET_SIZE_FTD2 (MAX_PACKET_SIZE_USB2 - FTD2_INTRA_PACKET_HEADER_SIZE)
 
-enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_FTD2, CAPTURE_CONN_IS_NITRO, CAPTURE_CONN_CYPRESS_NISETRO };
+enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_FTD2, CAPTURE_CONN_IS_NITRO, CAPTURE_CONN_CYPRESS_NISETRO, CAPTURE_CONN_CYPRESS_NEW_OPTIMIZE };
 enum InputVideoDataType { VIDEO_DATA_RGB, VIDEO_DATA_BGR, VIDEO_DATA_RGB16, VIDEO_DATA_BGR16 };
 enum CaptureScreensType { CAPTURE_SCREENS_BOTH, CAPTURE_SCREENS_TOP, CAPTURE_SCREENS_BOTTOM, CAPTURE_SCREENS_ENUM_END };
 enum CaptureSpeedsType { CAPTURE_SPEEDS_FULL, CAPTURE_SPEEDS_HALF, CAPTURE_SPEEDS_THIRD, CAPTURE_SPEEDS_QUARTER, CAPTURE_SPEEDS_ENUM_END };
@@ -76,8 +76,8 @@ struct PACKED USB888New3DSOptimizePixelData {
 
 struct PACKED USBNew3DSOptimizeSingleSoundData {
 	uint16_t sample_index;
-	uint16_t sample_r;
 	uint16_t sample_l;
+	uint16_t sample_r;
 };
 
 struct PACKED USBNew3DSOptimizeHeaderSoundData {
@@ -201,19 +201,23 @@ struct ALIGNED(16) PACKED ISTWLCaptureReceived {
 };
 
 struct ALIGNED(16) PACKED USB565New3DSOptimizeCaptureReceived {
-	USB565New3DSOptimizeInputColumnData columns_data[TOP_WIDTH_3DS + 1];
+	USB565New3DSOptimizeInputColumnData columns_data[TOP_WIDTH_3DS];
+	USB565New3DSOptimizePixelData bottom_only_column[HEIGHT_3DS][2];
 };
 
 struct ALIGNED(16) PACKED USB565New3DSOptimizeCaptureReceived_3D {
-	USB565New3DSOptimizeInputColumnData3D columns_data[TOP_WIDTH_3DS + 1];
+	USB565New3DSOptimizeInputColumnData3D columns_data[TOP_WIDTH_3DS];
+	USB565New3DSOptimizePixelData bottom_only_column[HEIGHT_3DS][3];
 };
 
 struct ALIGNED(16) PACKED USB888New3DSOptimizeCaptureReceived {
-	USB888New3DSOptimizeInputColumnData columns_data[TOP_WIDTH_3DS + 1];
+	USB888New3DSOptimizeInputColumnData columns_data[TOP_WIDTH_3DS];
+	USB888New3DSOptimizePixelData bottom_only_column[HEIGHT_3DS][2];
 };
 
 struct ALIGNED(16) PACKED USB888New3DSOptimizeCaptureReceived_3D {
-	USB888New3DSOptimizeInputColumnData3D columns_data[TOP_WIDTH_3DS + 1];
+	USB888New3DSOptimizeInputColumnData3D columns_data[TOP_WIDTH_3DS];
+	USB888New3DSOptimizePixelData bottom_only_column[HEIGHT_3DS][3];
 };
 
 #pragma pack(pop)

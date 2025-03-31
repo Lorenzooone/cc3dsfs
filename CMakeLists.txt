@@ -550,7 +550,7 @@ add_custom_command(
 
 add_custom_command(
 	OUTPUT ${TOOLS_DATA_DIR}/is_twl_cap_init_seed_table.cpp
-	COMMENT "Convert binary to C - IS TWL CRC32 table"
+	COMMENT "Convert binary to C - IS TWL Init Seed table"
 	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/is_twl_cap_init_seed_table.bin ${TOOLS_DATA_DIR} is_twl_cap_init_seed_table is_twl_cap_init_seed_table
 	DEPENDS ${CMAKE_SOURCE_DIR}/bin/is_twl_cap_init_seed_table.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
 )
