@@ -492,7 +492,6 @@ if(USE_FTD2XX_FOR_NEW_DS_LOOPY)
 endif()
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-
 # search headers and libraries in the target environment
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
@@ -505,10 +504,10 @@ set(OUTPUT_NAME cc3dsfs)
 if(MSVC)
 	set_source_files_properties(source/conversions.cpp PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:Release>:/O2>")
 else()
-	set_source_files_properties(source/conversions.cpp PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:Release>:-O3>")
+	set_source_files_properties(source/conversions.cpp PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:Release>:-O3;-funroll-loops>")
 endif()
-add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp source/Menus/ScalingRatioMenu.cpp source/Menus/ISNitroMenu.cpp source/Menus/VideoEffectsMenu.cpp source/CaptureDataBuffers.cpp source/Menus/InputMenu.cpp source/Menus/AudioDeviceMenu.cpp source/Menus/SeparatorMenu.cpp source/Menus/ColorCorrectionMenu.cpp source/Menus/Main3DMenu.cpp source/Menus/SecondScreen3DRelativePositionMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp ${TOOLS_DATA_DIR}/shaders_list.cpp ${SOURCE_CPP_EXTRA_FILES})
 
+add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp source/Menus/ScalingRatioMenu.cpp source/Menus/ISNitroMenu.cpp source/Menus/VideoEffectsMenu.cpp source/CaptureDataBuffers.cpp source/Menus/InputMenu.cpp source/Menus/AudioDeviceMenu.cpp source/Menus/SeparatorMenu.cpp source/Menus/ColorCorrectionMenu.cpp source/Menus/Main3DMenu.cpp source/Menus/SecondScreen3DRelativePositionMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp ${TOOLS_DATA_DIR}/shaders_list.cpp ${SOURCE_CPP_EXTRA_FILES})
 
 if(NOT ("${EXTRA_DEPENDENCIES}" STREQUAL ""))
 	add_dependencies(${OUTPUT_NAME} ${EXTRA_DEPENDENCIES})

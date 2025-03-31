@@ -61,7 +61,7 @@ On Windows, you may need to install the Visual C++ Redistributable set of librar
 To compile the program, assuming CMake, git and g++ are installed on the system, this is the command which should be launched:
 
 ```
-cmake -B build ; cmake --build build --config Release
+cmake -B build -DCMAKE_BUILD_TYPE=Release ; cmake --build build --config Release
 ```
 
 This will download FTD3XX, FTD2XX, libusb and SFML, which may take a while during the first execution of the command. Later runs should be much faster.
@@ -69,7 +69,7 @@ On MacOS, you may also be prompted to install the Apple Command Line Developer T
 
 When compiling on a Raspberry Pi, to enable usage of GPIO, use:
 ```
-cmake -B build -DRASPBERRY_PI_COMPILATION=TRUE ; cmake --build build --config Release
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DRASPBERRY_PI_COMPILATION=TRUE ; cmake --build build --config Release
 ```
 
 ### Docker Compilation

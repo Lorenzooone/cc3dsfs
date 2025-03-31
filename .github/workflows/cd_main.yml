@@ -59,7 +59,7 @@ jobs:
     - name: Configure
       if: runner.os != 'Linux'
       shell: bash
-      run: cmake -S . -B build -DCMAKE_INSTALL_PREFIX=install ${{matrix.platform.flags}} ${{matrix.config.flags}}
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ${{matrix.platform.flags}} ${{matrix.config.flags}}
 
     - name: Build Linux
       if: runner.os == 'Linux'

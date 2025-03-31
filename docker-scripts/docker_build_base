@@ -1,7 +1,7 @@
 #!/bin/sh
 
 export LANG=C.UTF-8
-cmake -S . -B $1 $2
+cmake -S . -B $1 -DCMAKE_BUILD_TYPE=Release $2
 cmake --build $1 --config Release -j
 cd $1
 cpack -G ZIP

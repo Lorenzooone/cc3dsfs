@@ -9,83 +9,39 @@
 
 #define OPTIMIZE_AUDIO_BUFFER_MAX_SIZE 0x200
 
+#define INTERLEAVED_RGB565_PIXEL_NUM 4
+#define INTERLEAVED_RGB565_PIXEL_SIZE 2
+#define INTERLEAVED_RGB565_DATA_SIZE sizeof(uint16_t)
+#define INTERLEAVED_RGB565_TOTAL_SIZE (INTERLEAVED_RGB565_PIXEL_SIZE * INTERLEAVED_RGB565_PIXEL_NUM / INTERLEAVED_RGB565_DATA_SIZE)
+
+#define INTERLEAVED_RGB888_PIXEL_NUM 4
+#define INTERLEAVED_RGB888_PIXEL_SIZE 3
+#define INTERLEAVED_RGB888_DATA_SIZE sizeof(uint16_t)
+#define INTERLEAVED_RGB888_TOTAL_SIZE (INTERLEAVED_RGB888_PIXEL_SIZE * INTERLEAVED_RGB888_PIXEL_NUM / INTERLEAVED_RGB888_DATA_SIZE)
+
 struct interleaved_rgb565_pixels {
-	uint16_t bottom_first;
-	uint16_t top_first;
-	uint16_t bottom_second;
-	uint16_t top_second;
-	uint16_t bottom_third;
-	uint16_t top_third;
-	uint16_t bottom_fourth;
-	uint16_t top_fourth;
+	uint16_t pixels[INTERLEAVED_RGB565_TOTAL_SIZE][2];
 };
 
-struct ALIGNED(8) interleaved_3d_rgb565_pixels {
-	uint16_t bottom_first;
-	uint16_t top_l_first;
-	uint16_t top_r_first;
-	uint16_t bottom_second;
-	uint16_t top_l_second;
-	uint16_t top_r_second;
-	uint16_t bottom_third;
-	uint16_t top_l_third;
-	uint16_t top_r_third;
-	uint16_t bottom_fourth;
-	uint16_t top_l_fourth;
-	uint16_t top_r_fourth;
+struct ALIGNED(INTERLEAVED_RGB565_PIXEL_NUM * INTERLEAVED_RGB565_PIXEL_SIZE) interleaved_3d_rgb565_pixels {
+	uint16_t pixels[INTERLEAVED_RGB565_TOTAL_SIZE][3];
 };
 
 struct deinterleaved_rgb565_pixels {
-	uint64_t first : 16;
-	uint64_t second : 16;
-	uint64_t third : 16;
-	uint64_t fourth : 16;
+	uint16_t pixels[INTERLEAVED_RGB565_TOTAL_SIZE];
 };
 
-struct ALIGNED(8) interleaved_rgb888_u16_pixels {
-	uint16_t bottom_first;
-	uint16_t top_first;
-	uint16_t bottom_second;
-	uint16_t top_second;
-	uint16_t bottom_third;
-	uint16_t top_third;
-	uint16_t bottom_fourth;
-	uint16_t top_fourth;
-	uint16_t bottom_fifth;
-	uint16_t top_fifth;
-	uint16_t bottom_sixth;
-	uint16_t top_sixth;
+struct ALIGNED(INTERLEAVED_RGB888_PIXEL_NUM * 2) interleaved_rgb888_u16_pixels {
+	uint16_t pixels[INTERLEAVED_RGB888_TOTAL_SIZE][2];
 };
 
-struct ALIGNED(4) interleaved_3d_rgb888_u16_pixels {
-	uint16_t bottom_first;
-	uint16_t top_l_first;
-	uint16_t top_r_first;
-	uint16_t bottom_second;
-	uint16_t top_l_second;
-	uint16_t top_r_second;
-	uint16_t bottom_third;
-	uint16_t top_l_third;
-	uint16_t top_r_third;
-	uint16_t bottom_fourth;
-	uint16_t top_l_fourth;
-	uint16_t top_r_fourth;
-	uint16_t bottom_fifth;
-	uint16_t top_l_fifth;
-	uint16_t top_r_fifth;
-	uint16_t bottom_sixth;
-	uint16_t top_l_sixth;
-	uint16_t top_r_sixth;
+struct ALIGNED(INTERLEAVED_RGB888_PIXEL_NUM) interleaved_3d_rgb888_u16_pixels {
+	uint16_t pixels[INTERLEAVED_RGB888_TOTAL_SIZE][3];
 };
 
-struct ALIGNED(4) deinterleaved_rgb888_u16_pixels {
+struct ALIGNED(INTERLEAVED_RGB888_PIXEL_NUM) deinterleaved_rgb888_u16_pixels {
 	// 4 pixels
-	uint16_t first;
-	uint16_t second;
-	uint16_t third;
-	uint16_t fourth;
-	uint16_t fifth;
-	uint16_t sixth;
+	uint16_t pixels[INTERLEAVED_RGB888_TOTAL_SIZE];
 };
 
 struct twl_16bit_pixels {
@@ -124,311 +80,265 @@ static inline uint16_t _reverse_endianness(uint16_t data) {
 
 static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLE(deinterleaved_rgb565_pixels* out_ptr_top, deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
 	//de-interleave pixels
-	for(size_t i = 0; i < num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * num_iters) + i;
-		size_t output_halfline_pixel = (output_halfline * num_iters) + i;
-		out_ptr_bottom[output_halfline_pixel].first = in_ptr[input_halfline_pixel].bottom_first;
-		out_ptr_bottom[output_halfline_pixel].second = in_ptr[input_halfline_pixel].bottom_second;
-		out_ptr_bottom[output_halfline_pixel].third = in_ptr[input_halfline_pixel].bottom_third;
-		out_ptr_bottom[output_halfline_pixel].fourth = in_ptr[input_halfline_pixel].bottom_fourth;
-		out_ptr_top[output_halfline_pixel].first = in_ptr[input_halfline_pixel].top_first;
-		out_ptr_top[output_halfline_pixel].second = in_ptr[input_halfline_pixel].top_second;
-		out_ptr_top[output_halfline_pixel].third = in_ptr[input_halfline_pixel].top_third;
-		out_ptr_top[output_halfline_pixel].fourth = in_ptr[input_halfline_pixel].top_fourth;
+	const int bottom_pos = 0;
+	const int top_pos = 1;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
+	for(size_t i = 0; i < real_num_iters; i++) {
+		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
+		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_bottom[output_halfline_pixel].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][bottom_pos];
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_top[output_halfline_pixel].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_pos];
 	}
 }
 
 static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoTop(deinterleaved_rgb565_pixels* out_ptr_top, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
 	//de-interleave pixels
-	for(size_t i = 0; i < num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * num_iters) + i;
-		size_t output_halfline_pixel = (output_halfline * num_iters) + i;
-		out_ptr_top[output_halfline_pixel].first = in_ptr[input_halfline_pixel].top_first;
-		out_ptr_top[output_halfline_pixel].second = in_ptr[input_halfline_pixel].top_second;
-		out_ptr_top[output_halfline_pixel].third = in_ptr[input_halfline_pixel].top_third;
-		out_ptr_top[output_halfline_pixel].fourth = in_ptr[input_halfline_pixel].top_fourth;
+	const int top_pos = 1;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
+	for(size_t i = 0; i < real_num_iters; i++) {
+		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
+		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_top[output_halfline_pixel].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_pos];
 	}
 }
 
 static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoBottom(deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
 	//de-interleave pixels
-	for(size_t i = 0; i < num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * num_iters) + i;
-		size_t output_halfline_pixel = (output_halfline * num_iters) + i;
-		out_ptr_bottom[output_halfline_pixel].first = in_ptr[input_halfline_pixel].bottom_first;
-		out_ptr_bottom[output_halfline_pixel].second = in_ptr[input_halfline_pixel].bottom_second;
-		out_ptr_bottom[output_halfline_pixel].third = in_ptr[input_halfline_pixel].bottom_third;
-		out_ptr_bottom[output_halfline_pixel].fourth = in_ptr[input_halfline_pixel].bottom_fourth;
+	const int bottom_pos = 0;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
+	for(size_t i = 0; i < real_num_iters; i++) {
+		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
+		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_bottom[output_halfline_pixel].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][bottom_pos];
 	}
 }
 
 static inline void usb_rgb565convertInterleave3DVideoToOutputDirectOptLE(deinterleaved_rgb565_pixels* out_ptr_top_l, deinterleaved_rgb565_pixels* out_ptr_top_r, deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_3d_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top) {
 	//de-interleave pixels
-	const size_t output_halfline_pos = output_halfline * num_iters;
-	for(size_t i = 0; i < num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * num_iters) + i;
+	const int bottom_pos = 0;
+	const int top_l_pos = 1;
+	const int top_r_pos = 2;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
+	const size_t output_halfline_pos = output_halfline * real_num_iters;
+	for(size_t i = 0; i < real_num_iters; i++) {
+		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
 		size_t output_halfline_pixel_bottom = output_halfline_pos + i;
 		size_t output_halfline_pixel_top = (output_halfline_pos * multiplier_top) + i;
-		out_ptr_bottom[output_halfline_pixel_bottom].first = in_ptr[input_halfline_pixel].bottom_first;
-		out_ptr_bottom[output_halfline_pixel_bottom].second = in_ptr[input_halfline_pixel].bottom_second;
-		out_ptr_bottom[output_halfline_pixel_bottom].third = in_ptr[input_halfline_pixel].bottom_third;
-		out_ptr_bottom[output_halfline_pixel_bottom].fourth = in_ptr[input_halfline_pixel].bottom_fourth;
-		out_ptr_top_l[output_halfline_pixel_top].first = in_ptr[input_halfline_pixel].top_l_first;
-		out_ptr_top_l[output_halfline_pixel_top].second = in_ptr[input_halfline_pixel].top_l_second;
-		out_ptr_top_l[output_halfline_pixel_top].third = in_ptr[input_halfline_pixel].top_l_third;
-		out_ptr_top_l[output_halfline_pixel_top].fourth = in_ptr[input_halfline_pixel].top_l_fourth;
-		out_ptr_top_r[output_halfline_pixel_top].first = in_ptr[input_halfline_pixel].top_r_first;
-		out_ptr_top_r[output_halfline_pixel_top].second = in_ptr[input_halfline_pixel].top_r_second;
-		out_ptr_top_r[output_halfline_pixel_top].third = in_ptr[input_halfline_pixel].top_r_third;
-		out_ptr_top_r[output_halfline_pixel_top].fourth = in_ptr[input_halfline_pixel].top_r_fourth;
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_bottom[output_halfline_pixel_bottom].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][bottom_pos];
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_top_l[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_l_pos];
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_top_r[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_r_pos];
 	}
 }
 
 static inline void usb_rgb565convertInterleave3DVideoToOutputDirectOptLEMonoTop(deinterleaved_rgb565_pixels* out_ptr_top_l, deinterleaved_rgb565_pixels* out_ptr_top_r, interleaved_3d_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top) {
 	//de-interleave pixels
-	const size_t output_halfline_pos = output_halfline * num_iters;
-	for(size_t i = 0; i < num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * num_iters) + i;
+	const int top_l_pos = 1;
+	const int top_r_pos = 2;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
+	const size_t output_halfline_pos = output_halfline * real_num_iters;
+	for(size_t i = 0; i < real_num_iters; i++) {
+		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
 		size_t output_halfline_pixel_top = (output_halfline_pos * multiplier_top) + i;
-		out_ptr_top_l[output_halfline_pixel_top].first = in_ptr[input_halfline_pixel].top_l_first;
-		out_ptr_top_l[output_halfline_pixel_top].second = in_ptr[input_halfline_pixel].top_l_second;
-		out_ptr_top_l[output_halfline_pixel_top].third = in_ptr[input_halfline_pixel].top_l_third;
-		out_ptr_top_l[output_halfline_pixel_top].fourth = in_ptr[input_halfline_pixel].top_l_fourth;
-		out_ptr_top_r[output_halfline_pixel_top].first = in_ptr[input_halfline_pixel].top_r_first;
-		out_ptr_top_r[output_halfline_pixel_top].second = in_ptr[input_halfline_pixel].top_r_second;
-		out_ptr_top_r[output_halfline_pixel_top].third = in_ptr[input_halfline_pixel].top_r_third;
-		out_ptr_top_r[output_halfline_pixel_top].fourth = in_ptr[input_halfline_pixel].top_r_fourth;
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_top_l[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_l_pos];
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_top_r[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_r_pos];
 	}
 }
 
 static inline void usb_rgb565convertInterleave3DVideoToOutputDirectOptLEMonoBottom(deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_3d_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
 	//de-interleave pixels
-	for(size_t i = 0; i < num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * num_iters) + i;
-		size_t output_halfline_pixel = (output_halfline * num_iters) + i;
-		out_ptr_bottom[output_halfline_pixel].first = in_ptr[input_halfline_pixel].bottom_first;
-		out_ptr_bottom[output_halfline_pixel].second = in_ptr[input_halfline_pixel].bottom_second;
-		out_ptr_bottom[output_halfline_pixel].third = in_ptr[input_halfline_pixel].bottom_third;
-		out_ptr_bottom[output_halfline_pixel].fourth = in_ptr[input_halfline_pixel].bottom_fourth;
+	const int bottom_pos = 0;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
+	const size_t output_halfline_pos = output_halfline * real_num_iters;
+	for(size_t i = 0; i < real_num_iters; i++) {
+		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
+		size_t output_halfline_pixel = output_halfline_pos + i;
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_bottom[output_halfline_pixel].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][bottom_pos];
 	}
 }
 
 static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBE(deinterleaved_rgb565_pixels* out_ptr_top, deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
 	//de-interleave pixels
-	for(size_t i = 0; i < num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * num_iters) + i;
-		size_t output_halfline_pixel = (output_halfline * num_iters) + i;
-		out_ptr_bottom[output_halfline_pixel].first = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_first);
-		out_ptr_bottom[output_halfline_pixel].second = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_second);
-		out_ptr_bottom[output_halfline_pixel].third = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_third);
-		out_ptr_bottom[output_halfline_pixel].fourth = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_fourth);
-		out_ptr_top[output_halfline_pixel].first = _reverse_endianness(in_ptr[input_halfline_pixel].top_first);
-		out_ptr_top[output_halfline_pixel].second = _reverse_endianness(in_ptr[input_halfline_pixel].top_second);
-		out_ptr_top[output_halfline_pixel].third = _reverse_endianness(in_ptr[input_halfline_pixel].top_third);
-		out_ptr_top[output_halfline_pixel].fourth = _reverse_endianness(in_ptr[input_halfline_pixel].top_fourth);
+	const int bottom_pos = 0;
+	const int top_pos = 1;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
+	for(size_t i = 0; i < real_num_iters; i++) {
+		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
+		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_bottom[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][bottom_pos]);
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_top[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_pos]);
 	}
 }
 
 static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoTop(deinterleaved_rgb565_pixels* out_ptr_top, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
 	//de-interleave pixels
-	for(size_t i = 0; i < num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * num_iters) + i;
-		size_t output_halfline_pixel = (output_halfline * num_iters) + i;
-		out_ptr_top[output_halfline_pixel].first = _reverse_endianness(in_ptr[input_halfline_pixel].top_first);
-		out_ptr_top[output_halfline_pixel].second = _reverse_endianness(in_ptr[input_halfline_pixel].top_second);
-		out_ptr_top[output_halfline_pixel].third = _reverse_endianness(in_ptr[input_halfline_pixel].top_third);
-		out_ptr_top[output_halfline_pixel].fourth = _reverse_endianness(in_ptr[input_halfline_pixel].top_fourth);
+	const int top_pos = 1;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
+	for(size_t i = 0; i < real_num_iters; i++) {
+		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
+		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_top[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_pos]);
 	}
 }
 
-static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoBottom(deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, const int num_screens = 2) {
+static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoBottom(deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
 	//de-interleave pixels
-	for(size_t i = 0; i < num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * num_iters) + i;
-		size_t output_halfline_pixel = (output_halfline * num_iters) + i;
-		out_ptr_bottom[output_halfline_pixel].first = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_first);
-		out_ptr_bottom[output_halfline_pixel].second = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_second);
-		out_ptr_bottom[output_halfline_pixel].third = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_third);
-		out_ptr_bottom[output_halfline_pixel].fourth = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_fourth);
+	const int bottom_pos = 0;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
+	for(size_t i = 0; i < real_num_iters; i++) {
+		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
+		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_bottom[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][bottom_pos]);
 	}
 }
 
 static inline void usb_rgb565convertInterleave3DVideoToOutputDirectOptBE(deinterleaved_rgb565_pixels* out_ptr_top_l, deinterleaved_rgb565_pixels* out_ptr_top_r, deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_3d_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top) {
 	//de-interleave pixels
-	const size_t output_halfline_pos = output_halfline * num_iters;
-	for(size_t i = 0; i < num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * num_iters) + i;
+	const int bottom_pos = 0;
+	const int top_l_pos = 1;
+	const int top_r_pos = 2;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
+	const size_t output_halfline_pos = output_halfline * real_num_iters;
+	for(size_t i = 0; i < real_num_iters; i++) {
+		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
 		size_t output_halfline_pixel_bottom = output_halfline_pos + i;
 		size_t output_halfline_pixel_top = (output_halfline_pos * multiplier_top) + i;
-		out_ptr_bottom[output_halfline_pixel_bottom].first = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_first);
-		out_ptr_bottom[output_halfline_pixel_bottom].second = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_second);
-		out_ptr_bottom[output_halfline_pixel_bottom].third = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_third);
-		out_ptr_bottom[output_halfline_pixel_bottom].fourth = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_fourth);
-		out_ptr_top_l[output_halfline_pixel_top].first = _reverse_endianness(in_ptr[input_halfline_pixel].top_l_first);
-		out_ptr_top_l[output_halfline_pixel_top].second = _reverse_endianness(in_ptr[input_halfline_pixel].top_l_second);
-		out_ptr_top_l[output_halfline_pixel_top].third = _reverse_endianness(in_ptr[input_halfline_pixel].top_l_third);
-		out_ptr_top_l[output_halfline_pixel_top].fourth = _reverse_endianness(in_ptr[input_halfline_pixel].top_l_fourth);
-		out_ptr_top_r[output_halfline_pixel_top].first = _reverse_endianness(in_ptr[input_halfline_pixel].top_r_first);
-		out_ptr_top_r[output_halfline_pixel_top].second = _reverse_endianness(in_ptr[input_halfline_pixel].top_r_second);
-		out_ptr_top_r[output_halfline_pixel_top].third = _reverse_endianness(in_ptr[input_halfline_pixel].top_r_third);
-		out_ptr_top_r[output_halfline_pixel_top].fourth = _reverse_endianness(in_ptr[input_halfline_pixel].top_r_fourth);
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_bottom[output_halfline_pixel_bottom].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][bottom_pos]);
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_top_l[output_halfline_pixel_top].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_l_pos]);
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_top_r[output_halfline_pixel_top].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_r_pos]);
 	}
 }
 
 static inline void usb_rgb565convertInterleave3DVideoToOutputDirectOptBEMonoTop(deinterleaved_rgb565_pixels* out_ptr_top_l, deinterleaved_rgb565_pixels* out_ptr_top_r, interleaved_3d_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top) {
 	//de-interleave pixels
-	const size_t output_halfline_pos = output_halfline * num_iters;
-	for(size_t i = 0; i < num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * num_iters) + i;
+	const int top_l_pos = 1;
+	const int top_r_pos = 2;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
+	const size_t output_halfline_pos = output_halfline * real_num_iters;
+	for(size_t i = 0; i < real_num_iters; i++) {
+		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
 		size_t output_halfline_pixel_top = (output_halfline_pos * multiplier_top) + i;
-		out_ptr_top_l[output_halfline_pixel_top].first = _reverse_endianness(in_ptr[input_halfline_pixel].top_l_first);
-		out_ptr_top_l[output_halfline_pixel_top].second = _reverse_endianness(in_ptr[input_halfline_pixel].top_l_second);
-		out_ptr_top_l[output_halfline_pixel_top].third = _reverse_endianness(in_ptr[input_halfline_pixel].top_l_third);
-		out_ptr_top_l[output_halfline_pixel_top].fourth = _reverse_endianness(in_ptr[input_halfline_pixel].top_l_fourth);
-		out_ptr_top_r[output_halfline_pixel_top].first = _reverse_endianness(in_ptr[input_halfline_pixel].top_r_first);
-		out_ptr_top_r[output_halfline_pixel_top].second = _reverse_endianness(in_ptr[input_halfline_pixel].top_r_second);
-		out_ptr_top_r[output_halfline_pixel_top].third = _reverse_endianness(in_ptr[input_halfline_pixel].top_r_third);
-		out_ptr_top_r[output_halfline_pixel_top].fourth = _reverse_endianness(in_ptr[input_halfline_pixel].top_r_fourth);
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_top_l[output_halfline_pixel_top].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_l_pos]);
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_top_r[output_halfline_pixel_top].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_r_pos]);
 	}
 }
 
 static inline void usb_rgb565convertInterleave3DVideoToOutputDirectOptBEMonoBottom(deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_3d_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
-	const size_t output_halfline_pos = output_halfline * num_iters;
-	for(size_t i = 0; i < num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * num_iters) + i;
+	//de-interleave pixels
+	const int bottom_pos = 0;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
+	const size_t output_halfline_pos = output_halfline * real_num_iters;
+	for(size_t i = 0; i < real_num_iters; i++) {
+		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
 		size_t output_halfline_pixel_bottom = output_halfline_pos + i;
-		out_ptr_bottom[output_halfline_pixel_bottom].first = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_first);
-		out_ptr_bottom[output_halfline_pixel_bottom].second = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_second);
-		out_ptr_bottom[output_halfline_pixel_bottom].third = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_third);
-		out_ptr_bottom[output_halfline_pixel_bottom].fourth = _reverse_endianness(in_ptr[input_halfline_pixel].bottom_fourth);
+		for(int j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
+			out_ptr_bottom[output_halfline_pixel_bottom].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][bottom_pos]);
 	}
 }
 
 static inline void usb_rgb888convertInterleaveU16VideoToOutputDirectOpt(deinterleaved_rgb888_u16_pixels* out_ptr_top, deinterleaved_rgb888_u16_pixels* out_ptr_bottom, interleaved_rgb888_u16_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
 	//de-interleave pixels
-	const int pixel_size = 3;
-	const int num_pixels_processed = sizeof(deinterleaved_rgb888_u16_pixels) / pixel_size;
-	const size_t real_num_iters = num_iters / num_pixels_processed;
+	const int bottom_pos = 0;
+	const int top_pos = 1;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB888_PIXEL_NUM;
 	for(size_t i = 0; i < real_num_iters; i++) {
 		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
 		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
-		out_ptr_bottom[output_halfline_pixel].first = in_ptr[input_halfline_pixel].bottom_first;
-		out_ptr_bottom[output_halfline_pixel].second = in_ptr[input_halfline_pixel].bottom_second;
-		out_ptr_bottom[output_halfline_pixel].third = in_ptr[input_halfline_pixel].bottom_third;
-		out_ptr_bottom[output_halfline_pixel].fourth = in_ptr[input_halfline_pixel].bottom_fourth;
-		out_ptr_bottom[output_halfline_pixel].fifth = in_ptr[input_halfline_pixel].bottom_fifth;
-		out_ptr_bottom[output_halfline_pixel].sixth = in_ptr[input_halfline_pixel].bottom_sixth;
-		out_ptr_top[output_halfline_pixel].first = in_ptr[input_halfline_pixel].top_first;
-		out_ptr_top[output_halfline_pixel].second = in_ptr[input_halfline_pixel].top_second;
-		out_ptr_top[output_halfline_pixel].third = in_ptr[input_halfline_pixel].top_third;
-		out_ptr_top[output_halfline_pixel].fourth = in_ptr[input_halfline_pixel].top_fourth;
-		out_ptr_top[output_halfline_pixel].fifth = in_ptr[input_halfline_pixel].top_fifth;
-		out_ptr_top[output_halfline_pixel].sixth = in_ptr[input_halfline_pixel].top_sixth;
+		for(int j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
+			out_ptr_bottom[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][bottom_pos]);
+		for(int j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
+			out_ptr_top[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_pos]);
 	}
 }
 
 static inline void usb_rgb888convertInterleaveU16VideoToOutputDirectOptMonoTop(deinterleaved_rgb888_u16_pixels* out_ptr_top, interleaved_rgb888_u16_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
 	//de-interleave pixels
-	const int pixel_size = 3;
-	const int num_pixels_processed = sizeof(deinterleaved_rgb888_u16_pixels) / pixel_size;
-	const size_t real_num_iters = num_iters / num_pixels_processed;
+	const int top_pos = 1;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB888_PIXEL_NUM;
 	for(size_t i = 0; i < real_num_iters; i++) {
 		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
 		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
-		out_ptr_top[output_halfline_pixel].first = in_ptr[input_halfline_pixel].top_first;
-		out_ptr_top[output_halfline_pixel].second = in_ptr[input_halfline_pixel].top_second;
-		out_ptr_top[output_halfline_pixel].third = in_ptr[input_halfline_pixel].top_third;
-		out_ptr_top[output_halfline_pixel].fourth = in_ptr[input_halfline_pixel].top_fourth;
-		out_ptr_top[output_halfline_pixel].fifth = in_ptr[input_halfline_pixel].top_fifth;
-		out_ptr_top[output_halfline_pixel].sixth = in_ptr[input_halfline_pixel].top_sixth;
+		for(int j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
+			out_ptr_top[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_pos]);
 	}
 }
 
 static inline void usb_rgb888convertInterleaveU16VideoToOutputDirectOptMonoBottom(deinterleaved_rgb888_u16_pixels* out_ptr_bottom, interleaved_rgb888_u16_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
 	//de-interleave pixels
-	const int pixel_size = 3;
-	const int num_pixels_processed = sizeof(deinterleaved_rgb888_u16_pixels) / pixel_size;
-	const size_t real_num_iters = num_iters / num_pixels_processed;
+	const int bottom_pos = 0;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB888_PIXEL_NUM;
 	for(size_t i = 0; i < real_num_iters; i++) {
 		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
 		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
-		out_ptr_bottom[output_halfline_pixel].first = in_ptr[input_halfline_pixel].bottom_first;
-		out_ptr_bottom[output_halfline_pixel].second = in_ptr[input_halfline_pixel].bottom_second;
-		out_ptr_bottom[output_halfline_pixel].third = in_ptr[input_halfline_pixel].bottom_third;
-		out_ptr_bottom[output_halfline_pixel].fourth = in_ptr[input_halfline_pixel].bottom_fourth;
-		out_ptr_bottom[output_halfline_pixel].fifth = in_ptr[input_halfline_pixel].bottom_fifth;
-		out_ptr_bottom[output_halfline_pixel].sixth = in_ptr[input_halfline_pixel].bottom_sixth;
+		for(int j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
+			out_ptr_bottom[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][bottom_pos]);
 	}
 }
 
 static inline void usb_rgb888convertInterleaveU163DVideoToOutputDirectOpt(deinterleaved_rgb888_u16_pixels* out_ptr_top_l, deinterleaved_rgb888_u16_pixels* out_ptr_top_r, deinterleaved_rgb888_u16_pixels* out_ptr_bottom, interleaved_3d_rgb888_u16_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top) {
 	//de-interleave pixels
-	const int pixel_size = 3;
-	const int num_pixels_processed = sizeof(deinterleaved_rgb888_u16_pixels) / pixel_size;
-	const size_t real_num_iters = num_iters / num_pixels_processed;
-	const size_t output_halfline_pos = output_halfline * num_iters;
+	const int bottom_pos = 0;
+	const int top_l_pos = 1;
+	const int top_r_pos = 2;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB888_PIXEL_NUM;
+	const size_t output_halfline_pos = output_halfline * real_num_iters;
 	for(size_t i = 0; i < real_num_iters; i++) {
 		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
 		size_t output_halfline_pixel_bottom = output_halfline_pos + i;
 		size_t output_halfline_pixel_top = (output_halfline_pos * multiplier_top) + i;
-		out_ptr_bottom[output_halfline_pixel_bottom].first = in_ptr[input_halfline_pixel].bottom_first;
-		out_ptr_bottom[output_halfline_pixel_bottom].second = in_ptr[input_halfline_pixel].bottom_second;
-		out_ptr_bottom[output_halfline_pixel_bottom].third = in_ptr[input_halfline_pixel].bottom_third;
-		out_ptr_bottom[output_halfline_pixel_bottom].fourth = in_ptr[input_halfline_pixel].bottom_fourth;
-		out_ptr_bottom[output_halfline_pixel_bottom].fifth = in_ptr[input_halfline_pixel].bottom_fifth;
-		out_ptr_bottom[output_halfline_pixel_bottom].sixth = in_ptr[input_halfline_pixel].bottom_sixth;
-		out_ptr_top_l[output_halfline_pixel_top].first = in_ptr[input_halfline_pixel].top_l_first;
-		out_ptr_top_l[output_halfline_pixel_top].second = in_ptr[input_halfline_pixel].top_l_second;
-		out_ptr_top_l[output_halfline_pixel_top].third = in_ptr[input_halfline_pixel].top_l_third;
-		out_ptr_top_l[output_halfline_pixel_top].fourth = in_ptr[input_halfline_pixel].top_l_fourth;
-		out_ptr_top_l[output_halfline_pixel_top].fifth = in_ptr[input_halfline_pixel].top_l_fifth;
-		out_ptr_top_l[output_halfline_pixel_top].sixth = in_ptr[input_halfline_pixel].top_l_sixth;
-		out_ptr_top_r[output_halfline_pixel_top].first = in_ptr[input_halfline_pixel].top_r_first;
-		out_ptr_top_r[output_halfline_pixel_top].second = in_ptr[input_halfline_pixel].top_r_second;
-		out_ptr_top_r[output_halfline_pixel_top].third = in_ptr[input_halfline_pixel].top_r_third;
-		out_ptr_top_r[output_halfline_pixel_top].fourth = in_ptr[input_halfline_pixel].top_r_fourth;
-		out_ptr_top_r[output_halfline_pixel_top].fifth = in_ptr[input_halfline_pixel].top_r_fifth;
-		out_ptr_top_r[output_halfline_pixel_top].sixth = in_ptr[input_halfline_pixel].top_r_sixth;
+		for(int j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
+			out_ptr_bottom[output_halfline_pixel_bottom].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][bottom_pos];
+		for(int j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
+			out_ptr_top_l[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_l_pos];
+		for(int j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
+			out_ptr_top_r[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_r_pos];
 	}
 }
 
 static inline void usb_rgb888convertInterleaveU163DVideoToOutputDirectOptMonoTop(deinterleaved_rgb888_u16_pixels* out_ptr_top_l, deinterleaved_rgb888_u16_pixels* out_ptr_top_r, interleaved_3d_rgb888_u16_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top) {
-	const int pixel_size = 3;
-	const int num_pixels_processed = sizeof(deinterleaved_rgb888_u16_pixels) / pixel_size;
-	const size_t real_num_iters = num_iters / num_pixels_processed;
-	const size_t output_halfline_pos = output_halfline * num_iters;
+	//de-interleave pixels
+	const int top_l_pos = 1;
+	const int top_r_pos = 2;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB888_PIXEL_NUM;
+	const size_t output_halfline_pos = output_halfline * real_num_iters;
 	for(size_t i = 0; i < real_num_iters; i++) {
 		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
 		size_t output_halfline_pixel_top = (output_halfline_pos * multiplier_top) + i;
-		out_ptr_top_l[output_halfline_pixel_top].first = in_ptr[input_halfline_pixel].top_l_first;
-		out_ptr_top_l[output_halfline_pixel_top].second = in_ptr[input_halfline_pixel].top_l_second;
-		out_ptr_top_l[output_halfline_pixel_top].third = in_ptr[input_halfline_pixel].top_l_third;
-		out_ptr_top_l[output_halfline_pixel_top].fourth = in_ptr[input_halfline_pixel].top_l_fourth;
-		out_ptr_top_l[output_halfline_pixel_top].fifth = in_ptr[input_halfline_pixel].top_l_fifth;
-		out_ptr_top_l[output_halfline_pixel_top].sixth = in_ptr[input_halfline_pixel].top_l_sixth;
-		out_ptr_top_r[output_halfline_pixel_top].first = in_ptr[input_halfline_pixel].top_r_first;
-		out_ptr_top_r[output_halfline_pixel_top].second = in_ptr[input_halfline_pixel].top_r_second;
-		out_ptr_top_r[output_halfline_pixel_top].third = in_ptr[input_halfline_pixel].top_r_third;
-		out_ptr_top_r[output_halfline_pixel_top].fourth = in_ptr[input_halfline_pixel].top_r_fourth;
-		out_ptr_top_r[output_halfline_pixel_top].fifth = in_ptr[input_halfline_pixel].top_r_fifth;
-		out_ptr_top_r[output_halfline_pixel_top].sixth = in_ptr[input_halfline_pixel].top_r_sixth;
+		for(int j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
+			out_ptr_top_l[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_l_pos];
+		for(int j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
+			out_ptr_top_r[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_r_pos];
 	}
 }
 
 static inline void usb_rgb888convertInterleaveU163DVideoToOutputDirectOptMonoBottom(deinterleaved_rgb888_u16_pixels* out_ptr_bottom, interleaved_3d_rgb888_u16_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
-	const int pixel_size = 3;
-	const int num_pixels_processed = sizeof(deinterleaved_rgb888_u16_pixels) / pixel_size;
-	const size_t real_num_iters = num_iters / num_pixels_processed;
-	const size_t output_halfline_pos = output_halfline * num_iters;
+	//de-interleave pixels
+	const int bottom_pos = 0;
+	const size_t real_num_iters = num_iters / INTERLEAVED_RGB888_PIXEL_NUM;
+	const size_t output_halfline_pos = output_halfline * real_num_iters;
 	for(size_t i = 0; i < real_num_iters; i++) {
 		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
 		size_t output_halfline_pixel_bottom = output_halfline_pos + i;
-		out_ptr_bottom[output_halfline_pixel_bottom].first = in_ptr[input_halfline_pixel].bottom_first;
-		out_ptr_bottom[output_halfline_pixel_bottom].second = in_ptr[input_halfline_pixel].bottom_second;
-		out_ptr_bottom[output_halfline_pixel_bottom].third = in_ptr[input_halfline_pixel].bottom_third;
-		out_ptr_bottom[output_halfline_pixel_bottom].fourth = in_ptr[input_halfline_pixel].bottom_fourth;
-		out_ptr_bottom[output_halfline_pixel_bottom].fifth = in_ptr[input_halfline_pixel].bottom_fifth;
-		out_ptr_bottom[output_halfline_pixel_bottom].sixth = in_ptr[input_halfline_pixel].bottom_sixth;
+		for(int j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
+			out_ptr_bottom[output_halfline_pixel_bottom].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][bottom_pos];
 	}
 }
 
@@ -508,11 +418,10 @@ static inline void usb_oldDSconvertVideoToOutputHalfLineDirectOptLE(USBOldDSCapt
 	const int num_screens = 2;
 	const int num_halflines = 2;
 	const size_t ptr_out_size = sizeof(deinterleaved_rgb565_pixels);
-	const size_t ptr_in_size = sizeof(interleaved_rgb565_pixels);
 	deinterleaved_rgb565_pixels* out_ptr_top = (deinterleaved_rgb565_pixels*)p_out->screen_data;
 	deinterleaved_rgb565_pixels* out_ptr_bottom = out_ptr_top + ((WIDTH_DS * HEIGHT_DS * pixels_size) / ptr_out_size);
 	interleaved_rgb565_pixels* in_ptr = (interleaved_rgb565_pixels*)p_in->video_in.screen_data;
-	const uint32_t halfline_iters = (WIDTH_DS * num_screens * pixels_size) / (ptr_in_size * num_halflines);
+	const uint32_t halfline_iters = WIDTH_DS / num_halflines;
 	usb_rgb565convertInterleaveVideoToOutputDirectOptLE(out_ptr_top, out_ptr_bottom, in_ptr, halfline_iters, input_halfline, output_halfline);
 }
 
@@ -522,11 +431,10 @@ static inline void usb_oldDSconvertVideoToOutputHalfLineDirectOptBE(USBOldDSCapt
 	const int num_screens = 2;
 	const int num_halflines = 2;
 	const size_t ptr_out_size = sizeof(deinterleaved_rgb565_pixels);
-	const size_t ptr_in_size = sizeof(interleaved_rgb565_pixels);
 	deinterleaved_rgb565_pixels* out_ptr_top = (deinterleaved_rgb565_pixels*)p_out->screen_data;
 	deinterleaved_rgb565_pixels* out_ptr_bottom = out_ptr_top + ((WIDTH_DS * HEIGHT_DS * pixels_size) / ptr_out_size);
 	interleaved_rgb565_pixels* in_ptr = (interleaved_rgb565_pixels*)p_in->video_in.screen_data;
-	const uint32_t halfline_iters = (WIDTH_DS * num_screens * pixels_size) / (ptr_in_size * num_halflines);
+	const uint32_t halfline_iters = WIDTH_DS / num_halflines;
 	usb_rgb565convertInterleaveVideoToOutputDirectOptBE(out_ptr_top, out_ptr_bottom, in_ptr, halfline_iters, input_halfline, output_halfline);
 }
 
@@ -538,13 +446,12 @@ static inline void usb_new3DS565OptimizeconvertVideoToOutputLineDirectOptLE(USB5
 	const size_t column_pre_last_bot_pos = (SCREEN_WIDTH_FIRST_PIXEL_BOTTOM_3DS * 2);
 	const size_t column_last_bot_pos = TOP_WIDTH_3DS;
 	const size_t ptr_out_size = sizeof(deinterleaved_rgb565_pixels);
-	const size_t ptr_in_size = sizeof(interleaved_rgb565_pixels);
 	deinterleaved_rgb565_pixels* out_ptr_bottom = (deinterleaved_rgb565_pixels*)p_out->screen_data;
 	deinterleaved_rgb565_pixels* out_ptr_top = out_ptr_bottom + ((BOT_SIZE_3DS * pixels_size) / ptr_out_size);
 	interleaved_rgb565_pixels* in_ptr = (interleaved_rgb565_pixels*)p_in->bottom_only_column;
 	if(column < column_last_bot_pos)
 		in_ptr = (interleaved_rgb565_pixels*)p_in->columns_data[column].pixel;
-	const uint32_t num_iters = (HEIGHT_3DS * pixels_size * num_screens) / ptr_in_size;
+	const uint32_t num_iters = HEIGHT_3DS;
 	if(column == column_last_bot_pos)
 		usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoBottom(out_ptr_bottom, in_ptr, num_iters, 0, BOT_WIDTH_3DS - 1);
 	else if(column == column_pre_last_bot_pos) {
@@ -567,13 +474,12 @@ static inline void usb_new3DS565OptimizeconvertVideoToOutputLineDirectOptBE(USB5
 	const size_t column_pre_last_bot_pos = (SCREEN_WIDTH_FIRST_PIXEL_BOTTOM_3DS * 2);
 	const size_t column_last_bot_pos = TOP_WIDTH_3DS;
 	const size_t ptr_out_size = sizeof(deinterleaved_rgb565_pixels);
-	const size_t ptr_in_size = sizeof(interleaved_rgb565_pixels);
 	deinterleaved_rgb565_pixels* out_ptr_bottom = (deinterleaved_rgb565_pixels*)p_out->screen_data;
 	deinterleaved_rgb565_pixels* out_ptr_top = out_ptr_bottom + ((BOT_SIZE_3DS * pixels_size) / ptr_out_size);
 	interleaved_rgb565_pixels* in_ptr = (interleaved_rgb565_pixels*)p_in->bottom_only_column;
 	if(column < column_last_bot_pos)
 		in_ptr = (interleaved_rgb565_pixels*)p_in->columns_data[column].pixel;
-	const uint32_t num_iters = (HEIGHT_3DS * pixels_size * num_screens) / ptr_in_size;
+	const uint32_t num_iters = HEIGHT_3DS;
 	if(column == column_last_bot_pos)
 		usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoBottom(out_ptr_bottom, in_ptr, num_iters, 0, BOT_WIDTH_3DS - 1);
 	else if(column == column_pre_last_bot_pos) {
@@ -596,7 +502,6 @@ static inline void usb_new3DS565Optimizeconvert3DVideoToOutputLineDirectOptLE(US
 	const size_t column_pre_last_bot_pos = (SCREEN_WIDTH_FIRST_PIXEL_BOTTOM_3DS * 2);
 	const size_t column_last_bot_pos = TOP_WIDTH_3DS;
 	const size_t ptr_out_size = sizeof(deinterleaved_rgb565_pixels);
-	const size_t ptr_in_size = sizeof(interleaved_3d_rgb565_pixels);
 	deinterleaved_rgb565_pixels* out_ptr_bottom = (deinterleaved_rgb565_pixels*)p_out->screen_data;
 	deinterleaved_rgb565_pixels* out_ptr_top_l = out_ptr_bottom + ((BOT_SIZE_3DS * pixels_size) / ptr_out_size);
 	deinterleaved_rgb565_pixels* out_ptr_top_r = out_ptr_bottom + (((TOP_SIZE_3DS + BOT_SIZE_3DS) * pixels_size) / ptr_out_size);
@@ -608,7 +513,7 @@ static inline void usb_new3DS565Optimizeconvert3DVideoToOutputLineDirectOptLE(US
 		multiplier_top = 2;
 		out_ptr_top_r = out_ptr_top_l + ((HEIGHT_3DS * pixels_size) / ptr_out_size);
 	}
-	const uint32_t num_iters = (HEIGHT_3DS * pixels_size * num_screens) / ptr_in_size;
+	const uint32_t num_iters = HEIGHT_3DS;
 	if(column == column_last_bot_pos)
 		usb_rgb565convertInterleave3DVideoToOutputDirectOptLEMonoBottom(out_ptr_bottom, in_ptr, num_iters, 0, BOT_WIDTH_3DS - 1);
 	else if(column == column_pre_last_bot_pos) {
@@ -632,7 +537,6 @@ static inline void usb_new3DS565Optimizeconvert3DVideoToOutputLineDirectOptBE(US
 	const size_t column_pre_last_bot_pos = (SCREEN_WIDTH_FIRST_PIXEL_BOTTOM_3DS * 2);
 	const size_t column_last_bot_pos = TOP_WIDTH_3DS;
 	const size_t ptr_out_size = sizeof(deinterleaved_rgb565_pixels);
-	const size_t ptr_in_size = sizeof(interleaved_3d_rgb565_pixels);
 	deinterleaved_rgb565_pixels* out_ptr_bottom = (deinterleaved_rgb565_pixels*)p_out->screen_data;
 	deinterleaved_rgb565_pixels* out_ptr_top_l = out_ptr_bottom + ((BOT_SIZE_3DS * pixels_size) / ptr_out_size);
 	deinterleaved_rgb565_pixels* out_ptr_top_r = out_ptr_bottom + (((TOP_SIZE_3DS + BOT_SIZE_3DS) * pixels_size) / ptr_out_size);
@@ -644,7 +548,7 @@ static inline void usb_new3DS565Optimizeconvert3DVideoToOutputLineDirectOptBE(US
 		multiplier_top = 2;
 		out_ptr_top_r = out_ptr_top_l + ((HEIGHT_3DS * pixels_size) / ptr_out_size);
 	}
-	const uint32_t num_iters = (HEIGHT_3DS * pixels_size * num_screens) / ptr_in_size;
+	const uint32_t num_iters = HEIGHT_3DS;
 	if(column == column_last_bot_pos)
 		usb_rgb565convertInterleave3DVideoToOutputDirectOptBEMonoBottom(out_ptr_bottom, in_ptr, num_iters, 0, BOT_WIDTH_3DS - 1);
 	else if(column == column_pre_last_bot_pos) {
