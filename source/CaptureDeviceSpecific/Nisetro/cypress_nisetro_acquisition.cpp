@@ -25,6 +25,8 @@
 #define MAX_ERRORS_ALLOWED 100
 #define NUM_CONSECUTIVE_NEEDED_OUTPUT 6
 
+#define NISETRO_CYPRESS_USB_WINDOWS_DRIVER CYPRESS_WINDOWS_DEFAULT_USB_DRIVER
+
 static void cypress_device_read_frame_cb(void* user_data, int transfer_length, int transfer_status);
 static int get_cypress_device_status(CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data);
 static void error_cypress_device_status(CypressDeviceCaptureReceivedData* cypress_device_capture_recv_data, int error_val);
@@ -35,7 +37,7 @@ static cy_device_device_handlers* usb_find_by_serial_number(const cyni_device_us
 	final_handlers = cypress_libusb_serial_reconnection(get_cy_usb_info(usb_device_desc), wanted_serial_number, curr_serial_extra_id, new_device);
 
 	if(final_handlers == NULL)
-		final_handlers = cypress_driver_find_by_serial_number(get_cy_usb_info(usb_device_desc), wanted_serial_number, curr_serial_extra_id, new_device);
+		final_handlers = cypress_driver_find_by_serial_number(get_cy_usb_info(usb_device_desc), wanted_serial_number, curr_serial_extra_id, new_device, NISETRO_CYPRESS_USB_WINDOWS_DRIVER);
 	return final_handlers;
 }
 
@@ -46,7 +48,7 @@ static int usb_find_free_fw_id(const cyni_device_usb_device* usb_device_desc) {
 	for(int i = 0; i < num_free_fw_ids; i++)
 		found[i] = false;
 	cypress_libusb_find_used_serial(get_cy_usb_info(usb_device_desc), found, num_free_fw_ids, curr_serial_extra_id);
-	cypress_driver_find_used_serial(get_cy_usb_info(usb_device_desc), found, num_free_fw_ids, curr_serial_extra_id);
+	cypress_driver_find_used_serial(get_cy_usb_info(usb_device_desc), found, num_free_fw_ids, curr_serial_extra_id, NISETRO_CYPRESS_USB_WINDOWS_DRIVER);
 
 	for(int i = 0; i < num_free_fw_ids; i++)
 		if(!found[i])
@@ -120,7 +122,7 @@ void list_devices_cyni_device(std::vector<CaptureDevice> &devices_list, std::vec
 		if(no_access_elems[i])
 			no_access_list.emplace_back(usb_devices_to_check[i]->vid, usb_devices_to_check[i]->pid);
 	if(any_not_supported)
-		cypress_driver_list_devices(devices_list, not_supported_elems, curr_serial_extra_id_cyni_device, usb_devices_to_check);
+		cypress_driver_list_devices(devices_list, not_supported_elems, curr_serial_extra_id_cyni_device, usb_devices_to_check, NISETRO_CYPRESS_USB_WINDOWS_DRIVER);
 
 	delete[] curr_serial_extra_id_cyni_device;
 	delete[] no_access_elems;

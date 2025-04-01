@@ -139,6 +139,15 @@ struct PACKED CYPRESS_SET_TRANSFER_SIZE_INFO {
 
 static GUID cypress_driver_guid = {.Data1 = 0xae18aa60, .Data2 = 0x7f6a, .Data3 = 0x11d4, .Data4 = {0x97, 0xdd, 0x0, 0x1, 0x2, 0x29, 0xb9, 0x59}};
 
+static GUID* get_driver_guid(CypressWindowsDriversEnum driver) {
+	switch(driver) {
+		case CYPRESS_WINDOWS_DEFAULT_USB_DRIVER:
+			return &cypress_driver_guid;
+		default:
+			return NULL;
+	}
+}
+
 static bool cypress_driver_process_async_transfers(std::vector<cy_async_callback_data*> *cb_data_vector, cy_device_device_handlers* handlers) {
 	bool found = false;
 	for (int i = 0; i < cb_data_vector->size(); i++) {
@@ -425,10 +434,13 @@ cy_device_device_handlers* cypress_driver_serial_reconnection(CaptureDevice* dev
 	return final_handlers;
 }
 
-void cypress_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool* not_supported_elems, int *curr_serial_extra_id_cypress, std::vector<const cy_device_usb_device*> &device_descriptions) {
+void cypress_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool* not_supported_elems, int *curr_serial_extra_id_cypress, std::vector<const cy_device_usb_device*> &device_descriptions, CypressWindowsDriversEnum driver) {
 	#ifdef _WIN32
+	GUID* to_check_guid = get_driver_guid(driver);
+	if(to_check_guid == NULL)
+		return;
 	HDEVINFO DeviceInfoSet = SetupDiGetClassDevs(
-		&cypress_driver_guid,
+		to_check_guid,
 		NULL,
 		NULL,
 		DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
@@ -437,7 +449,7 @@ void cypress_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool*
 	ZeroMemory(&DeviceInterfaceData, sizeof(SP_DEVICE_INTERFACE_DATA));
 	DeviceInterfaceData.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
 	uint32_t i = 0;
-	while(SetupDiEnumDeviceInterfaces(DeviceInfoSet, NULL, &cypress_driver_guid, i++, &DeviceInterfaceData)) {
+	while(SetupDiEnumDeviceInterfaces(DeviceInfoSet, NULL, to_check_guid, i++, &DeviceInterfaceData)) {
 		std::string path = cypress_driver_get_device_path(DeviceInfoSet, &DeviceInterfaceData);
 		if (path == "")
 			continue;
@@ -466,11 +478,14 @@ void cypress_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool*
 	#endif
 }
 
-cy_device_device_handlers* cypress_driver_find_by_serial_number(const cy_device_usb_device* usb_device_desc, std::string wanted_serial_number, int &curr_serial_extra_id, CaptureDevice* new_device) {
+cy_device_device_handlers* cypress_driver_find_by_serial_number(const cy_device_usb_device* usb_device_desc, std::string wanted_serial_number, int &curr_serial_extra_id, CaptureDevice* new_device, CypressWindowsDriversEnum driver) {
 	cy_device_device_handlers* final_handlers = NULL;
 	#ifdef _WIN32
+	GUID* to_check_guid = get_driver_guid(driver);
+	if(to_check_guid == NULL)
+		return final_handlers;
 	HDEVINFO DeviceInfoSet = SetupDiGetClassDevs(
-		&cypress_driver_guid,
+		to_check_guid,
 		NULL,
 		NULL,
 		DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
@@ -479,7 +494,7 @@ cy_device_device_handlers* cypress_driver_find_by_serial_number(const cy_device_
 	ZeroMemory(&DeviceInterfaceData, sizeof(SP_DEVICE_INTERFACE_DATA));
 	DeviceInterfaceData.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
 	uint32_t i = 0;
-	while(SetupDiEnumDeviceInterfaces(DeviceInfoSet, NULL, &cypress_driver_guid, i++, &DeviceInterfaceData)) {
+	while(SetupDiEnumDeviceInterfaces(DeviceInfoSet, NULL, to_check_guid, i++, &DeviceInterfaceData)) {
 		std::string path = cypress_driver_get_device_path(DeviceInfoSet, &DeviceInterfaceData);
 		if (path == "")
 			continue;
@@ -596,10 +611,13 @@ void cypress_driver_pipe_reset_ctrl_bulk_out(cy_device_device_handlers* handlers
 	#endif
 }
 
-void cypress_driver_find_used_serial(const cy_device_usb_device* usb_device_desc, bool* found, size_t num_free_fw_ids, int &curr_serial_extra_id) {
+void cypress_driver_find_used_serial(const cy_device_usb_device* usb_device_desc, bool* found, size_t num_free_fw_ids, int &curr_serial_extra_id, CypressWindowsDriversEnum driver) {
 	#ifdef _WIN32
+	GUID* to_check_guid = get_driver_guid(driver);
+	if(to_check_guid == NULL)
+		return;
 	HDEVINFO DeviceInfoSet = SetupDiGetClassDevs(
-		&cypress_driver_guid,
+		to_check_guid,
 		NULL,
 		NULL,
 		DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
@@ -608,7 +626,7 @@ void cypress_driver_find_used_serial(const cy_device_usb_device* usb_device_desc
 	ZeroMemory(&DeviceInterfaceData, sizeof(SP_DEVICE_INTERFACE_DATA));
 	DeviceInterfaceData.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
 	uint32_t i = 0;
-	while(SetupDiEnumDeviceInterfaces(DeviceInfoSet, NULL, &cypress_driver_guid, i++, &DeviceInterfaceData)) {
+	while(SetupDiEnumDeviceInterfaces(DeviceInfoSet, NULL, to_check_guid, i++, &DeviceInterfaceData)) {
 		std::string path = cypress_driver_get_device_path(DeviceInfoSet, &DeviceInterfaceData);
 		if (path == "")
 			continue;
