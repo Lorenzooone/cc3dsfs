@@ -138,11 +138,14 @@ struct PACKED CYPRESS_SET_TRANSFER_SIZE_INFO {
 #pragma pack(pop)
 
 static GUID cypress_driver_guid = {.Data1 = 0xae18aa60, .Data2 = 0x7f6a, .Data3 = 0x11d4, .Data4 = {0x97, 0xdd, 0x0, 0x1, 0x2, 0x29, 0xb9, 0x59}};
+static GUID cypress_optimize_new_driver_guid = {.Data1 = 0xae18aa60, .Data2 = 0x7f6a, .Data3 = 0x11d4, .Data4 = {0x97, 0xdd, 0x0, 0x1, 0x2, 0x29, 0xb9, 0x59}};
 
 static GUID* get_driver_guid(CypressWindowsDriversEnum driver) {
 	switch(driver) {
 		case CYPRESS_WINDOWS_DEFAULT_USB_DRIVER:
 			return &cypress_driver_guid;
+		case CYPRESS_WINDOWS_OPTIMIZE_NEW_USB_DRIVER:
+			return &cypress_optimize_new_driver_guid;
 		default:
 			return NULL;
 	}
@@ -365,7 +368,7 @@ static bool cypress_driver_get_device_pid_vid_manufacturer_serial_number(std::st
 	return true;
 }
 
-static bool cypress_nisetro_driver_setup_connection(cy_device_device_handlers* handlers, std::string path, bool do_pipe_clear_reset) {
+static bool cypress_driver_setup_connection(cy_device_device_handlers* handlers, std::string path, bool do_pipe_clear_reset) {
 	handlers->usb_handle = NULL;
 	handlers->mutex = NULL;
 	handlers->write_handle = INVALID_HANDLE_VALUE;
@@ -397,7 +400,7 @@ static bool cypress_nisetro_driver_setup_connection(cy_device_device_handlers* h
 	return true;
 }
 
-static void cypress_nisetro_driver_close_handle(void** handle, void* default_value = INVALID_HANDLE_VALUE) {
+static void cypress_driver_close_handle(void** handle, void* default_value = INVALID_HANDLE_VALUE) {
 	#ifdef _WIN32
 	if ((*handle) == default_value)
 		return;
@@ -419,7 +422,7 @@ cy_device_device_handlers* cypress_driver_serial_reconnection(CaptureDevice* dev
 	if(device->path != "") {
 		cy_device_device_handlers handlers;
 		const cy_device_usb_device* usb_device_info = (const cy_device_usb_device*)device->descriptor;
-		if(cypress_nisetro_driver_setup_connection(&handlers, device->path, usb_device_info->do_pipe_clear_reset)) {
+		if(cypress_driver_setup_connection(&handlers, device->path, usb_device_info->do_pipe_clear_reset)) {
 			final_handlers = new cy_device_device_handlers;
 			final_handlers->usb_handle = NULL;
 			final_handlers->mutex = handlers.mutex;
@@ -428,7 +431,7 @@ cy_device_device_handlers* cypress_driver_serial_reconnection(CaptureDevice* dev
 			final_handlers->path = device->path;
 		}
 		else
-			cypress_nisetro_driver_end_connection(&handlers);
+			cypress_driver_end_connection(&handlers);
 	}
 	#endif
 	return final_handlers;
@@ -464,8 +467,8 @@ void cypress_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool*
 			const cy_device_usb_device* usb_device_desc = device_descriptions[j];
 			if(not_supported_elems[j] && (usb_device_desc->vid == vid) && (usb_device_desc->pid == pid)) {
 				cy_device_device_handlers handlers;
-				bool result_conn_check = cypress_nisetro_driver_setup_connection(&handlers, path, usb_device_desc->do_pipe_clear_reset);
-				cypress_nisetro_driver_end_connection(&handlers);
+				bool result_conn_check = cypress_driver_setup_connection(&handlers, path, usb_device_desc->do_pipe_clear_reset);
+				cypress_driver_end_connection(&handlers);
 				if(result_conn_check)
 					cypress_insert_device(devices_list, usb_device_desc, serial, bcd_device, curr_serial_extra_id_cypress[j], path);
 				break;
@@ -508,7 +511,7 @@ cy_device_device_handlers* cypress_driver_find_by_serial_number(const cy_device_
 		std::string read_serial = cypress_get_serial(usb_device_desc, serial, bcd_device, curr_serial_extra_id);
 		if((usb_device_desc->vid == vid) && (usb_device_desc->pid == pid) && (wanted_serial_number == read_serial)) {
 			cy_device_device_handlers handlers;
-			if(cypress_nisetro_driver_setup_connection(&handlers, path, usb_device_desc->do_pipe_clear_reset)) {
+			if(cypress_driver_setup_connection(&handlers, path, usb_device_desc->do_pipe_clear_reset)) {
 				final_handlers = new cy_device_device_handlers;
 				final_handlers->usb_handle = NULL;
 				final_handlers->mutex = handlers.mutex;
@@ -519,7 +522,7 @@ cy_device_device_handlers* cypress_driver_find_by_serial_number(const cy_device_
 					*new_device = cypress_create_device(usb_device_desc, wanted_serial_number, path);
 			}
 			else
-				cypress_nisetro_driver_end_connection(&handlers);
+				cypress_driver_end_connection(&handlers);
 			break;
 		}
 	}
@@ -552,11 +555,11 @@ int cypress_driver_ctrl_transfer_out(cy_device_device_handlers* handlers, uint8_
 	#endif
 }
 
-void cypress_nisetro_driver_end_connection(cy_device_device_handlers* handlers) {
+void cypress_driver_end_connection(cy_device_device_handlers* handlers) {
 	#ifdef _WIN32
-	cypress_nisetro_driver_close_handle(&handlers->write_handle);
+	cypress_driver_close_handle(&handlers->write_handle);
 	handlers->read_handle = handlers->write_handle;
-	cypress_nisetro_driver_close_handle(&handlers->mutex, NULL);
+	cypress_driver_close_handle(&handlers->mutex, NULL);
 	#endif
 }
 

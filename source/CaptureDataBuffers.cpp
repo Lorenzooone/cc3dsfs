@@ -117,6 +117,7 @@ void CaptureDataBuffers::WriteToBuffer(CaptureReceived* buffer, uint64_t read, d
 	target->time_in_buf = time_in_buf;
 	target->capture_type = capture_type;
 	target->is_3d = is_3d;
+	target->buffer_video_data_type = device->video_data_type;
 	this->ReleaseWriterBuffer(index);
 }
 

@@ -308,6 +308,7 @@ struct CaptureDataSingleBuffer {
 	double time_in_buf;
 	uint32_t inner_index;
 	bool is_3d;
+	InputVideoDataType buffer_video_data_type;
 };
 
 class CaptureDataBuffers {

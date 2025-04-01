@@ -804,10 +804,12 @@ static void usb_is_device_convertVideoToOutput(CaptureReceived *p_in, VideoOutpu
 	}
 }
 
-bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status, bool interleaved_3d, bool is_data_3d) {
+bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status, bool interleaved_3d) {
 	CaptureReceived* p_in = (CaptureReceived*)(((uint8_t*)&data_buffer->capture_buf) + data_buffer->unused_offset);
 	bool converted = false;
 	CaptureDevice* chosen_device = &status->device;
+	bool is_data_3d = data_buffer->is_3d;
+	InputVideoDataType video_data_type = data_buffer->buffer_video_data_type;
 	bool is_3d_requested = get_3d_enabled(status);
 	#ifdef USE_FTD3
 	if(chosen_device->cc_type == CAPTURE_CONN_FTD3) {
@@ -841,8 +843,8 @@ bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, Capt
 	#endif
 	#ifdef USE_CYPRESS_NEW_OPTIMIZE
 	if(status->device.cc_type == CAPTURE_CONN_CYPRESS_NEW_OPTIMIZE) {
-		bool is_rgb888 = true;
-		usb_new_3ds_optimize_convertVideoToOutput(p_in, p_out, is_data_3d, is_big_endian, interleaved_3d, requested_3d, is_rgb888);
+		bool is_rgb888 = video_data_type == VIDEO_DATA_RGB;
+		usb_new_3ds_optimize_convertVideoToOutput(p_in, p_out, is_data_3d, is_big_endian, interleaved_3d, is_3d_requested, is_rgb888);
 		converted = true;
 	}
 	#endif
@@ -922,9 +924,11 @@ static void copyAudioNewOptimize3DSBE(std::int16_t *p_out, uint64_t &n_samples, 
 	n_samples = ((last_buffer_index + 1 + OPTIMIZE_AUDIO_BUFFER_MAX_SIZE - start) % OPTIMIZE_AUDIO_BUFFER_MAX_SIZE) * 2;
 }
 
-bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, uint16_t &last_buffer_index, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status, bool is_data_3d) {
+bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, uint16_t &last_buffer_index, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status) {
 	if(!status->device.has_audio)
 		return true;
+	bool is_data_3d = data_buffer->is_3d;
+	InputVideoDataType video_data_type = data_buffer->buffer_video_data_type;
 	CaptureReceived* p_in = (CaptureReceived*)(((uint8_t*)&data_buffer->capture_buf) + data_buffer->unused_offset);
 	uint8_t* base_ptr = NULL;
 	#ifdef USE_FTD3
@@ -967,7 +971,7 @@ bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, uint16_t &la
 	#endif
 	#ifdef USE_CYPRESS_NEW_OPTIMIZE
 	if(status->device.cc_type == CAPTURE_CONN_CYPRESS_NEW_OPTIMIZE) {
-		bool is_rgb888 = true;
+		bool is_rgb888 = video_data_type == VIDEO_DATA_RGB;
 		if(is_big_endian)
 			copyAudioNewOptimize3DSBE(p_out, n_samples, last_buffer_index, &data_buffer->capture_buf, is_rgb888, is_data_3d);
 		else

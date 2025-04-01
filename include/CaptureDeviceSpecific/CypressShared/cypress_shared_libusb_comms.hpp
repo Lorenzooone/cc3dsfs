@@ -1,5 +1,5 @@
-#ifndef __CYPRESS_NISETRO_DEVICE_LIBUSB_HPP
-#define __CYPRESS_NISETRO_DEVICE_LIBUSB_HPP
+#ifndef __CYPRESS_SHARED_DEVICE_LIBUSB_HPP
+#define __CYPRESS_SHARED_DEVICE_LIBUSB_HPP
 
 #include <vector>
 #include "capture_structs.hpp"

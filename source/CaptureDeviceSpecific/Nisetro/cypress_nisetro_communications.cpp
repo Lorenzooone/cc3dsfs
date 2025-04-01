@@ -106,6 +106,11 @@ bool has_to_load_firmware(const cyni_device_usb_device* device) {
 	return !((device->firmware_to_load == NULL) || (device->firmware_size == 0));
 }
 
+static bool free_firmware_and_return(uint8_t* fw_data, bool retval) {
+	delete []fw_data;
+	return retval;
+}
+
 bool load_firmware(cy_device_device_handlers* handlers, const cyni_device_usb_device* device, uint8_t patch_id) {
 	if(!has_to_load_firmware(device))
 		return true;
@@ -120,10 +125,8 @@ bool load_firmware(cy_device_device_handlers* handlers, const cyni_device_usb_de
 	uint8_t buffer[0x8000];
 	buffer[0] = 1;
 	int ret = cypress_ctrl_out_transfer(handlers, get_cy_usb_info(device), buffer, 1, 0xA0, 0xE600, 0, &transferred);
-	if(ret < 0) {
-		delete []fw_data;
-		return false;
-	}
+	if(ret < 0)
+		return free_firmware_and_return(fw_data, false);
 	bool done = false;
 	int fw_pos = read_le16(fw_data);
 	while(!done) {
@@ -132,20 +135,15 @@ bool load_firmware(cy_device_device_handlers* handlers, const cyni_device_usb_de
 		done = (inside_len & 0x8000) != 0;
 		inside_len &= 0x7FFF;
 		fw_pos += 4;
-		if((inside_len + fw_pos) > device->firmware_size) {
-			delete []fw_data;
-			return false;
-		}
+		if((inside_len + fw_pos) > device->firmware_size)
+			return free_firmware_and_return(fw_data, false);
 		memcpy(buffer, fw_data + fw_pos, inside_len);
 		fw_pos += inside_len;
 		ret = cypress_ctrl_out_transfer(handlers, get_cy_usb_info(device), buffer, inside_len, 0xA0, offset, 0, &transferred);
-		if(ret < 0) {
-			delete []fw_data;
-			return false;
-		}
+		if(ret < 0)
+			return free_firmware_and_return(fw_data, false);
 	}
-	delete []fw_data;
-	return true;
+	return free_firmware_and_return(fw_data, true);
 }
 
 int capture_start(cy_device_device_handlers* handlers, const cyni_device_usb_device* device) {

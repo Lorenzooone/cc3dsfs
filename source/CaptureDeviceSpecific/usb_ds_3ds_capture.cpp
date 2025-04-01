@@ -9,6 +9,7 @@
 
 // Adapted from sample code provided by Loopy
 
+#define PRODUCT_SIZE 32
 #define REAL_SERIAL_NUMBER_SIZE 32
 #define SERIAL_NUMBER_SIZE (REAL_SERIAL_NUMBER_SIZE+1)
 
@@ -131,6 +132,16 @@ static std::string get_serial(libusb_device_handle *handle, libusb_device_descri
 	return serial_str;
 }
 
+static bool check_product_usable(libusb_device_handle *handle, libusb_device_descriptor *usb_descriptor) {
+	uint8_t data[PRODUCT_SIZE + 1];
+	std::string product_str = "";
+	if(libusb_get_string_descriptor_ascii(handle, usb_descriptor->iProduct, data, PRODUCT_SIZE-1) >= 0) {
+		data[PRODUCT_SIZE] = '\0';
+		product_str = std::string((const char*)data);
+	}
+	return product_str != "N3DSCC";
+}
+
 static int do_usb_config_device(libusb_device_handle *handle, const usb_device* usb_device_desc) {
 	libusb_check_and_detach_kernel_driver(handle, usb_device_desc->capture_interface);
 	int result = libusb_check_and_set_configuration(handle, usb_device_desc->default_config);
@@ -159,6 +170,10 @@ static int insert_device(std::vector<CaptureDevice> &devices_list, const usb_dev
 	if(result < 0) {
 		libusb_close(handle);
 		return result;
+	}
+	if(!check_product_usable(handle, usb_descriptor)) {
+		libusb_close(handle);
+		return LIBUSB_ERROR_NOT_FOUND;
 	}
 	std::string serial_str = get_serial(handle, usb_descriptor, curr_serial_extra_id);
 	if(usb_device_desc->is_3ds)
@@ -189,6 +204,10 @@ static libusb_device_handle* usb_find_by_serial_number(const usb_device* usb_dev
 		result = libusb_open(usb_devices[i], &handle);
 		if(result || (handle == NULL))
 			continue;
+		if(!check_product_usable(handle, &usb_descriptor)) {
+			libusb_close(handle);
+			continue;
+		}
 		std::string device_serial_number = get_serial(handle, &usb_descriptor, curr_serial_extra_id);
 		if(serial_number == device_serial_number) {
 			final_handle = handle;

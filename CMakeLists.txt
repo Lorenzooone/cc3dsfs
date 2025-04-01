@@ -11,12 +11,13 @@ set(NEW_DS_LOOPY_SUPPORT 1)
 set(IS_DEVICES_SUPPORT 1)
 set(OLD_DS_3DS_LOOPY_SUPPORT 1)
 set(CYPRESS_NISETRO_SUPPORT 1)
+set(OPTIMIZE_NEW3DS_SUPPORT 1)
 
 set(USE_FTD2XX_FOR_NEW_DS_LOOPY ${NEW_DS_LOOPY_SUPPORT})
 set(USE_LIBUSB_FOR_NEW_DS_LOOPY ${NEW_DS_LOOPY_SUPPORT})
 set(USE_FTD3XX_FOR_N3DSXL_LOOPY ${N3DSXL_LOOPY_SUPPORT})
 set(USE_LIBUSB_FOR_N3DSXL_LOOPY ${N3DSXL_LOOPY_SUPPORT})
-set(USE_CYPRESS_USB_SUPPORT ${CYPRESS_NISETRO_SUPPORT})
+set(USE_CYPRESS_USB_SUPPORT ${CYPRESS_NISETRO_SUPPORT} OR ${OPTIMIZE_NEW3DS_SUPPORT})
 set(USE_LIBUSB_SUPPORT ${IS_DEVICES_SUPPORT} OR ${OLD_DS_3DS_LOOPY_SUPPORT} OR ${USE_LIBUSB_FOR_NEW_DS_LOOPY} OR ${USE_LIBUSB_FOR_N3DSXL_LOOPY} OR ${USE_CYPRESS_USB_SUPPORT})
 if(NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Windows"))
 	#Performance outside of Windows is very bad for the official drivers...
@@ -306,6 +307,7 @@ set(SOURCE_CPP_FTD2_FILES_BASE_PATH "${SOURCE_CPP_DEVICE_FILES_BASE_PATH}/DSCapt
 set(SOURCE_CPP_FTD3_FILES_BASE_PATH "${SOURCE_CPP_DEVICE_FILES_BASE_PATH}/3DSCapture_FTD3")
 set(SOURCE_CPP_CYPRESS_USB_FILES_BASE_PATH "${SOURCE_CPP_DEVICE_FILES_BASE_PATH}/CypressShared")
 set(SOURCE_CPP_CYPRESS_NISETRO_DEVICES_FILES_BASE_PATH "${SOURCE_CPP_DEVICE_FILES_BASE_PATH}/Nisetro")
+set(SOURCE_CPP_CYPRESS_NEW_OPTIMIZE_3DS_FILES_BASE_PATH "${SOURCE_CPP_DEVICE_FILES_BASE_PATH}/Optimize_New_3DS")
 if(N3DSXL_LOOPY_SUPPORT)
 	list(APPEND SOURCE_CPP_EXTRA_FILES ${SOURCE_CPP_FTD3_FILES_BASE_PATH}/3dscapture_ftd3_shared.cpp ${SOURCE_CPP_FTD3_FILES_BASE_PATH}/3dscapture_ftd3_compatibility.cpp)
 	if(MSVC)
@@ -366,6 +368,14 @@ if(CYPRESS_NISETRO_SUPPORT)
 		list(APPEND EXTRA_CXX_FLAGS "/DUSE_CYNI_USB")
 	else()
 		list(APPEND EXTRA_CXX_FLAGS "-DUSE_CYNI_USB")
+	endif()
+endif()
+if(OPTIMIZE_NEW3DS_SUPPORT)
+	list(APPEND SOURCE_CPP_EXTRA_FILES ${SOURCE_CPP_CYPRESS_NEW_OPTIMIZE_3DS_FILES_BASE_PATH}/cypress_optimize_new_3ds_communications.cpp ${SOURCE_CPP_CYPRESS_NEW_OPTIMIZE_3DS_FILES_BASE_PATH}/cypress_optimize_new_3ds_acquisition.cpp ${TOOLS_DATA_DIR}/optimize_new_3ds_fw.cpp ${TOOLS_DATA_DIR}/optimize_new_3ds_565_fpga_pl.cpp ${TOOLS_DATA_DIR}/optimize_new_3ds_888_fpga_pl.cpp)
+	if(MSVC)
+		list(APPEND EXTRA_CXX_FLAGS "/DUSE_CYPRESS_NEW_OPTIMIZE")
+	else()
+		list(APPEND EXTRA_CXX_FLAGS "-DUSE_CYPRESS_NEW_OPTIMIZE")
 	endif()
 endif()
 if(NEW_DS_LOOPY_SUPPORT)
@@ -527,7 +537,7 @@ endif()
 if(USE_FTD2XX_FOR_NEW_DS_LOOPY)
 	target_link_libraries(${OUTPUT_NAME} PRIVATE ${ftd2xx_BINARY_DIR}/${FTD2XX_SUBFOLDER}/${FTD2XX_LIB})
 endif()
-target_include_directories(${OUTPUT_NAME} PRIVATE ${EXTRA_INCLUDE_DIRECTORIES} ${TOOLS_DATA_DIR} ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/include/Menus ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/ISDevices ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/Nisetro ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/CypressShared ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/3DSCapture_FTD3 ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/DSCapture_FTD2)
+target_include_directories(${OUTPUT_NAME} PRIVATE ${EXTRA_INCLUDE_DIRECTORIES} ${TOOLS_DATA_DIR} ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/include/Menus ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/ISDevices ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/Nisetro ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/Optimize_New_3DS ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/CypressShared ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/3DSCapture_FTD3 ${CMAKE_SOURCE_DIR}/include/CaptureDeviceSpecific/DSCapture_FTD2)
 target_compile_features(${OUTPUT_NAME} PRIVATE cxx_std_20)
 target_compile_options(${OUTPUT_NAME} PRIVATE ${EXTRA_CXX_FLAGS})
 
@@ -571,6 +581,27 @@ add_custom_command(
 	COMMENT "Convert fw binary to C - Nisetro DS"
 	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/nisetro_ds_fw.bin ${TOOLS_DATA_DIR} nisetro_ds_fw nisetro_ds_fw
 	DEPENDS ${CMAKE_SOURCE_DIR}/bin/nisetro_ds_fw.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
+)
+
+add_custom_command(
+	OUTPUT ${TOOLS_DATA_DIR}/optimize_new_3ds_fw.cpp
+	COMMENT "Convert fw binary to C - Optimize New 3DS"
+	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/optimize_new_3ds_fw.bin ${TOOLS_DATA_DIR} optimize_new_3ds_fw optimize_new_3ds_fw
+	DEPENDS ${CMAKE_SOURCE_DIR}/bin/optimize_new_3ds_fw.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
+)
+
+add_custom_command(
+	OUTPUT ${TOOLS_DATA_DIR}/optimize_new_3ds_565_fpga_pl.cpp
+	COMMENT "Convert FPGA 565 PL binary to C - Optimize New 3DS"
+	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/optimize_new_3ds_565_fpga_pl.bin ${TOOLS_DATA_DIR} optimize_new_3ds_565_fpga_pl optimize_new_3ds_565_fpga_pl
+	DEPENDS ${CMAKE_SOURCE_DIR}/bin/optimize_new_3ds_565_fpga_pl.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
+)
+
+add_custom_command(
+	OUTPUT ${TOOLS_DATA_DIR}/optimize_new_3ds_888_fpga_pl.cpp
+	COMMENT "Convert FPGA 888 PL binary to C - Optimize New 3DS"
+	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/optimize_new_3ds_888_fpga_pl.bin ${TOOLS_DATA_DIR} optimize_new_3ds_888_fpga_pl optimize_new_3ds_888_fpga_pl
+	DEPENDS ${CMAKE_SOURCE_DIR}/bin/optimize_new_3ds_888_fpga_pl.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
 )
 
 set(SHADERS_LIST "")
@@ -647,6 +678,7 @@ else()
 	install(FILES ${USB_RULES_DIR}/50-ftd2xx.rules DESTINATION .)
 	install(FILES ${USB_RULES_DIR}/51-ftd2xx.rules DESTINATION .)
 	install(FILES ${USB_RULES_DIR}/51-nisetro.rules DESTINATION .)
+	install(FILES ${USB_RULES_DIR}/51-optimize.rules DESTINATION .)
 	install(FILES ${SETUP_SCRIPTS_DIR}/install_usb_rules${SCRIPT_EXTENSION} DESTINATION .)
 endif()
 

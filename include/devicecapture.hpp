@@ -22,7 +22,7 @@ void captureCall(CaptureData* capture_data);
 void capture_error_print(bool print_failed, CaptureData* capture_data, std::string error_string);
 void capture_error_print(bool print_failed, CaptureData* capture_data, std::string graphical_string, std::string detailed_string);
 uint64_t get_audio_n_samples(CaptureData* capture_data, CaptureDataSingleBuffer* data_buffer);
-uint64_t get_video_in_size(CaptureData* capture_data, bool is_3d);
+uint64_t get_video_in_size(CaptureData* capture_data, bool is_3d, InputVideoDataType video_data_type);
 std::string get_name_of_device(CaptureStatus* capture_status, bool use_long = false);
 int get_usb_speed_of_device(CaptureStatus* capture_status);
 bool get_device_can_do_3d(CaptureStatus* capture_status);
