@@ -333,7 +333,7 @@ static std::string cypress_driver_get_device_path(HDEVINFO DeviceInfoSet, SP_DEV
 	return result;
 }
 
-static bool cypress_driver_get_device_pid_vid_ids(HANDLE handle, uint16_t& out_vid, uint16_t& out_pid, UCHAR &imanufacturer, UCHAR &iserial, USHORT &bcdDevice) {
+static bool cypress_driver_get_device_pid_vid_ids(HANDLE handle, uint16_t& out_vid, uint16_t& out_pid, UCHAR &imanufacturer, UCHAR &iproduct, UCHAR &iserial, USHORT &bcdDevice) {
 	if (handle == INVALID_HANDLE_VALUE)
 		return false;
 	USB_DEVICE_DESCRIPTOR out_descriptor;
@@ -345,24 +345,27 @@ static bool cypress_driver_get_device_pid_vid_ids(HANDLE handle, uint16_t& out_v
 	out_vid = out_descriptor.idVendor;
 	out_pid = out_descriptor.idProduct;
 	imanufacturer = out_descriptor.iManufacturer;
+	iproduct = out_descriptor.iProduct;
 	iserial = out_descriptor.iSerialNumber;
 	bcdDevice = out_descriptor.bcdDevice;
 	return true;
 }
 
-static bool cypress_driver_get_device_pid_vid_manufacturer_serial_number(std::string path, uint16_t& out_vid, uint16_t& out_pid, std::string &manufacturer, std::string &serial, uint16_t& bcd_device) {
+static bool cypress_driver_get_device_pid_vid_manufacturer_product_serial_number(std::string path, uint16_t& out_vid, uint16_t& out_pid, std::string &manufacturer, std::string &product, std::string &serial, uint16_t& bcd_device) {
 	HANDLE handle = CreateFile(path.c_str(), (GENERIC_READ | GENERIC_WRITE), (FILE_SHARE_READ | FILE_SHARE_WRITE), NULL, OPEN_EXISTING, 0, NULL);
 	if (handle == INVALID_HANDLE_VALUE)
 		return false;
 	UCHAR imanufacturer;
+	UCHAR iproduct;
 	UCHAR iserial;
-	if(!cypress_driver_get_device_pid_vid_ids(handle, out_vid, out_pid, imanufacturer, iserial, bcd_device)) {
+	if(!cypress_driver_get_device_pid_vid_ids(handle, out_vid, out_pid, imanufacturer, iproduct, iserial, bcd_device)) {
 		CloseHandle(handle);
 		return false;
 	}
 	USHORT language = 0;
 	cypress_driver_get_string_language_info(handle, language);
 	cypress_driver_get_string_info(handle, imanufacturer, language, manufacturer);
+	cypress_driver_get_string_info(handle, iproduct, language, product);
 	cypress_driver_get_string_info(handle, iserial, language, serial);
 	CloseHandle(handle);
 	return true;
@@ -460,12 +463,13 @@ void cypress_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool*
 		uint16_t pid = 0;
 		uint16_t bcd_device = 0;
 		std::string manufacturer;
+		std::string product;
 		std::string serial;
-		if(!cypress_driver_get_device_pid_vid_manufacturer_serial_number(path, vid, pid, manufacturer, serial, bcd_device))
+		if(!cypress_driver_get_device_pid_vid_manufacturer_product_serial_number(path, vid, pid, manufacturer, product, serial, bcd_device))
 			continue;
 		for (int j = 0; j < device_descriptions.size(); j++) {
 			const cy_device_usb_device* usb_device_desc = device_descriptions[j];
-			if(not_supported_elems[j] && (usb_device_desc->vid == vid) && (usb_device_desc->pid == pid)) {
+			if(not_supported_elems[j] && (usb_device_desc->vid == vid) && (usb_device_desc->pid == pid) && ((!usb_device_desc->filter_for_product) || (usb_device_desc->wanted_product_str == product))) {
 				cy_device_device_handlers handlers;
 				bool result_conn_check = cypress_driver_setup_connection(&handlers, path, usb_device_desc->do_pipe_clear_reset);
 				cypress_driver_end_connection(&handlers);
@@ -505,11 +509,12 @@ cy_device_device_handlers* cypress_driver_find_by_serial_number(const cy_device_
 		uint16_t pid = 0;
 		uint16_t bcd_device = 0;
 		std::string manufacturer;
+		std::string product;
 		std::string serial;
-		if(!cypress_driver_get_device_pid_vid_manufacturer_serial_number(path, vid, pid, manufacturer, serial, bcd_device))
+		if(!cypress_driver_get_device_pid_vid_manufacturer_product_serial_number(path, vid, pid, manufacturer, product, serial, bcd_device))
 			continue;
 		std::string read_serial = cypress_get_serial(usb_device_desc, serial, bcd_device, curr_serial_extra_id);
-		if((usb_device_desc->vid == vid) && (usb_device_desc->pid == pid) && (wanted_serial_number == read_serial)) {
+		if((usb_device_desc->vid == vid) && (usb_device_desc->pid == pid) && (wanted_serial_number == read_serial) && ((!usb_device_desc->filter_for_product) || (usb_device_desc->wanted_product_str == product))) {
 			cy_device_device_handlers handlers;
 			if(cypress_driver_setup_connection(&handlers, path, usb_device_desc->do_pipe_clear_reset)) {
 				final_handlers = new cy_device_device_handlers;
@@ -637,11 +642,12 @@ void cypress_driver_find_used_serial(const cy_device_usb_device* usb_device_desc
 		uint16_t pid = 0;
 		uint16_t bcd_device = 0;
 		std::string manufacturer;
+		std::string product;
 		std::string serial;
-		if(!cypress_driver_get_device_pid_vid_manufacturer_serial_number(path, vid, pid, manufacturer, serial, bcd_device))
+		if(!cypress_driver_get_device_pid_vid_manufacturer_product_serial_number(path, vid, pid, manufacturer, product, serial, bcd_device))
 			continue;
 		std::string read_serial = cypress_get_serial(usb_device_desc, serial, bcd_device, curr_serial_extra_id);
-		if((usb_device_desc->vid == vid) && (usb_device_desc->pid == pid)) {
+		if((usb_device_desc->vid == vid) && (usb_device_desc->pid == pid) && ((!usb_device_desc->filter_for_product) || (usb_device_desc->wanted_product_str == product))) {
 			try {
 				int pos = std::stoi(read_serial);
 				if((pos < 0) || (pos >= num_free_fw_ids))

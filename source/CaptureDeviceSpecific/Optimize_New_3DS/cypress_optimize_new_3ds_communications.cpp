@@ -41,7 +41,9 @@ static const cyopn_device_usb_device cypress_optimize_new_3ds_generic_device = {
 	.alt_interface = 1,
 	.full_data = &cypress_optimize_new_3ds_generic_device,
 	.get_serial_fn = cypress_optimize_new_3ds_get_serial,
-	.create_device_fn = cypress_optimize_new_3ds_create_device
+	.create_device_fn = cypress_optimize_new_3ds_create_device,
+	.filter_for_product = false,
+	.wanted_product_str = ""
 }
 };
 

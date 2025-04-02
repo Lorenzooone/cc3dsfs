@@ -139,7 +139,7 @@ static bool check_product_usable(libusb_device_handle *handle, libusb_device_des
 		data[PRODUCT_SIZE] = '\0';
 		product_str = std::string((const char*)data);
 	}
-	return product_str != "N3DSCC";
+	return product_str != OPTIMIZE_NEW_3DS_ALTERNATIVE_PRODUCT_NAME;
 }
 
 static int do_usb_config_device(libusb_device_handle *handle, const usb_device* usb_device_desc) {

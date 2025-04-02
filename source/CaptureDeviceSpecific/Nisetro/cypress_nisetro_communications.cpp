@@ -48,7 +48,9 @@ static const cyni_device_usb_device cypress_fx2_generic_device = {
 	.alt_interface = 1,
 	.full_data = &cypress_fx2_generic_device,
 	.get_serial_fn = cypress_nisetro_get_serial,
-	.create_device_fn = cypress_nisetro_create_device
+	.create_device_fn = cypress_nisetro_create_device,
+	.filter_for_product = false,
+	.wanted_product_str = ""
 }
 };
 
@@ -70,7 +72,9 @@ static const cyni_device_usb_device cypress_fx2_nisetro_ds_device = {
 	.alt_interface = 0,
 	.full_data = &cypress_fx2_nisetro_ds_device,
 	.get_serial_fn = cypress_nisetro_get_serial,
-	.create_device_fn = cypress_nisetro_create_device
+	.create_device_fn = cypress_nisetro_create_device,
+	.filter_for_product = false,
+	.wanted_product_str = ""
 }
 };
 

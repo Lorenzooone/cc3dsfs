@@ -50,6 +50,8 @@ struct cy_device_usb_device {
 	const void* full_data;
 	cy_get_serial_function get_serial_fn;
 	cy_create_device_function create_device_fn;
+	bool filter_for_product;
+	std::string wanted_product_str;
 };
 
 struct cy_device_device_handlers {
