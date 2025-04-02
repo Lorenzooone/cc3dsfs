@@ -176,7 +176,7 @@ static void ftd3_libusb_capture_main_loop_processing(FTD3LibusbCaptureReceivedDa
 
 	bool could_use_3d = get_3d_enabled(&capture_data->status, true);
 	bool stored_3d_status = true;
-	bool result_3d_setup = ftd3_capture_3d_setup(capture_data, true, stored_3d_status);
+	bool result_3d_setup = ftd3_capture_3d_setup(capture_data, true, stored_3d_status, false);
 	if(!result_3d_setup)
 		return;
 
@@ -192,7 +192,7 @@ static void ftd3_libusb_capture_main_loop_processing(FTD3LibusbCaptureReceivedDa
 				return;
 			}
 
-			result_3d_setup = ftd3_capture_3d_setup(capture_data, false, stored_3d_status);
+			result_3d_setup = ftd3_capture_3d_setup(capture_data, false, stored_3d_status, false);
 			if(!result_3d_setup)
 				return;
 

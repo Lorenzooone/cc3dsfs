@@ -57,7 +57,7 @@ static void fast_capture_call(FTD3XXReceivedDataBuffer* received_buffer, Capture
 
 	bool could_use_3d = get_3d_enabled(&capture_data->status, true);
 	bool stored_3d_status = true;
-	bool result_3d_setup = ftd3_capture_3d_setup(capture_data, true, stored_3d_status);
+	bool result_3d_setup = ftd3_capture_3d_setup(capture_data, true, stored_3d_status, true);
 	if(!result_3d_setup)
 		return;
 
@@ -80,7 +80,7 @@ static void fast_capture_call(FTD3XXReceivedDataBuffer* received_buffer, Capture
 			if(!wait_all_fast_capture_call_async_transfers(received_buffer, capture_data))
 				return;
 
-			result_3d_setup = ftd3_capture_3d_setup(capture_data, false, stored_3d_status);
+			result_3d_setup = ftd3_capture_3d_setup(capture_data, false, stored_3d_status, true);
 			if(!result_3d_setup)
 				return;
 
@@ -116,13 +116,13 @@ static bool safe_capture_call(FTD3XXReceivedDataBuffer* received_buffer, Capture
 	void* handle = ((ftd3_device_device_handlers*)capture_data->handle)->driver_handle;
 	bool could_use_3d = get_3d_enabled(&capture_data->status, true);
 	bool stored_3d_status = true;
-	bool result_3d_setup = ftd3_capture_3d_setup(capture_data, true, stored_3d_status);
+	bool result_3d_setup = ftd3_capture_3d_setup(capture_data, true, stored_3d_status, true);
 	if(!result_3d_setup)
 		return true;
 
 	while(capture_data->status.connected && capture_data->status.running) {
 		if(could_use_3d && (stored_3d_status != capture_data->status.requested_3d)) {
-			result_3d_setup = ftd3_capture_3d_setup(capture_data, false, stored_3d_status);
+			result_3d_setup = ftd3_capture_3d_setup(capture_data, false, stored_3d_status, true);
 			if(!result_3d_setup)
 				return true;
 		}
