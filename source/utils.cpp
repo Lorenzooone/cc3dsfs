@@ -121,6 +121,16 @@ uint32_t read_be32(const uint8_t* data, size_t count, size_t multiplier) {
 	return data[3] | (data[2] << 8) | (data[1] << 16) | (data[0] << 24);
 }
 
+uint64_t read_le64(const uint8_t* data, size_t count, size_t multiplier) {
+	data += count * multiplier;
+	return data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24) | (((uint64_t)data[4]) << 32) | (((uint64_t)data[5]) << 40) | (((uint64_t)data[6]) << 48) | (((uint64_t)data[7]) << 56);
+}
+
+uint64_t read_be64(const uint8_t* data, size_t count, size_t multiplier) {
+	data += count * multiplier;
+	return data[7] | (data[6] << 8) | (data[5] << 16) | (data[4] << 24) | (((uint64_t)data[3]) << 32) | (((uint64_t)data[2]) << 40) | (((uint64_t)data[1]) << 48) | (((uint64_t)data[0]) << 56);
+}
+
 void write_le16(uint8_t* data, uint16_t value, size_t count, size_t multiplier) {
 	data += count * multiplier;
 	data[0] = value & 0xFF;
@@ -147,6 +157,30 @@ void write_be32(uint8_t* data, uint32_t value, size_t count, size_t multiplier) 
 	data[1] = (value >> 16) & 0xFF;
 	data[2] = (value >> 8) & 0xFF;
 	data[3] = value & 0xFF;
+}
+
+void write_le64(uint8_t* data, uint64_t value, size_t count, size_t multiplier) {
+	data += count * multiplier;
+	data[0] = value & 0xFF;
+	data[1] = (value >> 8) & 0xFF;
+	data[2] = (value >> 16) & 0xFF;
+	data[3] = (value >> 24) & 0xFF;
+	data[4] = (value >> 32) & 0xFF;
+	data[5] = (value >> 40) & 0xFF;
+	data[6] = (value >> 48) & 0xFF;
+	data[7] = (value >> 56) & 0xFF;
+}
+
+void write_be64(uint8_t* data, uint64_t value, size_t count, size_t multiplier) {
+	data += count * multiplier;
+	data[0] = (value >> 56) & 0xFF;
+	data[1] = (value >> 48) & 0xFF;
+	data[2] = (value >> 40) & 0xFF;
+	data[3] = (value >> 32) & 0xFF;
+	data[4] = (value >> 24) & 0xFF;
+	data[5] = (value >> 16) & 0xFF;
+	data[6] = (value >> 8) & 0xFF;
+	data[7] = value & 0xFF;
 }
 
 void write_string(uint8_t* data, std::string text) {

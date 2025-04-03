@@ -7,8 +7,6 @@
 
 #include <cstring>
 
-#define OPTIMIZE_AUDIO_BUFFER_MAX_SIZE 0x200
-
 #define INTERLEAVED_RGB565_PIXEL_NUM 4
 #define INTERLEAVED_RGB565_PIXEL_SIZE 2
 #define INTERLEAVED_RGB565_DATA_SIZE sizeof(uint16_t)
@@ -863,21 +861,21 @@ static USBNew3DSOptimizeHeaderSoundData* getAudioHeaderPtrNewOptimize3DS(Capture
 }
 
 static inline uint16_t read_sample_indexLE(USBNew3DSOptimizeSingleSoundData* sample) {
-	return sample->sample_index % OPTIMIZE_AUDIO_BUFFER_MAX_SIZE;
+	return sample->sample_index % OPTIMIZE_NEW_3DS_AUDIO_BUFFER_MAX_SIZE;
 }
 
 static inline uint16_t read_sample_indexBE(USBNew3DSOptimizeSingleSoundData* sample) {
-	return _reverse_endianness(sample->sample_index) % OPTIMIZE_AUDIO_BUFFER_MAX_SIZE;
+	return _reverse_endianness(sample->sample_index) % OPTIMIZE_NEW_3DS_AUDIO_BUFFER_MAX_SIZE;
 }
 
 static inline void copyAudioFromSoundDataNewOptimize3DSLE(std::int16_t *p_out, uint16_t start, USBNew3DSOptimizeSingleSoundData* sample) {
-	int32_t position = (read_sample_indexLE(sample) + OPTIMIZE_AUDIO_BUFFER_MAX_SIZE - start) % OPTIMIZE_AUDIO_BUFFER_MAX_SIZE;
+	int32_t position = (read_sample_indexLE(sample) + OPTIMIZE_NEW_3DS_AUDIO_BUFFER_MAX_SIZE - start) % OPTIMIZE_NEW_3DS_AUDIO_BUFFER_MAX_SIZE;
 	p_out[position * 2] = sample->sample_l;
 	p_out[(position * 2) + 1] = sample->sample_r;
 }
 
 static inline void copyAudioFromSoundDataNewOptimize3DSBE(std::int16_t *p_out, uint16_t start, USBNew3DSOptimizeSingleSoundData* sample) {
-	int32_t position = (read_sample_indexBE(sample) + OPTIMIZE_AUDIO_BUFFER_MAX_SIZE - start) % OPTIMIZE_AUDIO_BUFFER_MAX_SIZE;
+	int32_t position = (read_sample_indexBE(sample) + OPTIMIZE_NEW_3DS_AUDIO_BUFFER_MAX_SIZE - start) % OPTIMIZE_NEW_3DS_AUDIO_BUFFER_MAX_SIZE;
 	p_out[position * 2] = _reverse_endianness(sample->sample_l);
 	p_out[(position * 2) + 1] = _reverse_endianness(sample->sample_r);
 }
@@ -900,7 +898,7 @@ static void copyAudioNewOptimize3DSLE(std::int16_t *p_out, uint64_t &n_samples, 
 	}
 	USBNew3DSOptimizeHeaderSoundData* last_column_data = getAudioHeaderPtrNewOptimize3DS(buffer, is_rgb888, is_data_3d, TOP_WIDTH_3DS - 1);
 	last_buffer_index = read_sample_indexLE(&last_column_data->samples[1]);
-	n_samples = ((last_buffer_index + 1 + OPTIMIZE_AUDIO_BUFFER_MAX_SIZE - start) % OPTIMIZE_AUDIO_BUFFER_MAX_SIZE) * 2;
+	n_samples = ((last_buffer_index + 1 + OPTIMIZE_NEW_3DS_AUDIO_BUFFER_MAX_SIZE - start) % OPTIMIZE_NEW_3DS_AUDIO_BUFFER_MAX_SIZE) * 2;
 }
 
 static void copyAudioNewOptimize3DSBE(std::int16_t *p_out, uint64_t &n_samples, uint16_t &last_buffer_index, CaptureReceived* buffer, bool is_rgb888, bool is_data_3d) {
@@ -921,7 +919,7 @@ static void copyAudioNewOptimize3DSBE(std::int16_t *p_out, uint64_t &n_samples, 
 	}
 	USBNew3DSOptimizeHeaderSoundData* last_column_data = getAudioHeaderPtrNewOptimize3DS(buffer, is_rgb888, is_data_3d, TOP_WIDTH_3DS - 1);
 	last_buffer_index = read_sample_indexBE(&last_column_data->samples[1]);
-	n_samples = ((last_buffer_index + 1 + OPTIMIZE_AUDIO_BUFFER_MAX_SIZE - start) % OPTIMIZE_AUDIO_BUFFER_MAX_SIZE) * 2;
+	n_samples = ((last_buffer_index + 1 + OPTIMIZE_NEW_3DS_AUDIO_BUFFER_MAX_SIZE - start) % OPTIMIZE_NEW_3DS_AUDIO_BUFFER_MAX_SIZE) * 2;
 }
 
 bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, uint16_t &last_buffer_index, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status) {

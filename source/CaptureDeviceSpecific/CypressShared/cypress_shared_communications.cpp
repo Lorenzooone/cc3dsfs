@@ -52,10 +52,10 @@ int cypress_ctrl_bulk_in_transfer(cy_device_device_handlers* handlers, const cy_
 	return cypress_driver_ctrl_bulk_in(handlers, usb_device_desc, buf, length, transferred);
 }
 
-int cypress_ctrl_bulk_out_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
+int cypress_ctrl_bulk_out_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, const uint8_t* buf, int length, int* transferred) {
 	if(handlers->usb_handle)
-		return cypress_libusb_ctrl_bulk_out(handlers, usb_device_desc, buf, length, transferred);
-	return cypress_driver_ctrl_bulk_out(handlers, usb_device_desc, buf, length, transferred);
+		return cypress_libusb_ctrl_bulk_out(handlers, usb_device_desc, (uint8_t*)buf, length, transferred);
+	return cypress_driver_ctrl_bulk_out(handlers, usb_device_desc, (uint8_t*)buf, length, transferred);
 }
 
 void cypress_pipe_reset_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc) {

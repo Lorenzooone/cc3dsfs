@@ -72,7 +72,7 @@ int cypress_ctrl_out_transfer(cy_device_device_handlers* handlers, const cy_devi
 int cypress_bulk_in_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred);
 int cypress_bulk_in_async(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t *buf, int length, cy_async_callback_data* cb_data);
 int cypress_ctrl_bulk_in_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred);
-int cypress_ctrl_bulk_out_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred);
+int cypress_ctrl_bulk_out_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, const uint8_t* buf, int length, int* transferred);
 void cypress_pipe_reset_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc);
 void cypress_pipe_reset_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc);
 void cypress_pipe_reset_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc);

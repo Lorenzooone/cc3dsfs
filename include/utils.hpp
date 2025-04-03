@@ -47,10 +47,14 @@ uint16_t read_le16(const uint8_t* data, size_t count = 0, size_t multiplier = si
 uint16_t read_be16(const uint8_t* data, size_t count = 0, size_t multiplier = sizeof(uint16_t));
 uint32_t read_le32(const uint8_t* data, size_t count = 0, size_t multiplier = sizeof(uint32_t));
 uint32_t read_be32(const uint8_t* data, size_t count = 0, size_t multiplier = sizeof(uint32_t));
+uint64_t read_le64(const uint8_t* data, size_t count = 0, size_t multiplier = sizeof(uint64_t));
+uint64_t read_be64(const uint8_t* data, size_t count = 0, size_t multiplier = sizeof(uint64_t));
 void write_le16(uint8_t* data, uint16_t value, size_t count = 0, size_t multiplier = sizeof(uint16_t));
 void write_be16(uint8_t* data, uint16_t value, size_t count = 0, size_t multiplier = sizeof(uint16_t));
 void write_le32(uint8_t* data, uint32_t value, size_t count = 0, size_t multiplier = sizeof(uint32_t));
 void write_be32(uint8_t* data, uint32_t value, size_t count = 0, size_t multiplier = sizeof(uint32_t));
+void write_le64(uint8_t* data, uint64_t value, size_t count = 0, size_t multiplier = sizeof(uint64_t));
+void write_be64(uint8_t* data, uint64_t value, size_t count = 0, size_t multiplier = sizeof(uint64_t));
 void write_string(uint8_t* data, std::string text);
 std::string read_string(uint8_t* data, size_t size);
 uint32_t rotate_bits_left(uint32_t value);
