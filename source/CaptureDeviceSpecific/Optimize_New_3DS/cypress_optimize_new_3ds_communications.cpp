@@ -24,8 +24,10 @@
 #define CYPRESS_BASE_USB_PACKET_LIMIT 64
 #define CYPRESS_OPTIMIZE_NEW_3DS_USB_PACKET_LIMIT 512
 
+#define OPTIMIZE_NEW_3DS_WANTED_VALUE_BASE 0xFE00
+
 static const cyopn_device_usb_device cypress_optimize_new_3ds_generic_device = {
-.name = "EZ-USB Optimize New 3DS", .long_name = "EZ-USB Optimize New 3DS",
+.name = "EZ-USB -> Optimize New 3DS", .long_name = "EZ-USB -> Optimize New 3DS",
 .device_type = CYPRESS_OPTIMIZE_NEW_3DS_BLANK_DEVICE,
 .firmware_to_load = optimize_new_3ds_fw, .firmware_size = optimize_new_3ds_fw_len,
 .fpga_pl_565 = NULL, .fpga_pl_565_size = 0,
@@ -46,8 +48,8 @@ static const cyopn_device_usb_device cypress_optimize_new_3ds_generic_device = {
 	.full_data = &cypress_optimize_new_3ds_generic_device,
 	.get_serial_fn = cypress_optimize_new_3ds_get_serial,
 	.create_device_fn = cypress_optimize_new_3ds_create_device,
-	.filter_for_product = false,
-	.wanted_product_str = ""
+	.bcd_device_mask = 0x0000,
+	.bcd_device_wanted_value = 0x0000
 }
 };
 
@@ -62,7 +64,7 @@ static const cyopn_device_usb_device cypress_optimize_new_3ds_instantiated_devic
 .next_device = CYPRESS_OPTIMIZE_NEW_3DS_INSTANTIATED_DEVICE,
 .has_bcd_device_serial = true,
 .usb_device_info = {
-	.vid = 0x16d0, .pid = 0x06a3,
+	.vid = 0x04B4, .pid = 0x1004,
 	.default_config = 1, .default_interface = 0,
 	.bulk_timeout = 500,
 	.ep_ctrl_bulk_in = 1 | LIBUSB_ENDPOINT_IN, .ep_ctrl_bulk_out = 1 | LIBUSB_ENDPOINT_OUT,
@@ -73,8 +75,8 @@ static const cyopn_device_usb_device cypress_optimize_new_3ds_instantiated_devic
 	.full_data = &cypress_optimize_new_3ds_instantiated_device,
 	.get_serial_fn = cypress_optimize_new_3ds_get_serial,
 	.create_device_fn = cypress_optimize_new_3ds_create_device,
-	.filter_for_product = true,
-	.wanted_product_str = OPTIMIZE_NEW_3DS_ALTERNATIVE_PRODUCT_NAME
+	.bcd_device_mask = 0xFF00,
+	.bcd_device_wanted_value = OPTIMIZE_NEW_3DS_WANTED_VALUE_BASE
 }
 };
 
@@ -124,7 +126,7 @@ bool load_firmware(cy_device_device_handlers* handlers, const cyopn_device_usb_d
 	int num_patches = read_le16(fw_data, 1);
 	for(int i = 0; i < num_patches; i++) {
 		int pos_patch = read_le16(fw_data, 2 + i);
-		write_le16(fw_data + pos_patch, patch_id | 0xFF00);
+		write_le16(fw_data + pos_patch, patch_id | OPTIMIZE_NEW_3DS_WANTED_VALUE_BASE);
 	}
 	uint8_t buffer[0x8000];
 	buffer[0] = 1;
@@ -299,7 +301,7 @@ static int fpga_pl_load(cy_device_device_handlers* handlers, const cyopn_device_
 		if(remaining_size > fpga_pl_transfer_piece_size)
 			remaining_size = fpga_pl_transfer_piece_size;
 		memcpy(pl_buffer + fpga_pl_transfer_header_size, fpga_pl + (fpga_pl_transfer_piece_size * i), remaining_size);
-		ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), pl_buffer, sizeof(pl_buffer), &transferred);
+		ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), pl_buffer, remaining_size + fpga_pl_transfer_header_size, &transferred);
 		if(ret < 0)
 			return ret;
 	}

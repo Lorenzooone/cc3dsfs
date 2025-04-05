@@ -30,8 +30,10 @@
 #define PIO_RESET   0x10
 #define PIO_DIR     0x08
 
+#define NISETRO_DS_WANTED_VALUE_BASE 0xFF00
+
 static const cyni_device_usb_device cypress_fx2_generic_device = {
-.name = "EZ-USB FX2", .long_name = "EZ-USB FX2",
+.name = "EZ-USB -> Nisetro DS", .long_name = "EZ-USB -> Nisetro DS",
 .device_type = CYPRESS_NISETRO_BLANK_DEVICE,
 .video_data_type = VIDEO_DATA_RGB, 
 .firmware_to_load = nisetro_ds_fw, .firmware_size = nisetro_ds_fw_len,
@@ -49,8 +51,8 @@ static const cyni_device_usb_device cypress_fx2_generic_device = {
 	.full_data = &cypress_fx2_generic_device,
 	.get_serial_fn = cypress_nisetro_get_serial,
 	.create_device_fn = cypress_nisetro_create_device,
-	.filter_for_product = false,
-	.wanted_product_str = ""
+	.bcd_device_mask = 0x0000,
+	.bcd_device_wanted_value = 0x0000
 }
 };
 
@@ -73,8 +75,8 @@ static const cyni_device_usb_device cypress_fx2_nisetro_ds_device = {
 	.full_data = &cypress_fx2_nisetro_ds_device,
 	.get_serial_fn = cypress_nisetro_get_serial,
 	.create_device_fn = cypress_nisetro_create_device,
-	.filter_for_product = false,
-	.wanted_product_str = ""
+	.bcd_device_mask = 0xFF00,
+	.bcd_device_wanted_value = NISETRO_DS_WANTED_VALUE_BASE
 }
 };
 
@@ -124,7 +126,7 @@ bool load_firmware(cy_device_device_handlers* handlers, const cyni_device_usb_de
 	int num_patches = read_le16(fw_data, 1);
 	for(int i = 0; i < num_patches; i++) {
 		int pos_patch = read_le16(fw_data, 2 + i);
-		write_le16(fw_data + pos_patch, patch_id | 0xFF00);
+		write_le16(fw_data + pos_patch, patch_id | NISETRO_DS_WANTED_VALUE_BASE);
 	}
 	uint8_t buffer[0x8000];
 	buffer[0] = 1;

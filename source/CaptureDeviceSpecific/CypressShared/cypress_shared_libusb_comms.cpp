@@ -97,15 +97,12 @@ static bool cypress_libusb_setup_connection(libusb_device_handle* handle, const 
 	return true;
 }
 
-static void read_strings(libusb_device_handle *handle, libusb_device_descriptor *usb_descriptor, char* manufacturer, char* product, char* serial) {
+static void read_strings(libusb_device_handle *handle, libusb_device_descriptor *usb_descriptor, char* manufacturer, char* serial) {
 	manufacturer[0] = 0;
-	product[0] = 0;
 	serial[0] = 0;
 	libusb_get_string_descriptor_ascii(handle, usb_descriptor->iManufacturer, (uint8_t*)manufacturer, 0x100);
-	libusb_get_string_descriptor_ascii(handle, usb_descriptor->iProduct, (uint8_t*)product, 0x100);
 	libusb_get_string_descriptor_ascii(handle, usb_descriptor->iSerialNumber, (uint8_t*)serial, 0x100);
 	manufacturer[0xFF] = 0;
-	product[0xFF] = 0;
 	serial[0xFF] = 0;
 }
 
@@ -113,18 +110,15 @@ static int cypress_libusb_insert_device(std::vector<CaptureDevice> &devices_list
 	libusb_device_handle *handle = NULL;
 	if((usb_descriptor->idVendor != usb_device_desc->vid) || (usb_descriptor->idProduct != usb_device_desc->pid))
 		return LIBUSB_ERROR_NOT_FOUND;
+	uint16_t masked_wanted_bcd_device = usb_device_desc->bcd_device_mask & usb_device_desc->bcd_device_wanted_value;
+	if(masked_wanted_bcd_device != (usb_descriptor->bcdDevice & usb_device_desc->bcd_device_mask))
+		return LIBUSB_ERROR_NOT_FOUND;
 	int result = libusb_open(usb_device, &handle);
 	if((result < 0) || (handle == NULL))
 		return result;
 	char manufacturer[0x100];
-	char product[0x100];
 	char serial[0x100];
-	read_strings(handle, usb_descriptor, manufacturer, product, serial);
-	std::string product_str = (std::string)product;
-	if(usb_device_desc->filter_for_product && (usb_device_desc->wanted_product_str != product_str)) {
-		libusb_close(handle);
-		return LIBUSB_ERROR_NOT_FOUND;
-	}
+	read_strings(handle, usb_descriptor, manufacturer, serial);
 	bool claimed = false;
 	bool result_setup = cypress_libusb_setup_connection(handle, usb_device_desc, &claimed);
 	if(result_setup)
@@ -150,18 +144,15 @@ cy_device_device_handlers* cypress_libusb_serial_reconnection(const cy_device_us
 			continue;
 		if((usb_descriptor.idVendor != usb_device_desc->vid) || (usb_descriptor.idProduct != usb_device_desc->pid))
 			continue;
+		uint16_t masked_wanted_bcd_device = usb_device_desc->bcd_device_mask & usb_device_desc->bcd_device_wanted_value;
+		if(masked_wanted_bcd_device != (usb_descriptor.bcdDevice & usb_device_desc->bcd_device_mask))
+			continue;
 		result = libusb_open(usb_devices[i], &handlers.usb_handle);
 		if((result < 0) || (handlers.usb_handle == NULL))
 			continue;
 		char manufacturer[0x100];
-		char product[0x100];
 		char serial[0x100];
-		read_strings(handlers.usb_handle, &usb_descriptor, manufacturer, product, serial);
-		std::string product_str = (std::string)product;
-		if(usb_device_desc->filter_for_product && (usb_device_desc->wanted_product_str != product_str)) {
-			libusb_close(handlers.usb_handle);
-			continue;
-		}
+		read_strings(handlers.usb_handle, &usb_descriptor, manufacturer, serial);
 		std::string device_serial_number = cypress_get_serial(usb_device_desc, (std::string)(serial), usb_descriptor.bcdDevice, curr_serial_extra_id);
 		bool claimed = false;
 		if((wanted_serial_number == device_serial_number) && (cypress_libusb_setup_connection(handlers.usb_handle, usb_device_desc, &claimed))) {
@@ -204,17 +195,16 @@ void cypress_libusb_find_used_serial(const cy_device_usb_device* usb_device_desc
 			continue;
 		if((usb_descriptor.idVendor != usb_device_desc->vid) || (usb_descriptor.idProduct != usb_device_desc->pid))
 			continue;
+		uint16_t masked_wanted_bcd_device = usb_device_desc->bcd_device_mask & usb_device_desc->bcd_device_wanted_value;
+		if(masked_wanted_bcd_device != (usb_descriptor.bcdDevice & usb_device_desc->bcd_device_mask))
+			continue;
 		result = libusb_open(usb_devices[i], &handlers.usb_handle);
 		if(result || (handlers.usb_handle == NULL))
 			continue;
 		char manufacturer[0x100];
-		char product[0x100];
 		char serial[0x100];
-		read_strings(handlers.usb_handle, &usb_descriptor, manufacturer, product, serial);
+		read_strings(handlers.usb_handle, &usb_descriptor, manufacturer, serial);
 		libusb_close(handlers.usb_handle);
-		std::string product_str = (std::string)product;
-		if(usb_device_desc->filter_for_product && (usb_device_desc->wanted_product_str != product_str))
-			continue;
 		std::string device_serial_number = cypress_get_serial(usb_device_desc, (std::string)(serial), usb_descriptor.bcdDevice, curr_serial_extra_id);
 		try {
 			int pos = std::stoi(device_serial_number);
