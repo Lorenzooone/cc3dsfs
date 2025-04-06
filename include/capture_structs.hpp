@@ -87,8 +87,8 @@ struct PACKED USBNew3DSOptimizeHeaderSoundData {
 	uint16_t magic;
 	uint16_t unk_fixed_1 : 1;
 	uint16_t buffer_num : 1;
-	uint16_t unk : 5;
-	uint16_t column_index : 9;
+	uint16_t unk : 4;
+	uint16_t column_index : 10;
 	USBNew3DSOptimizeSingleSoundData samples[2];
 };
 

@@ -575,6 +575,7 @@ void cyni_device_acquisition_main_loop(CaptureData* capture_data) {
 		cypress_device_capture_recv_data[i].status = &status;
 		cypress_device_capture_recv_data[i].cb_data.actual_user_data = &cypress_device_capture_recv_data[i];
 		cypress_device_capture_recv_data[i].cb_data.transfer_data = NULL;
+		cypress_device_capture_recv_data[i].cb_data.is_data_ready = false;
 		cypress_device_capture_recv_data[i].cb_data.is_transfer_done_mutex = &is_transfer_done_shared_mutex;
 		cypress_device_capture_recv_data[i].cb_data.internal_index = i;
 		cypress_device_capture_recv_data[i].cb_data.is_transfer_data_ready_mutex = &is_transfer_data_ready_shared_mutex;
