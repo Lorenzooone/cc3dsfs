@@ -138,14 +138,14 @@ struct PACKED CYPRESS_SET_TRANSFER_SIZE_INFO {
 #pragma pack(pop)
 
 static GUID cypress_driver_guid = {.Data1 = 0xae18aa60, .Data2 = 0x7f6a, .Data3 = 0x11d4, .Data4 = {0x97, 0xdd, 0x0, 0x1, 0x2, 0x29, 0xb9, 0x59}};
-static GUID cypress_optimize_new_driver_guid = {.Data1 = 0xae18aa60, .Data2 = 0x7f6a, .Data3 = 0x11d4, .Data4 = {0x97, 0xdd, 0x0, 0x1, 0x2, 0x29, 0xb9, 0x59}};
+static GUID cypress_optimize_driver_guid = {.Data1 = 0xae18aa60, .Data2 = 0x7f6a, .Data3 = 0x11d4, .Data4 = {0x97, 0xdd, 0x0, 0x1, 0x2, 0x29, 0xb9, 0x59}};
 
 static GUID* get_driver_guid(CypressWindowsDriversEnum driver) {
 	switch(driver) {
 		case CYPRESS_WINDOWS_DEFAULT_USB_DRIVER:
 			return &cypress_driver_guid;
-		case CYPRESS_WINDOWS_OPTIMIZE_NEW_USB_DRIVER:
-			return &cypress_optimize_new_driver_guid;
+		case CYPRESS_WINDOWS_OPTIMIZE_USB_DRIVER:
+			return &cypress_optimize_driver_guid;
 		default:
 			return NULL;
 	}

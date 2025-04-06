@@ -68,8 +68,6 @@ struct twl_2bit_pixels {
 	uint8_t fourth_b : 1;
 };
 
-static void usb_new_3ds_optimize_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, bool enabled_3d, const bool is_big_endian, bool interleaved_3d, bool requested_3d, bool is_rgb888);
-
 // Optimized de-interleave methods...
 
 static inline uint16_t _reverse_endianness(uint16_t data) {
@@ -436,7 +434,7 @@ static inline void usb_oldDSconvertVideoToOutputHalfLineDirectOptBE(USBOldDSCapt
 	usb_rgb565convertInterleaveVideoToOutputDirectOptBE(out_ptr_top, out_ptr_bottom, in_ptr, halfline_iters, input_halfline, output_halfline);
 }
 
-static inline void usb_new3DS565OptimizeconvertVideoToOutputLineDirectOptLE(USB565New3DSOptimizeCaptureReceived *p_in, VideoOutputData *p_out, int column) {
+static inline void usb_3DS565OptimizeconvertVideoToOutputLineDirectOptLE(USB5653DSOptimizeCaptureReceived *p_in, VideoOutputData *p_out, int column) {
 	//de-interleave pixels
 	const int pixels_size = 2;
 	const int num_screens = 2;
@@ -464,7 +462,7 @@ static inline void usb_new3DS565OptimizeconvertVideoToOutputLineDirectOptLE(USB5
 	}
 }
 
-static inline void usb_new3DS565OptimizeconvertVideoToOutputLineDirectOptBE(USB565New3DSOptimizeCaptureReceived *p_in, VideoOutputData *p_out, int column) {
+static inline void usb_3DS565OptimizeconvertVideoToOutputLineDirectOptBE(USB5653DSOptimizeCaptureReceived *p_in, VideoOutputData *p_out, int column) {
 	//de-interleave pixels
 	const int pixels_size = 2;
 	const int num_screens = 2;
@@ -492,7 +490,7 @@ static inline void usb_new3DS565OptimizeconvertVideoToOutputLineDirectOptBE(USB5
 	}
 }
 
-static inline void usb_new3DS565Optimizeconvert3DVideoToOutputLineDirectOptLE(USB565New3DSOptimizeCaptureReceived_3D *p_in, VideoOutputData *p_out, int column, bool interleaved_3d) {
+static inline void usb_3DS565Optimizeconvert3DVideoToOutputLineDirectOptLE(USB5653DSOptimizeCaptureReceived_3D *p_in, VideoOutputData *p_out, int column, bool interleaved_3d) {
 	//de-interleave pixels
 	const int pixels_size = 2;
 	const int num_screens = 3;
@@ -527,7 +525,7 @@ static inline void usb_new3DS565Optimizeconvert3DVideoToOutputLineDirectOptLE(US
 	}
 }
 
-static inline void usb_new3DS565Optimizeconvert3DVideoToOutputLineDirectOptBE(USB565New3DSOptimizeCaptureReceived_3D *p_in, VideoOutputData *p_out, int column, bool interleaved_3d) {
+static inline void usb_3DS565Optimizeconvert3DVideoToOutputLineDirectOptBE(USB5653DSOptimizeCaptureReceived_3D *p_in, VideoOutputData *p_out, int column, bool interleaved_3d) {
 	//de-interleave pixels
 	const int pixels_size = 2;
 	const int num_screens = 3;
@@ -562,7 +560,7 @@ static inline void usb_new3DS565Optimizeconvert3DVideoToOutputLineDirectOptBE(US
 	}
 }
 
-static inline void usb_new3DS888OptimizeconvertVideoToOutputLineDirectOpt(USB888New3DSOptimizeCaptureReceived *p_in, VideoOutputData *p_out, int column) {
+static inline void usb_3DS888OptimizeconvertVideoToOutputLineDirectOpt(USB8883DSOptimizeCaptureReceived *p_in, VideoOutputData *p_out, int column) {
 	//de-interleave pixels
 	const int pixels_size = 3;
 	const size_t column_start_bot_pos = (SCREEN_WIDTH_FIRST_PIXEL_BOTTOM_3DS * 2) + 2;
@@ -589,7 +587,7 @@ static inline void usb_new3DS888OptimizeconvertVideoToOutputLineDirectOpt(USB888
 	}
 }
 
-static inline void usb_new3DS888Optimizeconvert3DVideoToOutputLineDirectOpt(USB888New3DSOptimizeCaptureReceived_3D *p_in, VideoOutputData *p_out, int column, bool interleaved_3d) {
+static inline void usb_3DS888Optimizeconvert3DVideoToOutputLineDirectOpt(USB8883DSOptimizeCaptureReceived_3D *p_in, VideoOutputData *p_out, int column, bool interleaved_3d) {
 	//de-interleave pixels
 	const int pixels_size = 3;
 	const size_t column_start_bot_pos = (SCREEN_WIDTH_FIRST_PIXEL_BOTTOM_3DS * 2) + 2;
@@ -720,35 +718,35 @@ static void usb_cypress_nisetro_ds_convertVideoToOutput(CaptureReceived *p_in, V
 	}
 }
 
-static void usb_new_3ds_optimize_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, bool enabled_3d, const bool is_big_endian, bool interleaved_3d, bool requested_3d, bool is_rgb888) {
+static void usb_3ds_optimize_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, bool enabled_3d, const bool is_big_endian, bool interleaved_3d, bool requested_3d, bool is_rgb888) {
 	if(!is_rgb888) {
 		if(!enabled_3d) {
 			if(!is_big_endian)
 				for(int i = 0; i < (TOP_WIDTH_3DS + 1); i++)
-					usb_new3DS565OptimizeconvertVideoToOutputLineDirectOptLE(&p_in->cypress_new_optimize_received_565, p_out, i);
+					usb_3DS565OptimizeconvertVideoToOutputLineDirectOptLE(&p_in->cypress_optimize_received_565, p_out, i);
 			else
 				for(int i = 0; i < (TOP_WIDTH_3DS + 1); i++)
-					usb_new3DS565OptimizeconvertVideoToOutputLineDirectOptBE(&p_in->cypress_new_optimize_received_565, p_out, i);
+					usb_3DS565OptimizeconvertVideoToOutputLineDirectOptBE(&p_in->cypress_optimize_received_565, p_out, i);
 			expand_2d_to_3d_convertVideoToOutput((uint8_t*)p_out->screen_data, 2, interleaved_3d, requested_3d);
 		}
 		else {
 			if(!is_big_endian)
 				for(int i = 0; i < (TOP_WIDTH_3DS + 1); i++)
-					usb_new3DS565Optimizeconvert3DVideoToOutputLineDirectOptLE(&p_in->cypress_new_optimize_received_565_3d, p_out, i, interleaved_3d);
+					usb_3DS565Optimizeconvert3DVideoToOutputLineDirectOptLE(&p_in->cypress_optimize_received_565_3d, p_out, i, interleaved_3d);
 			else
 				for(int i = 0; i < (TOP_WIDTH_3DS + 1); i++)
-					usb_new3DS565Optimizeconvert3DVideoToOutputLineDirectOptBE(&p_in->cypress_new_optimize_received_565_3d, p_out, i, interleaved_3d);
+					usb_3DS565Optimizeconvert3DVideoToOutputLineDirectOptBE(&p_in->cypress_optimize_received_565_3d, p_out, i, interleaved_3d);
 		}
 	}
 	else {
 		if(!enabled_3d) {
 			for(int i = 0; i < (TOP_WIDTH_3DS + 1); i++)
-				usb_new3DS888OptimizeconvertVideoToOutputLineDirectOpt(&p_in->cypress_new_optimize_received_888, p_out, i);
+				usb_3DS888OptimizeconvertVideoToOutputLineDirectOpt(&p_in->cypress_optimize_received_888, p_out, i);
 			expand_2d_to_3d_convertVideoToOutput((uint8_t*)p_out->screen_data, 3, interleaved_3d, requested_3d);
 		}
 		else {
 			for(int i = 0; i < (TOP_WIDTH_3DS + 1); i++)
-				usb_new3DS888Optimizeconvert3DVideoToOutputLineDirectOpt(&p_in->cypress_new_optimize_received_888_3d, p_out, i, interleaved_3d);
+				usb_3DS888Optimizeconvert3DVideoToOutputLineDirectOpt(&p_in->cypress_optimize_received_888_3d, p_out, i, interleaved_3d);
 		}
 	}
 }
@@ -839,37 +837,37 @@ bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, Capt
 		converted = true;
 	}
 	#endif
-	#ifdef USE_CYPRESS_NEW_OPTIMIZE
-	if(status->device.cc_type == CAPTURE_CONN_CYPRESS_NEW_OPTIMIZE) {
+	#ifdef USE_CYPRESS_OPTIMIZE
+	if(status->device.cc_type == CAPTURE_CONN_CYPRESS_OPTIMIZE) {
 		bool is_rgb888 = video_data_type == VIDEO_DATA_RGB;
-		usb_new_3ds_optimize_convertVideoToOutput(p_in, p_out, is_data_3d, is_big_endian, interleaved_3d, is_3d_requested, is_rgb888);
+		usb_3ds_optimize_convertVideoToOutput(p_in, p_out, is_data_3d, is_big_endian, interleaved_3d, is_3d_requested, is_rgb888);
 		converted = true;
 	}
 	#endif
 	return converted;
 }
 
-static USBNew3DSOptimizeHeaderSoundData* getAudioHeaderPtrNewOptimize3DS(CaptureReceived* buffer, bool is_rgb888, bool is_data_3d, int column) {
+static USB3DSOptimizeHeaderSoundData* getAudioHeaderPtrOptimize3DS(CaptureReceived* buffer, bool is_rgb888, bool is_data_3d, int column) {
 	if(!is_rgb888) {
 		if(!is_data_3d)
-			return &buffer->cypress_new_optimize_received_565.columns_data[column].header_sound;
-		return &buffer->cypress_new_optimize_received_565_3d.columns_data[column].header_sound;
+			return &buffer->cypress_optimize_received_565.columns_data[column].header_sound;
+		return &buffer->cypress_optimize_received_565_3d.columns_data[column].header_sound;
 	}
 	if(!is_data_3d)
-		return &buffer->cypress_new_optimize_received_888.columns_data[column].header_sound;
-	return &buffer->cypress_new_optimize_received_888_3d.columns_data[column].header_sound;
+		return &buffer->cypress_optimize_received_888.columns_data[column].header_sound;
+	return &buffer->cypress_optimize_received_888_3d.columns_data[column].header_sound;
 }
 
-static inline uint16_t read_sample_indexLE(USBNew3DSOptimizeSingleSoundData* sample) {
-	return sample->sample_index % OPTIMIZE_NEW_3DS_AUDIO_BUFFER_MAX_SIZE;
+static inline uint16_t read_sample_indexLE(USB3DSOptimizeSingleSoundData* sample) {
+	return sample->sample_index % OPTIMIZE_3DS_AUDIO_BUFFER_MAX_SIZE;
 }
 
-static inline uint16_t read_sample_indexBE(USBNew3DSOptimizeSingleSoundData* sample) {
-	return _reverse_endianness(sample->sample_index) % OPTIMIZE_NEW_3DS_AUDIO_BUFFER_MAX_SIZE;
+static inline uint16_t read_sample_indexBE(USB3DSOptimizeSingleSoundData* sample) {
+	return _reverse_endianness(sample->sample_index) % OPTIMIZE_3DS_AUDIO_BUFFER_MAX_SIZE;
 }
 
-static inline void copyAudioFromSoundDataNewOptimize3DSLE(std::int16_t *p_out, USBNew3DSOptimizeSingleSoundData* sample, uint64_t& num_inserted, int& last_inserted_index) {
-	uint16_t read_index = read_sample_indexLE(sample) % OPTIMIZE_NEW_3DS_AUDIO_BUFFER_MAX_SIZE;
+static inline void copyAudioFromSoundDataOptimize3DSLE(std::int16_t *p_out, USB3DSOptimizeSingleSoundData* sample, uint64_t& num_inserted, int& last_inserted_index) {
+	uint16_t read_index = read_sample_indexLE(sample) % OPTIMIZE_3DS_AUDIO_BUFFER_MAX_SIZE;
 	if(read_index == last_inserted_index)
 		return;
 	p_out[num_inserted * 2] = sample->sample_l;
@@ -878,8 +876,8 @@ static inline void copyAudioFromSoundDataNewOptimize3DSLE(std::int16_t *p_out, U
 	last_inserted_index = read_index;
 }
 
-static inline void copyAudioFromSoundDataNewOptimize3DSBE(std::int16_t *p_out, USBNew3DSOptimizeSingleSoundData* sample, uint64_t& num_inserted, int& last_inserted_index) {
-	uint16_t read_index = read_sample_indexBE(sample) % OPTIMIZE_NEW_3DS_AUDIO_BUFFER_MAX_SIZE;
+static inline void copyAudioFromSoundDataOptimize3DSBE(std::int16_t *p_out, USB3DSOptimizeSingleSoundData* sample, uint64_t& num_inserted, int& last_inserted_index) {
+	uint16_t read_index = read_sample_indexBE(sample) % OPTIMIZE_3DS_AUDIO_BUFFER_MAX_SIZE;
 	if(read_index == last_inserted_index)
 		return;
 	p_out[num_inserted * 2] = _reverse_endianness(sample->sample_l);
@@ -888,27 +886,27 @@ static inline void copyAudioFromSoundDataNewOptimize3DSBE(std::int16_t *p_out, U
 	last_inserted_index = read_index;
 }
 
-static void copyAudioNewOptimize3DSLE(std::int16_t *p_out, uint64_t &n_samples, uint16_t &last_buffer_index, CaptureReceived* buffer, bool is_rgb888, bool is_data_3d) {
-	USBNew3DSOptimizeHeaderSoundData* first_column_data = getAudioHeaderPtrNewOptimize3DS(buffer, is_rgb888, is_data_3d, 0);
+static void copyAudioOptimize3DSLE(std::int16_t *p_out, uint64_t &n_samples, uint16_t &last_buffer_index, CaptureReceived* buffer, bool is_rgb888, bool is_data_3d) {
+	USB3DSOptimizeHeaderSoundData* first_column_data = getAudioHeaderPtrOptimize3DS(buffer, is_rgb888, is_data_3d, 0);
 	uint64_t num_inserted = 0;
 	int last_inserted_index = last_buffer_index;
 	for(int i = 0; i < TOP_WIDTH_3DS; i++) {
-		USBNew3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrNewOptimize3DS(buffer, is_rgb888, is_data_3d, i);
-		copyAudioFromSoundDataNewOptimize3DSLE(p_out, &curr_column_data->samples[0], num_inserted, last_inserted_index);
-		copyAudioFromSoundDataNewOptimize3DSLE(p_out, &curr_column_data->samples[1], num_inserted, last_inserted_index);
+		USB3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrOptimize3DS(buffer, is_rgb888, is_data_3d, i);
+		copyAudioFromSoundDataOptimize3DSLE(p_out, &curr_column_data->samples[0], num_inserted, last_inserted_index);
+		copyAudioFromSoundDataOptimize3DSLE(p_out, &curr_column_data->samples[1], num_inserted, last_inserted_index);
 	}
 	last_buffer_index = last_inserted_index;
 	n_samples = num_inserted * 2;
 }
 
-static void copyAudioNewOptimize3DSBE(std::int16_t *p_out, uint64_t &n_samples, uint16_t &last_buffer_index, CaptureReceived* buffer, bool is_rgb888, bool is_data_3d) {
-	USBNew3DSOptimizeHeaderSoundData* first_column_data = getAudioHeaderPtrNewOptimize3DS(buffer, is_rgb888, is_data_3d, 0);
+static void copyAudioOptimize3DSBE(std::int16_t *p_out, uint64_t &n_samples, uint16_t &last_buffer_index, CaptureReceived* buffer, bool is_rgb888, bool is_data_3d) {
+	USB3DSOptimizeHeaderSoundData* first_column_data = getAudioHeaderPtrOptimize3DS(buffer, is_rgb888, is_data_3d, 0);
 	uint64_t num_inserted = 0;
 	int last_inserted_index = last_buffer_index;
 	for(int i = 0; i < TOP_WIDTH_3DS; i++) {
-		USBNew3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrNewOptimize3DS(buffer, is_rgb888, is_data_3d, i);
-		copyAudioFromSoundDataNewOptimize3DSBE(p_out, &curr_column_data->samples[0], num_inserted, last_inserted_index);
-		copyAudioFromSoundDataNewOptimize3DSBE(p_out, &curr_column_data->samples[1], num_inserted, last_inserted_index);
+		USB3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrOptimize3DS(buffer, is_rgb888, is_data_3d, i);
+		copyAudioFromSoundDataOptimize3DSBE(p_out, &curr_column_data->samples[0], num_inserted, last_inserted_index);
+		copyAudioFromSoundDataOptimize3DSBE(p_out, &curr_column_data->samples[1], num_inserted, last_inserted_index);
 	}
 	last_buffer_index = last_inserted_index;
 	n_samples = num_inserted * 2;
@@ -959,13 +957,13 @@ bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, uint16_t &la
 			
 	}
 	#endif
-	#ifdef USE_CYPRESS_NEW_OPTIMIZE
-	if(status->device.cc_type == CAPTURE_CONN_CYPRESS_NEW_OPTIMIZE) {
+	#ifdef USE_CYPRESS_OPTIMIZE
+	if(status->device.cc_type == CAPTURE_CONN_CYPRESS_OPTIMIZE) {
 		bool is_rgb888 = video_data_type == VIDEO_DATA_RGB;
 		if(is_big_endian)
-			copyAudioNewOptimize3DSBE(p_out, n_samples, last_buffer_index, &data_buffer->capture_buf, is_rgb888, is_data_3d);
+			copyAudioOptimize3DSBE(p_out, n_samples, last_buffer_index, &data_buffer->capture_buf, is_rgb888, is_data_3d);
 		else
-			copyAudioNewOptimize3DSLE(p_out, n_samples, last_buffer_index, &data_buffer->capture_buf, is_rgb888, is_data_3d);
+			copyAudioOptimize3DSLE(p_out, n_samples, last_buffer_index, &data_buffer->capture_buf, is_rgb888, is_data_3d);
 		return true;
 	}
 	#endif

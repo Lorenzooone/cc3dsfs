@@ -6,7 +6,7 @@
 #include "utils.hpp"
 #include "cypress_shared_communications.hpp"
 
-enum CypressWindowsDriversEnum { CYPRESS_WINDOWS_DEFAULT_USB_DRIVER, CYPRESS_WINDOWS_OPTIMIZE_NEW_USB_DRIVER };
+enum CypressWindowsDriversEnum { CYPRESS_WINDOWS_DEFAULT_USB_DRIVER, CYPRESS_WINDOWS_OPTIMIZE_USB_DRIVER };
 
 void cypress_driver_list_devices(std::vector<CaptureDevice>& devices_list, bool* not_supported_elems, int* curr_serial_extra_id_cypress, std::vector<const cy_device_usb_device*> &device_descriptions, CypressWindowsDriversEnum driver);
 void cypress_driver_find_used_serial(const cy_device_usb_device* usb_device_desc, bool* found, size_t num_free_fw_ids, int &curr_serial_extra_id, CypressWindowsDriversEnum driver);

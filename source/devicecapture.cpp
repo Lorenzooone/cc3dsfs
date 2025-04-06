@@ -4,7 +4,7 @@
 #include "usb_ds_3ds_capture.hpp"
 #include "usb_is_device_acquisition.hpp"
 #include "cypress_nisetro_acquisition.hpp"
-#include "cypress_optimize_new_3ds_acquisition.hpp"
+#include "cypress_optimize_3ds_acquisition.hpp"
 
 #include <vector>
 #include <thread>
@@ -88,8 +88,8 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	#ifdef USE_CYNI_USB
 	list_devices_cyni_device(devices_list, no_access_list);
 	#endif
-	#ifdef USE_CYPRESS_NEW_OPTIMIZE
-	list_devices_cyopn_device(devices_list, no_access_list);
+	#ifdef USE_CYPRESS_OPTIMIZE
+	list_devices_cyop_device(devices_list, no_access_list);
 	#endif
 	#ifdef USE_FTD3
 	list_devices_ftd3(devices_list, no_access_list);
@@ -132,8 +132,8 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_CYPRESS_NISETRO) && (!cyni_device_connect_usb(print_failed, capture_data, &devices_list[chosen_device])))
 		return false;
 	#endif
-	#ifdef USE_CYPRESS_NEW_OPTIMIZE
-	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_CYPRESS_NEW_OPTIMIZE) && (!cyopn_device_connect_usb(print_failed, capture_data, &devices_list[chosen_device])))
+	#ifdef USE_CYPRESS_OPTIMIZE
+	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_CYPRESS_OPTIMIZE) && (!cyop_device_connect_usb(print_failed, capture_data, &devices_list[chosen_device])))
 		return false;
 	#endif
 	#ifdef USE_FTD3
@@ -176,9 +176,9 @@ void captureCall(CaptureData* capture_data) {
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_NISETRO)
 			cyni_device_acquisition_main_loop(capture_data);
 		#endif
-		#ifdef USE_CYPRESS_NEW_OPTIMIZE
-		if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_NEW_OPTIMIZE)
-			cyopn_device_acquisition_main_loop(capture_data);
+		#ifdef USE_CYPRESS_OPTIMIZE
+		if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_OPTIMIZE)
+			cyop_device_acquisition_main_loop(capture_data);
 		#endif
 		#ifdef USE_FTD3
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
@@ -210,9 +210,9 @@ void captureCall(CaptureData* capture_data) {
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_NISETRO)
 			usb_cyni_device_acquisition_cleanup(capture_data);
 		#endif
-		#ifdef USE_CYPRESS_NEW_OPTIMIZE
-		if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_NEW_OPTIMIZE)
-			usb_cyopn_device_acquisition_cleanup(capture_data);
+		#ifdef USE_CYPRESS_OPTIMIZE
+		if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_OPTIMIZE)
+			usb_cyop_device_acquisition_cleanup(capture_data);
 		#endif
 		#ifdef USE_FTD3
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
@@ -241,8 +241,8 @@ void captureCall(CaptureData* capture_data) {
 uint64_t get_audio_n_samples(CaptureData* capture_data, CaptureDataSingleBuffer* data_buffer) {
 	if(!capture_data->status.device.has_audio)
 		return 0;
-	#ifdef USE_CYPRESS_NEW_OPTIMIZE
-	if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_NEW_OPTIMIZE)
+	#ifdef USE_CYPRESS_OPTIMIZE
+	if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_OPTIMIZE)
 		return -1;
 	#endif
 	uint64_t n_samples = (data_buffer->read - get_video_in_size(capture_data, data_buffer->is_3d, data_buffer->buffer_video_data_type)) / 2;
@@ -259,9 +259,9 @@ uint64_t get_video_in_size(CaptureData* capture_data, bool is_3d, InputVideoData
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_NISETRO)
 		return cyni_device_get_video_in_size(capture_data);
 	#endif
-	#ifdef USE_CYPRESS_NEW_OPTIMIZE
-	if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_NEW_OPTIMIZE)
-		return cyopn_device_get_video_in_size(capture_data, is_3d, video_data_type);
+	#ifdef USE_CYPRESS_OPTIMIZE
+	if(capture_data->status.device.cc_type == CAPTURE_CONN_CYPRESS_OPTIMIZE)
+		return cyop_device_get_video_in_size(capture_data, is_3d, video_data_type);
 	#endif
 	#ifdef USE_FTD3
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_FTD3)
@@ -364,8 +364,8 @@ void capture_init() {
 	#ifdef USE_CYNI_USB
 	usb_cyni_device_init();
 	#endif
-	#ifdef USE_CYPRESS_NEW_OPTIMIZE
-	usb_cyopn_device_init();
+	#ifdef USE_CYPRESS_OPTIMIZE
+	usb_cyop_device_init();
 	#endif
 }
 
@@ -382,7 +382,7 @@ void capture_close() {
 	#ifdef USE_CYNI_USB
 	usb_cyni_device_close();
 	#endif
-	#ifdef USE_CYPRESS_NEW_OPTIMIZE
-	usb_cyopn_device_close();
+	#ifdef USE_CYPRESS_OPTIMIZE
+	usb_cyop_device_close();
 	#endif
 }
