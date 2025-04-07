@@ -39,7 +39,7 @@ Audio::~Audio() {
 void Audio::update_volume() {
 	int new_final_volume = this->audio_data->get_final_volume();
 	if(this->final_volume != new_final_volume)
-		setVolume(new_final_volume);
+		setVolume((float)new_final_volume);
 	this->final_volume = new_final_volume;
 }
 	
@@ -85,8 +85,8 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 	inside_clock_time_start = std::chrono::high_resolution_clock::now();
 
 	inside_onGetData = true;
-	int loaded_samples = samples.size();
-	while(loaded_samples <= 0) {
+	size_t loaded_samples = samples.size();
+	while(loaded_samples == 0) {
 		switch(this->audio_data->get_audio_mode_output()) {
 			case AUDIO_MODE_STABLE:
 				inside_onGetData = false;
@@ -98,7 +98,7 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 					return false;
 				}
 				loaded_samples = samples.size();
-				if((loaded_samples <= 0) && this->hasTooMuchTimeElapsedInside()) {
+				if((loaded_samples == 0) && this->hasTooMuchTimeElapsedInside()) {
 					// This is needed by MacOS...
 					// But it also causes some trailing noise when
 					// closing the lid on the devices.
@@ -119,9 +119,9 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 
 	data.sampleCount = 0;
 
-	for(int i = 0; i < loaded_samples; i++) {
+	for(size_t i = 0; i < loaded_samples; i++) {
 		const std::int16_t *data_samples = samples.front().bytes;
-		uint64_t count = samples.front().size;
+		size_t count = (size_t)samples.front().size;
 		memcpy(buffer + data.sampleCount, data_samples, count * sizeof(std::int16_t));
 		// Unused, but could be useful info
 		//double real_sample_rate = (1.0 / samples.front().time) * count / 2;
@@ -130,7 +130,7 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 	}
 
 	if(this->audio_data->get_audio_output_type() == AUDIO_OUTPUT_MONO)
-		for(int i = 0; i < data.sampleCount; i++) {
+		for(size_t i = 0; i < data.sampleCount; i++) {
 			int sum = ((int)buffer[i * 2]) + buffer[(i * 2) + 1];
 			// >> is apparently implementation-dependent. Do it like this...
 			int sign_mult = 1;
@@ -146,7 +146,7 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 
 	#ifdef AUDIO_PANNING_TEST
 	int max_diff = 0;
-	for(int i = 0; i < data.sampleCount; i++) {
+	for(size_t i = 0; i < data.sampleCount; i++) {
 		int diff = abs(buffer[i * 2] - buffer[(i * 2) + 1]);
 		if(diff > max_diff)
 			max_diff = diff;

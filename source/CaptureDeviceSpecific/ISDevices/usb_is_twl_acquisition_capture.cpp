@@ -22,7 +22,7 @@ static void output_to_thread_reset_processed_data(CaptureData* capture_data, int
 }
 
 static int process_frame_and_read(CaptureData* capture_data, int internal_index, CaptureScreensType curr_capture_type, CaptureSpeedsType curr_capture_speed, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, uint32_t &last_read_frame_index, uint32_t video_address, uint32_t video_length, size_t &video_length_processed, uint32_t audio_address, uint32_t audio_length, size_t &audio_length_processed, bool &processed, float &last_frame_length, bool &reprocess) {
-	const size_t video_processed_size = usb_is_device_get_video_in_size(curr_capture_type, IS_TWL_CAPTURE_DEVICE);
+	const size_t video_processed_size = (size_t)usb_is_device_get_video_in_size(curr_capture_type, IS_TWL_CAPTURE_DEVICE);
 	processed = false;
 	if((video_length == 0) && (audio_length == 0)) {
 		if(reprocess)
@@ -58,7 +58,7 @@ static int process_frame_and_read(CaptureData* capture_data, int internal_index,
 		audio_address += -audio_diff_from_max;
 		audio_length = max_audio_length;
 	}
-	int audio_processed_diff_from_max = max_audio_length - audio_length_processed;
+	int audio_processed_diff_from_max = (int)(max_audio_length - audio_length_processed);
 	if(audio_processed_diff_from_max >= 0)
 		audio_processed_diff_from_max = 0;
 	else
@@ -70,19 +70,19 @@ static int process_frame_and_read(CaptureData* capture_data, int internal_index,
 		return ret;
 	audio_length_processed += audio_length;
 	// Have enough video frames been received? If yes, output!
-	int num_curr_available_frames = video_length / sizeof(ISTWLCaptureVideoInternalReceived);
-	int num_available_frames = video_length_processed / sizeof(ISTWLCaptureVideoInternalReceived);
+	int num_curr_available_frames = (int)(video_length / sizeof(ISTWLCaptureVideoInternalReceived));
+	int num_available_frames = (int)(video_length_processed / sizeof(ISTWLCaptureVideoInternalReceived));
 	if(num_available_frames < multiplier)
 		return 0;
 	if(num_curr_available_frames > 0) {
 		int frame_next = num_curr_available_frames - 1;
 		last_read_frame_index += num_curr_available_frames;
 		video_address = video_address + (frame_next * sizeof(ISTWLCaptureVideoInternalReceived));
-		ret = ReadFrame(handlers, (uint8_t*)&capture_buf->is_twl_capture_received.video_capture_in, video_address, video_processed_size, usb_device_desc);
+		ret = ReadFrame(handlers, (uint8_t*)&capture_buf->is_twl_capture_received.video_capture_in, video_address, (int)video_processed_size, usb_device_desc);
 		if(ret < 0)
 			return ret;
 		const auto curr_time = std::chrono::high_resolution_clock::now();
-		const std::chrono::duration<double> diff = curr_time - (*clock_start);
+		const std::chrono::duration<float> diff = curr_time - (*clock_start);
 		last_frame_length = diff.count();
 	}
 	// Possible issue: there is more video or audio data available
@@ -210,7 +210,7 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 		capture_error_print(true, capture_data, "Initial Frame Info Set: Failed");
 		return;
 	}
-	default_sleep(DEFAULT_FRAME_TIME_MS / SLEEP_FRAME_DIVIDER);
+	default_sleep((float)(DEFAULT_FRAME_TIME_MS / SLEEP_FRAME_DIVIDER));
 	ret = SetBatteryPercentage(handlers, usb_device_desc, curr_battery_percentage);
 	if(ret < 0) {
 		capture_error_print(true, capture_data, "Initial Battery Set: Failed");
@@ -247,7 +247,7 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 			if((last_frame_length > 0) && (last_frame_length < CUTOFF_LAST_FRAME_TIME))
 				default_sleep((last_frame_length * 1000) / SLEEP_FRAME_DIVIDER);
 			else
-				default_sleep(DEFAULT_FRAME_TIME_MS / SLEEP_FRAME_DIVIDER);
+				default_sleep((float)(DEFAULT_FRAME_TIME_MS / SLEEP_FRAME_DIVIDER));
 			ret = CaptureResetHardware(capture_data, clock_last_reset);
 			if(ret < 0) {
 				capture_error_print(true, capture_data, "Hardware Reset: Failed");

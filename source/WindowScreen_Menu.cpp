@@ -54,7 +54,7 @@ static void check_held_reset(bool value, HeldTime &action_time) {
 static float check_held_diff(std::chrono::time_point<std::chrono::high_resolution_clock> &curr_time, HeldTime &action_time) {
 	if(!action_time.started)
 		return 0.0;
-	const std::chrono::duration<double> diff = curr_time - action_time.start_time;
+	const std::chrono::duration<float> diff = curr_time - action_time.start_time;
 	return diff.count();
 }
 
@@ -263,8 +263,9 @@ void WindowScreen::game_crop_enable_change() {
 void WindowScreen::crop_value_change(int new_crop_value, bool do_print_notification, bool do_cycle) {
 	std::vector<const CropData*> *crops = this->get_crop_data_vector(&this->m_info);
 	int *crop_value = this->get_crop_index_ptr(&this->m_info);
-	int new_value = new_crop_value % crops->size();
-	if((!do_cycle) && ((new_crop_value < 0) || (new_crop_value >= crops->size())))
+	int num_crops = (int)crops->size();
+	int new_value = new_crop_value % num_crops;
+	if((!do_cycle) && ((new_crop_value < 0) || (new_crop_value >= num_crops)))
 		new_value = 0;
 	if(new_value < 0)
 		new_value = 0;
@@ -391,7 +392,7 @@ void WindowScreen::menu_scaling_change(bool positive) {
 	if(this->m_info.menu_scaling_factor > 9.95)
 		this->m_info.menu_scaling_factor = 10.0;
 	if(old_scaling != this->m_info.menu_scaling_factor) {
-		this->print_notification_float("Menu Scaling", this->m_info.menu_scaling_factor, 1);
+		this->print_notification_float("Menu Scaling", (float)this->m_info.menu_scaling_factor, 1);
 	}
 }
 
@@ -416,7 +417,7 @@ void WindowScreen::window_scaling_change(bool positive) {
 	if (this->m_info.scaling > (MAX_WINDOW_SCALING_VALUE - (WINDOW_SCALING_CHANGE / 2)))
 		this->m_info.scaling = MAX_WINDOW_SCALING_VALUE;
 	if(old_scaling != this->m_info.scaling) {
-		this->print_notification_float("Scaling", this->m_info.scaling, 1);
+		this->print_notification_float("Scaling", (float)this->m_info.scaling, 1);
 		this->future_operations.call_screen_settings_update = true;
 	}
 }
@@ -1035,13 +1036,13 @@ void WindowScreen::setup_resolution_menu(bool reset_data) {
 		if(modes.size() > 0) {
 			this->possible_resolutions.push_back(sf::VideoMode({0, 0}, 0));
 			this->possible_resolutions.push_back(modes[0]);
-			for(int i = 1; i < modes.size(); ++i)
+			for(size_t i = 1; i < modes.size(); ++i)
 				if(modes[0].bitsPerPixel == modes[i].bitsPerPixel)
 					this->possible_resolutions.push_back(modes[i]);
 		}
 		else {
 			this->print_notification("No Fullscreen resolution found", TEXT_KIND_WARNING);
-			for(int i = 0; i < (sizeof(default_fs_modes) / sizeof(default_fs_modes[0])); i++) {
+			for(size_t i = 0; i < (sizeof(default_fs_modes) / sizeof(default_fs_modes[0])); i++) {
 				this->possible_resolutions.push_back(*default_fs_modes[i]);
 			}
 		}
@@ -1239,11 +1240,7 @@ bool WindowScreen::no_menu_poll(SFEvent &event_data) {
 	bool consumed = true;
 	switch(event_data.type) {
 		case EVENT_TEXT_ENTERED:
-			switch(event_data.unicode) {
-				default:
-					consumed = false;
-					break;
-			}
+			consumed = false;
 			break;
 		case EVENT_KEY_PRESSED:
 			switch(event_data.code) {
@@ -1732,10 +1729,10 @@ void WindowScreen::poll(bool do_everything) {
 							this->rotation_change(this->m_info.bot_rotation, true);
 							break;
 						case VIDEO_MENU_SMALL_SCREEN_OFFSET_DEC:
-							this->offset_change(this->m_info.subscreen_offset, -0.1);
+							this->offset_change(this->m_info.subscreen_offset, -0.1f);
 							break;
 						case VIDEO_MENU_SMALL_SCREEN_OFFSET_INC:
-							this->offset_change(this->m_info.subscreen_offset, 0.1);
+							this->offset_change(this->m_info.subscreen_offset, 0.1f);
 							break;
 						case VIDEO_MENU_ROTATION_SETTINGS:
 							this->setup_rotation_menu();
@@ -1882,28 +1879,28 @@ void WindowScreen::poll(bool do_everything) {
 						case OFFSET_MENU_NO_ACTION:
 							break;
 						case OFFSET_MENU_SMALL_OFFSET_DEC:
-							this->offset_change(this->m_info.subscreen_offset, -0.1);
+							this->offset_change(this->m_info.subscreen_offset, -0.1f);
 							break;
 						case OFFSET_MENU_SMALL_OFFSET_INC:
-							this->offset_change(this->m_info.subscreen_offset, 0.1);
+							this->offset_change(this->m_info.subscreen_offset, 0.1f);
 							break;
 						case OFFSET_MENU_SMALL_SCREEN_DISTANCE_DEC:
-							this->offset_change(this->m_info.subscreen_attached_offset, -0.1);
+							this->offset_change(this->m_info.subscreen_attached_offset, -0.1f);
 							break;
 						case OFFSET_MENU_SMALL_SCREEN_DISTANCE_INC:
-							this->offset_change(this->m_info.subscreen_attached_offset, 0.1);
+							this->offset_change(this->m_info.subscreen_attached_offset, 0.1f);
 							break;
 						case OFFSET_MENU_SCREENS_X_POS_DEC:
-							this->offset_change(this->m_info.total_offset_x, -0.1);
+							this->offset_change(this->m_info.total_offset_x, -0.1f);
 							break;
 						case OFFSET_MENU_SCREENS_X_POS_INC:
-							this->offset_change(this->m_info.total_offset_x, 0.1);
+							this->offset_change(this->m_info.total_offset_x, 0.1f);
 							break;
 						case OFFSET_MENU_SCREENS_Y_POS_DEC:
-							this->offset_change(this->m_info.total_offset_y, -0.1);
+							this->offset_change(this->m_info.total_offset_y, -0.1f);
 							break;
 						case OFFSET_MENU_SCREENS_Y_POS_INC:
-							this->offset_change(this->m_info.total_offset_y, 0.1);
+							this->offset_change(this->m_info.total_offset_y, 0.1f);
 							break;
 						default:
 							break;
@@ -2247,7 +2244,7 @@ void WindowScreen::poll(bool do_everything) {
 						default:
 							audio_output_device_data tmp_out_device;
 							int output_device_index = this->audio_device_menu->selected_index - 1;
-							if((output_device_index >= 0) && (output_device_index < this->possible_audio_devices.size())) {
+							if((output_device_index >= 0) && (output_device_index < ((int)this->possible_audio_devices.size()))) {
 								tmp_out_device.preference_requested = true;
 								tmp_out_device.preferred = this->possible_audio_devices[output_device_index];
 							}
@@ -2530,7 +2527,7 @@ void WindowScreen::poll_window(bool do_everything) {
 			if(do_everything) {
 				check_held_reset(sf::Mouse::isButtonPressed(sf::Mouse::Button::Right), this->right_click_action);
 				bool found = false;
-				for(int i = 0; i < sf::Joystick::Count; i++) {
+				for(unsigned int i = 0; i < sf::Joystick::Count; i++) {
 					if(!sf::Joystick::isConnected(i))
 						continue;
 					if(sf::Joystick::getButtonCount(i) <= 0)
@@ -2572,90 +2569,91 @@ void WindowScreen::poll_window(bool do_everything) {
 }
 
 void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
+	float menu_scaling_factor = (float)this->loaded_info.menu_scaling_factor;
 	switch(this->loaded_menu) {
 		case CONNECT_MENU_TYPE:
-			this->connection_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+			this->connection_menu->prepare(menu_scaling_factor, view_size_x, view_size_y);
 			break;
 		case MAIN_MENU_TYPE:
-			this->main_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->capture_status->connected);
+			this->main_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->capture_status->connected);
 			break;
 		case VIDEO_MENU_TYPE:
-			this->video_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info, this->m_stype);
+			this->video_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info, this->m_stype);
 			break;
 		case CROP_MENU_TYPE:
-			this->crop_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, *this->get_crop_index_ptr(&this->loaded_info));
+			this->crop_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, *this->get_crop_index_ptr(&this->loaded_info));
 			break;
 		case TOP_PAR_MENU_TYPE:
-			this->par_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.top_par);
+			this->par_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.top_par);
 			break;
 		case BOTTOM_PAR_MENU_TYPE:
-			this->par_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.bot_par);
+			this->par_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.bot_par);
 			break;
 		case ROTATION_MENU_TYPE:
-			this->rotation_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+			this->rotation_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
 			break;
 		case OFFSET_MENU_TYPE:
-			this->offset_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+			this->offset_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
 			break;
 		case AUDIO_MENU_TYPE:
-			this->audio_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->audio_data);
+			this->audio_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->audio_data);
 			break;
 		case BFI_MENU_TYPE:
-			this->bfi_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+			this->bfi_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
 			break;
 		case RELATIVE_POS_MENU_TYPE:
-			this->relpos_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.bottom_pos);
+			this->relpos_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.bottom_pos);
 			break;
 		case RESOLUTION_MENU_TYPE:
-			this->resolution_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.fullscreen_mode_width, this->loaded_info.fullscreen_mode_height);
+			this->resolution_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.fullscreen_mode_width, this->loaded_info.fullscreen_mode_height);
 			break;
 		case SAVE_MENU_TYPE:
-			this->fileconfig_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+			this->fileconfig_menu->prepare(menu_scaling_factor, view_size_x, view_size_y);
 			break;
 		case LOAD_MENU_TYPE:
-			this->fileconfig_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+			this->fileconfig_menu->prepare(menu_scaling_factor, view_size_x, view_size_y);
 			break;
 		case EXTRA_MENU_TYPE:
-			this->extra_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+			this->extra_menu->prepare(menu_scaling_factor, view_size_x, view_size_y);
 			break;
 		case SHORTCUTS_MENU_TYPE:
-			this->shortcut_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+			this->shortcut_menu->prepare(menu_scaling_factor, view_size_x, view_size_y);
 			break;
 		case ACTION_SELECTION_MENU_TYPE:
-			this->action_selection_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, (*this->possible_buttons_ptrs[this->chosen_button])->cmd);
+			this->action_selection_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, (*this->possible_buttons_ptrs[this->chosen_button])->cmd);
 			break;
 		case STATUS_MENU_TYPE:
-			this->status_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, FPSArrayGetAverage(&in_fps), FPSArrayGetAverage(&poll_fps), FPSArrayGetAverage(&draw_fps), this->capture_status);
+			this->status_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, FPSArrayGetAverage(&in_fps), FPSArrayGetAverage(&poll_fps), FPSArrayGetAverage(&draw_fps), this->capture_status);
 			break;
 		case LICENSES_MENU_TYPE:
-			this->license_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y);
+			this->license_menu->prepare(menu_scaling_factor, view_size_x, view_size_y);
 			break;
 		case SCALING_RATIO_MENU_TYPE:
-			this->scaling_ratio_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+			this->scaling_ratio_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
 			break;
 		case ISN_MENU_TYPE:
-			this->is_nitro_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->capture_status);
+			this->is_nitro_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->capture_status);
 			break;
 		case VIDEO_EFFECTS_MENU_TYPE:
-			this->video_effects_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+			this->video_effects_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
 			break;
 		case INPUT_MENU_TYPE:
-			this->input_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->shared_data->input_data);
+			this->input_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, &this->shared_data->input_data);
 			break;
 		case AUDIO_DEVICE_MENU_TYPE:
-			this->audio_device_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->audio_data->get_audio_output_device_data());
+			this->audio_device_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->audio_data->get_audio_output_device_data());
 			break;
 		case SEPARATOR_MENU_TYPE:
-			this->separator_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+			this->separator_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
 			break;
 		case COLOR_CORRECTION_MENU_TYPE:
-			this->color_correction_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.top_color_correction);
+			this->color_correction_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->loaded_info.top_color_correction);
 			break;
 		case MAIN_3D_MENU_TYPE:
-			this->main_3d_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info, this->display_data, this->capture_status);
+			this->main_3d_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info, this->display_data, this->capture_status);
 			break;
 		case SECOND_SCREEN_RELATIVE_POS_MENU_TYPE:
-			this->second_screen_3d_relpos_menu->prepare(this->loaded_info.menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+			this->second_screen_3d_relpos_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
 			break;
 		default:
 			break;
@@ -2663,90 +2661,91 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 }
 
 void WindowScreen::execute_menu_draws() {
+	float menu_scaling_factor = (float)this->loaded_info.menu_scaling_factor;
 	switch(this->loaded_menu) {
 		case CONNECT_MENU_TYPE:
-			this->connection_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->connection_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case MAIN_MENU_TYPE:
-			this->main_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->main_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case VIDEO_MENU_TYPE:
-			this->video_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->video_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case CROP_MENU_TYPE:
-			this->crop_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->crop_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case TOP_PAR_MENU_TYPE:
-			this->par_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->par_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case BOTTOM_PAR_MENU_TYPE:
-			this->par_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->par_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case ROTATION_MENU_TYPE:
-			this->rotation_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->rotation_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case OFFSET_MENU_TYPE:
-			this->offset_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->offset_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case AUDIO_MENU_TYPE:
-			this->audio_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->audio_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case BFI_MENU_TYPE:
-			this->bfi_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->bfi_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case RELATIVE_POS_MENU_TYPE:
-			this->relpos_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->relpos_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case RESOLUTION_MENU_TYPE:
-			this->resolution_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->resolution_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case SAVE_MENU_TYPE:
-			this->fileconfig_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->fileconfig_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case LOAD_MENU_TYPE:
-			this->fileconfig_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->fileconfig_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case EXTRA_MENU_TYPE:
-			this->extra_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->extra_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case SHORTCUTS_MENU_TYPE:
-			this->shortcut_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->shortcut_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case ACTION_SELECTION_MENU_TYPE:
-			this->action_selection_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->action_selection_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case STATUS_MENU_TYPE:
-			this->status_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->status_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case LICENSES_MENU_TYPE:
-			this->license_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->license_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case SCALING_RATIO_MENU_TYPE:
-			this->scaling_ratio_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->scaling_ratio_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case ISN_MENU_TYPE:
-			this->is_nitro_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->is_nitro_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case VIDEO_EFFECTS_MENU_TYPE:
-			this->video_effects_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->video_effects_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case INPUT_MENU_TYPE:
-			this->input_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->input_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case AUDIO_DEVICE_MENU_TYPE:
-			this->audio_device_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->audio_device_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case SEPARATOR_MENU_TYPE:
-			this->separator_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->separator_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case COLOR_CORRECTION_MENU_TYPE:
-			this->color_correction_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->color_correction_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case MAIN_3D_MENU_TYPE:
-			this->main_3d_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->main_3d_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		case SECOND_SCREEN_RELATIVE_POS_MENU_TYPE:
-			this->second_screen_3d_relpos_menu->draw(this->loaded_info.menu_scaling_factor, this->m_win);
+			this->second_screen_3d_relpos_menu->draw(menu_scaling_factor, this->m_win);
 			break;
 		default:
 			break;

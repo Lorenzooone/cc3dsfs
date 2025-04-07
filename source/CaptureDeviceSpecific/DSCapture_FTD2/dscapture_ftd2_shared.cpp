@@ -137,12 +137,11 @@ static int end_spi_tx(uint8_t *txBuf, int retval) {
 	return retval;
 }
 
-static int ftd2_spi_tx(void* handle, bool is_ftd2_libusb, const uint8_t* buf, int size) {
+static int ftd2_spi_tx(void* handle, bool is_ftd2_libusb, const uint8_t* buf, size_t size) {
 	uint8_t *txBuf = new uint8_t[TX_SPI_SIZE + TX_SPI_OFFSET];
 	int retval = 0;
-	int len;
+	size_t len;
 	size_t sent;
-	size_t bytesIn;
 	size_t wrote = 0;
 
 	if(!pass_if_FT_queue_empty(handle, is_ftd2_libusb))
@@ -173,7 +172,7 @@ static int ftd2_spi_tx(void* handle, bool is_ftd2_libusb, const uint8_t* buf, in
 	return end_spi_tx(txBuf, 0);
 }
 
-static bool fpga_config(void* handle, bool is_ftd2_libusb, const uint8_t* bitstream, int size) {
+static bool fpga_config(void* handle, bool is_ftd2_libusb, const uint8_t* bitstream, size_t size) {
 	//D6=CDONE (in)
 	//D3=SS (out)
 	//D2=TDO (in)

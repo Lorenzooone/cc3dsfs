@@ -45,7 +45,7 @@ static const vid_pid_descriptor* accepted_devices[] = {
 };
 
 static const vid_pid_descriptor* get_device_descriptor(int vid, int pid) {
-	for(int i = 0; i < sizeof(accepted_devices) / sizeof(*accepted_devices); i++)
+	for(size_t i = 0; i < sizeof(accepted_devices) / sizeof(*accepted_devices); i++)
 		if((vid == accepted_devices[i]->vid) && (pid == accepted_devices[i]->pid))
 			return accepted_devices[i];
 	return NULL;
@@ -131,15 +131,14 @@ void list_devices_ftd2_libusb(std::vector<CaptureDevice> &devices_list, std::vec
 	if(!usb_is_initialized())
 		return;
 	libusb_device **usb_devices;
-	int num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
-	libusb_device_descriptor usb_descriptor{};
+	ssize_t num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	char description[DESCRIPTION_SIZE], SerialNumber[SERIAL_NUMBER_SIZE];
 	int debug_multiplier = 1;
 	bool insert_anyway = false;
 	bool perm_error = false;
 	const vid_pid_descriptor* curr_descriptor;
 
-	for(int i = 0; i < num_devices; i++) {
+	for(ssize_t i = 0; i < num_devices; i++) {
 		int retval = check_single_device_valid_ftd2_libusb(usb_devices[i], description, SerialNumber, &curr_descriptor);
 		if(retval < 0) {
 			if(retval == LIBUSB_ERROR_ACCESS)
@@ -148,7 +147,7 @@ void list_devices_ftd2_libusb(std::vector<CaptureDevice> &devices_list, std::vec
 		}
 		std::string serial_number = std::string(SerialNumber);
 		bool is_already_inserted = false;
-		for(int j = 0; j < devices_list.size(); j++) {
+		for(size_t j = 0; j < devices_list.size(); j++) {
 			if((devices_list[j].cc_type == CAPTURE_CONN_FTD2) && (devices_list[j].serial_number == serial_number)) {
 				is_already_inserted = true;
 				break;
@@ -170,7 +169,7 @@ static int ftd2_libusb_ctrl_out(ftd2_libusb_handle_data* handle, uint8_t request
 		return -1;
 	if(handle->usb_handle == NULL)
 		return -1;
-	return libusb_control_transfer(handle->usb_handle, 0x40, request, value, index, (uint8_t*)data, size, handle->timeout_w_ms);
+	return libusb_control_transfer(handle->usb_handle, 0x40, request, value, index, (uint8_t*)data, (uint16_t)size, handle->timeout_w_ms);
 }
 
 static int ftd2_libusb_ctrl_in(ftd2_libusb_handle_data* handle, uint8_t request, uint16_t value, uint16_t index, uint8_t* data, size_t size) {
@@ -178,7 +177,7 @@ static int ftd2_libusb_ctrl_in(ftd2_libusb_handle_data* handle, uint8_t request,
 		return -1;
 	if(handle->usb_handle == NULL)
 		return -1;
-	return libusb_control_transfer(handle->usb_handle, 0xC0, request, value, index, data, size, handle->timeout_r_ms);
+	return libusb_control_transfer(handle->usb_handle, 0xC0, request, value, index, data, (uint16_t)size, handle->timeout_r_ms);
 }
 
 static int ftd2_libusb_ctrl_out_with_index(ftd2_libusb_handle_data* handle, uint8_t request, uint16_t value, uint16_t index, uint8_t* data, size_t size) {
@@ -192,7 +191,7 @@ static int ftd2_libusb_bulk_out(ftd2_libusb_handle_data* handle, const uint8_t* 
 		return -1;
 	if(handle->usb_handle == NULL)
 		return -1;
-	return libusb_bulk_transfer(handle->usb_handle, handle->ep_out, (uint8_t*)data, size, transferred, handle->timeout_w_ms);
+	return libusb_bulk_transfer(handle->usb_handle, handle->ep_out, (uint8_t*)data, (int)size, transferred, handle->timeout_w_ms);
 }
 
 static int ftd2_libusb_bulk_in(ftd2_libusb_handle_data* handle, uint8_t* data, size_t size, int* transferred) {
@@ -200,7 +199,7 @@ static int ftd2_libusb_bulk_in(ftd2_libusb_handle_data* handle, uint8_t* data, s
 		return -1;
 	if(handle->usb_handle == NULL)
 		return -1;
-	return libusb_bulk_transfer(handle->usb_handle, handle->ep_in, data, size, transferred, handle->timeout_r_ms);
+	return libusb_bulk_transfer(handle->usb_handle, handle->ep_in, data, (int)size, transferred, handle->timeout_r_ms);
 }
 
 int ftd2_libusb_async_bulk_in_prepare_and_submit(void* handle, void* transfer_in, uint8_t* buffer_raw, size_t size, void* cb_fn, void* cb_data, int timeout_multiplier) {
@@ -212,7 +211,7 @@ int ftd2_libusb_async_bulk_in_prepare_and_submit(void* handle, void* transfer_in
 	if(!transfer_in)
 		return -1;
 	libusb_transfer* transfer = (libusb_transfer*)transfer_in;
-	libusb_fill_bulk_transfer(transfer, in_handle->usb_handle, in_handle->ep_in, buffer_raw, size, (libusb_transfer_cb_fn)cb_fn, cb_data, in_handle->timeout_r_ms * timeout_multiplier);
+	libusb_fill_bulk_transfer(transfer, in_handle->usb_handle, in_handle->ep_in, buffer_raw, (int)size, (libusb_transfer_cb_fn)cb_fn, cb_data, in_handle->timeout_r_ms * timeout_multiplier);
 	transfer->flags |= LIBUSB_TRANSFER_FREE_TRANSFER;
 	libusb_submit_transfer(transfer);
 	return 0;
@@ -304,7 +303,7 @@ size_t ftd2_libusb_get_expanded_length(size_t length) {
 size_t ftd2_libusb_get_actual_length(const int max_packet_size, size_t length, size_t header_packet_size) {
 	// Remove the small headers every 512 bytes...
 	// The "- header_packet_size" instead of "-1" covers for partial header transfers...
-	int num_iters = (length + max_packet_size - header_packet_size) / max_packet_size;
+	int num_iters = (int)((length + max_packet_size - header_packet_size) / max_packet_size);
 	if(num_iters > 0)
 		length -= (num_iters * header_packet_size);
 	else
@@ -319,15 +318,16 @@ size_t ftd2_libusb_get_actual_length(size_t length) {
 void ftd2_libusb_copy_buffer_to_target(uint8_t* buffer_written, uint8_t* buffer_target, const int max_packet_size, size_t length, size_t header_packet_size) {
 	// Remove the small headers every 512 bytes...
 	// The "- header_packet_size" instead of "-1" covers for partial header transfers...
-	int num_iters = (length + max_packet_size - header_packet_size) / max_packet_size;
+	int num_iters = (int)((length + max_packet_size - header_packet_size) / max_packet_size);
 	if(num_iters <= 0)
 		return;
 
 	length -= (num_iters * header_packet_size);
+	const int real_packet_size = (int)(max_packet_size - header_packet_size);
 	for(int i = 0; i < num_iters; i++) {
-		int rem_size = length - ((max_packet_size - header_packet_size) * i);
-		if(rem_size > ((int)(max_packet_size - header_packet_size)))
-			rem_size = max_packet_size - header_packet_size;
+		int rem_size = (int)(length - (real_packet_size * i));
+		if(rem_size > real_packet_size)
+			rem_size = real_packet_size;
 		if(rem_size <= 0)
 			break;
 		memcpy(buffer_target + ((max_packet_size - header_packet_size) * i), buffer_written + header_packet_size + (max_packet_size * i), rem_size);
@@ -403,16 +403,12 @@ int ftd2_libusb_open_serial(CaptureDevice* device, void** handle) {
 
 	*handle = NULL;
 	libusb_device **usb_devices;
-	int num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
-	libusb_device_descriptor usb_descriptor{};
+	ssize_t num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	char description[DESCRIPTION_SIZE], SerialNumber[SERIAL_NUMBER_SIZE];
-	int debug_multiplier = 1;
-	bool insert_anyway = false;
-	bool perm_error = false;
 	const vid_pid_descriptor* curr_descriptor;
 	int ret = LIBUSB_ERROR_OTHER;
 
-	for(int i = 0; i < num_devices; i++) {
+	for(ssize_t i = 0; i < num_devices; i++) {
 		ftd2_libusb_handle_data out_handle;
 		int retval = init_handle_and_populate_device_info_ftd2_libusb(&out_handle.usb_handle, usb_devices[i], description, SerialNumber, &curr_descriptor);
 		if(retval != LIBUSB_SUCCESS)

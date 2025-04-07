@@ -18,7 +18,7 @@
 class OptionSelectionMenu {
 public:
 	OptionSelectionMenu();
-	~OptionSelectionMenu();
+	virtual ~OptionSelectionMenu();
 	bool poll(SFEvent &event_data);
 	void draw(float scaling_factor, sf::RenderTarget &window);
 	void reset_data();
@@ -43,7 +43,7 @@ protected:
 	virtual bool is_option_selectable(int index, int action);
 	virtual bool is_option_inc_dec(int index);
 	virtual void set_output_option(int index, int action);
-	virtual int get_num_options();
+	virtual size_t get_num_options();
 	virtual std::string get_string_option(int index, int action);
 	virtual void class_setup();
 
@@ -84,9 +84,7 @@ private:
 	int next_page_id;
 
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_action_time;
-	const float action_timeout = 0.1;
-	int loaded_page = 0;
-	int option_selected = -1;
+	const float action_timeout = 0.1f;
 	bool *selectable_labels;
 	bool *loaded_enabled_labels;
 	MenuData loaded_data;

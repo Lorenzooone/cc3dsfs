@@ -57,7 +57,7 @@ void ftd2_capture_main_loop_driver(CaptureData* capture_data) {
 	auto clock_start = std::chrono::high_resolution_clock::now();
 	int curr_data_buffer_index = 0;
 	int next_data_buffer_index = 0;
-	const size_t full_size = get_capture_size(capture_data->status.device.is_rgb_888);
+	const size_t full_size = (size_t)get_capture_size(capture_data->status.device.is_rgb_888);
 	size_t next_size = full_size;
 	size_t bytesIn;
 
@@ -79,6 +79,6 @@ void ftd2_capture_main_loop_driver(CaptureData* capture_data) {
 		if(has_synch_failed) {
 			continue;
 		}
-		data_output_update(curr_data_buffer_index, capture_data, full_size, clock_start);
+		data_output_update(curr_data_buffer_index, capture_data, (int)full_size, clock_start);
 	}
 }

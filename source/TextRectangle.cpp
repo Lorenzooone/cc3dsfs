@@ -1,8 +1,8 @@
 #include "TextRectangle.hpp"
 
 TextRectangle::TextRectangle(bool font_load_success, sf::Font &text_font) : actual_text(text_font) {
+	this->reset_data(this->future_data);
 	this->font_load_success = font_load_success;
-	this->setSize(1, 1);
 	this->setRealSize(1, 1, false);
 	this->text_rect.out_rect.setTexture(&this->text_rect.out_tex.getTexture());
 	if(this->font_load_success)
@@ -30,7 +30,7 @@ void TextRectangle::setRectangleKind(TextKind kind) {
 }
 
 void TextRectangle::setTextFactor(float size_multiplier) {
-	int new_pixel_height = BASE_PIXEL_FONT_HEIGHT * size_multiplier;
+	float new_pixel_height = BASE_PIXEL_FONT_HEIGHT * size_multiplier;
 	if(this->future_data.font_pixel_height == new_pixel_height)
 		return;
 	this->future_data.font_pixel_height = new_pixel_height;
@@ -98,7 +98,7 @@ void TextRectangle::setShowText(bool show_text) {
 
 void TextRectangle::draw(sf::RenderTarget &window) {
 	if(this->loaded_data.render_text) {
-		this->updateText(window.getView().getSize().x);
+		this->updateText((int)window.getView().getSize().x);
 	}
 	if(font_load_success && this->loaded_data.show_text && (!this->is_done_showing_text)) {
 		this->text_rect.out_rect.setPosition({(float)this->loaded_data.pos_x, (float)this->loaded_data.pos_y});
@@ -161,24 +161,24 @@ void TextRectangle::setTextWithLineWrapping(int x_limit) {
 	bool is_done = false;
 	bool line_started = false;
 	std::string new_text = "";
-	int pos = 0;
+	size_t pos = 0;
 	while(!is_done) {
 		std::string curr_text = new_text;
 		if(line_started)
 			curr_text += " ";
-		auto space_pos = this->loaded_data.printed_text.find(' ', pos);
+		size_t space_pos = this->loaded_data.printed_text.find(' ', pos);
 		if(space_pos == std::string::npos) {
 			is_done = true;
 			space_pos = this->loaded_data.printed_text.length();
 		}
-		for(int i = pos; i < space_pos; i++)
+		for(size_t i = pos; i < space_pos; i++)
 			curr_text += this->loaded_data.printed_text[i];
 		this->actual_text.setString(curr_text);
 		sf::FloatRect globalBounds = this->actual_text.getGlobalBounds();
-		int bounds_width = globalBounds.size.x + (globalBounds.position.x * 2);
+		int bounds_width = (int)(globalBounds.size.x + (globalBounds.position.x * 2));
 		if(line_started && (bounds_width > x_limit)) {
 			curr_text = new_text + "\n";
-			for(int i = pos; i < space_pos; i++)
+			for(size_t i = pos; i < space_pos; i++)
 				curr_text += this->loaded_data.printed_text[i];
 		}
 		pos = space_pos + 1;
@@ -195,14 +195,14 @@ void TextRectangle::setRealSize(int width, int height, bool check_previous) {
 		if((height == this->text_rect.out_rect.getSize().y) && (width == this->text_rect.out_rect.getSize().x))
 			return;
 	}
-	this->text_rect.out_rect.setSize(sf::Vector2f(this->loaded_data.width, this->loaded_data.height));
+	this->text_rect.out_rect.setSize(sf::Vector2f((float)this->loaded_data.width, (float)this->loaded_data.height));
 	(void)this->text_rect.out_tex.resize({(unsigned int)this->loaded_data.width, (unsigned int)this->loaded_data.height});
 	this->text_rect.out_rect.setTextureRect(sf::IntRect({0, 0}, {this->loaded_data.width, this->loaded_data.height}));
 }
 
 void TextRectangle::updateText(int x_limit) {
 	// set the character size
-	this->actual_text.setCharacterSize(this->loaded_data.font_pixel_height); // in pixels, not points!
+	this->actual_text.setCharacterSize((unsigned int)this->loaded_data.font_pixel_height); // in pixels, not points!
 	// set the color
 	this->actual_text.setFillColor(sf::Color::White);
 	// set the text style
@@ -214,8 +214,8 @@ void TextRectangle::updateText(int x_limit) {
 		globalBounds = this->actual_text.getGlobalBounds();
 		int new_width = this->loaded_data.width;
 		int new_height = this->loaded_data.height;
-		int bounds_width = globalBounds.size.x + (globalBounds.position.x * 2);
-		int bounds_height = globalBounds.size.y + (globalBounds.position.y * 2);
+		int bounds_width = (int)(globalBounds.size.x + (globalBounds.position.x * 2));
+		int bounds_height = (int)(globalBounds.size.y + (globalBounds.position.y * 2));
 		if(new_width < bounds_width)
 			new_width = bounds_width;
 		if(new_height < bounds_height)
@@ -223,7 +223,7 @@ void TextRectangle::updateText(int x_limit) {
 		this->setRealSize(new_width, new_height);
 		this->actual_text.setPosition({(float)((int)(5 * (((float)this->loaded_data.font_pixel_height) / BASE_PIXEL_FONT_HEIGHT))), 0});
 		globalBounds = this->actual_text.getGlobalBounds();
-		this->setRealSize(globalBounds.size.x + (globalBounds.position.x * 2), globalBounds.size.y + (globalBounds.position.y * 2));
+		this->setRealSize((int)(globalBounds.size.x + (globalBounds.position.x * 2)), (int)(globalBounds.size.y + (globalBounds.position.y * 2)));
 	}
 	else {
 		this->setRealSize(this->loaded_data.width, this->loaded_data.height);

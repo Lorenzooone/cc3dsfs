@@ -58,9 +58,9 @@ std::string get_serial(const is_device_usb_device* usb_device_desc, is_device_de
 	bool conn_success = true;
 	if(initial_cleanup(usb_device_desc, handlers))
 		conn_success = false;
-	if (conn_success && (GetDeviceSerial(handlers, data, usb_device_desc) != LIBUSB_SUCCESS))
+	if(conn_success && (GetDeviceSerial(handlers, data, usb_device_desc) != LIBUSB_SUCCESS))
 		conn_success = false;
-	if (conn_success) {
+	if(conn_success) {
 		data[IS_DEVICE_REAL_SERIAL_NUMBER_SIZE] = '\0';
 		serial_str = std::string((const char*)data);
 	}
@@ -82,7 +82,7 @@ static is_device_device_handlers* usb_find_by_serial_number(const is_device_usb_
 	int curr_serial_extra_id = 0;
 	final_handlers = is_device_libusb_serial_reconnection(usb_device_desc, device, curr_serial_extra_id);
 
-	if (final_handlers == NULL)
+	if(final_handlers == NULL)
 		final_handlers = is_driver_serial_reconnection(device);
 	return final_handlers;
 }
@@ -92,7 +92,7 @@ void list_devices_is_device(std::vector<CaptureDevice> &devices_list, std::vecto
 	int* curr_serial_extra_id_is_device = new int[num_is_device_desc];
 	bool* no_access_elems = new bool[num_is_device_desc];
 	bool* not_supported_elems = new bool[num_is_device_desc];
-	for (int i = 0; i < num_is_device_desc; i++) {
+	for(size_t i = 0; i < num_is_device_desc; i++) {
 		no_access_elems[i] = false;
 		not_supported_elems[i] = false;
 		curr_serial_extra_id_is_device[i] = 0;
@@ -100,11 +100,11 @@ void list_devices_is_device(std::vector<CaptureDevice> &devices_list, std::vecto
 	is_device_libusb_list_devices(devices_list, no_access_elems, not_supported_elems, curr_serial_extra_id_is_device, num_is_device_desc);
 
 	bool any_not_supported = false;
-	for(int i = 0; i < num_is_device_desc; i++)
+	for(size_t i = 0; i < num_is_device_desc; i++)
 		any_not_supported |= not_supported_elems[i];
-	for(int i = 0; i < num_is_device_desc; i++)
+	for(size_t i = 0; i < num_is_device_desc; i++)
 		if(no_access_elems[i]) {
-			const is_device_usb_device* usb_device = GetISDeviceDesc(i);
+			const is_device_usb_device* usb_device = GetISDeviceDesc((int)i);
 			no_access_list.emplace_back(usb_device->vid, usb_device->pid);
 		}
 	if(any_not_supported)
@@ -116,9 +116,9 @@ void list_devices_is_device(std::vector<CaptureDevice> &devices_list, std::vecto
 }
 
 static void is_device_connection_end(is_device_device_handlers* handlers, const is_device_usb_device *device_desc, bool interface_claimed = true) {
-	if (handlers == NULL)
+	if(handlers == NULL)
 		return;
-	if (handlers->usb_handle)
+	if(handlers->usb_handle)
 		is_device_libusb_end_connection(handlers, device_desc, interface_claimed);
 	else
 		is_driver_end_connection(handlers);
@@ -212,13 +212,12 @@ int EndAcquisition(const is_device_usb_device* usb_device_desc, is_device_device
 
 void output_to_thread(CaptureData* capture_data, int internal_index, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t read_size) {
 	// Output to the other threads...
-	const is_device_usb_device* usb_device_info = (const is_device_usb_device*)capture_data->status.device.descriptor;
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - (*clock_start);
 	*clock_start = curr_time;
 	capture_data->data_buffers.WriteToBuffer(NULL, read_size, diff.count(), &capture_data->status.device, curr_capture_type, internal_index);
 
-	if (capture_data->status.cooldown_curr_in)
+	if(capture_data->status.cooldown_curr_in)
 		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
 	capture_data->status.video_wait.unlock();
 	capture_data->status.audio_wait.unlock();
@@ -226,15 +225,15 @@ void output_to_thread(CaptureData* capture_data, int internal_index, CaptureScre
 
 static void output_to_thread(CaptureData* capture_data, int internal_index, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start) {
 	const is_device_usb_device* usb_device_info = (const is_device_usb_device*)capture_data->status.device.descriptor;
-	output_to_thread(capture_data, internal_index, curr_capture_type, clock_start, usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type));
+	output_to_thread(capture_data, internal_index, curr_capture_type, clock_start, (size_t)usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type));
 }
 
 int is_device_read_frame_and_output(CaptureData* capture_data, int internal_index, CaptureScreensType curr_capture_type, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_start) {
 	const is_device_usb_device* usb_device_info = (const is_device_usb_device*)capture_data->status.device.descriptor;
 	CaptureDataSingleBuffer* target = capture_data->data_buffers.GetWriterBuffer(internal_index);
 	CaptureReceived* buffer = &target->capture_buf;
-	int ret = ReadFrame((is_device_device_handlers*)capture_data->handle, (uint8_t*)buffer, usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type), usb_device_info);
-	if (ret < 0) {
+	int ret = ReadFrame((is_device_device_handlers*)capture_data->handle, (uint8_t*)buffer, (int)usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type), usb_device_info);
+	if(ret < 0) {
 		capture_data->data_buffers.ReleaseWriterBuffer(internal_index, false);
 		return ret;
 	}
@@ -253,7 +252,7 @@ void is_device_read_frame_request(CaptureData* capture_data, ISDeviceCaptureRece
 	is_device_capture_recv_data->cb_data.function = is_device_read_frame_cb;
 	CaptureDataSingleBuffer* target = capture_data->data_buffers.GetWriterBuffer(is_device_capture_recv_data->cb_data.internal_index);
 	CaptureReceived* buffer = &target->capture_buf;
-	ReadFrameAsync((is_device_device_handlers*)capture_data->handle, (uint8_t*)buffer, usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type), usb_device_info, &is_device_capture_recv_data->cb_data);
+	ReadFrameAsync((is_device_device_handlers*)capture_data->handle, (uint8_t*)buffer, (int)usb_is_device_get_video_in_size(curr_capture_type, usb_device_info->device_type), usb_device_info, &is_device_capture_recv_data->cb_data);
 }
 
 static void end_is_device_read_frame_cb(ISDeviceCaptureReceivedData* is_device_capture_recv_data, bool pre_release) {
@@ -294,7 +293,7 @@ static void close_all_reads_error(CaptureData* capture_data, ISDeviceCaptureRece
 	if(get_is_device_status(is_device_capture_recv_data) >= 0)
 		return;
 	if(!async_read_closed) {
-		for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
+		for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
 			CloseAsyncRead((is_device_device_handlers*)capture_data->handle, &is_device_capture_recv_data[i].cb_data);
 		async_read_closed = true;
 	}
@@ -332,7 +331,7 @@ void wait_all_is_device_transfers_done(CaptureData* capture_data, ISDeviceCaptur
 	bool reset_usb_device = false;
 	close_all_reads_error(capture_data, is_device_capture_recv_data, async_read_closed, reset_usb_device, false);
 	const auto start_time = std::chrono::high_resolution_clock::now();
-	for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++) {
+	for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++) {
 		void* transfer_data;
 		do {
 			is_device_capture_recv_data[i].cb_data.transfer_data_access.lock();

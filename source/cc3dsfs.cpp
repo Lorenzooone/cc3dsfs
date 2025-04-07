@@ -378,27 +378,28 @@ static bool setDefaultAudioDevice(Audio &audio) {
 	return success;
 }
 
-static void handleAudioDeviceChanges(Audio &audio, AudioData *audio_data, std::optional<std::string> &curr_device, audio_output_device_data &in_use_audio_output_device_data) {
-		// Code for audio device selection
-		in_use_audio_output_device_data = audio_data->get_audio_output_device_data();
-		int index = -1;
-		bool success = false;
-		if(in_use_audio_output_device_data.preference_requested) {
-			std::vector<std::string> audio_devices =  sf::PlaybackDevice::getAvailableDevices();
-			index = searchAudioDevice(in_use_audio_output_device_data.preferred, audio_devices);
-			if((index != -1) && (curr_device != audio_devices[index])) {
-				audio.stop_audio();
-				audio.stop();
-				success = sf::PlaybackDevice::setDevice(audio_devices[index]);
-				curr_device = audio_devices[index];
-			}
+static bool handleAudioDeviceChanges(Audio &audio, AudioData *audio_data, std::optional<std::string> &curr_device, audio_output_device_data &in_use_audio_output_device_data) {
+	// Code for audio device selection
+	in_use_audio_output_device_data = audio_data->get_audio_output_device_data();
+	int index = -1;
+	bool success = false;
+	if(in_use_audio_output_device_data.preference_requested) {
+		std::vector<std::string> audio_devices =  sf::PlaybackDevice::getAvailableDevices();
+		index = searchAudioDevice(in_use_audio_output_device_data.preferred, audio_devices);
+		if((index != -1) && (curr_device != audio_devices[index])) {
+			audio.stop_audio();
+			audio.stop();
+			success = sf::PlaybackDevice::setDevice(audio_devices[index]);
+			curr_device = audio_devices[index];
 		}
-		if(index == -1) {
-			std::optional<std::string> default_device = sf::PlaybackDevice::getDefaultDevice();
-			if(default_device != curr_device)
-				success = setDefaultAudioDevice(audio);
-			curr_device = default_device;
-		}
+	}
+	if(index == -1) {
+		std::optional<std::string> default_device = sf::PlaybackDevice::getDefaultDevice();
+		if(default_device != curr_device)
+			success = setDefaultAudioDevice(audio);
+		curr_device = default_device;
+	}
+	return success;
 }
 
 static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
@@ -407,7 +408,7 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 	int audio_buf_counter = 0;
 	uint16_t last_buffer_index = -1;
 	const bool endianness = is_big_endian();
-	volatile int loaded_samples;
+	volatile size_t loaded_samples;
 	audio_output_device_data in_use_audio_output_device_data;
 	std::optional<std::string> curr_device = sf::PlaybackDevice::getDevice();
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_device_check_time = std::chrono::high_resolution_clock::now();
@@ -517,7 +518,6 @@ static float get_time_multiplier(CaptureData* capture_data, bool should_ignore_d
 static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data, bool created_proper_folder, override_all_data &override_data) {
 	VideoOutputData *out_buf;
 	double last_frame_time = 0.0;
-	int num_elements_fps_array = 0;
 	FrontendData frontend_data;
 	ConsumerMutex draw_lock;
 	reset_display_data(&frontend_data.display_data);

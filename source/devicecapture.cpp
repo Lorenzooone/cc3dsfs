@@ -109,7 +109,7 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 			capture_error_print(print_failed, capture_data, "No device was found");
 		else {
 			std::string full_error_part = "";
-			for(int i = 0; i < no_access_list.size(); i++) {
+			for(size_t i = 0; i < no_access_list.size(); i++) {
 				full_error_part += " - ";
 				if(no_access_list[i].vid == -1)
 					full_error_part += no_access_list[i].name;
@@ -298,9 +298,11 @@ int get_usb_speed_of_device(CaptureStatus* capture_status) {
 
 bool is_usb_speed_of_device_enough_3d(CaptureStatus* capture_status) {
 	switch(capture_status->device.cc_type) {
-		default:
+		case CAPTURE_CONN_FTD3:
 			if(get_usb_speed_of_device(capture_status) < 3)
 				return false;
+			break;
+		default:
 			break;
 	}
 	return true;

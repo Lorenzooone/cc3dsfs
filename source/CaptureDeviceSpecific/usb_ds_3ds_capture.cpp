@@ -143,7 +143,6 @@ static int do_usb_config_device(libusb_device_handle *handle, const usb_device* 
 
 static int insert_device(std::vector<CaptureDevice> &devices_list, const usb_device* usb_device_desc, libusb_device *usb_device, libusb_device_descriptor *usb_descriptor, int &curr_serial_extra_id) {
 	libusb_device_handle *handle = NULL;
-	uint8_t data[SERIAL_NUMBER_SIZE];
 	if((usb_descriptor->idVendor != usb_device_desc->vid) || (usb_descriptor->idProduct != usb_device_desc->pid))
 		return LIBUSB_ERROR_NOT_FOUND;
 	int result = libusb_open(usb_device, &handle);
@@ -174,14 +173,13 @@ static libusb_device_handle* usb_find_by_serial_number(const usb_device* usb_dev
 	if(!usb_is_initialized())
 		return NULL;
 	libusb_device **usb_devices;
-	int num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
+	ssize_t num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	libusb_device_descriptor usb_descriptor{};
 	libusb_device_handle *final_handle = NULL;
 
 	int curr_serial_extra_id = 0;
-	for(int i = 0; i < num_devices; i++) {
+	for(ssize_t i = 0; i < num_devices; i++) {
 		libusb_device_handle *handle = NULL;
-		uint8_t data[SERIAL_NUMBER_SIZE];
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
 		if(result < 0)
 			continue;
@@ -232,7 +230,7 @@ static usb_capture_status capture_read_oldds_3ds(CaptureData* capture_data, size
 	libusb_device_handle* handle = (libusb_device_handle*)capture_data->handle;
 	const usb_device* usb_device_desc = get_usb_device_desc(capture_data);
 	const bool enabled_3d = get_3d_enabled(&capture_data->status);
-	int bytesIn = 0;
+	size_t bytesIn = 0;
 	int transferred = 0;
 	int result = 0;
 	uint64_t video_size = _usb_get_video_in_size(usb_device_desc, enabled_3d);
@@ -248,8 +246,8 @@ static usb_capture_status capture_read_oldds_3ds(CaptureData* capture_data, size
 
 	// Both DS and 3DS old CCs send data until end of frame, followed by 0-length packets
 	do {
-		int transferSize = ((full_in_size - bytesIn) + (EXTRA_DATA_BUFFER_USB_SIZE - 1)) & ~(EXTRA_DATA_BUFFER_USB_SIZE - 1); // multiple of maxPacketSize
-		result = bulk_in(handle, usb_device_desc, video_data_ptr + bytesIn, transferSize, &transferred);
+		size_t transferSize = ((full_in_size - bytesIn) + (EXTRA_DATA_BUFFER_USB_SIZE - 1)) & ~(EXTRA_DATA_BUFFER_USB_SIZE - 1); // multiple of maxPacketSize
+		result = bulk_in(handle, usb_device_desc, video_data_ptr + bytesIn, (int)transferSize, &transferred);
 		if(result == LIBUSB_SUCCESS)
 			bytesIn += transferred;
 	} while((bytesIn < full_in_size) && (result == LIBUSB_SUCCESS) && (transferred > 0));
@@ -329,21 +327,21 @@ void list_devices_usb_ds_3ds(std::vector<CaptureDevice> &devices_list, std::vect
 	if(!usb_is_initialized())
 		return;
 	libusb_device **usb_devices;
-	int num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
+	ssize_t num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	libusb_device_descriptor usb_descriptor{};
 
 	const size_t num_usb_desc = sizeof(usb_devices_desc_list) / sizeof(usb_devices_desc_list[0]);
 	bool no_access_elems[num_usb_desc];
 	int curr_serial_extra_ids[num_usb_desc];
-	for (int i = 0; i < num_usb_desc; i++) {
+	for (size_t i = 0; i < num_usb_desc; i++) {
 		no_access_elems[i] = false;
 		curr_serial_extra_ids[i] = 0;
 	}
-	for(int i = 0; i < num_devices; i++) {
+	for(ssize_t i = 0; i < num_devices; i++) {
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
 		if(result < 0)
 			continue;
-		for(int j = 0; j < num_usb_desc; j++)
+		for(size_t j = 0; j < num_usb_desc; j++)
 			if(insert_device(devices_list, usb_devices_desc_list[j], usb_devices[i], &usb_descriptor, curr_serial_extra_ids[j]) != LIBUSB_ERROR_NOT_FOUND) {
 				if (result == LIBUSB_ERROR_ACCESS)
 					no_access_elems[j] = true;
@@ -354,7 +352,7 @@ void list_devices_usb_ds_3ds(std::vector<CaptureDevice> &devices_list, std::vect
 	if(num_devices >= 0)
 		libusb_free_device_list(usb_devices, 1);
 
-	for(int i = 0; i < num_usb_desc; i++)
+	for(size_t i = 0; i < num_usb_desc; i++)
 		if(no_access_elems[i])
 			no_access_list.emplace_back(usb_devices_desc_list[i]->vid, usb_devices_desc_list[i]->pid);
 }
@@ -383,7 +381,7 @@ bool connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* de
 		//FW bug(?) workaround- first read times out sometimes
 		uint8_t dummy;
 		vend_out(dev, usb_device_desc, usb_device_desc->cmdout_capture_start, 0, 0, 0, &dummy);
-		default_sleep(usb_device_desc->bulk_timeout);
+		default_sleep((float)usb_device_desc->bulk_timeout);
 	}
 
 	capture_data->handle = (void*)dev;

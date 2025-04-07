@@ -201,11 +201,11 @@ bool load_firmware(cy_device_device_handlers* handlers, const cyop_device_usb_de
 	if(ret < 0)
 		return free_firmware_and_return(fw_data, false);
 	bool done = false;
-	int fw_pos = read_le16(fw_data);
+	uint16_t fw_pos = read_le16(fw_data);
 	while(!done) {
 		int offset = read_le16(fw_data + fw_pos);
 		int index = read_le16(fw_data + fw_pos, 1);
-		int inside_len = read_le16(fw_data + fw_pos, 2);
+		uint32_t inside_len = read_le16(fw_data + fw_pos, 2);
 		done = (inside_len & 0x8000) != 0;
 		inside_len &= 0x7FFF;
 		fw_pos += 6;
@@ -259,7 +259,7 @@ static int read_second_device_id(cy_device_device_handlers* handlers, const cyop
 	ret = cypress_ctrl_bulk_in_transfer(handlers, get_cy_usb_info(device), in_buffer, sizeof(in_buffer), &transferred);
 	if(ret < 0)
 		return ret;
-	if(transferred < sizeof(in_buffer))
+	if(((size_t)transferred) < sizeof(in_buffer))
 		return -1;
 	second_device_id = read_le64(in_buffer);
 	return ret;
@@ -275,11 +275,11 @@ static int read_device_id(cy_device_device_handlers* handlers, const cyop_device
 	ret = cypress_ctrl_bulk_in_transfer(handlers, get_cy_usb_info(device), in_buffer, sizeof(in_buffer), &transferred);
 	if(ret < 0)
 		return ret;
-	if(transferred < sizeof(in_buffer))
+	if(((size_t)transferred) < sizeof(in_buffer))
 		return -1;
 	device_id = read_le64(in_buffer);
 	is_full_0s = true;
-	for(int i = 0; i < sizeof(in_buffer); i++)
+	for(size_t i = 0; i < sizeof(in_buffer); i++)
 		if(in_buffer[i] != 0) {
 			is_full_0s = false;
 			break;
@@ -297,7 +297,7 @@ static int read_first_unk_value(cy_device_device_handlers* handlers, const cyop_
 	ret = cypress_ctrl_bulk_in_transfer(handlers, get_cy_usb_info(device), in_buffer, sizeof(in_buffer), &transferred);
 	if(ret < 0)
 		return ret;
-	if(transferred < sizeof(in_buffer))
+	if(((size_t)transferred) < sizeof(in_buffer))
 		return -1;
 	value = read_le32(in_buffer);
 	return ret;
@@ -364,9 +364,9 @@ static int fpga_pl_load(cy_device_device_handlers* handlers, const cyop_device_u
 	if(ret < 0)
 		return ret;
 
-	const int fpga_pl_transfer_total_size = 64;
-	const int fpga_pl_transfer_header_size = 2;
-	const int fpga_pl_transfer_piece_size = fpga_pl_transfer_total_size - fpga_pl_transfer_header_size;
+	const size_t fpga_pl_transfer_total_size = 64;
+	const size_t fpga_pl_transfer_header_size = 2;
+	const size_t fpga_pl_transfer_piece_size = fpga_pl_transfer_total_size - fpga_pl_transfer_header_size;
 	const size_t num_iters = (fpga_pl_size + fpga_pl_transfer_piece_size - 1) / fpga_pl_transfer_piece_size;
 	uint8_t pl_buffer[fpga_pl_transfer_total_size];
 	pl_buffer[0] = 0x60;
@@ -376,7 +376,7 @@ static int fpga_pl_load(cy_device_device_handlers* handlers, const cyop_device_u
 		if(remaining_size > fpga_pl_transfer_piece_size)
 			remaining_size = fpga_pl_transfer_piece_size;
 		memcpy(pl_buffer + fpga_pl_transfer_header_size, fpga_pl + (fpga_pl_transfer_piece_size * i), remaining_size);
-		ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), pl_buffer, remaining_size + fpga_pl_transfer_header_size, &transferred);
+		ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), pl_buffer, (int)(remaining_size + fpga_pl_transfer_header_size), &transferred);
 		if(ret < 0)
 			return ret;
 	}
@@ -432,7 +432,6 @@ static int final_capture_start_transfer(cy_device_device_handlers* handlers, con
 }
 
 int capture_start(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_first_load, bool is_rgb888) {
-	int transferred = 0;
 	int ret = 0;
 	uint32_t value32 = 0;
 	uint64_t device_id = 0;

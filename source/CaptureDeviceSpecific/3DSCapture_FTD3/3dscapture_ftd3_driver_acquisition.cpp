@@ -40,7 +40,7 @@ static bool fast_capture_call_init_async_transfers(FTD3XXReceivedDataBuffer* rec
 		CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(inner_curr_in);
 		uint8_t* buffer = (uint8_t*)&data_buf->capture_buf;
 		received_buffer[inner_curr_in].is_3d = could_use_3d && stored_3d_status;
-		FT_STATUS ftStatus = FT_ASYNC_CALL(handle, fifo_channel, buffer, ftd3_get_capture_size(received_buffer[inner_curr_in].is_3d), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
+		FT_STATUS ftStatus = FT_ASYNC_CALL(handle, fifo_channel, buffer, (ULONG)ftd3_get_capture_size(received_buffer[inner_curr_in].is_3d), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
 		if(ftStatus != FT_IO_PENDING) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");
 			return false;
@@ -93,7 +93,7 @@ static void fast_capture_call(FTD3XXReceivedDataBuffer* received_buffer, Capture
 		CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(inner_curr_in);
 		uint8_t* buffer = (uint8_t*)&data_buf->capture_buf;
 		received_buffer[inner_curr_in].is_3d = could_use_3d && stored_3d_status;
-		ftStatus = FT_ASYNC_CALL(handle, fifo_channel, buffer, ftd3_get_capture_size(received_buffer[inner_curr_in].is_3d), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
+		ftStatus = FT_ASYNC_CALL(handle, fifo_channel, buffer, (ULONG)ftd3_get_capture_size(received_buffer[inner_curr_in].is_3d), &received_buffer[inner_curr_in].read_buffer, &received_buffer[inner_curr_in].overlap);
 		if(ftStatus != FT_IO_PENDING) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");
 			return;
@@ -131,9 +131,9 @@ static bool safe_capture_call(FTD3XXReceivedDataBuffer* received_buffer, Capture
 		uint8_t* buffer = (uint8_t*)&data_buf->capture_buf;
 		received_buffer->is_3d = could_use_3d && stored_3d_status;
 		#ifdef _WIN32
-		FT_STATUS ftStatus = FT_ReadPipeEx(handle, fifo_channel, buffer, ftd3_get_capture_size(received_buffer->is_3d), &received_buffer->read_buffer, NULL);
+		FT_STATUS ftStatus = FT_ReadPipeEx(handle, fifo_channel, buffer, (ULONG)ftd3_get_capture_size(received_buffer->is_3d), &received_buffer->read_buffer, NULL);
 		#else
-		FT_STATUS ftStatus = FT_ReadPipeEx(handle, fifo_channel, buffer, ftd3_get_capture_size(received_buffer->is_3d), &received_buffer->read_buffer, 1000);
+		FT_STATUS ftStatus = FT_ReadPipeEx(handle, fifo_channel, buffer, (ULONG)ftd3_get_capture_size(received_buffer->is_3d), &received_buffer->read_buffer, 1000);
 		#endif
 		if(FT_FAILED(ftStatus)) {
 			capture_error_print(true, capture_data, "Disconnected: Read failed");

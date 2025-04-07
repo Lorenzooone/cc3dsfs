@@ -76,8 +76,8 @@ void StatusMenu::class_setup() {
 	this->width_divisor_menu = 9;
 	this->base_height_factor_menu = 12;
 	this->base_height_divisor_menu = 6;
-	this->min_text_size = 0.3;
-	this->max_width_slack = 1.1;
+	this->min_text_size = 0.3f;
+	this->max_width_slack = 1.1f;
 	this->menu_color = sf::Color(30, 30, 60, 192);
 	this->title = "Status";
 	this->show_back_x = true;
@@ -89,8 +89,8 @@ void StatusMenu::insert_data() {
 	this->last_update_time = std::chrono::high_resolution_clock::now();
 	this->do_update = true;
 	this->num_enabled_options = 0;
-	for(int i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
-		this->options_indexes[this->num_enabled_options] = i;
+	for(size_t i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
+		this->options_indexes[this->num_enabled_options] = (int)i;
 		this->num_enabled_options++;
 	}
 	this->prepare_options();
@@ -105,7 +105,7 @@ void StatusMenu::set_output_option(int index, int action) {
 		this->selected_index = STATUS_MENU_BACK;
 }
 
-int StatusMenu::get_num_options() {
+size_t StatusMenu::get_num_options() {
 	return this->num_enabled_options;
 }
 
@@ -161,13 +161,13 @@ void StatusMenu::prepare(float menu_scaling_factor, int view_size_x, int view_si
 					this->labels[index]->setText(get_usb_speed_text(get_usb_speed_of_device(capture_status)));
 					break;
 				case STATUS_MENU_FPS_IN:
-					this->labels[index + INC_ACTION]->setText(get_float_str_decimals(in_fps, 2));
+					this->labels[index + INC_ACTION]->setText(get_float_str_decimals((float)in_fps, 2));
 					break;
 				case STATUS_MENU_FPS_POLL:
-					this->labels[index + INC_ACTION]->setText(get_float_str_decimals(poll_fps, 2));
+					this->labels[index + INC_ACTION]->setText(get_float_str_decimals((float)poll_fps, 2));
 					break;
 				case STATUS_MENU_FPS_DRAW:
-					this->labels[index + INC_ACTION]->setText(get_float_str_decimals(draw_fps, 2));
+					this->labels[index + INC_ACTION]->setText(get_float_str_decimals((float)draw_fps, 2));
 					break;
 				default:
 					break;

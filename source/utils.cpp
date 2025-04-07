@@ -184,7 +184,7 @@ void write_be64(uint8_t* data, uint64_t value, size_t count, size_t multiplier) 
 }
 
 void write_string(uint8_t* data, std::string text) {
-	for(int i = 0; i < text.size(); i++)
+	for(size_t i = 0; i < text.size(); i++)
 		data[i] = (uint8_t)text[i];
 }
 
@@ -255,7 +255,7 @@ std::string get_version_string(bool get_letter) {
 }
 
 std::string get_float_str_decimals(float value, int decimals) {
-	float approx_factor = pow(0.1, decimals) * (0.5);
+	float approx_factor = (float)(pow(0.1f, decimals) * (0.5f));
 	int int_part = (int)(value + approx_factor);
 	int dec_part = (int)((value + approx_factor - int_part) * pow(10, decimals));
 	std::string return_text = std::to_string(int_part);

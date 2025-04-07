@@ -1,5 +1,7 @@
 #include "WindowCommands.hpp"
 
+#define NUM_SELECTABLE_WINDOW_COMMANDS (sizeof(possible_cmds) / sizeof(possible_cmds[0]))
+
 static const WindowCommand none_cmd = {
 .cmd = WINDOW_COMMAND_NONE,
 .name = "Nothing",
@@ -348,13 +350,13 @@ static const WindowCommand* possible_cmds[] = {
 };
 
 void create_window_commands_list(std::vector<const WindowCommand*> &list_to_fill, bool is_mono_extra) {
-	for(int i = 0; i < sizeof(possible_cmds) / sizeof(possible_cmds[0]); i++)
+	for(size_t i = 0; i < NUM_SELECTABLE_WINDOW_COMMANDS; i++)
 		if(possible_cmds[i]->available_mono_extra || (!is_mono_extra))
 			list_to_fill.push_back(possible_cmds[i]);
 }
 
 const WindowCommand* get_window_command(PossibleWindowCommands cmd) {
-	for(int i = 0; i < sizeof(possible_cmds) / sizeof(possible_cmds[0]); i++)
+	for(size_t i = 0; i < NUM_SELECTABLE_WINDOW_COMMANDS; i++)
 		if(possible_cmds[i]->cmd == cmd)
 			return possible_cmds[i];
 	return &none_cmd;

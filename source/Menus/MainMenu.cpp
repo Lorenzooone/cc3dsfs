@@ -183,8 +183,8 @@ void MainMenu::class_setup() {
 	this->width_divisor_menu = 9;
 	this->base_height_factor_menu = 12;
 	this->base_height_divisor_menu = 6;
-	this->min_text_size = 0.3;
-	this->max_width_slack = 1.1;
+	this->min_text_size = 0.3f;
+	this->max_width_slack = 1.1f;
 	this->menu_color = sf::Color(30, 30, 60, 192);
 	this->title = "Main Menu";
 	this->show_back_x = true;
@@ -204,7 +204,7 @@ static bool check_cc_specific_option(const MainMenuOptionInfo* option, CaptureDe
 
 void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_mode, CaptureDevice* device, bool connected) {
 	this->num_enabled_options = 0;
-	for(int i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
+	for(size_t i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
 		bool valid = true;
 		if(is_fullscreen)
 			valid = valid && pollable_options[i]->active_fullscreen;
@@ -225,7 +225,7 @@ void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_
 		//if((pollable_options[i]->out_action == MAIN_MENU_SHORTCUT_SETTINGS) && (!enable_shortcut))
 		//	valid = false;
 		if(valid) {
-			this->options_indexes[this->num_enabled_options] = i;
+			this->options_indexes[this->num_enabled_options] = (int)i;
 			this->num_enabled_options++;
 		}
 	}
@@ -243,7 +243,7 @@ void MainMenu::set_output_option(int index, int action) {
 		this->selected_index = pollable_options[this->options_indexes[index]]->out_action;
 }
 
-int MainMenu::get_num_options() {
+size_t MainMenu::get_num_options() {
 	return this->num_enabled_options;
 }
 

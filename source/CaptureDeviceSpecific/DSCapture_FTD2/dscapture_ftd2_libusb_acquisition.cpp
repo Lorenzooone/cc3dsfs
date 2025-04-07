@@ -34,14 +34,13 @@ static void STDCALL ftd2_libusb_read_callback(libusb_transfer* transfer) {
 
 // Read from bulk
 static void ftd2_libusb_schedule_read(ftd2_async_callback_data* cb_data, uint8_t* buffer_raw, int length) {
-	const int max_packet_size = MAX_PACKET_SIZE_USB2;
 	libusb_transfer *transfer_in = libusb_alloc_transfer(0);
 	if(!transfer_in)
 		return;
 	cb_data->transfer_data_access.lock();
 	cb_data->transfer_data = transfer_in;
 	cb_data->is_transfer_done_mutex->specific_try_lock(cb_data->internal_index);
-	length = ftd2_libusb_get_expanded_length(length);
+	length = (int)ftd2_libusb_get_expanded_length(length);
 	cb_data->requested_length = length;
 	ftd2_libusb_async_bulk_in_prepare_and_submit(cb_data->handle, (void*)transfer_in, buffer_raw, length, (void*)ftd2_libusb_read_callback, (void*)cb_data, NUM_CAPTURE_RECEIVED_DATA_BUFFERS);
 	cb_data->transfer_data_access.unlock();
@@ -51,39 +50,8 @@ static int get_ftd2_libusb_status(FTD2CaptureReceivedData* received_data_buffers
 	return *received_data_buffers[0].status;
 }
 
-static void reset_ftd2_libusb_status(FTD2CaptureReceivedData* received_data_buffers) {
-	*received_data_buffers[0].status = 0;
-}
-
 static void error_ftd2_libusb_status(FTD2CaptureReceivedData* received_data_buffers, int error) {
 	*received_data_buffers[0].status = error;
-}
-
-static int ftd2_libusb_get_num_free_buffers(FTD2CaptureReceivedData* received_data_buffers) {
-	int num_free = 0;
-	for(int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
-		if(!received_data_buffers[i].in_use)
-			num_free += 1;
-	return num_free;
-}
-
-static void wait_all_ftd2_libusb_transfers_done(FTD2CaptureReceivedData* received_data_buffers) {
-	if (received_data_buffers == NULL)
-		return;
-	if (*received_data_buffers[0].status < 0) {
-		for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++)
-			ftd2_libusb_cancel_callback(&received_data_buffers[i].cb_data);
-	}
-	for (int i = 0; i < NUM_CAPTURE_RECEIVED_DATA_BUFFERS; i++) {
-		void* transfer_data;
-		do {
-			received_data_buffers[i].cb_data.transfer_data_access.lock();
-			transfer_data = received_data_buffers[i].cb_data.transfer_data;
-			received_data_buffers[i].cb_data.transfer_data_access.unlock();
-			if(transfer_data)
-				received_data_buffers[i].cb_data.is_transfer_done_mutex->specific_timed_lock(i);
-		} while(transfer_data);
-	}
 }
 
 static void wait_all_ftd2_libusb_buffers_free(FTD2CaptureReceivedData* received_data_buffers) {
@@ -114,10 +82,6 @@ static void wait_one_ftd2_libusb_buffer_free(FTD2CaptureReceivedData* received_d
 	}
 }
 
-static bool ftd2_libusb_are_buffers_all_free(FTD2CaptureReceivedData* received_data_buffers) {
-	return ftd2_libusb_get_num_free_buffers(received_data_buffers) == NUM_CAPTURE_RECEIVED_DATA_BUFFERS;
-}
-
 static FTD2CaptureReceivedData* ftd2_libusb_get_free_buffer(FTD2CaptureReceivedData* received_data_buffers) {
 	wait_one_ftd2_libusb_buffer_free(received_data_buffers);
 	if(*received_data_buffers[0].status < 0)
@@ -139,7 +103,7 @@ static void ftd2_libusb_start_read(FTD2CaptureReceivedData* received_data_buffer
 	received_data_buffer->buffer_raw = (uint8_t*)&data_buffer->ftd2_received_old_ds_normal_plus_raw.raw_data;
 	received_data_buffer->buffer_target = (uint32_t*)data_buffer;
 	received_data_buffer->index = index;
-	ftd2_libusb_schedule_read(&received_data_buffer->cb_data, received_data_buffer->buffer_raw, size);
+	ftd2_libusb_schedule_read(&received_data_buffer->cb_data, received_data_buffer->buffer_raw, (int)size);
 }
 
 static void ftd2_libusb_copy_buffer_to_target_and_skip(uint8_t* buffer_written, uint8_t* buffer_target, const int max_packet_size, size_t length, size_t header_packet_size, size_t ignored_bytes) {
@@ -148,25 +112,26 @@ static void ftd2_libusb_copy_buffer_to_target_and_skip(uint8_t* buffer_written, 
 
 	// Remove the small headers every 512 bytes...
 	// The "- header_packet_size" instead of "-1" covers for partial header transfers...
-	int num_iters = (length + max_packet_size - header_packet_size) / max_packet_size;
+	int real_packet_size = (int)(max_packet_size - header_packet_size);
+	int num_iters = (int)((length + real_packet_size) / max_packet_size);
 	if(num_iters <= 0)
 		return;
 
 	size_t inner_length = length - (num_iters * header_packet_size);
-	size_t fully_ignored_iters = ignored_bytes / (max_packet_size - header_packet_size);
-	size_t partially_ignored_iters = (ignored_bytes + (max_packet_size - header_packet_size) - 1) / (max_packet_size - header_packet_size);
-	num_iters -= fully_ignored_iters;
+	size_t fully_ignored_iters = ignored_bytes / real_packet_size;
+	size_t partially_ignored_iters = (ignored_bytes + real_packet_size - 1) / real_packet_size;
+	num_iters -= (int)fully_ignored_iters;
 	if(num_iters <= 0)
 		return;
 
 	buffer_written += fully_ignored_iters * max_packet_size;
 	// Skip inside a packet, since it's misaligned
 	if(partially_ignored_iters != fully_ignored_iters) {
-		size_t offset_bytes = ignored_bytes % (max_packet_size - header_packet_size);
-		int rem_size = inner_length - ((max_packet_size - header_packet_size) * fully_ignored_iters);
-		if(rem_size > ((int)((max_packet_size - header_packet_size))))
-			rem_size = max_packet_size - header_packet_size;
-		rem_size -= offset_bytes;
+		size_t offset_bytes = ignored_bytes % real_packet_size;
+		int rem_size = (int)(inner_length - (real_packet_size * fully_ignored_iters));
+		if(rem_size > real_packet_size)
+			rem_size = real_packet_size;
+		rem_size -= (int)offset_bytes;
 		if(rem_size > 0) {
 			memcpy(buffer_target, buffer_written + header_packet_size + offset_bytes, rem_size);
 			buffer_written += max_packet_size;
@@ -202,7 +167,7 @@ static size_t ftd2_libusb_copy_buffer_to_target_and_skip_synch(uint8_t* in_buffe
 	else
 		*sync_offset = 0;
 	uint16_t* out_u16 = (uint16_t*)out_buffer;
-	for(int i = 0; i < ignored_halfwords; i++)
+	for(size_t i = 0; i < ignored_halfwords; i++)
 		out_u16[(real_length / 2) - ignored_halfwords + i] = FTD2_OLDDS_SYNCH_VALUES;
 	return remove_synch_from_final_length(out_buffer, real_length);
 }
@@ -241,7 +206,7 @@ static void ftd2_libusb_capture_process_data(void* in_user_data, int transfer_le
 		*user_data->status = LIBUSB_ERROR_OTHER;
 		return end_ftd2_libusb_read_frame_cb(user_data, false);
 	}
-	if(transfer_length < user_data->cb_data.requested_length)
+	if(((size_t)transfer_length) < user_data->cb_data.requested_length)
 		return end_ftd2_libusb_read_frame_cb(user_data, false);
 	if(((int32_t)(user_data->index - (*user_data->last_used_index))) <= 0) {
 		//*user_data->status = LIBUSB_ERROR_INTERRUPTED;
@@ -307,18 +272,13 @@ static void resync_offset(FTD2CaptureReceivedData* received_data_buffers, uint32
 void ftd2_capture_main_loop_libusb(CaptureData* capture_data) {
 	const bool is_ftd2_libusb = true;
 	bool is_done = false;
-	int inner_curr_in = 0;
-	int retval = 0;
 	auto clock_start = std::chrono::high_resolution_clock::now();
 	FTD2CaptureReceivedData* received_data_buffers = new FTD2CaptureReceivedData[NUM_CAPTURE_RECEIVED_DATA_BUFFERS];
-	int curr_data_buffer = 0;
-	int next_data_buffer = 0;
 	int status = 0;
 	uint32_t last_used_index = -1;
 	uint32_t index = 0;
 	size_t curr_offset = 0;
-	const size_t full_size = get_capture_size(capture_data->status.device.is_rgb_888);
-	size_t bytesIn;
+	const size_t full_size = (size_t)get_capture_size(capture_data->status.device.is_rgb_888);
 
 	libusb_register_to_event_thread();
 

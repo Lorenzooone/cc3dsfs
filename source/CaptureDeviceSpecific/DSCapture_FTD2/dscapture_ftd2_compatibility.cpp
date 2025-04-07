@@ -28,8 +28,8 @@ void list_devices_ftd2_compatibility(std::vector<CaptureDevice> &devices_list, s
 }
 
 void ftd2_capture_main_loop(CaptureData* capture_data) {
-	bool is_ftd2_libusb = capture_data->status.device.descriptor != NULL;
 	#ifdef USE_FTD2_DRIVER
+	bool is_ftd2_libusb = capture_data->status.device.descriptor != NULL;
 	if(!is_ftd2_libusb)
 		return ftd2_capture_main_loop_driver(capture_data);
 	#endif
@@ -70,7 +70,7 @@ int ftd2_write(void* handle, bool is_ftd2_libusb, const uint8_t* data, size_t si
 	#ifdef USE_FTD2_DRIVER
 	if(!is_ftd2_libusb) {
 		DWORD inner_sent = 0;
-		FT_STATUS ftStatus = FT_Write(handle, (void*)data, size, &inner_sent);
+		FT_STATUS ftStatus = FT_Write(handle, (void*)data, (DWORD)size, &inner_sent);
 		*sent = inner_sent;
 		return ftStatus;
 	}
@@ -86,7 +86,7 @@ int ftd2_read(void* handle, bool is_ftd2_libusb, uint8_t* data, size_t size, siz
 	#ifdef USE_FTD2_DRIVER
 	if(!is_ftd2_libusb) {
 		DWORD inner_bytes_in = 0;
-		FT_STATUS ftStatus = FT_Read(handle, (void*)data, size, &inner_bytes_in);
+		FT_STATUS ftStatus = FT_Read(handle, (void*)data, (DWORD)size, &inner_bytes_in);
 		*bytesIn = inner_bytes_in;
 		return ftStatus;
 	}
@@ -126,10 +126,10 @@ int ftd2_reset_device(void* handle, bool is_ftd2_libusb) {
 int ftd2_set_usb_parameters(void* handle, bool is_ftd2_libusb, size_t size_in, size_t size_out) {
 	#ifdef USE_FTD2_DRIVER
 	if(!is_ftd2_libusb)
-		return FT_SetUSBParameters(handle, size_in, size_out);
+		return FT_SetUSBParameters(handle, (ULONG)size_in, (ULONG)size_out);
 	#endif
 	#ifdef USE_FTD2_LIBUSB
-	return ftd2_libusb_set_usb_chunksizes(handle, size_in, size_out);
+	return ftd2_libusb_set_usb_chunksizes(handle, (unsigned int)size_in, (unsigned int)size_out);
 	#else
 	return FT_OK;
 	#endif

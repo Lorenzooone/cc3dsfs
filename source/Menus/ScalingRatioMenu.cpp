@@ -63,8 +63,8 @@ void ScalingRatioMenu::class_setup() {
 	this->width_divisor_menu = 9;
 	this->base_height_factor_menu = 12;
 	this->base_height_divisor_menu = 6;
-	this->min_text_size = 0.3;
-	this->max_width_slack = 1.1;
+	this->min_text_size = 0.3f;
+	this->max_width_slack = 1.1f;
 	this->menu_color = sf::Color(30, 30, 60, 192);
 	this->title = "Scaling & Ratio Settings";
 	this->show_back_x = true;
@@ -74,8 +74,8 @@ void ScalingRatioMenu::class_setup() {
 
 void ScalingRatioMenu::insert_data() {
 	this->num_enabled_options = 0;
-	for(int i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
-		this->options_indexes[this->num_enabled_options] = i;
+	for(size_t i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
+		this->options_indexes[this->num_enabled_options] = (int)i;
 		this->num_enabled_options++;
 	}
 	this->prepare_options();
@@ -94,7 +94,7 @@ void ScalingRatioMenu::set_output_option(int index, int action) {
 		this->selected_index = pollable_options[this->options_indexes[index]]->out_action;
 }
 
-int ScalingRatioMenu::get_num_options() {
+size_t ScalingRatioMenu::get_num_options() {
 	return this->num_enabled_options;
 }
 

@@ -30,7 +30,7 @@ public:
 	AudioMode get_audio_mode_output();
 	std::string get_audio_output_name();
 	std::string get_audio_mode_name();
-	int get_max_audio_latency();
+	size_t get_max_audio_latency();
 	int get_final_volume();
 	bool has_text_to_print();
 	std::string text_to_print();
@@ -44,7 +44,7 @@ public:
 
 private:
 	int volume;
-	int max_audio_latency;
+	size_t max_audio_latency;
 	bool mute;
 	AudioOutputType output_type;
 	audio_output_device_data output_device;

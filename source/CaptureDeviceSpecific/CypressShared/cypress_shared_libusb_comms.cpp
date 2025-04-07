@@ -133,11 +133,11 @@ cy_device_device_handlers* cypress_libusb_serial_reconnection(const cy_device_us
 	if(!usb_is_initialized())
 		return NULL;
 	libusb_device **usb_devices;
-	int num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
+	ssize_t num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	libusb_device_descriptor usb_descriptor{};
 	cy_device_device_handlers* final_handlers = NULL;
 
-	for(int i = 0; i < num_devices; i++) {
+	for(ssize_t i = 0; i < num_devices; i++) {
 		cy_device_device_handlers handlers;
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
 		if(result < 0)
@@ -174,7 +174,7 @@ cy_device_device_handlers* cypress_libusb_serial_reconnection(const cy_device_us
 }
 
 void cypress_libusb_end_connection(cy_device_device_handlers* handlers, const cy_device_usb_device* device_desc, bool interface_claimed) {
-	if (interface_claimed)
+	if(interface_claimed)
 		libusb_release_interface(handlers->usb_handle, device_desc->default_interface);
 	libusb_close(handlers->usb_handle);
 	handlers->usb_handle = NULL;
@@ -184,11 +184,10 @@ void cypress_libusb_find_used_serial(const cy_device_usb_device* usb_device_desc
 	if(!usb_is_initialized())
 		return;
 	libusb_device **usb_devices;
-	int num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
+	ssize_t num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	libusb_device_descriptor usb_descriptor{};
-	cy_device_device_handlers* final_handlers = NULL;
 
-	for(int i = 0; i < num_devices; i++) {
+	for(ssize_t i = 0; i < num_devices; i++) {
 		cy_device_device_handlers handlers;
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
 		if(result < 0)
@@ -208,7 +207,7 @@ void cypress_libusb_find_used_serial(const cy_device_usb_device* usb_device_desc
 		std::string device_serial_number = cypress_get_serial(usb_device_desc, (std::string)(serial), usb_descriptor.bcdDevice, curr_serial_extra_id);
 		try {
 			int pos = std::stoi(device_serial_number);
-			if((pos < 0) || (pos >= num_free_fw_ids))
+			if((pos < 0) || (pos >= ((int)num_free_fw_ids)))
 				continue;
 			found[pos] = true;
 		}
@@ -227,19 +226,19 @@ void cypress_libusb_list_devices(std::vector<CaptureDevice> &devices_list, bool*
 	if(!usb_is_initialized())
 		return;
 	libusb_device **usb_devices;
-	int num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
+	ssize_t num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	libusb_device_descriptor usb_descriptor{};
 
-	for(int i = 0; i < num_devices; i++) {
+	for(ssize_t i = 0; i < num_devices; i++) {
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
 		if(result < 0)
 			continue;
-		for (int j = 0; j < device_descriptions.size(); j++) {
+		for(size_t j = 0; j < device_descriptions.size(); j++) {
 			result = cypress_libusb_insert_device(devices_list, device_descriptions[j], usb_devices[i], &usb_descriptor, curr_serial_extra_id_cypress[j]);
-			if (result != LIBUSB_ERROR_NOT_FOUND) {
-				if (result == LIBUSB_ERROR_ACCESS)
+			if(result != LIBUSB_ERROR_NOT_FOUND) {
+				if(result == LIBUSB_ERROR_ACCESS)
 					no_access_elems[j] = true;
-				if (result == LIBUSB_ERROR_NOT_SUPPORTED)
+				if(result == LIBUSB_ERROR_NOT_SUPPORTED)
 					not_supported_elems[j] = true;
 				break;
 			}

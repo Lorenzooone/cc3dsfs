@@ -43,14 +43,14 @@ static const RelativePositionMenuOptionInfo below_option = {
 static const RelativePositionMenuOptionInfo desc_option = {
 .base_name = "Top Screen", .is_selectable = false,
 .position_x = 1, .position_y = 2, .multiplier_y = 2,
-.text_factor_multiplier = 0.95,
+.text_factor_multiplier = 0.95f,
 .out_action = BOT_REL_POS_END,
 .divisor_x = 3};
 
 static const RelativePositionMenuOptionInfo desc2_option = {
 .base_name = "Position", .is_selectable = false,
 .position_x = 1, .position_y = 3, .multiplier_y = 2,
-.text_factor_multiplier = 0.95,
+.text_factor_multiplier = 0.95f,
 .out_action = BOT_REL_POS_END,
 .divisor_x = 3};
 
@@ -109,8 +109,8 @@ void RelativePositionMenu::class_setup() {
 	this->width_divisor_menu = 9;
 	this->base_height_factor_menu = 12;
 	this->base_height_divisor_menu = 6;
-	this->min_text_size = 0.3;
-	this->max_width_slack = 1.1;
+	this->min_text_size = 0.3f;
+	this->max_width_slack = 1.1f;
 	this->menu_color = sf::Color(30, 30, 60, 192);
 	this->title = "Screens Placement";
 }
@@ -159,20 +159,22 @@ void RelativePositionMenu::set_default_cursor_position() {
 	}
 }
 
+// This is reversed, due to it being the position of the bottom screen.
+// But we ask the user the position of the top screen.
 bool RelativePositionMenu::is_option_left(int index) {
-	return pollable_options[index]->out_action == LEFT_TOP;
-}
-
-bool RelativePositionMenu::is_option_right(int index) {
 	return pollable_options[index]->out_action == RIGHT_TOP;
 }
 
+bool RelativePositionMenu::is_option_right(int index) {
+	return pollable_options[index]->out_action == LEFT_TOP;
+}
+
 bool RelativePositionMenu::is_option_above(int index) {
-	return pollable_options[index]->out_action == ABOVE_TOP;
+	return pollable_options[index]->out_action == UNDER_TOP;
 }
 
 bool RelativePositionMenu::is_option_below(int index) {
-	return pollable_options[index]->out_action == UNDER_TOP;
+	return pollable_options[index]->out_action == ABOVE_TOP;
 }
 
 void RelativePositionMenu::decrement_selected_option(bool is_simple) {
@@ -182,7 +184,7 @@ void RelativePositionMenu::decrement_selected_option(bool is_simple) {
 	}
 	int elem_index = this->future_data.option_selected - this->elements_start_id;
 	if(!is_simple) {
-		if(this->is_option_element(this->future_data.option_selected) && (this->is_option_left(elem_index) || this->is_option_above(elem_index)))
+		if(this->is_option_element(this->future_data.option_selected) && (this->is_option_right(elem_index) || this->is_option_below(elem_index)))
 			this->future_data.option_selected -= 1;
 	}
 	do {
@@ -199,7 +201,7 @@ void RelativePositionMenu::increment_selected_option(bool is_simple) {
 	}
 	int elem_index = this->future_data.option_selected - this->elements_start_id;
 	if(!is_simple) {
-		if(this->is_option_element(this->future_data.option_selected) && this->is_option_right(elem_index))
+		if(this->is_option_element(this->future_data.option_selected) && this->is_option_left(elem_index))
 			this->future_data.option_selected += 1;
 	}
 	do {
@@ -284,25 +286,8 @@ void RelativePositionMenu::down_code(bool is_simple) {
 void RelativePositionMenu::left_code() {
 	if(!this->can_execute_action())
 		return;
-	if(this->is_option_element(this->future_data.option_selected) && this->is_option_right(this->future_data.option_selected - this->elements_start_id))
-		this->option_selection_handling();
-	else {
-		this->future_data.option_selected -= 1;
-		for(int i = 0; i < this->num_options_per_screen; i++) {
-			if(this->is_option_right(i)) {
-				this->future_data.option_selected = i + this->elements_start_id;
-				break;
-			}
-		}
-		this->last_action_time = std::chrono::high_resolution_clock::now();
-	}
-}
-
-void RelativePositionMenu::right_code() {
-	if(!this->can_execute_action())
-		return;
 	int elem_index = this->future_data.option_selected - this->elements_start_id;
-	if(this->is_option_element(this->future_data.option_selected) && this->is_option_left(this->future_data.option_selected - this->elements_start_id))
+	if(this->is_option_element(this->future_data.option_selected) && this->is_option_left(elem_index))
 		this->option_selection_handling();
 	else {
 		this->future_data.option_selected -= 1;
@@ -316,18 +301,30 @@ void RelativePositionMenu::right_code() {
 	}
 }
 
+void RelativePositionMenu::right_code() {
+	if(!this->can_execute_action())
+		return;
+	int elem_index = this->future_data.option_selected - this->elements_start_id;
+	if(this->is_option_element(this->future_data.option_selected) && this->is_option_right(elem_index))
+		this->option_selection_handling();
+	else {
+		this->future_data.option_selected -= 1;
+		for(int i = 0; i < this->num_options_per_screen; i++) {
+			if(this->is_option_right(i)) {
+				this->future_data.option_selected = i + this->elements_start_id;
+				break;
+			}
+		}
+		this->last_action_time = std::chrono::high_resolution_clock::now();
+	}
+}
+
 bool RelativePositionMenu::poll(SFEvent &event_data) {
 	bool consumed = true;
 	switch (event_data.type) {
 	case EVENT_TEXT_ENTERED:
-		switch (event_data.unicode) {
-		default:
-			consumed = false;
-			break;
-		}
-
+		consumed = false;
 		break;
-		
 	case EVENT_KEY_PRESSED:
 		switch (event_data.code) {
 		case sf::Keyboard::Key::Up:
@@ -426,7 +423,7 @@ bool RelativePositionMenu::poll(SFEvent &event_data) {
 void RelativePositionMenu::draw(float scaling_factor, sf::RenderTarget &window) {
 	const sf::Vector2f rect_size = this->menu_rectangle.getSize();
 	if((this->loaded_data.menu_width != rect_size.x) || (this->loaded_data.menu_height != rect_size.y)) {
-		this->menu_rectangle.setSize(sf::Vector2f(this->loaded_data.menu_width, this->loaded_data.menu_height));
+		this->menu_rectangle.setSize(sf::Vector2f((float)this->loaded_data.menu_width, (float)this->loaded_data.menu_height));
 	}
 	this->menu_rectangle.setPosition({(float)this->loaded_data.pos_x, (float)this->loaded_data.pos_y});
 	window.draw(this->menu_rectangle);
@@ -499,16 +496,12 @@ void RelativePositionMenu::base_prepare(float menu_scaling_factor, int view_size
 	if(num_elements_text_scaling_factor < this->min_elements_text_scaling_factor)
 		num_elements_text_scaling_factor = this->min_elements_text_scaling_factor;
 	float text_scaling_factor = (menu_scaling_factor * this->num_vertical_slices) / num_elements_text_scaling_factor;
-	this->future_data.menu_height = base_height * final_menu_scaling_factor;
+	this->future_data.menu_height = (int)(base_height * final_menu_scaling_factor);
 	this->future_data.menu_width = (this->future_data.menu_height * this->width_factor_menu) / this->width_divisor_menu;
 	if(this->future_data.menu_width > max_width)
 		this->future_data.menu_width = max_width;
 	this->future_data.pos_x = (view_size_x - this->future_data.menu_width) / 2;
 	this->future_data.pos_y = (view_size_y - this->future_data.menu_height) / 2;
-	int slice_y_size = this->future_data.menu_height / this->num_vertical_slices;
-	int slice_x_size = 3;
-	int num_rendered_y = 0;
-	int top_divisor = 6;
 	this->prepare_text_slices(0, 6, 0, this->num_vertical_slices, this->back_x_id, text_scaling_factor);
 	this->prepare_text_slices(0, 1, 0, this->num_vertical_slices, this->title_id, text_scaling_factor);
 	for(int i = 0; i < this->num_options_per_screen; i++) {

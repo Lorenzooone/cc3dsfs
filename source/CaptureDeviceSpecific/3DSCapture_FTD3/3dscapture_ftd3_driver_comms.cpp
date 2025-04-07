@@ -90,7 +90,7 @@ void ftd3_driver_list_devices(std::vector<CaptureDevice> &devices_list, int *cur
 		SerialNumber, Description, &ftHandle);
 		if(FT_FAILED(ftStatus))
 			continue;
-		for(int j = 0; j < valid_descriptions.size(); j++) {
+		for(size_t j = 0; j < valid_descriptions.size(); j++) {
 			if(Description == valid_descriptions[j]) {
 				ftStatus = FT_Create(SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, &ftHandle);
 				if(FT_FAILED(ftStatus))
@@ -107,7 +107,7 @@ ftd3_device_device_handlers* ftd3_driver_serial_reconnection(std::string wanted_
 	ftd3_device_device_handlers* final_handlers = NULL;
 	ftd3_device_device_handlers inside_handlers;
 	char SerialNumber[SERIAL_NUMBER_SIZE] = { 0 };
-	strncpy(SerialNumber, wanted_serial_number.c_str(), REAL_SERIAL_NUMBER_SIZE);
+	strncpy_s(SerialNumber, REAL_SERIAL_NUMBER_SIZE, wanted_serial_number.c_str(), REAL_SERIAL_NUMBER_SIZE);
 	SerialNumber[REAL_SERIAL_NUMBER_SIZE] = 0;
 	if(!FT_FAILED(FT_Create(SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, &inside_handlers.driver_handle))) {
 		final_handlers = new ftd3_device_device_handlers;

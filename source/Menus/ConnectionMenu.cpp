@@ -14,8 +14,8 @@ void ConnectionMenu::class_setup() {
 	this->width_divisor_menu = 9;
 	this->base_height_factor_menu = 10;
 	this->base_height_divisor_menu = 6;
-	this->min_text_size = 0.3;
-	this->max_width_slack = 1.1;
+	this->min_text_size = 0.3f;
+	this->max_width_slack = 1.1f;
 	this->menu_color = sf::Color(30, 30, 60, 192);
 	this->title = "Device Selection";
 	this->show_back_x = false;
@@ -36,7 +36,7 @@ void ConnectionMenu::set_output_option(int index, int action) {
 	this->selected_index = index;
 }
 
-int ConnectionMenu::get_num_options() {
+size_t ConnectionMenu::get_num_options() {
 	return this->devices_list->size();
 }
 

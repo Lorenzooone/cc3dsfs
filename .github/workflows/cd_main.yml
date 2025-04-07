@@ -90,6 +90,7 @@ jobs:
       with:
         name: cc3dsfs-single-${{matrix.platform.artifact_name}}
         path: build/cc3dsfs*.zip
+        if-no-files-found: error
 
   create_pi_setup:
     name: Create Pi Mono Setup
@@ -114,6 +115,7 @@ jobs:
       with:
         name: cc3dsfs-single-rpi-mono
         path: cc3dsfs_rpi_kiosk_setup.zip
+        if-no-files-found: error
 
   publish:
     name: Publishing

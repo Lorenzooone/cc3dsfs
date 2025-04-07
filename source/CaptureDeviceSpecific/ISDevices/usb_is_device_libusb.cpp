@@ -65,11 +65,11 @@ is_device_device_handlers* is_device_libusb_serial_reconnection(const is_device_
 	if(!usb_is_initialized())
 		return NULL;
 	libusb_device **usb_devices;
-	int num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
+	ssize_t num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	libusb_device_descriptor usb_descriptor{};
 	is_device_device_handlers* final_handlers = NULL;
 
-	for(int i = 0; i < num_devices; i++) {
+	for(ssize_t i = 0; i < num_devices; i++) {
 		is_device_device_handlers handlers;
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
 		if(result < 0)
@@ -110,15 +110,15 @@ void is_device_libusb_list_devices(std::vector<CaptureDevice> &devices_list, boo
 	if(!usb_is_initialized())
 		return;
 	libusb_device **usb_devices;
-	int num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
+	ssize_t num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	libusb_device_descriptor usb_descriptor{};
 
-	for(int i = 0; i < num_devices; i++) {
+	for(ssize_t i = 0; i < num_devices; i++) {
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
 		if(result < 0)
 			continue;
-		for (int j = 0; j < num_is_device_desc; j++) {
-			result = is_device_libusb_insert_device(devices_list, GetISDeviceDesc(j), usb_devices[i], &usb_descriptor, curr_serial_extra_id_is_device[j]);
+		for (size_t j = 0; j < num_is_device_desc; j++) {
+			result = is_device_libusb_insert_device(devices_list, GetISDeviceDesc((int)j), usb_devices[i], &usb_descriptor, curr_serial_extra_id_is_device[j]);
 			if (result != LIBUSB_ERROR_NOT_FOUND) {
 				if (result == LIBUSB_ERROR_ACCESS)
 					no_access_elems[j] = true;

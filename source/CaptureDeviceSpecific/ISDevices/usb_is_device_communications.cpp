@@ -270,7 +270,7 @@ static void fix_endianness_header(is_nitro_nec_packet_header* header) {
 
 static uint32_t get_crc32_data_comm(uint8_t* data, size_t size) {
 	uint32_t value = 0xFFFFFFFF;
-	for(int i = 0; i < size; i++) {
+	for(size_t i = 0; i < size; i++) {
 		uint8_t inner_value = (value >> 24) ^ data[i];
 		value <<= 8;
 		value ^= read_le32(is_twl_cap_crc32_table, inner_value);
@@ -295,29 +295,29 @@ static void apply_enc_dec_action_value(uint32_t action_value, uint32_t rotating_
 	}
 	switch((action_value & 0xFF) - 1) {
 		case 0:
-			for(int j = 0; j < size_u16; j++)
+			for(size_t j = 0; j < size_u16; j++)
 				write_be16(data, read_le16(data, j), j);
 			break;
 		case 1:
-			for(int j = 0; j < size_u16; j++) {
+			for(size_t j = 0; j < size_u16; j++) {
 				write_le16(data, read_le16(data, j) ^ rotating_value, j);
 				rotating_value += increment;
 			}
 			break;
 		case 2:
-			for(int j = 0; j < size_u16; j++) {
+			for(size_t j = 0; j < size_u16; j++) {
 				write_le16(data, read_le16(data, j) + rotating_value, j);
 				rotating_value += increment;
 			}
 			break;
 		case 3:
-			for(int j = 0; j < size_u16; j++) {
+			for(size_t j = 0; j < size_u16; j++) {
 				write_le16(data, read_le16(data, j) - rotating_value, j);
 				rotating_value += increment;
 			}
 			break;
 		case 4:
-			for(int j = 0; j < (size_u16 / 2); j++) {
+			for(size_t j = 0; j < (size_u16 / 2); j++) {
 				first_val = read_le16(data, j);
 				write_le16(data, read_le16(data, size_u16 - 1 - j), j);
 				write_le16(data, first_val, size_u16 - 1 - j);
@@ -325,13 +325,13 @@ static void apply_enc_dec_action_value(uint32_t action_value, uint32_t rotating_
 			break;
 		case 5:
 			first_val = read_le16(data);
-			for(int j = 0; j < (size_u16 - 1); j++)
+			for(size_t j = 0; j < (size_u16 - 1); j++)
 				write_le16(data, read_le16(data, j + 1), j);
 			write_le16(data, first_val, size_u16 - 1);
 			break;
 		case 6:
 			last_val = read_le16(data, size_u16 - 1);
-			for(int j = 0; j < (size_u16 - 1); j++)
+			for(size_t j = 0; j < (size_u16 - 1); j++)
 				write_le16(data, read_le16(data, size_u16 - 1 - j - 1), size_u16 - 1 - j);
 			write_le16(data, last_val);
 			break;
@@ -488,9 +488,9 @@ static int SendWritePacket(is_device_device_handlers* handlers, uint16_t command
 	bool append_mode = true;
 	if(device_desc->device_type == IS_NITRO_CAPTURE_DEVICE)
 		append_mode = false;
-	int single_packet_covered_size = device_desc->max_usb_packet_size - sizeof(header);
+	int single_packet_covered_size = (int)(device_desc->max_usb_packet_size - sizeof(header));
 	if(!append_mode)
-		single_packet_covered_size = device_desc->max_usb_packet_size;
+		single_packet_covered_size = (int)device_desc->max_usb_packet_size;
 	int num_iters = (length + single_packet_covered_size - 1) / single_packet_covered_size;
 	if(!num_iters)
 		num_iters = 1;
@@ -513,7 +513,7 @@ static int SendWritePacket(is_device_device_handlers* handlers, uint16_t command
 		fix_endianness_header(&header);
 		int ret = 0;
 		int num_bytes = 0;
-		for(int j = 0; j < sizeof(is_device_packet_header); j++)
+		for(size_t j = 0; j < sizeof(is_device_packet_header); j++)
 			single_usb_packet[j] = ((uint8_t*)&header)[j];
 		if(append_mode && (buf != NULL)) {
 			for(int j = 0; j < transfer_size; j++)
@@ -533,7 +533,7 @@ static int SendWritePacket(is_device_device_handlers* handlers, uint16_t command
 		}
 		if(ret < 0)
 			return return_and_delete(single_usb_packet, ret);
-		if(num_bytes != (transfer_size + sizeof(is_device_packet_header)))
+		if(num_bytes != ((int)(transfer_size + sizeof(is_device_packet_header))))
 			return return_and_delete(single_usb_packet, LIBUSB_ERROR_INTERRUPTED);
 	}
 	if((device_desc->device_type == IS_NITRO_CAPTURE_DEVICE) && expect_result) {
@@ -552,7 +552,7 @@ static int SendWritePacket(is_device_device_handlers* handlers, uint16_t command
 
 static int SendReadPacket(is_device_device_handlers* handlers, uint16_t command, is_device_packet_type type, uint32_t address, uint8_t* buf, int length, const is_device_usb_device* device_desc, bool expect_result = true) {
 	is_device_packet_header header;
-	int single_packet_covered_size = device_desc->max_usb_packet_size;
+	int single_packet_covered_size = (int)device_desc->max_usb_packet_size;
 	int num_iters = (length + single_packet_covered_size - 1) / single_packet_covered_size;
 	if(num_iters == 0)
 		num_iters = 1;
@@ -601,11 +601,11 @@ static int SendReadWritePacket(is_device_device_handlers* handlers, uint16_t com
 	if((device_desc->device_type == IS_NITRO_EMULATOR_DEVICE) || (device_desc->device_type == IS_NITRO_CAPTURE_DEVICE))
 		return LIBUSB_SUCCESS;
 	is_device_rw_packet_header header;
-	int single_packet_covered_size_w = device_desc->max_usb_packet_size - sizeof(header);
+	int single_packet_covered_size_w = (int)(device_desc->max_usb_packet_size - sizeof(header));
 	int num_iters_w = (length_w + single_packet_covered_size_w - 1) / single_packet_covered_size_w;
 	if(!num_iters_w)
 		num_iters_w = 1;
-	int single_packet_covered_size_r = device_desc->max_usb_packet_size;
+	int single_packet_covered_size_r = (int)device_desc->max_usb_packet_size;
 	int num_iters_r = (length_r + single_packet_covered_size_r - 1) / single_packet_covered_size_r;
 	if(!num_iters_r)
 		num_iters_r = 1;
@@ -635,7 +635,7 @@ static int SendReadWritePacket(is_device_device_handlers* handlers, uint16_t com
 		int ret = 0;
 		int num_bytes = 0;
 		if(is_packet_direction_write(device_desc->device_type, packet_direction)) {
-			for(int j = 0; j < sizeof(is_device_rw_packet_header); j++)
+			for(size_t j = 0; j < sizeof(is_device_rw_packet_header); j++)
 				single_usb_packet[j] = ((uint8_t*)&header)[j];
 			if(buf_w != NULL) {
 				for(int j = 0; j < transfer_size_w; j++)
@@ -648,7 +648,7 @@ static int SendReadWritePacket(is_device_device_handlers* handlers, uint16_t com
 			}
 			if(ret < 0)
 				return return_and_delete(single_usb_packet, ret);
-			if(num_bytes != (transfer_size_w + sizeof(is_device_rw_packet_header)))
+			if(num_bytes != ((int)(transfer_size_w + sizeof(is_device_rw_packet_header))))
 				return return_and_delete(single_usb_packet, LIBUSB_ERROR_INTERRUPTED);
 		}
 		else {
@@ -803,9 +803,9 @@ int WriteNecMem(is_device_device_handlers* handlers, uint32_t address, uint8_t u
 	header.count = count;
 	header.address = address;
 	fix_endianness_header(&header);
-	for(int i = 0; i < sizeof(is_nitro_nec_packet_header); i++)
+	for(size_t i = 0; i < sizeof(is_nitro_nec_packet_header); i++)
 		buffer[i] = ((uint8_t*)&header)[i];
-	for(int i = 0; i < count * unit_size; i++)
+	for(int i = 0; i < (count * unit_size); i++)
 		buffer[i + sizeof(is_nitro_nec_packet_header)] = buf[i];
 	int ret = SendWriteCommand(handlers, header.command, buffer, (count * unit_size) + sizeof(is_nitro_nec_packet_header), device_desc);
 	delete []buffer;

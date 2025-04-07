@@ -5,11 +5,11 @@ CaptureDataBuffers::CaptureDataBuffers() {
 	last_curr_in = 0;
 	for(int i = 0; i < NUM_CONCURRENT_DATA_BUFFER_WRITERS; i++) {
 		curr_writer_pos[i] = -1;
-		is_being_written_to[i] = false;
 	}
 	for(int i = 0; i < NUM_CONCURRENT_DATA_BUFFER_READERS; i++)
 		curr_reader_pos[i] = -1;
 	for(int i = 0; i < NUM_CONCURRENT_DATA_BUFFERS; i++) {
+		is_being_written_to[i] = false;
 		num_readers[i] = 0;
 		for(int j = 0; j < NUM_CONCURRENT_DATA_BUFFER_READERS; j++)
 			has_read_data[i][j] = true;
@@ -105,7 +105,7 @@ void CaptureDataBuffers::WriteToBuffer(CaptureReceived* buffer, uint64_t read, d
 	if(target == NULL)
 		return;
 	if(buffer != NULL) {
-		memcpy(&target->capture_buf, ((uint8_t*)buffer) + offset, read - offset);
+		memcpy(&target->capture_buf, ((uint8_t*)buffer) + offset, (size_t)(read - offset));
 		// Make sure to also copy the extra needed data, if any
 		if((device->cc_type == CAPTURE_CONN_USB) && (!device->is_3ds))
 			memcpy(&target->capture_buf.usb_received_old_ds.frameinfo, &buffer->usb_received_old_ds.frameinfo, sizeof(buffer->usb_received_old_ds.frameinfo));

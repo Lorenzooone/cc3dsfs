@@ -14,8 +14,8 @@ void ResolutionMenu::class_setup() {
 	this->width_divisor_menu = 9;
 	this->base_height_factor_menu = 12;
 	this->base_height_divisor_menu = 6;
-	this->min_text_size = 0.3;
-	this->max_width_slack = 1.1;
+	this->min_text_size = 0.3f;
+	this->max_width_slack = 1.1f;
 	this->menu_color = sf::Color(30, 30, 60, 192);
 	this->title = "Resolution Settings";
 	this->show_back_x = true;
@@ -40,7 +40,7 @@ void ResolutionMenu::set_output_option(int index, int action) {
 		this->selected_index = index;
 }
 
-int ResolutionMenu::get_num_options() {
+size_t ResolutionMenu::get_num_options() {
 	return (*this->possible_resolutions).size();
 }
 
@@ -67,7 +67,7 @@ void ResolutionMenu::prepare(float menu_scaling_factor, int view_size_x, int vie
 			continue;
 		int mode_index = start + i;
 		sf::VideoMode mode = this->get_resolution(mode_index);
-		if((mode.size.x == fullscreen_mode_width) && (mode.size.y == fullscreen_mode_height))
+		if((mode.size.x == ((size_t)fullscreen_mode_width)) && (mode.size.y == ((size_t)fullscreen_mode_height)))
 			this->labels[index]->setText("<" + this->get_string_option(mode_index, DEFAULT_ACTION) + ">");
 		else
 			this->labels[index]->setText(this->get_string_option(mode_index, DEFAULT_ACTION));

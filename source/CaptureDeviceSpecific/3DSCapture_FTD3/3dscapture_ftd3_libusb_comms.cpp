@@ -119,10 +119,10 @@ int ftd3_libusb_async_in_start(ftd3_device_device_handlers* handlers, int endpoi
 
 static int ftd3_libusb_send_command(libusb_device_handle* handle, uint8_t* data, size_t length) {
 	int num_transferred = 0;
-	int result = libusb_bulk_transfer(handle, FTD3_COMMAND_BULK_PIPE_ID, data, length, &num_transferred, FTD3_COMMAND_TIMEOUT);
+	int result = libusb_bulk_transfer(handle, FTD3_COMMAND_BULK_PIPE_ID, data, (int)length, &num_transferred, FTD3_COMMAND_TIMEOUT);
 	if(result < 0)
 		return result;
-	if(num_transferred != length)
+	if(num_transferred != ((int)length))
 		return -1;
 	return result;
 }
@@ -159,21 +159,21 @@ int ftd3_libusb_abort_pipe(ftd3_device_device_handlers* handlers, int pipe) {
 }
 
 int ftd3_libusb_write_pipe(ftd3_device_device_handlers* handlers, int pipe, const uint8_t* data, size_t length, int* num_transferred) {
-	int result = ftd3_libusb_send_len_data_command((libusb_device_handle*)handlers->usb_handle, pipe, FTD3_COMMAND_RW_OPERATION_PREPARE_ID, length);
+	int result = ftd3_libusb_send_len_data_command((libusb_device_handle*)handlers->usb_handle, pipe, FTD3_COMMAND_RW_OPERATION_PREPARE_ID, (uint32_t)length);
 	if(result < 0)
 		return result;
-	return ftd3_libusb_bulk_out(handlers, pipe, FTD3_COMMAND_TIMEOUT, data, length, num_transferred);
+	return ftd3_libusb_bulk_out(handlers, pipe, FTD3_COMMAND_TIMEOUT, data, (int)length, num_transferred);
 }
 
 int ftd3_libusb_read_pipe(ftd3_device_device_handlers* handlers, int pipe, uint8_t* data, size_t length, int* num_transferred) {
-	int result = ftd3_libusb_send_len_data_command((libusb_device_handle*)handlers->usb_handle, pipe, FTD3_COMMAND_RW_OPERATION_PREPARE_ID, length);
+	int result = ftd3_libusb_send_len_data_command((libusb_device_handle*)handlers->usb_handle, pipe, FTD3_COMMAND_RW_OPERATION_PREPARE_ID, (uint32_t)length);
 	if(result < 0)
 		return result;
-	return ftd3_libusb_bulk_in(handlers, pipe, FTD3_COMMAND_TIMEOUT, data, length, num_transferred);
+	return ftd3_libusb_bulk_in(handlers, pipe, FTD3_COMMAND_TIMEOUT, data, (int)length, num_transferred);
 }
 
 int ftd3_libusb_set_stream_pipe(ftd3_device_device_handlers* handlers, int pipe, size_t length) {
-	return ftd3_libusb_send_len_data_command((libusb_device_handle*)handlers->usb_handle, pipe, FTD3_COMMAND_SET_STREAM_PIPE_ID, length);
+	return ftd3_libusb_send_len_data_command((libusb_device_handle*)handlers->usb_handle, pipe, FTD3_COMMAND_SET_STREAM_PIPE_ID, (uint32_t)length);
 }
 
 static bool ftd3_libusb_setup_connection(libusb_device_handle* handle, bool* claimed_cmd, bool* claimed_bulk) {
@@ -222,7 +222,7 @@ static int ftd3_libusb_insert_device(std::vector<CaptureDevice> &devices_list, l
 	char serial[0x100];
 	read_strings(handle, usb_descriptor, manufacturer, product, serial);
 	bool found = false;
-	for(int i = 0; i < valid_descriptions.size(); i++)
+	for(size_t i = 0; i < valid_descriptions.size(); i++)
 		if(product == valid_descriptions[i]) {
 			found = true;
 			break;
@@ -248,16 +248,16 @@ static int ftd3_libusb_insert_device(std::vector<CaptureDevice> &devices_list, l
 	return result;
 }
 
-static ftd3_device_device_handlers* ftd3_libusb_serial_find_in_list(libusb_device **usb_devices, int num_devices, std::string wanted_serial_number, int &curr_serial_extra_id, const std::vector<std::string> &valid_descriptions) {
-	for(int i = 0; i < num_devices; i++) {
+static ftd3_device_device_handlers* ftd3_libusb_serial_find_in_list(libusb_device **usb_devices, ssize_t num_devices, std::string wanted_serial_number, int &curr_serial_extra_id, const std::vector<std::string> &valid_descriptions) {
+	for(ssize_t i = 0; i < num_devices; i++) {
 		libusb_device_descriptor usb_descriptor{};
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
 		if(result < 0)
 			continue;
-		for(int j = 0; j < ftd3_num_vids; j++) {
+		for(size_t j = 0; j < ftd3_num_vids; j++) {
 			if(usb_descriptor.idVendor != ftd3_valid_vids[j])
 				continue;
-			for(int k = 0; k < ftd3_num_pids; k++) {
+			for(size_t k = 0; k < ftd3_num_pids; k++) {
 				if(usb_descriptor.idProduct != ftd3_valid_pids[k])
 					continue;
 				ftd3_device_device_handlers handlers;
@@ -268,7 +268,7 @@ static ftd3_device_device_handlers* ftd3_libusb_serial_find_in_list(libusb_devic
 				char product[0x100];
 				char serial[0x100];
 				read_strings((libusb_device_handle*)handlers.usb_handle, &usb_descriptor, manufacturer, product, serial);
-				for(int l = 0; l < valid_descriptions.size(); l++) {
+				for(size_t l = 0; l < valid_descriptions.size(); l++) {
 					if(product != valid_descriptions[l])
 						continue;
 					std::string device_serial_number = ftd3_get_serial((std::string)(serial), curr_serial_extra_id);
@@ -296,7 +296,7 @@ ftd3_device_device_handlers* ftd3_libusb_serial_reconnection(std::string wanted_
 	if(!usb_is_initialized())
 		return NULL;
 	libusb_device **usb_devices;
-	int num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
+	ssize_t num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 
 	ftd3_device_device_handlers* final_handlers = ftd3_libusb_serial_find_in_list(usb_devices, num_devices, wanted_serial_number, curr_serial_extra_id, valid_descriptions);
 
@@ -321,17 +321,17 @@ void ftd3_libusb_list_devices(std::vector<CaptureDevice> &devices_list, bool* no
 	if(!usb_is_initialized())
 		return;
 	libusb_device **usb_devices;
-	int num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
+	ssize_t num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	libusb_device_descriptor usb_descriptor{};
 
-	for(int i = 0; i < num_devices; i++) {
+	for(ssize_t i = 0; i < num_devices; i++) {
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
 		if(result < 0)
 			continue;
-		for(int j = 0; j < ftd3_num_vids; j++) {
+		for(size_t j = 0; j < ftd3_num_vids; j++) {
 			if(usb_descriptor.idVendor != ftd3_valid_vids[j])
 				continue;
-			for(int k = 0; k < ftd3_num_pids; k++) {
+			for(size_t k = 0; k < ftd3_num_pids; k++) {
 				if(usb_descriptor.idProduct != ftd3_valid_pids[k])
 					continue;
 				result = ftd3_libusb_insert_device(devices_list, usb_devices[i], &usb_descriptor, *curr_serial_extra_id_ftd3, valid_descriptions);

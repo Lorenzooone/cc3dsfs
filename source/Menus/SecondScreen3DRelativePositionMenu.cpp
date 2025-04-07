@@ -55,7 +55,7 @@ static const SecondScreen3DRelativePositionMenuOptionInfo desc_option = {
 .base_name = "3D Screen", .false_name = "",
 .is_selectable = false,
 .position_x = 1, .position_y = 4, .multiplier_y = 2,
-.text_factor_multiplier = 0.95,
+.text_factor_multiplier = 0.95f,
 .out_action = SECOND_SCREEN_3D_REL_POS_MENU_NO_ACTION,
 .out_position = SECOND_SCREEN_3D_REL_POS_END,
 .divisor_x = 3, .exists_non_joint = true};
@@ -64,7 +64,7 @@ static const SecondScreen3DRelativePositionMenuOptionInfo desc2_option = {
 .base_name = "Position", .false_name = "",
 .is_selectable = false,
 .position_x = 1, .position_y = 5, .multiplier_y = 2,
-.text_factor_multiplier = 0.95,
+.text_factor_multiplier = 0.95f,
 .out_action = SECOND_SCREEN_3D_REL_POS_MENU_NO_ACTION,
 .out_position = SECOND_SCREEN_3D_REL_POS_END,
 .divisor_x = 3, .exists_non_joint = true};
@@ -108,8 +108,8 @@ void SecondScreen3DRelativePositionMenu::class_setup() {
 	this->width_divisor_menu = 9;
 	this->base_height_factor_menu = 12;
 	this->base_height_divisor_menu = 6;
-	this->min_text_size = 0.3;
-	this->max_width_slack = 1.1;
+	this->min_text_size = 0.3f;
+	this->max_width_slack = 1.1f;
 	this->menu_color = sf::Color(30, 30, 60, 192);
 	this->title = "3D Screen Placement";
 }
@@ -164,19 +164,19 @@ bool SecondScreen3DRelativePositionMenu::is_option_element(int option) {
 }
 
 bool SecondScreen3DRelativePositionMenu::is_option_left(int index) {
-	return (pollable_options[index]->out_action == SECOND_SCREEN_3D_REL_POS_MENU_CONFIRM) && (pollable_options[index]->out_position == RIGHT_FIRST);
-}
-
-bool SecondScreen3DRelativePositionMenu::is_option_right(int index) {
 	return (pollable_options[index]->out_action == SECOND_SCREEN_3D_REL_POS_MENU_CONFIRM) && (pollable_options[index]->out_position == LEFT_FIRST);
 }
 
+bool SecondScreen3DRelativePositionMenu::is_option_right(int index) {
+	return (pollable_options[index]->out_action == SECOND_SCREEN_3D_REL_POS_MENU_CONFIRM) && (pollable_options[index]->out_position == RIGHT_FIRST);
+}
+
 bool SecondScreen3DRelativePositionMenu::is_option_above(int index) {
-	return (pollable_options[index]->out_action == SECOND_SCREEN_3D_REL_POS_MENU_CONFIRM) && (pollable_options[index]->out_position == UNDER_FIRST);
+	return (pollable_options[index]->out_action == SECOND_SCREEN_3D_REL_POS_MENU_CONFIRM) && (pollable_options[index]->out_position == ABOVE_FIRST);
 }
 
 bool SecondScreen3DRelativePositionMenu::is_option_below(int index) {
-	return (pollable_options[index]->out_action == SECOND_SCREEN_3D_REL_POS_MENU_CONFIRM) && (pollable_options[index]->out_position == ABOVE_FIRST);
+	return (pollable_options[index]->out_action == SECOND_SCREEN_3D_REL_POS_MENU_CONFIRM) && (pollable_options[index]->out_position == UNDER_FIRST);
 }
 
 std::string SecondScreen3DRelativePositionMenu::setTextOptionBool(int index, bool value) {

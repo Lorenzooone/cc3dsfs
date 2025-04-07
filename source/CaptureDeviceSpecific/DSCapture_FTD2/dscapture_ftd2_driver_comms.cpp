@@ -44,7 +44,7 @@ void list_devices_ftd2_driver(std::vector<CaptureDevice> &devices_list, std::vec
 
 int ftd2_driver_open_serial(CaptureDevice* device, void** handle) {
 	char SerialNumber[SERIAL_NUMBER_SIZE] = { 0 };
-	strncpy(SerialNumber, device->serial_number.c_str(), SERIAL_NUMBER_SIZE);
+	strncpy_s(SerialNumber, SERIAL_NUMBER_SIZE, device->serial_number.c_str(), SERIAL_NUMBER_SIZE);
 	SerialNumber[REAL_SERIAL_NUMBER_SIZE] = 0;
 	return FT_OpenEx(SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, handle);
 }

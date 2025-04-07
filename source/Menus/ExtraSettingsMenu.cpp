@@ -75,8 +75,8 @@ void ExtraSettingsMenu::class_setup() {
 	this->width_divisor_menu = 9;
 	this->base_height_factor_menu = 12;
 	this->base_height_divisor_menu = 6;
-	this->min_text_size = 0.3;
-	this->max_width_slack = 1.1;
+	this->min_text_size = 0.3f;
+	this->max_width_slack = 1.1f;
 	this->menu_color = sf::Color(30, 30, 60, 192);
 	this->title = "Extra Settings";
 	this->show_back_x = true;
@@ -86,7 +86,7 @@ void ExtraSettingsMenu::class_setup() {
 
 void ExtraSettingsMenu::insert_data(ScreenType s_type, bool is_fullscreen) {
 	this->num_enabled_options = 0;
-	for(int i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
+	for(size_t i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
 		bool valid = true;
 		if(is_fullscreen)
 			valid = valid && pollable_options[i]->active_fullscreen;
@@ -99,7 +99,7 @@ void ExtraSettingsMenu::insert_data(ScreenType s_type, bool is_fullscreen) {
 		else
 			valid = valid && pollable_options[i]->active_joint_screen;
 		if(valid) {
-			this->options_indexes[this->num_enabled_options] = i;
+			this->options_indexes[this->num_enabled_options] = (int)i;
 			this->num_enabled_options++;
 		}
 	}
@@ -121,7 +121,7 @@ bool ExtraSettingsMenu::is_option_selectable(int index, int action) {
 	return pollable_options[this->options_indexes[index]]->is_selectable;
 }
 
-int ExtraSettingsMenu::get_num_options() {
+size_t ExtraSettingsMenu::get_num_options() {
 	return this->num_enabled_options;
 }
 

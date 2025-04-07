@@ -331,22 +331,10 @@ const PARData fit_wide_vertical_par = {
 .is_width_main = false, .is_fit = true,
 .name = "Fit to 16:9 V."};
 
-const PARData special_3ds_horizontal_par = {
-.width_multiplier = 1.0, .width_divisor = 2.0,
-.is_width_main = true, .is_fit = false,
-.name = "3DS 800x240 Horizontal"};
-
-const PARData special_3ds_vertical_par = {
-.width_multiplier = 1.0, .width_divisor = 2.0,
-.is_width_main = false, .is_fit = false,
-.name = "3DS 800x240 Vertical"};
-
 static const PARData* basic_possible_pars[] = {
 &base_par,
 &snes_horizontal_par,
 &snes_vertical_par,
-//&special_3ds_horizontal_par,
-//&special_3ds_vertical_par,
 &lb_horizontal_par,
 &lb_vertical_par,
 &top_3ds_horizontal_par,
@@ -379,7 +367,7 @@ const ShaderColorEmulationData color_profile_identity = {
 };
 
 const ShaderColorEmulationData color_profile_libretro_gba = {
-.targetGamma = 2.2f + (0.28125 * 1.6), .lum = 0.91f,
+.targetGamma = 2.2f + (0.28125f * 1.6f), .lum = 0.91f,
 .rgb_mod = {
 {0.905f,  0.195f,  -0.1f},
 {0.1f,    0.65f,    0.25f},
@@ -463,7 +451,7 @@ const ShaderColorEmulationData color_profile_libretro_emulators_gba = {
 };
 
 const ShaderColorEmulationData color_profile_libretro_gbc = {
-.targetGamma = 2.2f + (0.5 * (-1.0)), .lum = 0.91f,
+.targetGamma = 2.2f + (0.5f * (-1.0f)), .lum = 0.91f,
 .rgb_mod = {
 {0.905f,   0.195f,   -0.1f},
 {0.1f,      0.65f,   0.25f},
@@ -516,20 +504,20 @@ static bool is_allowed_crop(const CropData* crop_data, ScreenType s_type, bool i
 }
 
 void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type, bool is_ds, bool allow_game_specific) {
-	for(int i = 0; i < (sizeof(basic_possible_crops) / sizeof(basic_possible_crops[0])); i++) {
+	for(size_t i = 0; i < (sizeof(basic_possible_crops) / sizeof(basic_possible_crops[0])); i++) {
 		if(is_allowed_crop(basic_possible_crops[i], s_type, is_ds, allow_game_specific))
 			crop_vector.push_back(basic_possible_crops[i]);
 	}
 }
 
 void insert_basic_pars(std::vector<const PARData*> &par_vector) {
-	for(int i = 0; i < (sizeof(basic_possible_pars) / sizeof(basic_possible_pars[0])); i++) {
+	for(size_t i = 0; i < (sizeof(basic_possible_pars) / sizeof(basic_possible_pars[0])); i++) {
 		par_vector.push_back(basic_possible_pars[i]);
 	}
 }
 
 void insert_basic_color_profiles(std::vector<const ShaderColorEmulationData*> &color_profiles_vector) {
-	for(int i = 0; i < (sizeof(basic_possible_color_profiles) / sizeof(basic_possible_color_profiles[0])); i++) {
+	for(size_t i = 0; i < (sizeof(basic_possible_color_profiles) / sizeof(basic_possible_color_profiles[0])); i++) {
 		color_profiles_vector.push_back(basic_possible_color_profiles[i]);
 	}
 }
@@ -685,19 +673,19 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		return true;
 	}
 	if(key == (base + "sub_off")) {
-		info.subscreen_offset = offset_sanitization(std::stod(value));
+		info.subscreen_offset = offset_sanitization(std::stof(value));
 		return true;
 	}
 	if(key == (base + "sub_att_off")) {
-		info.subscreen_attached_offset = offset_sanitization(std::stod(value));
+		info.subscreen_attached_offset = offset_sanitization(std::stof(value));
 		return true;
 	}
 	if(key == (base + "off_x")) {
-		info.total_offset_x = offset_sanitization(std::stod(value));
+		info.total_offset_x = offset_sanitization(std::stof(value));
 		return true;
 	}
 	if(key == (base + "off_y")) {
-		info.total_offset_y = offset_sanitization(std::stod(value));
+		info.total_offset_y = offset_sanitization(std::stof(value));
 		return true;
 	}
 	if(key == (base + "top_rot")) {
@@ -722,12 +710,12 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 	}
 	if(key == (base + "top_scaling")) {
 		info.top_scaling = std::stoi(value);
-		info.non_integer_top_scaling = info.top_scaling;
+		info.non_integer_top_scaling = (float)info.top_scaling;
 		return true;
 	}
 	if(key == (base + "bot_scaling")) {
 		info.bot_scaling = std::stoi(value);
-		info.non_integer_bot_scaling = info.bot_scaling;
+		info.non_integer_bot_scaling = (float)info.bot_scaling;
 		return true;
 	}
 	if(key == (base + "bfi")) {
@@ -782,7 +770,7 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 			info.separator_windowed_multiplier = SEP_WINDOW_SCALING_MIN_MULTIPLIER;
 		if(info.separator_windowed_multiplier > MAX_WINDOW_SCALING_VALUE)
 			info.separator_windowed_multiplier = MAX_WINDOW_SCALING_VALUE;
-		info.separator_windowed_multiplier = std::round(info.separator_windowed_multiplier / WINDOW_SCALING_CHANGE) * WINDOW_SCALING_CHANGE;
+		info.separator_windowed_multiplier = (float)(std::round(info.separator_windowed_multiplier / WINDOW_SCALING_CHANGE) * WINDOW_SCALING_CHANGE);
 		return true;
 	}
 	if(key == (base + "separator_fullscreen_multiplier")) {
@@ -791,7 +779,7 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 			info.separator_fullscreen_multiplier = SEP_FULLSCREEN_SCALING_MIN_MULTIPLIER;
 		if(info.separator_fullscreen_multiplier > MAX_WINDOW_SCALING_VALUE)
 			info.separator_fullscreen_multiplier = MAX_WINDOW_SCALING_VALUE;
-		info.separator_fullscreen_multiplier = std::round(info.separator_fullscreen_multiplier / WINDOW_SCALING_CHANGE) * WINDOW_SCALING_CHANGE;
+		info.separator_fullscreen_multiplier = (float)(std::round(info.separator_fullscreen_multiplier / WINDOW_SCALING_CHANGE) * WINDOW_SCALING_CHANGE);
 		return true;
 	}
 	if(key == (base + "top_par")) {
@@ -932,11 +920,11 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 }
 
 void joystick_axis_poll(std::queue<SFEvent> &events_queue) {
-	for(int i = 0; i < sf::Joystick::Count; i++) {
+	for(unsigned int i = 0; i < sf::Joystick::Count; i++) {
 		if(!sf::Joystick::isConnected(i))
 			continue;
-		for(int j = 0; j < sf::Joystick::AxisCount; j++) {
-			sf::Joystick::Axis axis = sf::Joystick::Axis((int)sf::Joystick::Axis::X + j);
+		for(unsigned int j = 0; j < sf::Joystick::AxisCount; j++) {
+			sf::Joystick::Axis axis = sf::Joystick::Axis((unsigned int)sf::Joystick::Axis::X + j);
 			if(sf::Joystick::hasAxis(i, axis))
 				events_queue.emplace(i, axis, sf::Joystick::getAxisPosition(i, axis));
 		}
@@ -948,8 +936,8 @@ const PARData* get_base_par() {
 }
 
 void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor, bool divide_3d_par) {
-	width *= multiplier_factor;
-	height *= multiplier_factor;
+	width = (int)(width * multiplier_factor);
+	height = (int)(height * multiplier_factor);
 	float correction_factor_3d = 1.0;
 	if(divide_3d_par)
 		correction_factor_3d = 2.0;
@@ -959,18 +947,18 @@ void get_par_size(int &width, int &height, float multiplier_factor, const PARDat
 	float correction_factor_approx_contribute = correction_factor_divisor / 2;
 	if(correction_factor->is_fit) {
 		if(correction_factor->is_width_main)
-			width = ((height * correction_factor->width_multiplier) + correction_factor_approx_contribute) / correction_factor_divisor;
+			width = (int)(((height * correction_factor->width_multiplier) + correction_factor_approx_contribute) / correction_factor_divisor);
 		else {
-			width /= correction_factor_3d;
-			height = ((width * correction_factor->width_divisor) + correction_factor_approx_contribute) / correction_factor_divisor;
+			width = (int)(width / correction_factor_3d);
+			height = (int)(((width * correction_factor->width_divisor) + correction_factor_approx_contribute) / correction_factor_divisor);
 		}
 	}
 	else {
 		if(correction_factor->is_width_main)
-			width = ((width * correction_factor->width_multiplier) + correction_factor_approx_contribute) / correction_factor_divisor;
+			width = (int)(((width * correction_factor->width_multiplier) + correction_factor_approx_contribute) / correction_factor_divisor);
 		else
-			height = ((height * correction_factor->width_divisor) + correction_factor_approx_contribute) / correction_factor_divisor;
-		width /= correction_factor_3d;
+			height = (int)(((height * correction_factor->width_divisor) + correction_factor_approx_contribute) / correction_factor_divisor);
+		width = (int)(width / correction_factor_3d);
 	}
 }
 
@@ -1113,7 +1101,7 @@ void update_connected_specific_settings(FrontendData* frontend_data, const Captu
 
 void default_sleep(float wanted_ms) {
 	if(wanted_ms < 0)
-		wanted_ms = 1000.0/USB_CHECKS_PER_SECOND;
+		wanted_ms = 1000.0f/USB_CHECKS_PER_SECOND;
 	sf::sleep(sf::microseconds((int)(wanted_ms * 1000)));
 }
 

@@ -27,7 +27,7 @@ public:
 	void reset_output_option();
 protected:
 	void set_output_option(int index, int action);
-	int get_num_options();
+	size_t get_num_options();
 	std::string get_string_option(int index, int action);
 	void class_setup();
 private:

@@ -44,10 +44,6 @@ static void error_ftd3_libusb_status(FTD3LibusbCaptureReceivedData* ftd3_libusb_
 		*ftd3_libusb_capture_recv_data[0].status = error_val;
 }
 
-static void reset_ftd3_libusb_status(FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data) {
-	error_ftd3_libusb_status(ftd3_libusb_capture_recv_data, 0);
-}
-
 static void ftd3_libusb_read_frame_request(CaptureData* capture_data, FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data, uint32_t index, int pipe, bool is_3d) {
 	if(ftd3_libusb_capture_recv_data == NULL)
 		return;
@@ -58,7 +54,7 @@ static void ftd3_libusb_read_frame_request(CaptureData* capture_data, FTD3Libusb
 	CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(ftd3_libusb_capture_recv_data->internal_index);
 	uint8_t* buffer = (uint8_t*)&data_buf->capture_buf;
 	ftd3_libusb_capture_recv_data->is_3d = is_3d;
-	ftd3_libusb_async_in_start((ftd3_device_device_handlers*)capture_data->handle, pipe, MAX_TIME_WAIT * 1000, buffer, ftd3_get_capture_size(is_3d), &ftd3_libusb_capture_recv_data->cb_data);
+	ftd3_libusb_async_in_start((ftd3_device_device_handlers*)capture_data->handle, pipe, (uint32_t)(MAX_TIME_WAIT * 1000), buffer, (int)ftd3_get_capture_size(is_3d), &ftd3_libusb_capture_recv_data->cb_data);
 }
 
 static void end_ftd3_libusb_read_frame_cb(FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data, bool early_release) {
@@ -88,14 +84,6 @@ static void ftd3_libusb_read_frame_cb(void* user_data, int transfer_length, int 
 
 	data_output_update(ftd3_libusb_capture_recv_data->internal_index, transfer_length, ftd3_libusb_capture_recv_data->capture_data, *ftd3_libusb_capture_recv_data->clock_start, ftd3_libusb_capture_recv_data->is_3d);
 	end_ftd3_libusb_read_frame_cb(ftd3_libusb_capture_recv_data, false);
-}
-
-static int ftd3_libusb_get_num_free_buffers(FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data) {
-	int num_free = 0;
-	for(int i = 0; i < FTD3_CONCURRENT_BUFFERS; i++)
-		if(!ftd3_libusb_capture_recv_data[i].in_use)
-			num_free += 1;
-	return num_free;
 }
 
 static void close_all_reads_error(FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data, bool &async_read_closed) {
@@ -151,10 +139,6 @@ static void wait_one_ftd3_libusb_buffer_free(FTD3LibusbCaptureReceivedData* ftd3
 			ftd3_libusb_capture_recv_data[0].is_buffer_free_shared_mutex->general_timed_lock(&dummy);
 		}
 	}
-}
-
-static bool ftd3_libusb_are_buffers_all_free(FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data) {
-	return ftd3_libusb_get_num_free_buffers(ftd3_libusb_capture_recv_data) == FTD3_CONCURRENT_BUFFERS;
 }
 
 static FTD3LibusbCaptureReceivedData* ftd3_libusb_get_free_buffer(FTD3LibusbCaptureReceivedData* ftd3_libusb_capture_recv_data) {

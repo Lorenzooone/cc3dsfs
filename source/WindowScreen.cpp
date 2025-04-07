@@ -104,6 +104,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	}
 	n_shader_refs += 1;
 	this->was_last_frame_null = true;
+	this->main_thread_owns_window = true;
 	this->created_proper_folder = created_proper_folder;
 }
 
@@ -127,10 +128,6 @@ WindowScreen::~WindowScreen() {
 void WindowScreen::build() {
 	sf::Vector2f top_screen_size = {(float)TOP_WIDTH_3DS * 2, (float)HEIGHT_3DS};
 	sf::Vector2f bot_screen_size = {(float)BOT_WIDTH_3DS, (float)HEIGHT_3DS};
-
-	int width = TOP_WIDTH_3DS;
-	if(this->m_stype == ScreenType::BOTTOM)
-		width = BOT_WIDTH_3DS;
 
 	(void)this->m_out_rect_top.out_tex.resize({(unsigned int)top_screen_size.x, (unsigned int)top_screen_size.y});
 	this->m_out_rect_top.out_rect.setSize(top_screen_size);
@@ -265,7 +262,7 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 		loaded_info = m_info;
 		m_info.initial_pos_x = DEFAULT_NO_POS_WINDOW_VALUE;
 		m_info.initial_pos_y = DEFAULT_NO_POS_WINDOW_VALUE;
-		this->notification->setTextFactor(this->loaded_info.menu_scaling_factor);
+		this->notification->setTextFactor((float)this->loaded_info.menu_scaling_factor);
 		this->notification->prepareRenderText();
 		this->frame_time = frame_time;
 		this->scheduled_work_on_window = this->window_needs_work();
@@ -347,7 +344,7 @@ void WindowScreen::resize_in_rect(sf::RectangleShape &in_rect, int start_x, int 
 	in_rect.setSize({(float)target_width, (float)target_height});
 	in_rect.setOrigin({target_width / 2.0f, target_height / 2.0f});
 
-	in_rect.setRotation(sf::degrees(target_rotation));
+	in_rect.setRotation(sf::degrees((float)target_rotation));
 	in_rect.setPosition({width / 2.0f, height / 2.0f});
 }
 
@@ -548,7 +545,7 @@ int WindowScreen::_choose_color_emulation_shader(bool is_top) {
 	int color_profile_index = this->loaded_info.top_color_correction;
 	if(!is_top)
 		color_profile_index = this->loaded_info.bot_color_correction;
-	if((color_profile_index >= possible_color_profiles.size()) || (color_profile_index < 0))
+	if((color_profile_index >= ((int)possible_color_profiles.size())) || (color_profile_index < 0))
 		color_profile_index = 0;
 
 	const ShaderColorEmulationData* shader_color_data = possible_color_profiles[color_profile_index];
@@ -653,8 +650,8 @@ int WindowScreen::_choose_shader(PossibleShaderTypes shader_type, bool is_top) {
 
 int WindowScreen::choose_shader(PossibleShaderTypes shader_type, bool is_top) {
 	int chosen_shader = _choose_shader(shader_type, is_top);
-	if((chosen_shader >= 0) && (chosen_shader < usable_shaders.size()) && usable_shaders[chosen_shader].is_valid)
-		return chosen_shader;
+	if((chosen_shader >= 0) && (chosen_shader < ((int)usable_shaders.size())) && usable_shaders[chosen_shader].is_valid)
+		return (int)chosen_shader;
 	return -1;
 }
 
@@ -760,12 +757,12 @@ sf::Vector2u WindowScreen::get_desk_mode_3d_multiplied(ScreenInfo* info) {
 sf::Vector2f WindowScreen::get_3d_offset_out_rect(ScreenInfo* info, bool is_second_screen) {
 	if((!get_3d_enabled(this->capture_status)) || (this->display_data->interleaved_3d))
 		return {0, 0};
-	float x_contribution = this->m_width_no_manip;
-	float y_contribution = this->m_height_no_manip;
+	float x_contribution = (float)this->m_width_no_manip;
+	float y_contribution = (float)this->m_height_no_manip;
 	if(info->is_fullscreen) {
 		sf::Vector2u curr_desk_mode_3d_size = get_desk_mode_3d_multiplied(info);
-		x_contribution = curr_desk_mode_3d_size.x;
-		y_contribution = curr_desk_mode_3d_size.y;
+		x_contribution = (float)curr_desk_mode_3d_size.x;
+		y_contribution = (float)curr_desk_mode_3d_size.y;
 	}
 	float offset_x_first_screen = 0;
 	float offset_y_first_screen = 0;
@@ -845,10 +842,10 @@ void WindowScreen::window_render_call() {
 			if(this->loaded_info.bfi_amount > (this->loaded_info.bfi_divider - 1))
 				this->loaded_info.bfi_amount = this->loaded_info.bfi_divider - 1;
 			for(int i = 0; i < (this->loaded_info.bfi_divider - this->loaded_info.bfi_amount - 1); i++) {
-				sf::sleep(sf::seconds(frame_time / (this->loaded_info.bfi_divider * 1.1)));
+				sf::sleep(sf::seconds((float)(frame_time / (this->loaded_info.bfi_divider * 1.1))));
 			}
 			for(int i = 0; i < this->loaded_info.bfi_amount; i++) {
-				sf::sleep(sf::seconds(frame_time / (this->loaded_info.bfi_divider * 1.1)));
+				sf::sleep(sf::seconds((float)(frame_time / (this->loaded_info.bfi_divider * 1.1))));
 				this->display_data_to_window(false);
 			}
 		}
@@ -867,8 +864,8 @@ static bool should_have_separator(sf::Vector2f top_screen_size, sf::Vector2f bot
 
 static int get_separator_size_xy(float top_scaling, float bot_scaling, int separator_size, float separator_multiplier, bool is_fullscreen) {
 	if((!is_fullscreen) && (separator_multiplier == SEP_FOLLOW_SCALING_MULTIPLIER))
-		return separator_size * top_scaling;
-	return separator_size * separator_multiplier;
+		return (int)(separator_size * top_scaling);
+	return (int)(separator_size * separator_multiplier);
 }
 
 static int get_separator_size_x(sf::Vector2f top_screen_size, sf::Vector2f bot_screen_size, float top_scaling, float bot_scaling, ScreenType stype, BottomRelativePosition bottom_pos, int separator_size, float separator_multiplier, bool is_fullscreen) {
@@ -890,19 +887,15 @@ static int get_separator_size_y(sf::Vector2f top_screen_size, sf::Vector2f bot_s
 void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::Vector2f &curr_bot_screen_size, int offset_x, int offset_y, int max_x, int max_y, int separator_size_x, int separator_size_y, bool do_work) {
 	int top_screen_x = 0, top_screen_y = 0;
 	int bot_screen_x = 0, bot_screen_y = 0;
-	int top_screen_width = curr_top_screen_size.x;
-	int top_screen_height = curr_top_screen_size.y;
-	int bot_screen_width = curr_bot_screen_size.x;
-	int bot_screen_height = curr_bot_screen_size.y;
+	int top_screen_width = (int)curr_top_screen_size.x;
+	int top_screen_height = (int)curr_top_screen_size.y;
+	int bot_screen_width = (int)curr_bot_screen_size.x;
+	int bot_screen_height = (int)curr_bot_screen_size.y;
 
-	if((this->loaded_info.top_rotation / 10) % 2) {
-		top_screen_width = curr_top_screen_size.y;
-		top_screen_height = curr_top_screen_size.x;
-	}
-	if((this->loaded_info.bot_rotation / 10) % 2) {
-		bot_screen_width = curr_bot_screen_size.y;
-		bot_screen_height = curr_bot_screen_size.x;
-	}
+	if((this->loaded_info.top_rotation / 10) % 2)
+		std::swap(top_screen_width, top_screen_height);
+	if((this->loaded_info.bot_rotation / 10) % 2)
+		std::swap(bot_screen_width, bot_screen_height);
 
 	if(this->m_stype == ScreenType::TOP)
 		bot_screen_width = bot_screen_height = 0;
@@ -919,39 +912,39 @@ void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::
 	if(this->m_stype == ScreenType::JOINT) {
 		switch(this->loaded_info.bottom_pos) {
 			case UNDER_TOP:
-				bot_screen_x = (greatest_width - bot_screen_width) * this->loaded_info.subscreen_offset;
-				top_screen_x = (greatest_width - top_screen_width) * this->loaded_info.subscreen_offset;
+				bot_screen_x = (int)((greatest_width - bot_screen_width) * this->loaded_info.subscreen_offset);
+				top_screen_x = (int)((greatest_width - top_screen_width) * this->loaded_info.subscreen_offset);
 				bot_screen_y = top_screen_height + separator_size_y;
 				if(max_y > 0)
-					bot_screen_y += (max_y - bot_screen_height - separator_size_y - top_screen_height - offset_y) * this->loaded_info.subscreen_attached_offset;
+					bot_screen_y += (int)((max_y - bot_screen_height - separator_size_y - top_screen_height - offset_y) * this->loaded_info.subscreen_attached_offset);
 				break;
 			case RIGHT_TOP:
-				bot_screen_y = (greatest_height - bot_screen_height) * this->loaded_info.subscreen_offset;
-				top_screen_y = (greatest_height - top_screen_height) * this->loaded_info.subscreen_offset;
+				bot_screen_y = (int)((greatest_height - bot_screen_height) * this->loaded_info.subscreen_offset);
+				top_screen_y = (int)((greatest_height - top_screen_height) * this->loaded_info.subscreen_offset);
 				bot_screen_x = top_screen_width + separator_size_x;
 				if(max_x > 0)
-					bot_screen_x += (max_x - bot_screen_width - separator_size_x - top_screen_width - offset_x) * this->loaded_info.subscreen_attached_offset;
+					bot_screen_x += (int)((max_x - bot_screen_width - separator_size_x - top_screen_width - offset_x) * this->loaded_info.subscreen_attached_offset);
 				break;
 			case ABOVE_TOP:
-				bot_screen_x = (greatest_width - bot_screen_width) * this->loaded_info.subscreen_offset;
-				top_screen_x = (greatest_width - top_screen_width) * this->loaded_info.subscreen_offset;
+				bot_screen_x = (int)((greatest_width - bot_screen_width) * this->loaded_info.subscreen_offset);
+				top_screen_x = (int)((greatest_width - top_screen_width) * this->loaded_info.subscreen_offset);
 				top_screen_y = bot_screen_height + separator_size_y;
 				if(max_y > 0)
-					top_screen_y += (max_y - bot_screen_height - separator_size_y - top_screen_height - offset_y) * this->loaded_info.subscreen_attached_offset;
+					top_screen_y += (int)((max_y - bot_screen_height - separator_size_y - top_screen_height - offset_y) * this->loaded_info.subscreen_attached_offset);
 				break;
 			case LEFT_TOP:
-				bot_screen_y = (greatest_height - bot_screen_height) * this->loaded_info.subscreen_offset;
-				top_screen_y = (greatest_height - top_screen_height) * this->loaded_info.subscreen_offset;
+				bot_screen_y = (int)((greatest_height - bot_screen_height) * this->loaded_info.subscreen_offset);
+				top_screen_y = (int)((greatest_height - top_screen_height) * this->loaded_info.subscreen_offset);
 				top_screen_x = bot_screen_width + separator_size_x;
 				if(max_x > 0)
-					top_screen_x += (max_x - bot_screen_width - separator_size_x - top_screen_width - offset_x) * this->loaded_info.subscreen_attached_offset;
+					top_screen_x += (int)((max_x - bot_screen_width - separator_size_x - top_screen_width - offset_x) * this->loaded_info.subscreen_attached_offset);
 				break;
 			default:
 				break;
 		}
 	}
 	if(do_work) {
-		float scale_issue_fix_offset = -0.005;
+		float scale_issue_fix_offset = -0.005f;
 		this->m_out_rect_top.out_rect.setPosition({top_screen_x + scale_issue_fix_offset + offset_x + get_screen_corner_modifier_x(this->loaded_info.top_rotation, top_screen_width), top_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.top_rotation, top_screen_height) + scale_issue_fix_offset});
 		this->m_out_rect_bot.out_rect.setPosition({bot_screen_x + scale_issue_fix_offset + offset_x + get_screen_corner_modifier_x(this->loaded_info.bot_rotation, bot_screen_width), bot_screen_y + offset_y + get_screen_corner_modifier_y(this->loaded_info.bot_rotation, bot_screen_height) + scale_issue_fix_offset});
 	}
@@ -974,7 +967,7 @@ float WindowScreen::get_max_float_screen_multiplier(ResizingScreenData *own_scre
 
 	if((other_rotation / 10) % 2)
 		std::swap(width_limit, height_limit);
-	sf::Vector2f other_screen_size = sf::Vector2f(width_limit, height_limit);
+	sf::Vector2f other_screen_size = sf::Vector2f((float)width_limit, (float)height_limit);
 	if((!is_size_valid(other_screen_size)) && is_two_screens_merged)
 		other_screen_size = sf::Vector2f(1, 1);
 	sf::Vector2u curr_desk_mode_3d_size = get_desk_mode_3d_multiplied(&this->m_info);
@@ -1010,13 +1003,13 @@ float WindowScreen::get_max_float_screen_multiplier(ResizingScreenData *own_scre
 }
 
 int WindowScreen::prepare_screen_ratio(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation) {
-	return this->get_max_float_screen_multiplier(own_screen, width_limit, height_limit, other_rotation);
+	return (int)this->get_max_float_screen_multiplier(own_screen, width_limit, height_limit, other_rotation);
 }
 
-float WindowScreen::get_ratio_compared_other_screen(ResizingScreenData *own_screen, ResizingScreenData* other_screen, float other_scaling) {
-	int other_width = other_screen->size.x;
-	int other_height = other_screen->size.y;
-	get_par_size(other_width, other_height, other_scaling, other_screen->par, other_screen->divide_3d_par);
+int WindowScreen::get_ratio_compared_other_screen(ResizingScreenData *own_screen, ResizingScreenData* other_screen, int other_scaling) {
+	int other_width = (int)other_screen->size.x;
+	int other_height = (int)other_screen->size.y;
+	get_par_size(other_width, other_height, (float)other_scaling, other_screen->par, other_screen->divide_3d_par);
 	return prepare_screen_ratio(own_screen, other_width, other_height, other_screen->rotation);
 }
 
@@ -1038,7 +1031,7 @@ void WindowScreen::calc_scaling_resize_screens(ResizingScreenData *own_screen, R
 		(*own_screen->scaling) = chosen_ratio;
 	if(set_to_zero)
 		(*own_screen->scaling) = 0;
-	if((increase && ((old_scaling == (*own_screen->scaling)) || ((*other_screen->scaling) == 0)) || (mantain && ((*other_screen->scaling) == 0))) && ((*own_screen->scaling) > 0))
+	if(((increase && ((old_scaling == (*own_screen->scaling)) || ((*other_screen->scaling) == 0))) || (mantain && ((*other_screen->scaling) == 0))) && ((*own_screen->scaling) > 0))
 		(*other_screen->scaling) = 0;
 	else
 		(*other_screen->scaling) = get_ratio_compared_other_screen(other_screen, own_screen, *own_screen->scaling);
@@ -1059,18 +1052,18 @@ bool WindowScreen::can_non_integerly_scale() {
 }
 
 void WindowScreen::rescale_nonint_subscreen(ResizingScreenData *main_screen_resize_data, ResizingScreenData *sub_screen_resize_data) {
-	int new_width = main_screen_resize_data->size.x;
-	int new_height = main_screen_resize_data->size.y;
+	int new_width = (int)main_screen_resize_data->size.x;
+	int new_height = (int)main_screen_resize_data->size.y;
 	get_par_size(new_width, new_height, *main_screen_resize_data->non_int_scaling, main_screen_resize_data->par, main_screen_resize_data->divide_3d_par);
 	*sub_screen_resize_data->non_int_scaling = this->get_max_float_screen_multiplier(sub_screen_resize_data, new_width, new_height, main_screen_resize_data->rotation);
 	if(!sub_screen_resize_data->use_non_int_scaling)
-		*sub_screen_resize_data->non_int_scaling = static_cast<int>(*sub_screen_resize_data->non_int_scaling);
+		*sub_screen_resize_data->non_int_scaling = std::floor(*sub_screen_resize_data->non_int_scaling);
 }
 
 void WindowScreen::direct_scale_nonint_screen(ResizingScreenData *main_screen_resize_data, int sub_min_width, int sub_height_min, int sub_screen_rotation) {
 	*main_screen_resize_data->non_int_scaling = this->get_max_float_screen_multiplier(main_screen_resize_data, sub_min_width, sub_height_min, sub_screen_rotation);
 	if(!main_screen_resize_data->use_non_int_scaling)
-		*main_screen_resize_data->non_int_scaling = static_cast<int>(*main_screen_resize_data->non_int_scaling);
+		*main_screen_resize_data->non_int_scaling = std::floor(*main_screen_resize_data->non_int_scaling);
 }
 
 void WindowScreen::non_int_scale_screens_with_main(ResizingScreenData *main_screen_resize_data, ResizingScreenData *sub_screen_resize_data, int sub_min_width, int sub_height_min) {
@@ -1079,8 +1072,8 @@ void WindowScreen::non_int_scale_screens_with_main(ResizingScreenData *main_scre
 }
 
 void WindowScreen::non_int_scale_screens_both(ResizingScreenData *main_screen_resize_data, ResizingScreenData *sub_screen_resize_data, int free_width, int free_height, float multiplier_main, int main_min_width, int main_height_min, int sub_min_width, int sub_height_min) {
-	int main_free_width = (free_width * multiplier_main) + 0.5;
-	int main_free_height = (free_height * multiplier_main) + 0.5;
+	int main_free_width = (int)((free_width * multiplier_main) + 0.5f);
+	int main_free_height = (int)((free_height * multiplier_main) + 0.5f);
 	int sub_free_width = free_width - main_free_width;
 	int sub_free_height = free_height - main_free_height;
 	this->direct_scale_nonint_screen(main_screen_resize_data, sub_min_width + sub_free_width, sub_height_min + sub_free_height, sub_screen_resize_data->rotation);
@@ -1091,8 +1084,8 @@ void WindowScreen::non_int_scale_screens_both(ResizingScreenData *main_screen_re
 
 void WindowScreen::non_integer_scale_screens(ResizingScreenData *top_screen_resize_data, ResizingScreenData *bot_screen_resize_data) {
 	if(!this->can_non_integerly_scale()) {
-		this->m_info.non_integer_top_scaling = this->m_info.top_scaling;
-		this->m_info.non_integer_bot_scaling = this->m_info.bot_scaling;
+		this->m_info.non_integer_top_scaling = (float)this->m_info.top_scaling;
+		this->m_info.non_integer_bot_scaling = (float)this->m_info.bot_scaling;
 		return;
 	}
 	if(this->m_info.top_scaling == 0) {
@@ -1123,12 +1116,12 @@ void WindowScreen::non_integer_scale_screens(ResizingScreenData *top_screen_resi
 		min_top_scaling = this->m_info.top_scaling;
 	if(min_bot_scaling > this->m_info.bot_scaling)
 		min_bot_scaling = this->m_info.bot_scaling;
-	int min_top_screen_width = top_screen_resize_data->size.x;
-	int min_top_screen_height = top_screen_resize_data->size.y;
-	int min_bot_screen_width = bot_screen_resize_data->size.x;
-	int min_bot_screen_height = bot_screen_resize_data->size.y;
-	get_par_size(min_top_screen_width, min_top_screen_height, min_top_scaling, top_screen_resize_data->par, top_screen_resize_data->divide_3d_par);
-	get_par_size(min_bot_screen_width, min_bot_screen_height, min_bot_scaling, bot_screen_resize_data->par, bot_screen_resize_data->divide_3d_par);
+	int min_top_screen_width = (int)top_screen_resize_data->size.x;
+	int min_top_screen_height = (int)top_screen_resize_data->size.y;
+	int min_bot_screen_width = (int)bot_screen_resize_data->size.x;
+	int min_bot_screen_height = (int)bot_screen_resize_data->size.y;
+	get_par_size(min_top_screen_width, min_top_screen_height, (float)min_top_scaling, top_screen_resize_data->par, top_screen_resize_data->divide_3d_par);
+	get_par_size(min_bot_screen_width, min_bot_screen_height, (float)min_bot_scaling, bot_screen_resize_data->par, bot_screen_resize_data->divide_3d_par);
 
 	ResizingScreenData *bigger_screen_resize_data = top_screen_resize_data;
 	ResizingScreenData *smaller_screen_resize_data = bot_screen_resize_data;
@@ -1206,8 +1199,8 @@ void WindowScreen::merge_screens_data(ResizingScreenData* top_screen_resize_data
 	else
 		merged_screen_resize_data->use_non_int_scaling = false;
 	merged_screen_resize_data->rotation = 0;
-	*merged_screen_resize_data->scaling = 1.0;
-	*merged_screen_resize_data->non_int_scaling = 1.0;
+	*merged_screen_resize_data->scaling = 1;
+	*merged_screen_resize_data->non_int_scaling = 1.0f;
 	merged_screen_resize_data->par = get_base_par();
 }
 
@@ -1219,11 +1212,11 @@ bool WindowScreen::prepare_screens_same_scaling_factor(ResizingScreenData* top_s
 	ResizingScreenData merged_screen_resize_data = {.size = {}, .scaling = &scaling_merged, .non_int_scaling = &non_int_scaling_merged, .use_non_int_scaling = false, .rotation = 0, .par = NULL, .divide_3d_par = false};
 	merge_screens_data(top_screen_resize_data, bot_screen_resize_data, &merged_screen_resize_data, this->m_info.bottom_pos);
 	non_int_scaling_merged = this->get_max_float_screen_multiplier(&merged_screen_resize_data, 0, 0, 0, true);
-	scaling_merged = non_int_scaling_merged;
+	scaling_merged = (int)non_int_scaling_merged;
 	if(non_int_scaling_merged < 1.0)
 		return false;
-	*top_screen_resize_data->non_int_scaling = scaling_merged;
-	*bot_screen_resize_data->non_int_scaling = scaling_merged;
+	*top_screen_resize_data->non_int_scaling = (float)scaling_merged;
+	*bot_screen_resize_data->non_int_scaling = (float)scaling_merged;
 	if(merged_screen_resize_data.use_non_int_scaling) {
 		*top_screen_resize_data->non_int_scaling = non_int_scaling_merged;
 		*bot_screen_resize_data->non_int_scaling = non_int_scaling_merged;
@@ -1260,9 +1253,9 @@ void WindowScreen::prepare_size_ratios(bool top_increase, bool bot_increase, boo
 		bot_increase = false;
 	}
 	bool prioritize_top = (!bot_increase) && (top_increase || (this->m_info.bottom_pos == UNDER_TOP) || (this->m_info.bottom_pos == RIGHT_TOP));
-	if((this->m_info.top_par >= this->possible_pars.size()) || (this->m_info.top_par < 0))
+	if((this->m_info.top_par >= ((int)this->possible_pars.size())) || (this->m_info.top_par < 0))
 		this->m_info.top_par = 0;
-	if((this->m_info.bot_par >= this->possible_pars.size()) || (this->m_info.bot_par < 0))
+	if((this->m_info.bot_par >= ((int)this->possible_pars.size())) || (this->m_info.bot_par < 0))
 		this->m_info.bot_par = 0;
 	ResizingScreenData top_screen_resize_data = {.size = top_screen_size, .scaling = &this->m_info.top_scaling, .non_int_scaling = &this->m_info.non_integer_top_scaling, .use_non_int_scaling = this->m_info.use_non_integer_scaling_top, .rotation = this->m_info.top_rotation, .par = this->possible_pars[this->m_info.top_par], .divide_3d_par = get_divide_3d_par(true, &this->m_info)};
 	ResizingScreenData bot_screen_resize_data = {.size = bot_screen_size, .scaling = &this->m_info.bot_scaling, .non_int_scaling = &this->m_info.non_integer_bot_scaling, .use_non_int_scaling = this->m_info.use_non_integer_scaling_bottom, .rotation = this->m_info.bot_rotation, .par = this->possible_pars[this->m_info.bot_par], .divide_3d_par = get_divide_3d_par(false, &this->m_info)};
@@ -1301,7 +1294,7 @@ int WindowScreen::get_fullscreen_offset_x(int top_width, int top_height, int bot
 			return 0;
 	}
 	sf::Vector2u curr_desk_mode_3d_size = get_desk_mode_3d_multiplied(&this->loaded_info);
-	return (curr_desk_mode_3d_size.x - offset_contribute) * this->loaded_info.total_offset_x;
+	return (int)((curr_desk_mode_3d_size.x - offset_contribute) * this->loaded_info.total_offset_x);
 }
 
 int WindowScreen::get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height, int separator_contribute) {
@@ -1324,18 +1317,18 @@ int WindowScreen::get_fullscreen_offset_y(int top_width, int top_height, int bot
 			return 0;
 	}
 	sf::Vector2u curr_desk_mode_3d_size = get_desk_mode_3d_multiplied(&this->loaded_info);
-	return (curr_desk_mode_3d_size.y - offset_contribute) * this->loaded_info.total_offset_y;
+	return (int)((curr_desk_mode_3d_size.y - offset_contribute) * this->loaded_info.total_offset_y);
 }
 
 void WindowScreen::resize_window_and_out_rects(bool do_work) {
 	sf::Vector2f top_screen_size = getShownScreenSize(true, &this->loaded_info);
 	sf::Vector2f bot_screen_size = getShownScreenSize(false, &this->loaded_info);
-	int top_width = top_screen_size.x;
-	int top_height = top_screen_size.y;
-	float top_scaling = this->loaded_info.scaling;
-	int bot_width = bot_screen_size.x;
-	int bot_height = bot_screen_size.y;
-	float bot_scaling = this->loaded_info.scaling;
+	int top_width = (int)top_screen_size.x;
+	int top_height = (int)top_screen_size.y;
+	float top_scaling = (float)this->loaded_info.scaling;
+	int bot_width = (int)bot_screen_size.x;
+	int bot_height = (int)bot_screen_size.y;
+	float bot_scaling = (float)this->loaded_info.scaling;
 	int offset_x = 0;
 	int offset_y = 0;
 	int max_x = 0;
@@ -1349,9 +1342,9 @@ void WindowScreen::resize_window_and_out_rects(bool do_work) {
 		bot_scaling = this->loaded_info.non_integer_bot_scaling;
 		sep_multiplier = this->loaded_info.separator_fullscreen_multiplier;
 	}
-	if((this->loaded_info.top_par >= this->possible_pars.size()) || (this->loaded_info.top_par < 0))
+	if((this->loaded_info.top_par >= ((int)this->possible_pars.size())) || (this->loaded_info.top_par < 0))
 		this->loaded_info.top_par = 0;
-	if((this->loaded_info.bot_par >= this->possible_pars.size()) || (this->loaded_info.bot_par < 0))
+	if((this->loaded_info.bot_par >= ((int)this->possible_pars.size())) || (this->loaded_info.bot_par < 0))
 		this->loaded_info.bot_par = 0;
 	get_par_size(top_width, top_height, top_scaling, this->possible_pars[this->loaded_info.top_par], get_divide_3d_par(true, &this->loaded_info));
 	get_par_size(bot_width, bot_height, bot_scaling, this->possible_pars[this->loaded_info.bot_par], get_divide_3d_par(false, &this->loaded_info));
@@ -1389,8 +1382,8 @@ void WindowScreen::resize_window_and_out_rects(bool do_work) {
 			sf::Vector2f offset_to_apply = offset_first_screen;
 			if((offset_first_screen.x <= 0) && (offset_first_screen.y <= 0))
 				offset_to_apply = get_3d_offset_out_rect(&this->loaded_info, true);
-			this->m_width += offset_to_apply.x;
-			this->m_height += offset_to_apply.y;
+			this->m_width += (int)offset_to_apply.x;
+			this->m_height += (int)offset_to_apply.y;
 		}
 	}
 	if((!this->loaded_info.is_fullscreen) && this->loaded_info.rounded_corners_fix) {
@@ -1474,8 +1467,8 @@ void WindowScreen::update_screen_settings() {
 }
 
 void WindowScreen::rotate() {
-	this->m_out_rect_top.out_rect.setRotation(sf::degrees(this->loaded_info.top_rotation));
-	this->m_out_rect_bot.out_rect.setRotation(sf::degrees(this->loaded_info.bot_rotation));
+	this->m_out_rect_top.out_rect.setRotation(sf::degrees((float)this->loaded_info.top_rotation));
+	this->m_out_rect_bot.out_rect.setRotation(sf::degrees((float)this->loaded_info.bot_rotation));
 	this->loaded_operations.call_screen_settings_update = true;
 }
 
@@ -1501,7 +1494,7 @@ int* WindowScreen::get_crop_index_ptr(ScreenInfo* info) {
 sf::Vector2f WindowScreen::getShownScreenSize(bool is_top, ScreenInfo* info) {
 	std::vector<const CropData*> *crops = this->get_crop_data_vector(info);
 	int *crop_kind = this->get_crop_index_ptr(info);
-	if(((*crop_kind) >= crops->size()) || ((*crop_kind) < 0))
+	if(((*crop_kind) >= ((int)crops->size())) || ((*crop_kind) < 0))
 		*crop_kind = 0;
 	int width = (*crops)[*crop_kind]->top_width;
 	int height = (*crops)[*crop_kind]->top_height;
@@ -1521,7 +1514,7 @@ void WindowScreen::crop() {
 	sf::Vector2f top_screen_size = getShownScreenSize(true, &this->loaded_info);
 	sf::Vector2f bot_screen_size = getShownScreenSize(false, &this->loaded_info);
 
-	this->resize_in_rect(this->m_in_rect_bot, this->capture_status->device.bot_screen_x + (*crops)[*crop_value]->bot_x, this->capture_status->device.bot_screen_y + (*crops)[*crop_value]->bot_y, bot_screen_size.x, bot_screen_size.y);
+	this->resize_in_rect(this->m_in_rect_bot, this->capture_status->device.bot_screen_x + (*crops)[*crop_value]->bot_x, this->capture_status->device.bot_screen_y + (*crops)[*crop_value]->bot_y, (int)bot_screen_size.x, (int)bot_screen_size.y);
 	if(get_3d_enabled(this->capture_status) && (!this->display_data->interleaved_3d)) {
 		int left_top_screen_x = this->capture_status->device.top_screen_x;
 		int left_top_screen_y = this->capture_status->device.top_screen_y;
@@ -1531,14 +1524,14 @@ void WindowScreen::crop() {
 			std::swap(left_top_screen_x, right_top_screen_x);
 			std::swap(left_top_screen_y, right_top_screen_y);
 		}
-		this->resize_in_rect(this->m_in_rect_top, left_top_screen_x + (*crops)[*crop_value]->top_x, left_top_screen_y + (*crops)[*crop_value]->top_y, top_screen_size.x, top_screen_size.y);
-		this->resize_in_rect(this->m_in_rect_top_right, right_top_screen_x + (*crops)[*crop_value]->top_x, right_top_screen_y + (*crops)[*crop_value]->top_y, top_screen_size.x, top_screen_size.y);
+		this->resize_in_rect(this->m_in_rect_top, left_top_screen_x + (*crops)[*crop_value]->top_x, left_top_screen_y + (*crops)[*crop_value]->top_y, (int)top_screen_size.x, (int)top_screen_size.y);
+		this->resize_in_rect(this->m_in_rect_top_right, right_top_screen_x + (*crops)[*crop_value]->top_x, right_top_screen_y + (*crops)[*crop_value]->top_y, (int)top_screen_size.x, (int)top_screen_size.y);
 	}
 	else {
 		float x_multiplier = 1.0;
 		if(get_3d_enabled(this->capture_status) && this->display_data->interleaved_3d)
 			x_multiplier = 2.0;
-		this->resize_in_rect(this->m_in_rect_top, this->capture_status->device.top_screen_x + ((*crops)[*crop_value]->top_x * x_multiplier), this->capture_status->device.top_screen_y + (*crops)[*crop_value]->top_y, top_screen_size.x, top_screen_size.y);
+		this->resize_in_rect(this->m_in_rect_top, (int)(this->capture_status->device.top_screen_x + ((*crops)[*crop_value]->top_x * x_multiplier)), this->capture_status->device.top_screen_y + (*crops)[*crop_value]->top_y, (int)top_screen_size.x, (int)top_screen_size.y);
 	}
 	this->loaded_operations.call_screen_settings_update = true;
 }

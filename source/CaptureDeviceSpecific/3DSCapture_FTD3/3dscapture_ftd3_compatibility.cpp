@@ -13,17 +13,21 @@
 #include <ftd3xx.h>
 #endif
 
+#ifdef USE_FTD3_LIBUSB
+#define CHECK_DRIVER_VALUE false
+#else
+#define CHECK_DRIVER_VALUE true
+#endif
+
 void ftd3_list_devices_compat(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list, const std::vector<std::string> &valid_descriptions) {
 	bool no_access_elems = false;
 	bool not_supported_elems = false;
 	int curr_serial_extra_id_ftd3 = 0;
-	bool check_driver_too = true;
 	#ifdef USE_FTD3_LIBUSB
-	check_driver_too = false;
 	ftd3_libusb_list_devices(devices_list, &no_access_elems, &not_supported_elems, &curr_serial_extra_id_ftd3, valid_descriptions);
 	#endif
 	#ifdef USE_FTD3XX
-	if(check_driver_too || not_supported_elems)
+	if(CHECK_DRIVER_VALUE || not_supported_elems)
 		ftd3_driver_list_devices(devices_list, &curr_serial_extra_id_ftd3, valid_descriptions);
 	#endif
 	if(no_access_elems)
@@ -86,7 +90,7 @@ int ftd3_set_stream_pipe_compat(ftd3_device_device_handlers* handlers, int pipe,
 	#endif
 	#ifdef USE_FTD3XX
 	if(handlers->driver_handle)
-		return FT_SetStreamPipe(handlers->driver_handle, false, false, pipe, length);
+		return FT_SetStreamPipe(handlers->driver_handle, false, false, pipe, (ULONG)length);
 	#endif
 	return 0;
 }
@@ -99,7 +103,7 @@ int ftd3_write_pipe_compat(ftd3_device_device_handlers* handlers, int pipe, cons
 	#ifdef USE_FTD3XX
 	if(handlers->driver_handle) {
 		ULONG transferred_ftd3xx = 0;
-		int result = FT_WritePipe(handlers->driver_handle, pipe, (uint8_t*)data, size, &transferred_ftd3xx, 0);
+		int result = FT_WritePipe(handlers->driver_handle, pipe, (uint8_t*)data, (ULONG)size, &transferred_ftd3xx, 0);
 		if(FT_FAILED(result))
 			return result;
 		*num_transferred = (int)transferred_ftd3xx;
@@ -117,7 +121,7 @@ int ftd3_read_pipe_compat(ftd3_device_device_handlers* handlers, int pipe, uint8
 	#ifdef USE_FTD3XX
 	if(handlers->driver_handle) {
 		ULONG transferred_ftd3xx = 0;
-		int result = FT_ReadPipe(handlers->driver_handle, pipe, data, size, &transferred_ftd3xx, 0);
+		int result = FT_ReadPipe(handlers->driver_handle, pipe, data, (ULONG)size, &transferred_ftd3xx, 0);
 		if(FT_FAILED(result))
 			return result;
 		*num_transferred = (int)transferred_ftd3xx;

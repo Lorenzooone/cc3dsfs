@@ -306,7 +306,7 @@ private:
 	sf::Vector2u get_desk_mode_3d_multiplied(ScreenInfo* info);
 	sf::Vector2f get_3d_offset_out_rect(ScreenInfo* info, bool is_second_screen);
 	int prepare_screen_ratio(ResizingScreenData *own_screen, int width_limit, int height_limit, int other_rotation);
-	float get_ratio_compared_other_screen(ResizingScreenData *own_screen, ResizingScreenData* other_screen, float other_scaling);
+	int get_ratio_compared_other_screen(ResizingScreenData *own_screen, ResizingScreenData* other_screen, int other_scaling);
 	bool can_non_integerly_scale();
 	void calc_scaling_resize_screens(ResizingScreenData *own_screen, ResizingScreenData* other_screen, bool increase, bool mantain, bool set_to_zero, bool cycle);
 	void rescale_nonint_subscreen(ResizingScreenData *main_screen_resize_data, ResizingScreenData *sub_screen_resize_data);

@@ -35,7 +35,7 @@
 static int drain_frames(is_device_device_handlers* handlers, int num_frames, int start_frames, CaptureScreensType capture_type, const is_device_usb_device* usb_device_desc) {
 	ISNitroEmulatorVideoInputData* video_in_buffer = new ISNitroEmulatorVideoInputData;
 	for (int i = start_frames; i < num_frames; i++) {
-		int ret = ReadFrame(handlers, (uint8_t*)video_in_buffer, usb_is_device_get_video_in_size(capture_type, usb_device_desc->device_type), usb_device_desc);
+		int ret = ReadFrame(handlers, (uint8_t*)video_in_buffer, (int)usb_is_device_get_video_in_size(capture_type, usb_device_desc->device_type), usb_device_desc);
 		if(ret < 0) {
 			delete video_in_buffer;
 			return ret;
@@ -104,7 +104,7 @@ static int StartAcquisitionEmulator(is_device_device_handlers* handlers, uint16_
 			break;
 	}
 	const auto curr_time = std::chrono::high_resolution_clock::now();
-	const std::chrono::duration<double> diff = curr_time - clock_start;
+	const std::chrono::duration<float> diff = curr_time - clock_start;
 	// Sometimes the upper 8 bits aren't updated... Use only the lower 8 bits.
 	newFrameCount &= 0xFF;
 	oldFrameCount &= 0xFF;
@@ -149,12 +149,12 @@ static bool do_sleep(float single_frame_time, std::chrono::time_point<std::chron
 	if((capture_type == CAPTURE_SCREENS_TOP) || (capture_type == CAPTURE_SCREENS_BOTTOM))
 		adding_single_frame_time_divisor *= 2;
 	if(adding_single_frame_time_divisor > 0) {
-		float adding_single_frame_time_multiplier = adding_single_frame_time_divisor - 1;
+		float adding_single_frame_time_multiplier = (float)(adding_single_frame_time_divisor - 1);
 		if(adding_single_frame_time_multiplier == 0)
-			adding_single_frame_time_multiplier = 0.33;
+			adding_single_frame_time_multiplier = 0.33f;
 		expected_time += (single_frame_time * adding_single_frame_time_multiplier) / adding_single_frame_time_divisor;
 	}
-	float low_single_frame_time = 1.0 / ((int)((1.0 / single_frame_time) + 1));
+	float low_single_frame_time = 1.0f / ((int)((1.0 / single_frame_time) + 1));
 	float low_expected_time = low_single_frame_time * curr_frame_counter;
 	// If the current time is too low, sleep a bit to make sure we don't overrun the framerate counter
 	// Don't do it regardless of the situation, and only in small increments...
@@ -172,11 +172,8 @@ static void frame_wait(float single_frame_time, std::chrono::time_point<std::chr
 	if(curr_frame_counter == FRAME_BUFFER_SIZE)
 		return;
 	float sleep_time = 0;
-	int sleep_counter = 0;
-	while(do_sleep(single_frame_time, clock_last_reset, capture_type, capture_speed, curr_frame_counter, last_frame_counter, &sleep_time)) {
-		default_sleep(sleep_time * 1000.0 / SLEEP_TIME_DIVISOR);
-		sleep_counter++;
-	}
+	while(do_sleep(single_frame_time, clock_last_reset, capture_type, capture_speed, curr_frame_counter, last_frame_counter, &sleep_time))
+		default_sleep(sleep_time * 1000.0f / SLEEP_TIME_DIVISOR);
 }
 
 static int reset_acquisition_frames(CaptureData* capture_data, uint16_t &curr_frame_counter, uint16_t &last_frame_counter, float &single_frame_time, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_reset, CaptureScreensType &curr_capture_type, CaptureScreensType wanted_capture_type, CaptureSpeedsType &curr_capture_speed, CaptureSpeedsType wanted_capture_speed, ISDeviceCaptureReceivedData* is_device_capture_recv_data) {
@@ -226,13 +223,13 @@ static int reset_acquisition_frames(CaptureData* capture_data, uint16_t &curr_fr
 	int frame_diff = 0;
 	int diff_target = FRAME_BUFFER_SIZE * multiplier;
 	std::chrono::time_point<std::chrono::high_resolution_clock> curr_time;
-	std::chrono::duration<double> diff;
+	std::chrono::duration<float> diff;
 	do {
 		// Is this not the first loop? Also, do not sleep too much...
 		if((frame_diff > 0) && (((internalFrameCount & (FRAME_BUFFER_SIZE - 1)) < (FRAME_BUFFER_SIZE - 1)))) {
 			float expected_time = single_frame_time * FRAME_BUFFER_SIZE;
 			if(diff.count() < expected_time)
-				default_sleep(single_frame_time * 1000.0 / SLEEP_TIME_DIVISOR);
+				default_sleep(single_frame_time * 1000.0f / SLEEP_TIME_DIVISOR);
 		}
 		// Check how many frames have passed...
 		ret = GetFrameCounter(handlers, &internalFrameCount, usb_device_desc);

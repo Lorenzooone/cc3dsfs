@@ -40,7 +40,7 @@ static void is_device_is_driver_function(bool* usb_thread_run, ISDeviceCaptureRe
 			cb_data->is_data_ready = false;
 			cb_data->transfer_data_access.unlock();
 			if(is_device_capture_recv_data[i].in_use && read_data_ready)
-				cb_data->function(&is_device_capture_recv_data[i], cb_data->actual_length, cb_data->status_value);
+				cb_data->function(&is_device_capture_recv_data[i], (int)cb_data->actual_length, cb_data->status_value);
 		}
 		int dummy = 0;
 		is_device_capture_recv_data[0].cb_data.is_transfer_data_ready_mutex->general_timed_lock(&dummy);
@@ -48,7 +48,7 @@ static void is_device_is_driver_function(bool* usb_thread_run, ISDeviceCaptureRe
 }
 
 static bool read_is_driver_device_info(HANDLE handle, uint8_t* buffer, size_t size, DWORD* num_read) {
-	return DeviceIoControl(handle, 0x22000C, buffer, size, buffer, size, num_read, NULL);
+	return DeviceIoControl(handle, 0x22000C, buffer, (DWORD)size, buffer, (DWORD)size, num_read, NULL);
 }
 
 static bool is_driver_send_ioctl(HANDLE handle, uint8_t* buffer, size_t size, uint8_t request, uint16_t index, DWORD* num_read) {
@@ -58,7 +58,7 @@ static bool is_driver_send_ioctl(HANDLE handle, uint8_t* buffer, size_t size, ui
 	write_le32(data, 2, 1);
 	write_le32(data, ((uint32_t)request) << 8, 2);
 	write_le32(data, index, 3);
-	return DeviceIoControl(handle, 0x220020, data, 0x10, buffer, size, num_read, NULL);
+	return DeviceIoControl(handle, 0x220020, data, 0x10, buffer, (DWORD)size, num_read, NULL);
 }
 
 static bool is_driver_device_reset(HANDLE handle) {
@@ -250,8 +250,8 @@ void is_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool* not_
 		uint16_t pid = 0;
 		if(!is_driver_get_device_pid_vid(path, vid, pid))
 			continue;
-		for (int j = 0; j < num_is_device_desc; j++) {
-			const is_device_usb_device* usb_device_desc = GetISDeviceDesc(j);
+		for(size_t j = 0; j < num_is_device_desc; j++) {
+			const is_device_usb_device* usb_device_desc = GetISDeviceDesc((int)j);
 			if(not_supported_elems[j] && (usb_device_desc->vid == vid) && (usb_device_desc->pid == pid)) {
 				is_device_device_handlers handlers;
 				if(is_driver_setup_connection(&handlers, path, usb_device_desc->read_pipe, usb_device_desc->write_pipe, usb_device_desc->do_pipe_clear_reset))
@@ -319,7 +319,7 @@ int is_drive_async_in_start(is_device_device_handlers* handlers, const is_device
 	memset(overlap_data, 0, sizeof(OVERLAPPED));
 	cb_data->is_transfer_done_mutex->specific_try_lock(cb_data->internal_index);
 	cb_data->is_transfer_data_ready_mutex->specific_try_lock(cb_data->internal_index);
-	int retval = ReadFileEx(cb_data->handle, cb_data->buffer, cb_data->requested_length, (OVERLAPPED*)cb_data->transfer_data, OverlappedCompletionNothingRoutine);
+	int retval = ReadFileEx(cb_data->handle, cb_data->buffer, (DWORD)cb_data->requested_length, (OVERLAPPED*)cb_data->transfer_data, OverlappedCompletionNothingRoutine);
 	cb_data->transfer_data_access.unlock();
 	if (retval == 0)
 		return LIBUSB_ERROR_BUSY;

@@ -248,8 +248,8 @@ void VideoMenu::class_setup() {
 	this->width_divisor_menu = 9;
 	this->base_height_factor_menu = 12;
 	this->base_height_divisor_menu = 6;
-	this->min_text_size = 0.3;
-	this->max_width_slack = 1.1;
+	this->min_text_size = 0.3f;
+	this->max_width_slack = 1.1f;
 	this->menu_color = sf::Color(30, 30, 60, 192);
 	this->title = "Video Settings";
 	this->show_back_x = true;
@@ -259,7 +259,7 @@ void VideoMenu::class_setup() {
 
 void VideoMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool can_have_titlebar) {
 	this->num_enabled_options = 0;
-	for(int i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
+	for(size_t i = 0; i < NUM_TOTAL_MENU_OPTIONS; i++) {
 		bool valid = true;
 		if(is_fullscreen)
 			valid = valid && pollable_options[i]->active_fullscreen;
@@ -274,7 +274,7 @@ void VideoMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool can_have
 		if((!can_have_titlebar) && pollable_options[i]->requires_titlebar_possible)
 			valid = false;
 		if(valid) {
-			this->options_indexes[this->num_enabled_options] = i;
+			this->options_indexes[this->num_enabled_options] = (int)i;
 			this->num_enabled_options++;
 		}
 	}
@@ -294,7 +294,7 @@ void VideoMenu::set_output_option(int index, int action) {
 		this->selected_index = pollable_options[this->options_indexes[index]]->out_action;
 }
 
-int VideoMenu::get_num_options() {
+size_t VideoMenu::get_num_options() {
 	return this->num_enabled_options;
 }
 
@@ -337,10 +337,10 @@ void VideoMenu::prepare(float menu_scaling_factor, int view_size_x, int view_siz
 				this->labels[index]->setText(this->setTextOptionBool(real_index, info->rounded_corners_fix));
 				break;
 			case VIDEO_MENU_WINDOW_SCALING_DEC:
-				this->labels[index]->setText(this->setTextOptionFloat(real_index, info->scaling));
+				this->labels[index]->setText(this->setTextOptionFloat(real_index, (float)info->scaling));
 				break;
 			case VIDEO_MENU_MENU_SCALING_DEC:
-				this->labels[index]->setText(this->setTextOptionFloat(real_index, info->menu_scaling_factor));
+				this->labels[index]->setText(this->setTextOptionFloat(real_index, (float)info->menu_scaling_factor));
 				break;
 			case VIDEO_MENU_SMALL_SCREEN_OFFSET_DEC:
 				this->labels[index]->setText(this->setTextOptionFloat(real_index, info->subscreen_offset));

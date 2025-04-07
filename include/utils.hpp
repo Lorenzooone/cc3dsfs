@@ -81,7 +81,7 @@ private:
 	std::condition_variable_any condition;
 	const float base_time_fps = 30;
 	int count = 0;
-	float time_multiplier = 1.0;
+	float time_multiplier = 1.0f;
 };
 
 class SharedConsumerMutex {
@@ -104,7 +104,7 @@ private:
 	const float base_time_fps = 30;
 	int* counts;
 	int num_elements;
-	float time_multiplier = 1.0;
+	float time_multiplier = 1.0f;
 };
 
 #endif

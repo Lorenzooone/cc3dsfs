@@ -249,7 +249,7 @@ bool ftd3_capture_3d_setup(CaptureData* capture_data, bool first_pass, bool& sto
 			return false;
 	}
 
-	if(ftd3_is_error_compat(handlers, ftd3_set_stream_pipe_compat(handlers, BULK_IN, ftd3_get_capture_size(_3d_enabled_result || (first_pass && is_driver))))) {
+	if(ftd3_is_error_compat(handlers, ftd3_set_stream_pipe_compat(handlers, BULK_IN, (size_t)ftd3_get_capture_size(_3d_enabled_result || (first_pass && is_driver))))) {
 		capture_error_print(print_failed, capture_data, "Stream failed");
 		preemptive_close_connection(capture_data);
 		return false;
@@ -262,7 +262,7 @@ bool ftd3_capture_3d_setup(CaptureData* capture_data, bool first_pass, bool& sto
 			return false;
 		}
 
-		if(ftd3_is_error_compat(handlers, ftd3_set_stream_pipe_compat(handlers, BULK_IN, ftd3_get_capture_size(_3d_enabled_result || (first_pass && is_driver))))) {
+		if(ftd3_is_error_compat(handlers, ftd3_set_stream_pipe_compat(handlers, BULK_IN, (size_t)ftd3_get_capture_size(_3d_enabled_result || (first_pass && is_driver))))) {
 			capture_error_print(print_failed, capture_data, "Stream failed");
 			preemptive_close_connection(capture_data);
 			return false;
@@ -273,7 +273,6 @@ bool ftd3_capture_3d_setup(CaptureData* capture_data, bool first_pass, bool& sto
 }
 
 void ftd3_capture_main_loop(CaptureData* capture_data) {
-	bool could_have_3d = get_3d_enabled(&capture_data->status, true);
 	ftd3_main_loop_compat(capture_data, BULK_IN);
 }
 

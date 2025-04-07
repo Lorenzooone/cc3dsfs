@@ -134,9 +134,9 @@ bool load_firmware(cy_device_device_handlers* handlers, const cyni_device_usb_de
 	if(ret < 0)
 		return free_firmware_and_return(fw_data, false);
 	bool done = false;
-	int fw_pos = read_le16(fw_data);
+	uint16_t fw_pos = read_le16(fw_data);
 	while(!done) {
-		int inside_len = read_be16(fw_data + fw_pos);
+		uint32_t inside_len = read_be16(fw_data + fw_pos);
 		int offset = read_be16(fw_data + fw_pos, 1);
 		done = (inside_len & 0x8000) != 0;
 		inside_len &= 0x7FFF;

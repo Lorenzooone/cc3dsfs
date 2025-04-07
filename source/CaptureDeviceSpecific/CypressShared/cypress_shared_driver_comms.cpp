@@ -153,7 +153,7 @@ static GUID* get_driver_guid(CypressWindowsDriversEnum driver) {
 
 static bool cypress_driver_process_async_transfers(std::vector<cy_async_callback_data*> *cb_data_vector, cy_device_device_handlers* handlers) {
 	bool found = false;
-	for (int i = 0; i < cb_data_vector->size(); i++) {
+	for(size_t i = 0; i < cb_data_vector->size(); i++) {
 		cy_async_callback_data* cb_data = cb_data_vector->at(i);
 		bool possible_result = false;
 		bool is_data_ready = false;
@@ -195,12 +195,12 @@ static bool cypress_driver_process_async_transfers(std::vector<cy_async_callback
 static void cypress_driver_function(bool* usb_thread_run, std::vector<cy_async_callback_data*> *cb_data_vector, cy_device_device_handlers* handlers) {
 	int ret = 0;
 	HANDLE* to_wait_array = new HANDLE[cb_data_vector->size()];
-	for(int i = 0; i < cb_data_vector->size(); i++)
+	for(size_t i = 0; i < cb_data_vector->size(); i++)
 		to_wait_array[i] = ((OVERLAPPED*)cb_data_vector->at(i)->base_transfer_data)->hEvent;
 
 	while(*usb_thread_run) {
 		if(cypress_driver_process_async_transfers(cb_data_vector, handlers)) {
-			for (int i = 0; i < cb_data_vector->size(); i++) {
+			for(size_t i = 0; i < cb_data_vector->size(); i++) {
 				cy_async_callback_data* cb_data = cb_data_vector->at(i);
 				bool is_data_ready = false;
 				cb_data->transfer_data_access.lock();
@@ -208,12 +208,12 @@ static void cypress_driver_function(bool* usb_thread_run, std::vector<cy_async_c
 				cb_data->transfer_data_access.unlock();
 				if((*cb_data->in_use_ptr) && is_data_ready) {
 					cb_data->is_data_ready = false;
-					cb_data->function(cb_data->actual_user_data, cb_data->actual_length, cb_data->status_value);
+					cb_data->function(cb_data->actual_user_data, (int)cb_data->actual_length, cb_data->status_value);
 				}
 			}
 		}
 		else
-			WaitForMultipleObjects(cb_data_vector->size(), to_wait_array, false, 300);
+			WaitForMultipleObjects((DWORD)cb_data_vector->size(), to_wait_array, false, 300);
 	}
 	delete []to_wait_array;
 }
@@ -221,7 +221,7 @@ static void cypress_driver_function(bool* usb_thread_run, std::vector<cy_async_c
 static bool cypress_driver_bulk_async_start(HANDLE handle, uint8_t* buffer, size_t size, DWORD* num_read, uint8_t ep_num, OVERLAPPED* overlap, CYPRESS_SINGLE_TRANSFER* single_transfer) {
 	memset(single_transfer, 0, sizeof(CYPRESS_SINGLE_TRANSFER));
 	single_transfer->ucEndpointAddress = ep_num;
-	bool retval = DeviceIoControl(handle, IOCTL_ADAPT_SEND_NON_EP0_DIRECT, single_transfer, sizeof(CYPRESS_SINGLE_TRANSFER), buffer, size, num_read, overlap);
+	bool retval = DeviceIoControl(handle, IOCTL_ADAPT_SEND_NON_EP0_DIRECT, single_transfer, sizeof(CYPRESS_SINGLE_TRANSFER), buffer, (DWORD)size, num_read, overlap);
 	return retval;
 }
 
@@ -238,17 +238,17 @@ static bool cypress_driver_generic_ctrl_transfer(HANDLE handle, uint8_t* buffer,
 	single_transfer->SetupPacket.bmReqType.Direction = direction;
 	single_transfer->SetupPacket.bmReqType.Type = type;
 	single_transfer->SetupPacket.bmReqType.Recipient = recipient;
-	single_transfer->SetupPacket.bRequest = request_code;
+	single_transfer->SetupPacket.bRequest = (UCHAR)request_code;
 	single_transfer->SetupPacket.wVal.hiByte = val_hi;
 	single_transfer->SetupPacket.wVal.lowByte = val_low;
 	single_transfer->SetupPacket.wIndex = index;
-	single_transfer->SetupPacket.wLength = inner_size;
+	single_transfer->SetupPacket.wLength = (USHORT)inner_size;
 	single_transfer->SetupPacket.ulTimeOut = timeout_s;
 	single_transfer->BufferLength = single_transfer->SetupPacket.wLength;
 	single_transfer->BufferOffset = sizeof(CYPRESS_SINGLE_TRANSFER);
 	if(direction == DIR_HOST_TO_DEVICE)
 		memcpy(full_buffer + single_transfer->BufferOffset, buffer, inner_size);
-	bool retval = DeviceIoControl(handle, IOCTL_ADAPT_SEND_EP0_CONTROL_TRANSFER, full_buffer, full_size, full_buffer, full_size, num_read, NULL);
+	bool retval = DeviceIoControl(handle, IOCTL_ADAPT_SEND_EP0_CONTROL_TRANSFER, full_buffer, (DWORD)full_size, full_buffer, (DWORD)full_size, num_read, NULL);
 	if((*num_read) >= sizeof(CYPRESS_SINGLE_TRANSFER))
 		*num_read -= sizeof(CYPRESS_SINGLE_TRANSFER);
 	else
@@ -304,7 +304,7 @@ static bool cypress_driver_get_string_info(HANDLE handle, UCHAR string_index, US
 	if(retval && num_read >= 2) {
 		uint8_t bytes = buffer[0];
 		if(bytes > num_read)
-			bytes = num_read;
+			bytes = (uint8_t)num_read;
 		uint8_t signature = buffer[1];
 		if((signature == 3) && (bytes > 2))
 			out_str = read_string(buffer + 2, bytes - 2);
@@ -469,7 +469,7 @@ void cypress_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool*
 		UCHAR iserial = 0;
 		if(!cypress_driver_get_device_pid_vid_imanufacturer_iserial_number(path, vid, pid, imanufacturer, iserial, bcd_device))
 			continue;
-		for (int j = 0; j < device_descriptions.size(); j++) {
+		for(size_t j = 0; j < device_descriptions.size(); j++) {
 			const cy_device_usb_device* usb_device_desc = device_descriptions[j];
 			uint16_t masked_wanted_bcd_device = usb_device_desc->bcd_device_mask & usb_device_desc->bcd_device_wanted_value;
 			if(not_supported_elems[j] && (usb_device_desc->vid == vid) && (usb_device_desc->pid == pid) && (masked_wanted_bcd_device == (bcd_device & usb_device_desc->bcd_device_mask))) {
@@ -667,7 +667,7 @@ void cypress_driver_find_used_serial(const cy_device_usb_device* usb_device_desc
 				continue;
 			std::string read_serial = cypress_get_serial(usb_device_desc, serial, bcd_device, curr_serial_extra_id);
 			try {
-				int pos = std::stoi(read_serial);
+				size_t pos = std::stoi(read_serial);
 				if((pos < 0) || (pos >= num_free_fw_ids))
 					continue;
 				found[pos] = true;
@@ -691,7 +691,7 @@ int cypress_driver_async_in_start(cy_device_device_handlers* handlers, const cy_
 	cb_data->requested_length = length;
 	cb_data->buffer = buf;
 	cb_data->start_request = std::chrono::high_resolution_clock::now();
-	cb_data->timeout_s = usb_device_desc->bulk_timeout / 1000.0;
+	cb_data->timeout_s = usb_device_desc->bulk_timeout / 1000.0f;
 	OVERLAPPED* overlap_data = (OVERLAPPED*)cb_data->transfer_data;
 	cb_data->is_transfer_done_mutex->specific_try_lock(cb_data->internal_index);
 	int retval = cypress_driver_bulk_async_start(cb_data->handle, cb_data->buffer, cb_data->requested_length, NULL, usb_device_desc->ep_bulk_in, overlap_data, (CYPRESS_SINGLE_TRANSFER*)cb_data->extra_transfer_data);
@@ -708,7 +708,7 @@ int cypress_driver_async_in_start(cy_device_device_handlers* handlers, const cy_
 void cypress_driver_start_thread(std::thread* thread_ptr, bool* usb_thread_run, std::vector<cy_async_callback_data*> &cb_data_vector, cy_device_device_handlers* handlers) {
 	#ifdef _WIN32
 	*usb_thread_run = true;
-	for (int i = 0; i < cb_data_vector.size(); i++) {
+	for (size_t i = 0; i < cb_data_vector.size(); i++) {
 		cb_data_vector[i]->extra_transfer_data = new CYPRESS_SINGLE_TRANSFER;
 		cb_data_vector[i]->base_transfer_data = new OVERLAPPED;
 		((OVERLAPPED*)cb_data_vector[i]->base_transfer_data)->hEvent = CreateEvent(NULL, false, false, NULL);
@@ -721,7 +721,7 @@ void cypress_driver_close_thread(std::thread* thread_ptr, bool* usb_thread_run, 
 	#ifdef _WIN32
 	*usb_thread_run = false;
 	thread_ptr->join();
-	for (int i = 0; i < cb_data_vector.size(); i++) {
+	for(size_t i = 0; i < cb_data_vector.size(); i++) {
 		CloseHandle(((OVERLAPPED*)cb_data_vector[i]->base_transfer_data)->hEvent);
 		delete ((OVERLAPPED*)cb_data_vector[i]->base_transfer_data);
 		delete ((CYPRESS_SINGLE_TRANSFER*)cb_data_vector[i]->extra_transfer_data);
@@ -751,7 +751,7 @@ void cypress_driver_set_transfer_size_bulk_in(cy_device_device_handlers* handler
 	new_transfer_size = ((new_transfer_size + usb_device_desc->max_usb_packet_size - 1) / usb_device_desc->max_usb_packet_size) * usb_device_desc->max_usb_packet_size;
 
     SetTransferInfo.EndpointAddress = usb_device_desc->ep_bulk_in;    
-    SetTransferInfo.TransferSize = new_transfer_size;    
+    SetTransferInfo.TransferSize = (ULONG)new_transfer_size;    
 
     DeviceIoControl(handlers->read_handle, IOCTL_ADAPT_SET_TRANSFER_SIZE, &SetTransferInfo, sizeof(CYPRESS_SET_TRANSFER_SIZE_INFO), &SetTransferInfo, sizeof(CYPRESS_SET_TRANSFER_SIZE_INFO), &transferred, NULL);
 	#endif

@@ -2,11 +2,13 @@
 
 int searchAudioDevice(std::string device_name, std::vector<std::string> &audio_devices) {
 	int index = -1;
-	for(int i = 0; i < audio_devices.size(); i++)
+	for(size_t i = 0; i < audio_devices.size(); i++)
 		if(audio_devices[i] == device_name) {
-			index = i;
+			index = (int)i;
 			break;
 		}
+	if(index < 0)
+		index = -1;
 	return index;
 }
 
@@ -26,8 +28,8 @@ void AudioData::change_max_audio_latency(bool is_change_positive) {
 	int change = 1;
 	if(!is_change_positive)
 		change = -1;
-	int initial_max_audio_latency = this->max_audio_latency;
-	this->set_max_audio_latency(this->max_audio_latency + change);
+	size_t initial_max_audio_latency = this->max_audio_latency;
+	this->set_max_audio_latency(((int)this->max_audio_latency) + change);
 	if(this->max_audio_latency != initial_max_audio_latency)
 		this->update_text("Max Audio Latency: " + std::to_string(this->max_audio_latency));
 }
@@ -159,7 +161,7 @@ std::string AudioData::get_audio_mode_name() {
 	return chosen_str;
 }
 
-int AudioData::get_max_audio_latency() {
+size_t AudioData::get_max_audio_latency() {
 	return this->max_audio_latency;
 }
 

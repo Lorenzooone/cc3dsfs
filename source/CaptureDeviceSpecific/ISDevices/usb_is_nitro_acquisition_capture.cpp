@@ -102,8 +102,6 @@ int EndAcquisitionCapture(const is_device_usb_device* usb_device_desc, is_device
 }
 
 void is_nitro_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data) {
-	is_device_device_handlers* handlers = (is_device_device_handlers*)capture_data->handle;
-	const is_device_usb_device* usb_device_desc = (const is_device_usb_device*)capture_data->status.device.descriptor;
 	bool is_acquisition_off = true;
 	uint32_t index = 0;
 	CaptureScreensType curr_capture_type = capture_data->status.capture_type;

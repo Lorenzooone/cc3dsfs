@@ -20,7 +20,7 @@ class RelativePositionMenu {
 public:
 	RelativePositionMenu();
 	RelativePositionMenu(bool font_load_success, sf::Font &text_font);
-	~RelativePositionMenu();
+	virtual ~RelativePositionMenu();
 	bool poll(SFEvent &event_data);
 	void draw(float scaling_factor, sf::RenderTarget &window);
 	void reset_data();
@@ -79,8 +79,7 @@ private:
 	int title_id;
 
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_action_time;
-	const float action_timeout = 0.1;
-	int option_selected = -1;
+	const float action_timeout = 0.1f;
 	RelPosMenuData loaded_data;
 	sf::RectangleShape menu_rectangle = sf::RectangleShape(sf::Vector2f(1, 1));
 
