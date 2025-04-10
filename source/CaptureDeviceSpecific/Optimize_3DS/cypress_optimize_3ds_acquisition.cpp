@@ -42,7 +42,8 @@ struct CypressOptimize3DSDeviceCaptureReceivedData {
 	bool* is_ring_buffer_slice_data_ready_arr;
 	int ring_buffer_slice_index;
 	int* last_ring_buffer_slice_allocated;
-	int* last_used_ring_buffer_slice_index;
+	int* first_usable_ring_buffer_slice_index;
+	bool* is_synchronized;
 	size_t* last_used_ring_buffer_slice_pos;
 	int* buffer_ring_slice_to_array_ptr;
 	InputVideoDataType* stored_video_data_type;
@@ -201,6 +202,18 @@ uint64_t cyop_device_get_video_in_size(bool is_3d, InputVideoDataType video_data
 	return sizeof(USB5653DSOptimizeCaptureReceived);
 }
 
+uint64_t cyop_device_get_video_in_size_extra_header(bool is_3d, InputVideoDataType video_data_type) {
+	bool is_rgb888 = video_data_type == VIDEO_DATA_RGB;
+	if(is_rgb888) {
+		if(is_3d)
+			return sizeof(USB8883DSOptimizeCaptureReceived_3DExtraHeader);
+		return sizeof(USB8883DSOptimizeCaptureReceivedExtraHeader);
+	}
+	if(is_3d)
+		return sizeof(USB5653DSOptimizeCaptureReceived_3DExtraHeader);
+	return sizeof(USB5653DSOptimizeCaptureReceivedExtraHeader);
+}
+
 
 uint64_t cyop_device_get_video_in_size(CaptureStatus* status, bool is_3d, InputVideoDataType video_data_type) {
 	return cyop_device_get_video_in_size(is_3d, video_data_type);
@@ -234,34 +247,62 @@ static int cypress_device_read_frame_request(CaptureData* capture_data, CypressO
 	return ReadFrameAsync((cy_device_device_handlers*)capture_data->handle, buffer, (int)read_size, usb_device_info, &cypress_device_capture_recv_data->cb_data);
 }
 
-static void unlock_buffer_directly(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data_real) {
+static void unlock_buffer_directly(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data_real, bool reset_slice_data_arr_info) {
 	int slice_index = cypress_device_capture_recv_data_real->ring_buffer_slice_index;
-	cypress_device_capture_recv_data_real->is_ring_buffer_slice_data_ready_arr[slice_index] = false;
-	cypress_device_capture_recv_data_real->is_ring_buffer_slice_data_in_use_arr[slice_index] = false;
+	if(reset_slice_data_arr_info) {
+		cypress_device_capture_recv_data_real->is_ring_buffer_slice_data_ready_arr[slice_index] = false;
+		cypress_device_capture_recv_data_real->is_ring_buffer_slice_data_in_use_arr[slice_index] = false;
+	}
 	cypress_device_capture_recv_data_real->buffer_ring_slice_to_array_ptr[slice_index] = -1;
 	cypress_device_capture_recv_data_real->in_use = false;
-	cypress_device_capture_recv_data_real->is_buffer_free_shared_mutex->specific_unlock(cypress_device_capture_recv_data_real->cb_data.internal_index);
+	if(!cypress_device_capture_recv_data_real->to_process)
+		cypress_device_capture_recv_data_real->is_buffer_free_shared_mutex->specific_unlock(cypress_device_capture_recv_data_real->cb_data.internal_index);
 }
 
-static void unlock_buffer_slice_index(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, size_t slice_index) {
+static void unlock_buffer_slice_index(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, size_t slice_index, bool reset_slice_data_arr_info) {
 	int index = cypress_device_capture_recv_data->buffer_ring_slice_to_array_ptr[slice_index];
-	if(index == -1)
+	if(index == -1) {
+		if(reset_slice_data_arr_info) {
+			cypress_device_capture_recv_data->is_ring_buffer_slice_data_ready_arr[slice_index] = false;
+			cypress_device_capture_recv_data->is_ring_buffer_slice_data_in_use_arr[slice_index] = false;
+		}
 		return;
-	unlock_buffer_directly(&cypress_device_capture_recv_data->array_ptr[index]);
+	}
+	unlock_buffer_directly(&cypress_device_capture_recv_data->array_ptr[index], reset_slice_data_arr_info);
 }
 
 static void end_cypress_device_read_frame_cb(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, bool to_unlock) {
-	cypress_device_capture_recv_data->to_process = false;
 	if(to_unlock)
-		unlock_buffer_directly(cypress_device_capture_recv_data);
+		unlock_buffer_directly(cypress_device_capture_recv_data, true);
+	cypress_device_capture_recv_data->to_process = false;
+	if(!cypress_device_capture_recv_data->in_use)
+		cypress_device_capture_recv_data->is_buffer_free_shared_mutex->specific_unlock(cypress_device_capture_recv_data->cb_data.internal_index);
+}
+
+static USB3DSOptimizeColumnInfo convert_to_column_info(uint16_t value) {
+	// The macos compiler requires this... :/
+	USB3DSOptimizeColumnInfo column_info;
+	column_info.has_extra_header_data = (value >> 15) & 1;
+	column_info.buffer_num = (value >> 14) & 1;
+	column_info.unk = (value >> 10) & 0xF;
+	column_info.column_index = value & 0x3FF;
+	return column_info;
+}
+
+static bool get_expect_extra_header_in_buffer(uint16_t value) {
+	return convert_to_column_info(value).has_extra_header_data;
+}
+
+static bool get_is_pos_first_synch_in_buffer(uint8_t* buffer, size_t pos_to_check) {
+	if(read_le16(buffer + pos_to_check) != SYNCH_VALUE_OPTIMIZE)
+		return false;
+	return convert_to_column_info(read_le16(buffer + pos_to_check + 2)).column_index == 0;
 }
 
 static size_t get_pos_first_synch_in_buffer(uint8_t* buffer) {
 	for(int i = 0; i < (SINGLE_RING_BUFFER_SLICE_SIZE / 2); i++) {
-		if(read_le16(buffer, i) == SYNCH_VALUE_OPTIMIZE) {
-			if((read_le16(buffer, i + 1) & 0x3FF) == 0)
-				return i * 2;
-		}
+		if(get_is_pos_first_synch_in_buffer(buffer, i * 2))
+			return i * 2;
 	}
 	return SINGLE_RING_BUFFER_SLICE_SIZE + 1;
 }
@@ -276,18 +317,27 @@ static int get_num_consecutive_ready_ring_buffer_slices(CypressOptimize3DSDevice
 	return NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS;
 }
 
+static void unlock_buffers_from_x(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, int pos_to_unlock, int num_buffers_to_unlock, bool reset_slice_data_arr_info) {
+	for(int i = 0; i < num_buffers_to_unlock; i++)
+		unlock_buffer_slice_index(cypress_device_capture_recv_data, (pos_to_unlock + i) % NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS, reset_slice_data_arr_info);
+}
+
+static void copy_slice_data_to_buffer(uint8_t* dst, uint8_t *src, size_t start_slice_index, size_t start_slice_pos, size_t copy_size) {
+	size_t start_byte = (start_slice_index * SINGLE_RING_BUFFER_SLICE_SIZE) + start_slice_pos;
+	if((start_byte + copy_size) <= (NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS * SINGLE_RING_BUFFER_SLICE_SIZE))
+		memcpy(dst, src + start_byte, copy_size);
+	else {
+		size_t upper_read_size = (NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS * SINGLE_RING_BUFFER_SLICE_SIZE) - start_byte;
+		size_t start_read_size = copy_size - upper_read_size;
+		memcpy(dst, src + start_byte, upper_read_size);
+		memcpy(dst + upper_read_size, src, start_read_size);
+	}
+}
+
 static void cypress_output_to_thread(CaptureData* capture_data, uint8_t *buffer_arr, size_t start_slice_index, size_t start_slice_pos, int internal_index, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t read_size) {
 	// Output to the other threads...
 	CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(internal_index);
-	size_t start_byte = (start_slice_index * SINGLE_RING_BUFFER_SLICE_SIZE) + start_slice_pos;
-	if((start_byte + read_size) <= (NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS * SINGLE_RING_BUFFER_SLICE_SIZE))
-		memcpy(&data_buf->capture_buf, buffer_arr + start_byte, read_size);
-	else {
-		size_t upper_read_size = (NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS * SINGLE_RING_BUFFER_SLICE_SIZE) - start_byte;
-		size_t start_read_size = read_size - upper_read_size;
-		memcpy(&data_buf->capture_buf, buffer_arr + start_byte, upper_read_size);
-		memcpy(((uint8_t*)&data_buf->capture_buf) + upper_read_size, buffer_arr, start_read_size);
-	}
+	copy_slice_data_to_buffer((uint8_t*)&data_buf->capture_buf, buffer_arr, start_slice_index, start_slice_pos, read_size);
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - (*clock_start);
 	*clock_start = curr_time;
@@ -296,6 +346,88 @@ static void cypress_output_to_thread(CaptureData* capture_data, uint8_t *buffer_
 		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
 	capture_data->status.video_wait.unlock();
 	capture_data->status.audio_wait.unlock();
+}
+
+static bool cypress_device_read_frame_not_synchronized(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, int &error) {
+	volatile int first_slice_to_check = *cypress_device_capture_recv_data->first_usable_ring_buffer_slice_index;
+	bool found = false;
+	// Determine which buffer is the first which needs to still be checked
+	for(int i = 0; i < NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS; i++) {
+		int index_to_check = (first_slice_to_check + i) % NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS;
+		if(cypress_device_capture_recv_data->is_ring_buffer_slice_data_in_use_arr[index_to_check]) {
+			first_slice_to_check = index_to_check;
+			found = true;
+			break;
+		}
+	}
+	// Too many have been checked... Just fail.
+	if(!found) {
+		error = LIBUSB_ERROR_OTHER;
+		return false;
+	}
+	for(int i = 0; i < NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS; i++) {
+		int check_index = (first_slice_to_check + i) % NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS;
+		// Search for the synch values. If they're not there, free the buffer.
+		// If they are there, enque the buffer and switch mode.
+		// Checks all available buffers which have data (but in order).
+		if(cypress_device_capture_recv_data->is_ring_buffer_slice_data_ready_arr[check_index]) {
+			size_t result = get_pos_first_synch_in_buffer(&cypress_device_capture_recv_data->ring_slice_buffer_arr[check_index * SINGLE_RING_BUFFER_SLICE_SIZE]);
+			if(result >= SINGLE_RING_BUFFER_SLICE_SIZE) {
+				unlock_buffer_slice_index(cypress_device_capture_recv_data, check_index, true);
+			}
+			else {
+				*cypress_device_capture_recv_data->first_usable_ring_buffer_slice_index = check_index;
+				*cypress_device_capture_recv_data->last_used_ring_buffer_slice_pos = result;
+				*cypress_device_capture_recv_data->is_synchronized = true;
+				break;
+			}
+		}
+		else
+			break;
+	}
+	return true;
+}
+
+static void cypress_device_read_frame_synchronized(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data) {
+	volatile int read_slice_index = *cypress_device_capture_recv_data->first_usable_ring_buffer_slice_index;
+	volatile size_t read_slice_pos = *cypress_device_capture_recv_data->last_used_ring_buffer_slice_pos;
+	int num_consecutive_ready_buffers = get_num_consecutive_ready_ring_buffer_slices(cypress_device_capture_recv_data, read_slice_index);
+	size_t video_in_size = (size_t)cyop_device_get_video_in_size(*cypress_device_capture_recv_data->stored_is_3d, *cypress_device_capture_recv_data->stored_video_data_type);
+	size_t curr_consecutive_available_bytes = (num_consecutive_ready_buffers * SINGLE_RING_BUFFER_SLICE_SIZE) - read_slice_pos;
+	if(curr_consecutive_available_bytes >= sizeof(USB3DSOptimizeHeaderData)) {
+		uint8_t tmp_buffer[sizeof(USB3DSOptimizeHeaderData)];
+		copy_slice_data_to_buffer(tmp_buffer, cypress_device_capture_recv_data->ring_slice_buffer_arr, read_slice_index, read_slice_pos, sizeof(USB3DSOptimizeHeaderData));
+		if(!get_is_pos_first_synch_in_buffer(tmp_buffer, 0)) {
+			*cypress_device_capture_recv_data->is_synchronized = false;
+			return;
+		}
+		else {
+			if(get_expect_extra_header_in_buffer(read_le16(tmp_buffer, 1)))
+				video_in_size = (size_t)cyop_device_get_video_in_size_extra_header(*cypress_device_capture_recv_data->stored_is_3d, *cypress_device_capture_recv_data->stored_video_data_type);
+		}
+	}
+	if(curr_consecutive_available_bytes >= video_in_size) {
+		// Enough data. Time to do output...
+		cypress_output_to_thread(cypress_device_capture_recv_data->capture_data, cypress_device_capture_recv_data->ring_slice_buffer_arr, read_slice_index, read_slice_pos, 0, cypress_device_capture_recv_data->clock_start, video_in_size);
+		// Keep the ring buffer going.
+		size_t raw_new_pos = read_slice_pos + video_in_size;
+		int new_slice_index = (int)(read_slice_index + (raw_new_pos / SINGLE_RING_BUFFER_SLICE_SIZE));
+		size_t new_slice_pos = raw_new_pos % SINGLE_RING_BUFFER_SLICE_SIZE;
+		new_slice_index %= NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS;
+		// Fully unlock used buffers
+		unlock_buffers_from_x(cypress_device_capture_recv_data, read_slice_index, (new_slice_index + NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS - read_slice_index) % NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS, true);
+		// Update the position of the data
+		*cypress_device_capture_recv_data->first_usable_ring_buffer_slice_index = new_slice_index;
+		*cypress_device_capture_recv_data->last_used_ring_buffer_slice_pos = new_slice_pos;
+	}
+	// Partially unlock buffers already with data.
+	// Unlocks the transfers to be used for more.
+	// This is possible under the assumption that there are significantly
+	// more buffers than transfers!!!
+	// Without said assumption, you'd risk the two stepping on each other.
+	read_slice_index = *cypress_device_capture_recv_data->first_usable_ring_buffer_slice_index;
+	num_consecutive_ready_buffers = get_num_consecutive_ready_ring_buffer_slices(cypress_device_capture_recv_data, read_slice_index);
+	unlock_buffers_from_x(cypress_device_capture_recv_data, read_slice_index, num_consecutive_ready_buffers, false);
 }
 
 static void cypress_device_read_frame_cb(void* user_data, int transfer_length, int transfer_status) {
@@ -310,66 +442,27 @@ static void cypress_device_read_frame_cb(void* user_data, int transfer_length, i
 		return end_cypress_device_read_frame_cb(cypress_device_capture_recv_data, true);
 	}
 	cypress_device_capture_recv_data->is_ring_buffer_slice_data_ready_arr[cypress_device_capture_recv_data->ring_buffer_slice_index] = true;
-	// First case
+	// Not synchronized case
 	bool to_free = false;
-	volatile int read_slice_index = *cypress_device_capture_recv_data->last_used_ring_buffer_slice_index;
-	if(read_slice_index == -1) {
-		size_t first_to_check = 0;
-		for(int i = 0; i < NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS; i++) {
-			if(!cypress_device_capture_recv_data->is_ring_buffer_slice_data_in_use_arr[i])
-				first_to_check++;
-			else
-				break;
-		}
-		if(first_to_check > NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS) {
-			int error = LIBUSB_ERROR_OTHER;
-			*cypress_device_capture_recv_data->status = error;
-			return end_cypress_device_read_frame_cb(cypress_device_capture_recv_data, true);
-		}
-		for(int i = 0; i < NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS; i++) {
-			size_t check_index = (first_to_check + i) % NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS;
-			if(cypress_device_capture_recv_data->is_ring_buffer_slice_data_ready_arr[check_index]) {
-				size_t result = get_pos_first_synch_in_buffer(&cypress_device_capture_recv_data->ring_slice_buffer_arr[check_index * SINGLE_RING_BUFFER_SLICE_SIZE]);
-				if(result >= SINGLE_RING_BUFFER_SLICE_SIZE) {
-					unlock_buffer_slice_index(cypress_device_capture_recv_data, check_index);
-				}
-				else {
-					*cypress_device_capture_recv_data->last_used_ring_buffer_slice_index = (int)check_index;
-					*cypress_device_capture_recv_data->last_used_ring_buffer_slice_pos = result;
-					break;
-				}
+	bool continue_looping = true;
+	int remaining_iters_before_force_exit = 4;
+	volatile bool read_is_synchronized = *cypress_device_capture_recv_data->is_synchronized;
+	while(continue_looping) {
+		if(read_is_synchronized)
+			cypress_device_read_frame_synchronized(cypress_device_capture_recv_data);
+		else {
+			int error = 0;
+			bool retval = cypress_device_read_frame_not_synchronized(cypress_device_capture_recv_data, error);
+			if(!retval) {
+				*cypress_device_capture_recv_data->status = error;
+				return end_cypress_device_read_frame_cb(cypress_device_capture_recv_data, true);
 			}
-			else
-				break;
 		}
-	}
-	// Generic case
-	read_slice_index = *cypress_device_capture_recv_data->last_used_ring_buffer_slice_index;
-	volatile size_t read_slice_pos = *cypress_device_capture_recv_data->last_used_ring_buffer_slice_pos;
-	if(read_slice_index != -1) {
-		int num_consecutive_ready_buffers = get_num_consecutive_ready_ring_buffer_slices(cypress_device_capture_recv_data, read_slice_index);
-		size_t video_in_size = (size_t)cyop_device_get_video_in_size(*cypress_device_capture_recv_data->stored_is_3d, *cypress_device_capture_recv_data->stored_video_data_type);
-		size_t raw_new_pos = read_slice_pos + video_in_size;
-		int num_needed_buffers = (int)((raw_new_pos + SINGLE_RING_BUFFER_SLICE_SIZE - 1) / SINGLE_RING_BUFFER_SLICE_SIZE);
-		if(num_consecutive_ready_buffers >= num_needed_buffers) {
-			// Enough data. Time to do output...
-			cypress_output_to_thread(cypress_device_capture_recv_data->capture_data, cypress_device_capture_recv_data->ring_slice_buffer_arr, read_slice_index, read_slice_pos, 0, cypress_device_capture_recv_data->clock_start, video_in_size);
-			// Keep the ring buffer going.
-			int new_slice_index = read_slice_index + num_needed_buffers - 1;
-			size_t new_slice_pos = raw_new_pos % SINGLE_RING_BUFFER_SLICE_SIZE;
-			if(new_slice_pos == 0)
-				new_slice_index += 1;
-			new_slice_index %= NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS;
-			// Unlock the buffers already processed
-			int pos_to_unlock = read_slice_index;
-			while(pos_to_unlock != new_slice_index) {
-				unlock_buffer_slice_index(cypress_device_capture_recv_data, pos_to_unlock);
-				pos_to_unlock = (pos_to_unlock + 1) % NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS;
-			}
-			// Update the position of the data
-			*cypress_device_capture_recv_data->last_used_ring_buffer_slice_index = new_slice_index;
-			*cypress_device_capture_recv_data->last_used_ring_buffer_slice_pos = new_slice_pos;
-		}
+		volatile bool new_read_is_synchronized = *cypress_device_capture_recv_data->is_synchronized;
+		remaining_iters_before_force_exit--;
+		if((new_read_is_synchronized == read_is_synchronized) || (remaining_iters_before_force_exit == 0))
+			continue_looping = false;
+		read_is_synchronized = new_read_is_synchronized;
 	}
 	return end_cypress_device_read_frame_cb(cypress_device_capture_recv_data, to_free);
 }
@@ -403,10 +496,9 @@ static void error_too_much_time_passed(CaptureData* capture_data, CypressOptimiz
 	}
 }
 
-static void check_unlock_waiting_with_error(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data) {
-	if(get_cypress_device_status(cypress_device_capture_recv_data) < 0) {
-		if(cypress_device_capture_recv_data->is_ring_buffer_slice_data_ready_arr[cypress_device_capture_recv_data->ring_buffer_slice_index])
-			unlock_buffer_directly(cypress_device_capture_recv_data);
+static void unlock_buffer_in_error_case(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, int status) {
+	if((status < 0) && (!cypress_device_capture_recv_data->to_process)) {
+		unlock_buffer_directly(cypress_device_capture_recv_data, true);
 	}
 }
 
@@ -419,7 +511,7 @@ static void wait_all_cypress_device_buffers_free(CaptureData* capture_data, Cypr
 	for(int i = 0; i < NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS; i++)
 		while(cypress_device_capture_recv_data[i].in_use) {
 			error_too_much_time_passed(capture_data, cypress_device_capture_recv_data, async_read_closed, start_time);
-			check_unlock_waiting_with_error(&cypress_device_capture_recv_data[i]);
+			unlock_buffer_in_error_case(&cypress_device_capture_recv_data[i], get_cypress_device_status(cypress_device_capture_recv_data));
 			cypress_device_capture_recv_data[i].is_buffer_free_shared_mutex->specific_timed_lock(i);
 		}
 }
@@ -429,7 +521,7 @@ static void wait_one_cypress_device_buffer_free(CaptureData* capture_data, Cypre
 	const auto start_time = std::chrono::high_resolution_clock::now();
 	while(!done) {
 		for(int i = 0; i < NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS; i++) {
-			if(!cypress_device_capture_recv_data[i].in_use)
+			if((!cypress_device_capture_recv_data[i].in_use) && (!cypress_device_capture_recv_data[i].to_process))
 				done = true;
 		}
 		if(!done) {
@@ -448,7 +540,7 @@ static CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_get_free_buff
 	if(get_cypress_device_status(cypress_device_capture_recv_data) < 0)
 		return NULL;
 	for(int i = 0; i < NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS; i++)
-		if(!cypress_device_capture_recv_data[i].in_use) {
+		if((!cypress_device_capture_recv_data[i].in_use) && (!cypress_device_capture_recv_data[i].to_process)) {
 			return &cypress_device_capture_recv_data[i];
 		}
 	return NULL;
@@ -478,7 +570,7 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 		capture_error_print(true, capture_data, "Capture Start: Failed");
 		return false;
 	}
-	CypressSetMaxTransferSize(handlers, get_cy_usb_info(usb_device_desc), (size_t)cyop_device_get_video_in_size(stored_is_3d, stored_video_data_type));
+	CypressSetMaxTransferSize(handlers, get_cy_usb_info(usb_device_desc), (size_t)cyop_device_get_video_in_size_extra_header(stored_is_3d, stored_video_data_type));
 	for(int i = 0; i < NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS; i++) {
 		CypressOptimize3DSDeviceCaptureReceivedData* chosen_buffer = cypress_device_get_free_buffer(capture_data, cypress_device_capture_recv_data);
 		ret = cypress_device_read_frame_request(capture_data, chosen_buffer, index++, stored_is_3d, stored_video_data_type);
@@ -536,7 +628,8 @@ void cyop_device_acquisition_main_loop(CaptureData* capture_data) {
 		is_ring_buffer_slice_data_in_use[i] = false;
 		buffer_ring_slice_to_array[i] = -1;
 	}
-	int last_used_ring_buffer_slice_index = -1;
+	int first_usable_ring_buffer_slice_index = 0;
+	bool is_synchronized = false;
 	size_t last_used_ring_buffer_slice_pos = 0;
 	int last_ring_buffer_slice_allocated = -1;
 
@@ -557,7 +650,8 @@ void cyop_device_acquisition_main_loop(CaptureData* capture_data) {
 		cypress_device_capture_recv_data[i].is_ring_buffer_slice_data_in_use_arr = is_ring_buffer_slice_data_in_use;
 		cypress_device_capture_recv_data[i].is_ring_buffer_slice_data_ready_arr = is_ring_buffer_slice_data_ready;
 		cypress_device_capture_recv_data[i].last_ring_buffer_slice_allocated = &last_ring_buffer_slice_allocated;
-		cypress_device_capture_recv_data[i].last_used_ring_buffer_slice_index = &last_used_ring_buffer_slice_index;
+		cypress_device_capture_recv_data[i].first_usable_ring_buffer_slice_index = &first_usable_ring_buffer_slice_index;
+		cypress_device_capture_recv_data[i].is_synchronized = &is_synchronized;
 		cypress_device_capture_recv_data[i].last_used_ring_buffer_slice_pos = &last_used_ring_buffer_slice_pos;
 		cypress_device_capture_recv_data[i].buffer_ring_slice_to_array_ptr = buffer_ring_slice_to_array;
 		cypress_device_capture_recv_data[i].capture_data = capture_data;

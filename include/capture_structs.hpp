@@ -82,13 +82,21 @@ struct PACKED USB3DSOptimizeSingleSoundData {
 	uint16_t sample_r;
 };
 
-struct PACKED USB3DSOptimizeHeaderSoundData {
+struct PACKED USB3DSOptimizeColumnInfo {
 	// Order is Little Endian
-	uint16_t magic;
-	uint16_t unk_fixed_1 : 1;
-	uint16_t buffer_num : 1;
-	uint16_t unk : 4;
 	uint16_t column_index : 10;
+	uint16_t unk : 4;
+	uint16_t buffer_num : 1;
+	uint16_t has_extra_header_data : 1;
+};
+
+struct PACKED USB3DSOptimizeHeaderData {
+	uint16_t magic;
+	USB3DSOptimizeColumnInfo column_info;
+};
+
+struct PACKED USB3DSOptimizeHeaderSoundData {
+	USB3DSOptimizeHeaderData header_info;
 	USB3DSOptimizeSingleSoundData samples[2];
 };
 
@@ -223,6 +231,22 @@ struct ALIGNED(16) PACKED USB8883DSOptimizeCaptureReceived_3D {
 	USB8883DSOptimizePixelData bottom_only_column[HEIGHT_3DS][3];
 };
 
+struct ALIGNED(16) PACKED USB5653DSOptimizeCaptureReceivedExtraHeader {
+	USB5653DSOptimizeInputColumnData columns_data[TOP_WIDTH_3DS + 1];
+};
+
+struct ALIGNED(16) PACKED USB5653DSOptimizeCaptureReceived_3DExtraHeader {
+	USB5653DSOptimizeInputColumnData3D columns_data[TOP_WIDTH_3DS + 1];
+};
+
+struct ALIGNED(16) PACKED USB8883DSOptimizeCaptureReceivedExtraHeader {
+	USB8883DSOptimizeInputColumnData columns_data[TOP_WIDTH_3DS + 1];
+};
+
+struct ALIGNED(16) PACKED USB8883DSOptimizeCaptureReceived_3DExtraHeader {
+	USB8883DSOptimizeInputColumnData3D columns_data[TOP_WIDTH_3DS + 1];
+};
+
 #pragma pack(pop)
 
 struct ALIGNED(16) FTD2OldDSCaptureReceivedNormalPlusRaw {
@@ -245,6 +269,10 @@ union CaptureReceived {
 	USB5653DSOptimizeCaptureReceived_3D cypress_optimize_received_565_3d;
 	USB8883DSOptimizeCaptureReceived cypress_optimize_received_888;
 	USB8883DSOptimizeCaptureReceived_3D cypress_optimize_received_888_3d;
+	USB5653DSOptimizeCaptureReceivedExtraHeader cypress_optimize_received_565_extra_header;
+	USB5653DSOptimizeCaptureReceived_3DExtraHeader cypress_optimize_received_565_3d_extra_header;
+	USB8883DSOptimizeCaptureReceivedExtraHeader cypress_optimize_received_888_extra_header;
+	USB8883DSOptimizeCaptureReceived_3DExtraHeader cypress_optimize_received_888_3d_extra_header;
 };
 
 struct CaptureDevice {
