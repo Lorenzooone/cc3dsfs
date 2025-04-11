@@ -491,7 +491,7 @@ static bool has_too_much_time_passed(const std::chrono::time_point<std::chrono::
 
 static void error_too_much_time_passed(CaptureData* capture_data, CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, bool &async_read_closed, const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time) {
 	if(has_too_much_time_passed(start_time)) {
-		error_cypress_device_status(cypress_device_capture_recv_data, -1);
+		error_cypress_device_status(cypress_device_capture_recv_data, LIBUSB_ERROR_TIMEOUT);
 		close_all_reads_error(capture_data, cypress_device_capture_recv_data, async_read_closed);
 	}
 }
@@ -502,6 +502,10 @@ static void unlock_buffer_in_error_case(CypressOptimize3DSDeviceCaptureReceivedD
 	}
 }
 
+static bool is_buffer_still_in_use(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data) {
+	return cypress_device_capture_recv_data->in_use || cypress_device_capture_recv_data->to_process;
+}
+
 static void wait_all_cypress_device_buffers_free(CaptureData* capture_data, CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data) {
 	if(cypress_device_capture_recv_data == NULL)
 		return;
@@ -509,7 +513,7 @@ static void wait_all_cypress_device_buffers_free(CaptureData* capture_data, Cypr
 	close_all_reads_error(capture_data, cypress_device_capture_recv_data, async_read_closed);
 	const auto start_time = std::chrono::high_resolution_clock::now();
 	for(int i = 0; i < NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS; i++)
-		while(cypress_device_capture_recv_data[i].in_use) {
+		while(is_buffer_still_in_use(&cypress_device_capture_recv_data[i])) {
 			error_too_much_time_passed(capture_data, cypress_device_capture_recv_data, async_read_closed, start_time);
 			unlock_buffer_in_error_case(&cypress_device_capture_recv_data[i], get_cypress_device_status(cypress_device_capture_recv_data));
 			cypress_device_capture_recv_data[i].is_buffer_free_shared_mutex->specific_timed_lock(i);
@@ -521,7 +525,7 @@ static void wait_one_cypress_device_buffer_free(CaptureData* capture_data, Cypre
 	const auto start_time = std::chrono::high_resolution_clock::now();
 	while(!done) {
 		for(int i = 0; i < NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS; i++) {
-			if((!cypress_device_capture_recv_data[i].in_use) && (!cypress_device_capture_recv_data[i].to_process))
+			if(!is_buffer_still_in_use(&cypress_device_capture_recv_data[i]))
 				done = true;
 		}
 		if(!done) {
@@ -540,7 +544,7 @@ static CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_get_free_buff
 	if(get_cypress_device_status(cypress_device_capture_recv_data) < 0)
 		return NULL;
 	for(int i = 0; i < NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS; i++)
-		if((!cypress_device_capture_recv_data[i].in_use) && (!cypress_device_capture_recv_data[i].to_process)) {
+		if(!is_buffer_still_in_use(&cypress_device_capture_recv_data[i])) {
 			return &cypress_device_capture_recv_data[i];
 		}
 	return NULL;
@@ -561,6 +565,73 @@ static void exported_error_cypress_device_status(void* data, int error_val) {
 	return error_cypress_device_status((CypressOptimize3DSDeviceCaptureReceivedData*)data, error_val);
 }
 
+static bool get_buffer_and_schedule_read(CaptureData* capture_data, CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, uint32_t &index, InputVideoDataType &stored_video_data_type, bool &stored_is_3d, const std::string error_to_print) {
+	CypressOptimize3DSDeviceCaptureReceivedData* chosen_buffer = cypress_device_get_free_buffer(capture_data, cypress_device_capture_recv_data);
+	if(chosen_buffer == NULL)
+		error_cypress_device_status(cypress_device_capture_recv_data, LIBUSB_ERROR_TIMEOUT);
+	int ret = cypress_device_read_frame_request(capture_data, chosen_buffer, index++, stored_is_3d, stored_video_data_type);
+	if(ret < 0) {
+		chosen_buffer->in_use = false;
+		cypress_device_capture_recv_data->to_process = false;
+		error_cypress_device_status(cypress_device_capture_recv_data, ret);
+		if(error_to_print != "")
+			capture_error_print(true, capture_data, error_to_print);
+		return false;
+	}
+	return true;
+}
+
+static bool schedule_all_reads(CaptureData* capture_data, CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, uint32_t &index, InputVideoDataType &stored_video_data_type, bool &stored_is_3d, const std::string error_to_print) {
+	for(int i = 0; i < NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS; i++) {
+		if(!get_buffer_and_schedule_read(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, error_to_print))
+			return false;
+	}
+	return true;
+}
+
+static int end_capture_from_capture_data(CaptureData* capture_data) {
+	cy_device_device_handlers* handlers = (cy_device_device_handlers*)capture_data->handle;
+	const cyop_device_usb_device* usb_device_desc = (const cyop_device_usb_device*)capture_data->status.device.descriptor;
+	return capture_end(handlers, usb_device_desc);
+}
+
+static void reset_buffer_processing_data(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data) {
+	*cypress_device_capture_recv_data[0].last_ring_buffer_slice_allocated = -1;
+	*cypress_device_capture_recv_data[0].first_usable_ring_buffer_slice_index = 0;
+	*cypress_device_capture_recv_data[0].last_used_ring_buffer_slice_pos = 0;
+	*cypress_device_capture_recv_data[0].is_synchronized = false;
+	*cypress_device_capture_recv_data[0].last_index = -1;
+	for(int i = 0; i < NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS; i++) {
+		cypress_device_capture_recv_data[0].is_ring_buffer_slice_data_ready_arr[i] = false;
+		cypress_device_capture_recv_data[0].is_ring_buffer_slice_data_in_use_arr[i] = false;
+		cypress_device_capture_recv_data[0].buffer_ring_slice_to_array_ptr[i] = -1;
+	}
+	for(int i = 0; i < NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS; i++) {
+		cypress_device_capture_recv_data[i].in_use = false;
+		cypress_device_capture_recv_data[i].to_process = false;
+		cypress_device_capture_recv_data[i].index = i;
+		cypress_device_capture_recv_data[i].ring_buffer_slice_index = -1;
+	}
+}
+
+static int timeout_error_handler(CaptureData* capture_data, CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, uint32_t &index, InputVideoDataType &stored_video_data_type, bool &stored_is_3d) {
+	cy_device_device_handlers* handlers = (cy_device_device_handlers*)capture_data->handle;
+	const cyop_device_usb_device* usb_device_desc = (const cyop_device_usb_device*)capture_data->status.device.descriptor;
+	int retval = end_capture_from_capture_data(capture_data);
+	if(retval < 0)
+		return retval;
+	error_cypress_device_status(cypress_device_capture_recv_data, 0);
+	default_sleep(100);
+
+	index = 0;
+	reset_buffer_processing_data(cypress_device_capture_recv_data);
+
+	if(!schedule_all_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, ""))
+		return -1;
+	StartCaptureDma(handlers, usb_device_desc, stored_video_data_type == VIDEO_DATA_RGB);
+	return 0;
+}
+
 static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, InputVideoDataType &stored_video_data_type, bool &stored_is_3d) {
 	cy_device_device_handlers* handlers = (cy_device_device_handlers*)capture_data->handle;
 	const cyop_device_usb_device* usb_device_desc = (const cyop_device_usb_device*)capture_data->status.device.descriptor;
@@ -571,37 +642,28 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 		return false;
 	}
 	CypressSetMaxTransferSize(handlers, get_cy_usb_info(usb_device_desc), (size_t)cyop_device_get_video_in_size_extra_header(stored_is_3d, stored_video_data_type));
-	for(int i = 0; i < NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS; i++) {
-		CypressOptimize3DSDeviceCaptureReceivedData* chosen_buffer = cypress_device_get_free_buffer(capture_data, cypress_device_capture_recv_data);
-		ret = cypress_device_read_frame_request(capture_data, chosen_buffer, index++, stored_is_3d, stored_video_data_type);
-		if(ret < 0) {
-			chosen_buffer->in_use = false;
-			cypress_device_capture_recv_data->to_process = false;
-			error_cypress_device_status(cypress_device_capture_recv_data, ret);
-			capture_error_print(true, capture_data, "Initial Reads: Failed");
-			return false;
-		}
-	}
+	if(!schedule_all_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, "Initial Reads: Failed"))
+		return false;
 
 	StartCaptureDma(handlers, usb_device_desc, stored_video_data_type == VIDEO_DATA_RGB);
 	while (capture_data->status.connected && capture_data->status.running) {
 		ret = get_cypress_device_status(cypress_device_capture_recv_data);
 		if(ret < 0) {
+			int cause_error = ret;
 			wait_all_cypress_device_buffers_free(capture_data, cypress_device_capture_recv_data);
-			capture_error_print(true, capture_data, "Disconnected: Read error");
-			return false;
+			bool has_recovered = false;
+			if(cause_error == LIBUSB_ERROR_TIMEOUT) {
+				int timeout_ret = timeout_error_handler(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d);
+				if(timeout_ret >= 0)
+					has_recovered = true;
+			}
+			if(!has_recovered) {
+				capture_error_print(true, capture_data, "Disconnected: Read error");
+				return false;
+			}
 		}
-		CypressOptimize3DSDeviceCaptureReceivedData* chosen_buffer = cypress_device_get_free_buffer(capture_data, cypress_device_capture_recv_data);
-		if(chosen_buffer == NULL)
-			error_cypress_device_status(cypress_device_capture_recv_data, LIBUSB_ERROR_TIMEOUT);
-		ret = cypress_device_read_frame_request(capture_data, chosen_buffer, index++, stored_is_3d, stored_video_data_type);
-		if(ret < 0) {
-			chosen_buffer->in_use = false;
-			cypress_device_capture_recv_data->to_process = false;
-			error_cypress_device_status(cypress_device_capture_recv_data, ret);
-			capture_error_print(true, capture_data, "Setup Read: Failed");
+		if(!get_buffer_and_schedule_read(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, "Setup Read: Failed"))
 			return false;
-		}
 	}
 	return true;
 }
@@ -644,6 +706,7 @@ void cyop_device_acquisition_main_loop(CaptureData* capture_data) {
 		cypress_device_capture_recv_data[i].in_use = false;
 		cypress_device_capture_recv_data[i].to_process = false;
 		cypress_device_capture_recv_data[i].index = i;
+		cypress_device_capture_recv_data[i].ring_buffer_slice_index = -1;
 		cypress_device_capture_recv_data[i].stored_video_data_type = &stored_video_data_type;
 		cypress_device_capture_recv_data[i].stored_is_3d = &stored_is_3d;
 		cypress_device_capture_recv_data[i].ring_slice_buffer_arr = ring_slice_buffer;
