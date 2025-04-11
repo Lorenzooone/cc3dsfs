@@ -78,8 +78,8 @@ struct PACKED USB8883DSOptimizePixelData {
 
 struct PACKED USB3DSOptimizeSingleSoundData {
 	uint16_t sample_index;
-	uint16_t sample_l;
 	uint16_t sample_r;
+	uint16_t sample_l;
 };
 
 struct PACKED USB3DSOptimizeColumnInfo {
