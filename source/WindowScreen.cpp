@@ -130,14 +130,17 @@ void WindowScreen::build() {
 	sf::Vector2f bot_screen_size = {(float)BOT_WIDTH_3DS, (float)HEIGHT_3DS};
 
 	(void)this->m_out_rect_top.out_tex.resize({(unsigned int)top_screen_size.x, (unsigned int)top_screen_size.y});
+	(void)this->m_out_rect_top.backup_tex.resize({(unsigned int)top_screen_size.x, (unsigned int)top_screen_size.y});
 	this->m_out_rect_top.out_rect.setSize(top_screen_size);
 	this->m_out_rect_top.out_rect.setTexture(&this->m_out_rect_top.out_tex.getTexture());
 
 	(void)this->m_out_rect_top_right.out_tex.resize({(unsigned int)top_screen_size.x / 2, (unsigned int)top_screen_size.y});
+	(void)this->m_out_rect_top_right.backup_tex.resize({(unsigned int)top_screen_size.x / 2, (unsigned int)top_screen_size.y});
 	this->m_out_rect_top_right.out_rect.setSize(top_screen_size);
 	this->m_out_rect_top_right.out_rect.setTexture(&this->m_out_rect_top_right.out_tex.getTexture());
 
 	(void)this->m_out_rect_bot.out_tex.resize({(unsigned int)bot_screen_size.x, (unsigned int)bot_screen_size.y});
+	(void)this->m_out_rect_bot.backup_tex.resize({(unsigned int)bot_screen_size.x, (unsigned int)bot_screen_size.y});
 	this->m_out_rect_bot.out_rect.setSize(bot_screen_size);
 	this->m_out_rect_bot.out_rect.setTexture(&this->m_out_rect_bot.out_tex.getTexture());
 
@@ -382,8 +385,11 @@ void WindowScreen::print_notification_float(std::string base_text, float value, 
 void WindowScreen::prepare_screen_rendering() {
 	if(loaded_operations.call_blur) {
 		this->m_out_rect_top.out_tex.setSmooth(this->loaded_info.is_blurred);
+		this->m_out_rect_top.backup_tex.setSmooth(this->loaded_info.is_blurred);
 		this->m_out_rect_top_right.out_tex.setSmooth(this->loaded_info.is_blurred);
+		this->m_out_rect_top_right.backup_tex.setSmooth(this->loaded_info.is_blurred);
 		this->m_out_rect_bot.out_tex.setSmooth(this->loaded_info.is_blurred);
+		this->m_out_rect_bot.backup_tex.setSmooth(this->loaded_info.is_blurred);
 	}
 	if(loaded_operations.call_crop) {
 		this->crop();
@@ -655,22 +661,25 @@ int WindowScreen::choose_shader(PossibleShaderTypes shader_type, bool is_top) {
 	return -1;
 }
 
-void WindowScreen::apply_shader_to_texture(sf::RectangleShape &rect_data, sf::RenderTexture &tex_data, PossibleShaderTypes shader_type, bool is_top) {
-	int chosen_shader = choose_shader(COLOR_PROCESSING_SHADER_TYPE, is_top);
+void WindowScreen::apply_shader_to_texture(sf::RectangleShape &rect_data, sf::RenderTexture* &to_process_tex_data, sf::RenderTexture* &backup_tex_data, PossibleShaderTypes shader_type, bool is_top) {
+	int chosen_shader = choose_shader(shader_type, is_top);
 	if(chosen_shader < 0)
 		return;
+	to_process_tex_data->display();
 	sf::RectangleShape in_rect;
-	in_rect.setTexture(&tex_data.getTexture());
+	in_rect.setTexture(&to_process_tex_data->getTexture());
 	const sf::IntRect texture_rect = rect_data.getTextureRect();
 	in_rect.setTextureRect(texture_rect);
 	in_rect.setSize({(float)texture_rect.size.x, (float)texture_rect.size.y});
 	in_rect.setPosition({(float)texture_rect.position.x, (float)texture_rect.position.y});
 	in_rect.setRotation(sf::degrees(0));
 	in_rect.setOrigin({0, 0});
-	tex_data.draw(in_rect, &usable_shaders[chosen_shader].shader);
+	backup_tex_data->draw(in_rect, &usable_shaders[chosen_shader].shader);
+	std::swap(to_process_tex_data, backup_tex_data);
+	rect_data.setTexture(&to_process_tex_data->getTexture());
 }
 
-bool WindowScreen::apply_shaders_to_input(sf::RectangleShape &rect_data, sf::RenderTexture &tex_data, const sf::RectangleShape &final_in_rect, bool is_top) {
+bool WindowScreen::apply_shaders_to_input(sf::RectangleShape &rect_data, sf::RenderTexture* &to_process_tex_data, sf::RenderTexture* &backup_tex_data, const sf::RectangleShape &final_in_rect, bool is_top) {
 	if(!sf::Shader::isAvailable())
 		return false;
 
@@ -683,38 +692,39 @@ bool WindowScreen::apply_shaders_to_input(sf::RectangleShape &rect_data, sf::Ren
 		old_frame_pos_x = -1.0 / NUM_FRAMES_BLENDED;
 	sf::Glsl::Vec2 old_pos = {old_frame_pos_x, 0.0};
 	usable_shaders[chosen_shader].shader.setUniform("old_frame_offset", old_pos);
-	tex_data.draw(final_in_rect, &usable_shaders[chosen_shader].shader);
+	to_process_tex_data->draw(final_in_rect, &usable_shaders[chosen_shader].shader);
 
-	this->apply_shader_to_texture(rect_data, tex_data, COLOR_PROCESSING_SHADER_TYPE, is_top);
+	this->apply_shader_to_texture(rect_data, to_process_tex_data, backup_tex_data, COLOR_PROCESSING_SHADER_TYPE, is_top);
 	return true;
 }
 
-void WindowScreen::post_texture_conversion_processing(sf::RectangleShape &rect_data, sf::RenderTexture &tex_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug) {
+void WindowScreen::post_texture_conversion_processing(sf::RectangleShape &rect_data, sf::RenderTexture* &to_process_tex_data, sf::RenderTexture* &backup_tex_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug) {
 	if((is_top && this->m_stype == ScreenType::BOTTOM) || ((!is_top) && this->m_stype == ScreenType::TOP))
 		return;
 	if(this->loaded_menu == CONNECT_MENU_TYPE)
 		return;
 
+	rect_data.setTexture(&to_process_tex_data->getTexture());
 	if(is_debug) {
 		if(is_top)
-			tex_data.clear(sf::Color::Red);
+			to_process_tex_data->clear(sf::Color::Red);
 		else
-			tex_data.clear(sf::Color::Blue);
+			to_process_tex_data->clear(sf::Color::Blue);
 	}
 	else {
-		tex_data.clear();
+		to_process_tex_data->clear();
 		sf::RectangleShape final_in_rect = in_rect;
 		sf::IntRect text_coords_rect = final_in_rect.getTextureRect();
 		text_coords_rect.position.x += this->curr_frame_texture_pos * MAX_IN_VIDEO_WIDTH;
 		final_in_rect.setTextureRect(text_coords_rect);
 		if(this->capture_status->connected && actually_draw) {
-			bool use_default_shader = !(this->apply_shaders_to_input(rect_data, tex_data, final_in_rect, is_top));
+			bool use_default_shader = !(this->apply_shaders_to_input(rect_data, to_process_tex_data, backup_tex_data, final_in_rect, is_top));
 			if(use_default_shader)
-				tex_data.draw(final_in_rect);
+				to_process_tex_data->draw(final_in_rect);
 			//Place postprocessing effects here
 		}
 	}
-	tex_data.display();
+	to_process_tex_data->display();
 }
 
 void WindowScreen::draw_rect_to_window(const sf::RectangleShape &out_rect, bool is_top) {
@@ -790,11 +800,17 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 	sf::RectangleShape in_rect_top = this->m_in_rect_top;
 	sf::RectangleShape in_rect_top_right = this->m_in_rect_top_right;
 	sf::RectangleShape in_rect_bot = this->m_in_rect_bot;
-	this->post_texture_conversion_processing(out_rect_top, this->m_out_rect_top.out_tex, in_rect_top, actually_draw, true, is_debug);
-	this->post_texture_conversion_processing(out_rect_bot, this->m_out_rect_bot.out_tex, in_rect_bot, actually_draw, false, is_debug);
+	this->m_out_rect_top.to_process_tex = &this->m_out_rect_top.out_tex;
+	this->m_out_rect_top.to_backup_tex = &this->m_out_rect_top.backup_tex;
+	this->post_texture_conversion_processing(out_rect_top, this->m_out_rect_top.to_process_tex, this->m_out_rect_top.to_backup_tex, in_rect_top, actually_draw, true, is_debug);
+	this->m_out_rect_bot.to_process_tex = &this->m_out_rect_bot.out_tex;
+	this->m_out_rect_bot.to_backup_tex = &this->m_out_rect_bot.backup_tex;
+	this->post_texture_conversion_processing(out_rect_bot, this->m_out_rect_bot.to_process_tex, this->m_out_rect_bot.to_backup_tex, in_rect_bot, actually_draw, false, is_debug);
 	if(get_3d_enabled(this->capture_status) && (!this->display_data->interleaved_3d) && (this->m_stype != ScreenType::BOTTOM) && is_size_valid(out_rect_top.getSize())) {
 		out_rect_top_right.setTextureRect(out_rect_top.getTextureRect());
-		this->post_texture_conversion_processing(out_rect_top_right, this->m_out_rect_top_right.out_tex, in_rect_top_right, actually_draw, true, is_debug);
+		this->m_out_rect_top_right.to_process_tex = &this->m_out_rect_top_right.out_tex;
+		this->m_out_rect_top_right.to_backup_tex = &this->m_out_rect_top_right.backup_tex;
+		this->post_texture_conversion_processing(out_rect_top_right, this->m_out_rect_top_right.to_process_tex, this->m_out_rect_top_right.to_backup_tex, in_rect_top_right, actually_draw, true, is_debug);
 	}
 
 	if(is_debug)

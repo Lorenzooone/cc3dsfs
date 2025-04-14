@@ -291,10 +291,10 @@ private:
 	int _choose_color_emulation_shader(bool is_top);
 	int _choose_shader(PossibleShaderTypes shader_type, bool is_top);
 	int choose_shader(PossibleShaderTypes shader_type, bool is_top);
-	void apply_shader_to_texture(sf::RectangleShape &rect_data, sf::RenderTexture &tex_data, PossibleShaderTypes shader_type, bool is_top);
-	bool apply_shaders_to_input(sf::RectangleShape &rect_data, sf::RenderTexture &tex_data, const sf::RectangleShape &final_in_rect, bool is_top);
+	void apply_shader_to_texture(sf::RectangleShape &rect_data, sf::RenderTexture* &to_process_tex_data, sf::RenderTexture* &backup_tex_data, PossibleShaderTypes shader_type, bool is_top);
+	bool apply_shaders_to_input(sf::RectangleShape &rect_data, sf::RenderTexture* &to_process_tex_data, sf::RenderTexture* &backup_tex_data, const sf::RectangleShape &final_in_rect, bool is_top);
 	void pre_texture_conversion_processing();
-	void post_texture_conversion_processing(sf::RectangleShape &rect_data, sf::RenderTexture &tex_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug);
+	void post_texture_conversion_processing(sf::RectangleShape &rect_data, sf::RenderTexture* &to_process_tex_data, sf::RenderTexture* &backup_tex_data, const sf::RectangleShape &in_rect, bool actually_draw, bool is_top, bool is_debug);
 	void draw_rect_to_window(const sf::RectangleShape &out_rect, bool is_top);
 	void window_bg_processing();
 	void display_data_to_window(bool actually_draw, bool is_debug = false);
