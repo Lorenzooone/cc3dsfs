@@ -1,0 +1,32 @@
+#!/bin/sh
+
+SFML_FOLDER=$1
+ARCH_CHOSEN=$2
+STL_CHOSEN=$3
+RELEASE_TYPE=$4
+OUT_FOLDER=$5
+ANDROID_FOLDER=$6
+GRADLE_FLAGS=""
+
+add_to_gradle_flags()
+{
+	to_add=$1
+	GRADLE_FLAGS="${GRADLE_FLAGS} -P${to_add}"
+}
+
+to_lower()
+{
+	echo "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+(cd ${SFML_FOLDER} ; mkdir -p build/${ARCH_CHOSEN})
+(cd ${SFML_FOLDER}/build/${ARCH_CHOSEN} ; cmake -DCMAKE_SYSTEM_NAME=Android -DCMAKE_ANDROID_NDK=${ANDROID_NDK_HOME} -DCMAKE_ANDROID_ARCH_ABI=${ARCH_CHOSEN} -DCMAKE_ANDROID_STL_TYPE=${STL_CHOSEN} -DCMAKE_BUILD_TYPE=${RELEASE_TYPE} ../.. ; make ; make install)
+add_to_gradle_flags NDK_VERSION=${ANDROID_NDK_VERSION}
+add_to_gradle_flags ARCH_ABI=${ARCH_CHOSEN}
+add_to_gradle_flags TARGET_SDK=${ANDROID_SDK_VERSION}
+add_to_gradle_flags STL_TYPE=${STL_CHOSEN}
+LOWER_RELEASE_TYPE=$(to_lower $RELEASE_TYPE)
+# Default with gradle-wrapper, slow in docker
+#./gradlew assemble${RELEASE_TYPE} ${GRADLE_FLAGS}
+# Use the pre-donwloaded gradle to speed build up
+(cd ${ANDROID_FOLDER} && gradle assemble${RELEASE_TYPE} ${GRADLE_FLAGS} && mkdir -p ${OUT_FOLDER} && cp app/build/outputs/apk/${LOWER_RELEASE_TYPE}/*.apk ${OUT_FOLDER})
