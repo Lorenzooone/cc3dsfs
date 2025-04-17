@@ -321,7 +321,8 @@ private:
 	int get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height, int separator_contribute);
 	void resize_window_and_out_rects(bool do_work = true);
 	void create_window(bool re_prepare_size, bool reset_text  = true);
-	std::string title_factory();
+	std::string _title_factory();
+	sf::String title_factory();
 	void update_view_size();
 	void open();
 	void update_screen_settings();

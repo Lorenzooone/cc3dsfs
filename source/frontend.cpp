@@ -109,7 +109,7 @@ const CropData scaled_ds_pokemon_crop = {
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = false,
 .allowed_3ds = true, .allowed_ds = false, .is_game_specific = true,
-.name = "Scaled Pokemon DS"};
+.name = "Scaled Pokémon DS"};
 
 const CropData scaled_ds_pmd_brt_crop = {
 .top_width = TOP_SCALED_DS_WIDTH_3DS, .top_height = HEIGHT_3DS,
@@ -127,7 +127,7 @@ const CropData native_ds_pokemon_crop = {
 .bot_x = (BOT_WIDTH_3DS - WIDTH_DS) / 2, .bot_y = HEIGHT_3DS - HEIGHT_DS,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
 .allowed_3ds = true, .allowed_ds = false, .is_game_specific = true,
-.name = "Native Pokemon DS"};
+.name = "Native Pokémon DS"};
 
 const CropData native_ds_pmd_brt_crop = {
 .top_width = WIDTH_DS, .top_height = HEIGHT_DS,
@@ -190,7 +190,7 @@ const CropData ds_pokemon_crop = {
 .bot_x = 0, .bot_y = 0,
 .allowed_joint = true, .allowed_top = true, .allowed_bottom = true,
 .allowed_3ds = false, .allowed_ds = true, .is_game_specific = true,
-.name = "Pokemon DS"};
+.name = "Pokémon DS"};
 
 const CropData ds_pmd_brt_crop = {
 .top_width = WIDTH_DS, .top_height = HEIGHT_DS,

@@ -481,11 +481,16 @@ void WindowScreen::window_factory(bool is_main_thread) {
 	this->update_connection();
 }
 
-std::string WindowScreen::title_factory() {
+std::string WindowScreen::_title_factory() {
 	std::string title = this->win_title;
 	if(this->capture_status->connected)
 		title += " - " + get_name_of_device(this->capture_status);
 	return title;
+}
+
+sf::String WindowScreen::title_factory() {
+	std::string title = this->_title_factory();
+	return sf::String::fromUtf8(title.begin(), title.end());
 }
 
 // These values may be undefined under Windows...

@@ -153,9 +153,13 @@ void TextRectangle::reset_data(TextData &data) {
 	data.pos_y = 0;
 }
 
+static sf::String convert_to_utf8(const std::string &str) {
+	return sf::String::fromUtf8(str.begin(), str.end());
+}
+
 void TextRectangle::setTextWithLineWrapping(int x_limit) {
 	if(x_limit == 0) {
-		this->actual_text.setString(this->loaded_data.printed_text);
+		this->actual_text.setString(convert_to_utf8(this->loaded_data.printed_text));
 		return;
 	}
 	bool is_done = false;
@@ -173,7 +177,7 @@ void TextRectangle::setTextWithLineWrapping(int x_limit) {
 		}
 		for(size_t i = pos; i < space_pos; i++)
 			curr_text += this->loaded_data.printed_text[i];
-		this->actual_text.setString(curr_text);
+		this->actual_text.setString(convert_to_utf8(curr_text));
 		sf::FloatRect globalBounds = this->actual_text.getGlobalBounds();
 		int bounds_width = (int)(globalBounds.size.x + (globalBounds.position.x * 2));
 		if(line_started && (bounds_width > x_limit)) {
@@ -185,7 +189,7 @@ void TextRectangle::setTextWithLineWrapping(int x_limit) {
 		line_started = true;
 		new_text = curr_text;
 	}
-	this->actual_text.setString(new_text);
+	this->actual_text.setString(convert_to_utf8(new_text));
 }
 
 void TextRectangle::setRealSize(int width, int height, bool check_previous) {
