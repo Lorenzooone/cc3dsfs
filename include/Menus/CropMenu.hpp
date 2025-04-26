@@ -13,7 +13,7 @@
 
 class CropMenu : public OptionSelectionMenu {
 public:
-	CropMenu(bool font_load_success, sf::Font &text_font);
+	CropMenu(TextRectanglePool* text_pool);
 	~CropMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, int current_crop);
 	void insert_data(std::vector<const CropData*>* possible_crops);

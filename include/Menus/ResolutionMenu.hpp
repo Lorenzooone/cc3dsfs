@@ -13,7 +13,7 @@
 
 class ResolutionMenu : public OptionSelectionMenu {
 public:
-	ResolutionMenu(bool font_load_success, sf::Font &text_font);
+	ResolutionMenu(TextRectanglePool* text_pool);
 	~ResolutionMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, int fullscreen_mode_width, int fullscreen_mode_height);
 	void insert_data(std::vector<sf::VideoMode>* possible_resolutions, const sf::VideoMode &desktop_resolution);

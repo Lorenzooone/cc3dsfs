@@ -15,7 +15,7 @@ enum LicenseMenuOutAction{
 
 class LicenseMenu : public OptionSelectionMenu {
 public:
-	LicenseMenu(bool font_load_success, sf::Font &text_font);
+	LicenseMenu(TextRectanglePool* text_pool);
 	~LicenseMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y);
 	void insert_data();

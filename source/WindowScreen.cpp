@@ -7,6 +7,7 @@
 #include "font_ttf.h"
 #include "shaders_list.hpp"
 #include "devicecapture.hpp"
+#include <conversions.hpp>
 
 #define LEFT_ROUNDED_PADDING 5
 #define RIGHT_ROUNDED_PADDING 5
@@ -36,7 +37,7 @@ static bool is_size_valid(sf::Vector2f size) {
 	return (size.x > 0.0) && (size.y > 0.0);
 }
 
-WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, SharedData* shared_data, AudioData* audio_data, ConsumerMutex *draw_lock, bool created_proper_folder) {
+WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, SharedData* shared_data, AudioData* audio_data, ConsumerMutex *draw_lock, bool created_proper_folder, bool disable_frame_blending) {
 	this->draw_lock = draw_lock;
 	this->m_stype = stype;
 	insert_basic_crops(this->possible_crops, this->m_stype, false, false);
@@ -53,16 +54,60 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->m_scheduled_split = false;
 	this->ret_val = 0;
 	reset_screen_info(this->m_info);
-	this->font_load_success = this->text_font.openFromMemory(font_ttf, font_ttf_len);
-	this->notification = new TextRectangle(this->font_load_success, this->text_font);
+	bool font_load_success = this->text_font.openFromMemory(font_ttf, font_ttf_len);
+	this->notification = new TextRectangle(font_load_success, this->text_font);
+	this->text_rectangle_pool = new TextRectanglePool(font_load_success, &this->text_font);
 	this->init_menus();
 	FPSArrayInit(&this->in_fps);
 	FPSArrayInit(&this->draw_fps);
 	FPSArrayInit(&this->poll_fps);
-	(void)this->in_tex.resize({MAX_IN_VIDEO_WIDTH * NUM_FRAMES_BLENDED, MAX_IN_VIDEO_HEIGHT});
-	this->m_in_rect_top.setTexture(&this->in_tex);
-	this->m_in_rect_top_right.setTexture(&this->in_tex);
-	this->m_in_rect_bot.setTexture(&this->in_tex);
+	this->last_update_texture_data_type = VIDEO_DATA_RGB;
+	this->use_texture_software_based_conv = false;
+	this->num_frames_to_blend = NUM_FRAMES_BLENDED;
+	if(disable_frame_blending)
+		this->num_frames_to_blend = 1;
+	const size_t top_width = MAX_IN_VIDEO_WIDTH_TOP * this->num_frames_to_blend;
+	const size_t top_height = MAX_IN_VIDEO_HEIGHT_TOP;
+	const size_t top_single_width = MAX_IN_VIDEO_WIDTH_SINGLE_TOP * this->num_frames_to_blend;
+	const size_t top_single_height = MAX_IN_VIDEO_HEIGHT_SINGLE_TOP;
+	const size_t bottom_width = MAX_IN_VIDEO_WIDTH_BOTTOM * this->num_frames_to_blend;
+	const size_t bottom_height = MAX_IN_VIDEO_HEIGHT_BOTTOM;
+	size_t full_width = MAX_IN_VIDEO_WIDTH * this->num_frames_to_blend;
+	size_t full_height = MAX_IN_VIDEO_HEIGHT;
+	if(this->m_stype == ScreenType::TOP) {
+		full_width = top_width;
+		full_height = top_height;
+	}
+	if(this->m_stype == ScreenType::BOTTOM) {
+		full_width = bottom_width;
+		full_height = bottom_height;
+	}
+	this->shared_texture_available = this->full_in_tex.resize({(unsigned int)full_width, (unsigned int)full_height});
+	if(this->shared_texture_available) {
+		this->m_in_rect_top.setTexture(&this->full_in_tex);
+		this->m_in_rect_top_right.setTexture(&this->full_in_tex);
+		this->m_in_rect_bot.setTexture(&this->full_in_tex);
+	}
+	else {
+		if((this->m_stype == ScreenType::TOP) || (this->m_stype == ScreenType::JOINT)) {
+			full_width = top_width;
+			full_height = top_height;
+			(void)this->top_l_in_tex.resize({ (unsigned int)top_single_width, (unsigned int)top_single_height });
+			(void)this->top_r_in_tex.resize({ (unsigned int)top_single_width, (unsigned int)top_single_height });
+			this->m_in_rect_top.setTexture(&this->top_l_in_tex);
+			this->m_in_rect_top_right.setTexture(&this->top_r_in_tex);
+		}
+		else {
+			this->m_in_rect_top.setTexture(&this->bot_in_tex);
+			this->m_in_rect_top_right.setTexture(&this->bot_in_tex);
+		}
+		if((this->m_stype == ScreenType::BOTTOM) || (this->m_stype == ScreenType::JOINT)) {
+			(void)this->bot_in_tex.resize({ (unsigned int)bottom_width, (unsigned int)bottom_height });
+			this->m_in_rect_bot.setTexture(&this->bot_in_tex);
+		}
+		else
+			this->m_in_rect_bot.setTexture(&this->top_l_in_tex);
+	}
 	this->display_data = display_data;
 	this->shared_data = shared_data;
 	this->audio_data = audio_data;
@@ -76,10 +121,16 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->done_display = true;
 	this->saved_buf = new VideoOutputData;
 	this->win_title = NAME;
-	if(this->m_stype == ScreenType::TOP)
+	if(this->m_stype == ScreenType::TOP) {
 		this->win_title += "_top";
-	if(this->m_stype == ScreenType::BOTTOM)
+		this->own_out_text_data.preamble_name += " top window";
+	}
+	if(this->m_stype == ScreenType::BOTTOM) {
 		this->win_title += "_bot";
+		this->own_out_text_data.preamble_name += " bottom window";
+	}
+	if(this->m_stype == ScreenType::JOINT)
+		this->own_out_text_data.preamble_name += " joint window";
 	this->last_connected_status = false;
 	this->last_enabled_3d = false;
 	this->last_interleaved_3d = false;
@@ -114,6 +165,7 @@ WindowScreen::~WindowScreen() {
 	delete this->saved_buf;
 	delete this->notification;
 	this->destroy_menus();
+	delete this->text_rectangle_pool;
 	FPSArrayDestroy(&this->in_fps);
 	FPSArrayDestroy(&this->draw_fps);
 	FPSArrayDestroy(&this->poll_fps);
@@ -250,7 +302,7 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 		this->last_poll_time = std::chrono::high_resolution_clock::now();
 	}
 	if(this->m_win.isOpen() || this->loaded_operations.call_create) {
-		this->curr_frame_texture_pos = (this->curr_frame_texture_pos + 1) % NUM_FRAMES_BLENDED;
+		this->curr_frame_texture_pos = (this->curr_frame_texture_pos + 1) % this->num_frames_to_blend;
 		auto curr_time = std::chrono::high_resolution_clock::now();
 		const std::chrono::duration<double> diff = curr_time - this->last_draw_time;
 		FPSArrayInsertElement(&draw_fps, diff.count());
@@ -330,6 +382,14 @@ void WindowScreen::free_ownership_of_window(bool is_main_thread) {
 	}
 }
 
+static bool is_vertically_rotated(int rotation) {
+	return (rotation / 10) % 2;
+}
+
+static bool is_negatively_rotated(int rotation) {
+	return ((rotation / 10) % 4) >= 2;
+}
+
 void WindowScreen::resize_in_rect(sf::RectangleShape &in_rect, int start_x, int start_y, int width, int height) {
 	int target_x = start_x;
 	int target_y = start_y;
@@ -337,7 +397,7 @@ void WindowScreen::resize_in_rect(sf::RectangleShape &in_rect, int start_x, int 
 	int target_height = height;
 	int target_rotation = -1 * this->capture_status->device.base_rotation;
 
-	if((this->capture_status->device.base_rotation / 10) % 2) {
+	if(is_vertically_rotated(this->capture_status->device.base_rotation)) {
 		std::swap(target_x, target_y);
 		std::swap(target_width, target_height);
 	}
@@ -486,8 +546,8 @@ std::string WindowScreen::_title_factory() {
 	if(this->capture_status->connected)
 		title += " - " + get_name_of_device(this->capture_status);
 	return title;
-}
-
+ }
+ 
 sf::String WindowScreen::title_factory() {
 	std::string title = this->_title_factory();
 	return sf::String::fromUtf8(title.begin(), title.end());
@@ -506,32 +566,171 @@ sf::String WindowScreen::title_factory() {
 #define GL_UNSIGNED_SHORT_5_6_5_REV 0x8364
 #endif
 
-void WindowScreen::update_texture() {
-	unsigned int m_texture = this->in_tex.getNativeHandle();
-	if (this->saved_buf && m_texture)
-	{
-		// Copy pixels from the given array to the texture
-		glBindTexture(GL_TEXTURE_2D, m_texture);
-		GLenum format = GL_RGB;
-		GLenum type = GL_UNSIGNED_BYTE;
-		if(this->capture_status->device.video_data_type == VIDEO_DATA_BGR)
-			format = GL_BGR;
-		if(this->capture_status->device.video_data_type == VIDEO_DATA_RGB16)
-			type =  GL_UNSIGNED_SHORT_5_6_5;
-		if(this->capture_status->device.video_data_type == VIDEO_DATA_BGR16)
-			type =  GL_UNSIGNED_SHORT_5_6_5_REV;
-		size_t width = this->capture_status->device.width;
-		size_t height = this->capture_status->device.height;
-		if(get_3d_enabled(this->capture_status)) {
-			width = this->capture_status->device.width_3d;
-			height = this->capture_status->device.height_3d;
-		}
-		glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(this->curr_frame_texture_pos * MAX_IN_VIDEO_WIDTH), static_cast<GLint>(0), static_cast<GLsizei>(width), static_cast<GLsizei>(height), format, type, this->saved_buf);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+void WindowScreen::opengl_error_out(std::string error_base, std::string error_str) {
+	UpdateOutText(this->own_out_text_data, error_base + ": " + error_str, error_base, TEXT_KIND_ERROR);
+}
 
-		// Force an OpenGL flush, so that the texture data will appear updated
-		// in all contexts immediately (solves problems in multi-threaded apps)
-		glFlush();
+void WindowScreen::opengl_error_check(std::string error_base) {
+	GLenum glCheckInternalError = glGetError();
+	while (glCheckInternalError != GL_NO_ERROR) {
+		// Do error processing here... Simply logging it for now
+		this->opengl_error_out(error_base, std::to_string(glCheckInternalError));
+		glCheckInternalError = glGetError();
+	}
+}
+
+bool WindowScreen::single_update_texture(unsigned int m_texture, InputVideoDataType video_data_type, size_t pos_x_data, size_t pos_y_data, size_t width, size_t height, bool manually_converted) {
+	if(!(this->saved_buf && m_texture))
+		return false;
+
+	this->opengl_error_check("Previous OpenGL Error");
+	// Copy pixels from the given array to the texture
+	glBindTexture(GL_TEXTURE_2D, m_texture);
+	GLenum format = GL_RGB;
+	GLenum type = GL_UNSIGNED_BYTE;
+	size_t format_size = sizeof(VideoPixelRGB);
+
+	if(!manually_converted) {
+		if(video_data_type == VIDEO_DATA_BGR) {
+			format = GL_BGR;
+			format_size = sizeof(VideoPixelBGR);
+		}
+		if(video_data_type == VIDEO_DATA_RGB16) {
+			type = GL_UNSIGNED_SHORT_5_6_5;
+			format_size = sizeof(VideoPixelRGB16);
+		}
+		if(video_data_type == VIDEO_DATA_BGR16) {
+			type = GL_UNSIGNED_SHORT_5_6_5_REV;
+			format_size = sizeof(VideoPixelBGR16);
+		}
+	}
+
+	this->opengl_error_check("BindTexture OpenGL Error");
+	glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(this->curr_frame_texture_pos * MAX_IN_VIDEO_WIDTH), static_cast<GLint>(0), static_cast<GLsizei>(width), static_cast<GLsizei>(height), format, type, ((uint8_t*)this->saved_buf) + (pos_y_data * width * format_size));
+	GLenum glCheckInternalError = glGetError();
+	while (glCheckInternalError != GL_NO_ERROR) {
+		bool processed = false;
+		if(glCheckInternalError == GL_INVALID_ENUM) {
+			if((format != GL_RGB) || (type != GL_UNSIGNED_BYTE)) {
+				UpdateOutText(this->own_out_text_data, "Switching to software-based texture updating", "", TEXT_KIND_NORMAL);
+				this->last_update_texture_data_type = video_data_type;
+				this->use_texture_software_based_conv = true;
+				return true;
+			}
+		}
+		if(!processed) {
+			// Do error processing here... Simply logging it for now
+			this->opengl_error_out("SubImage2D OpenGL Error", std::to_string(glCheckInternalError));
+			processed = true;
+		}
+		glCheckInternalError = glGetError();
+	}
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	this->opengl_error_check("TexParameteri OpenGL Error");
+
+	// Force an OpenGL flush, so that the texture data will appear updated
+	// in all contexts immediately (solves problems in multi-threaded apps)
+	glFlush();
+	return false;
+}
+
+void WindowScreen::execute_single_update_texture(bool &manually_converted, bool do_full, bool is_top, bool is_second) {
+	InputVideoDataType video_data_type = this->capture_status->device.video_data_type;
+	size_t top_width = TOP_WIDTH_3DS;
+	size_t top_height = HEIGHT_3DS;
+	size_t single_top_width = TOP_WIDTH_3DS;
+	size_t single_top_height = HEIGHT_3DS;
+	size_t bot_width = BOT_WIDTH_3DS;
+	size_t bot_height = HEIGHT_3DS;
+	if(!this->capture_status->device.is_3ds) {
+		top_width = WIDTH_DS;
+		top_height = HEIGHT_DS;
+		single_top_width = WIDTH_DS;
+		single_top_height = HEIGHT_DS;
+		bot_width = WIDTH_DS;
+		bot_height = HEIGHT_DS;
+	}
+	if(get_3d_enabled(this->capture_status))
+		top_width *= 2;
+
+	if(is_vertically_rotated(this->capture_status->device.base_rotation)) {
+		std::swap(top_width, top_height);
+		std::swap(single_top_width, single_top_height);
+		std::swap(bot_width, bot_height);
+	}
+	size_t full_width = std::max(top_width, bot_width);
+	size_t full_height = top_height + bot_height;
+	size_t width = full_width;
+	size_t height = full_height;
+	size_t pos_x_data = 0;
+	size_t pos_y_data = 0;
+	if(this->m_stype == ScreenType::TOP) {
+		full_height = top_height;
+		height = full_height;
+		pos_x_data = this->get_pos_x_screen_inside_data(true);
+		pos_y_data = this->get_pos_y_screen_inside_data(true);
+	}
+	if(this->m_stype == ScreenType::BOTTOM) {
+		full_height = bot_height;
+		height = full_height;
+		pos_x_data = this->get_pos_x_screen_inside_data(false);
+		pos_y_data = this->get_pos_y_screen_inside_data(false);
+	}
+	size_t pos_x_conv = pos_x_data;
+	size_t pos_y_conv = pos_y_data;
+
+	sf::Texture* target_texture = &this->full_in_tex;
+	if(!do_full) {
+		if(is_top) {
+			height = single_top_height;
+			pos_x_data = this->get_pos_x_screen_inside_data(true, is_second);
+			pos_y_data = this->get_pos_y_screen_inside_data(true, is_second);
+			sf::Texture* top_l_texture = &this->top_l_in_tex;
+			sf::Texture* top_r_texture = &this->top_r_in_tex;
+			if(get_3d_enabled(this->capture_status) && (!this->display_data->interleaved_3d)) {
+				if(!this->capture_status->device.is_second_top_screen_right)
+					std::swap(top_l_texture, top_r_texture);
+			}
+			target_texture = top_l_texture;
+			if(is_second)
+				target_texture = top_r_texture;
+		}
+		else {
+			height = bot_height;
+			pos_x_data = this->get_pos_x_screen_inside_data(false);
+			pos_y_data = this->get_pos_y_screen_inside_data(false);
+			target_texture = &this->bot_in_tex;
+		}
+	}
+
+	if(is_vertically_rotated(this->capture_status->device.base_rotation))
+		std::swap(pos_x_data, pos_y_data);
+
+	unsigned int m_texture = target_texture->getNativeHandle();
+	bool retry = true;
+	while(retry) {
+		bool software_based_conv = manually_converted || (this->use_texture_software_based_conv && (video_data_type == this->last_update_texture_data_type));
+		if(software_based_conv) {
+			if(!manually_converted)
+				manualConvertOutputToRGB(this->saved_buf, this->saved_buf, pos_x_conv, pos_y_conv, full_width, full_height, video_data_type);
+			manually_converted = true;
+		}
+		retry = this->single_update_texture(m_texture, video_data_type, pos_x_data, pos_y_data, width, height, manually_converted);
+	}
+}
+
+void WindowScreen::update_texture() {
+	bool manually_converted = false;
+	if(this->shared_texture_available)
+		this->execute_single_update_texture(manually_converted, true);
+	else {
+		if((this->m_stype == ScreenType::TOP) || (this->m_stype == ScreenType::JOINT)) {
+			this->execute_single_update_texture(manually_converted, false, true);
+			if(get_3d_enabled(this->capture_status))
+				this->execute_single_update_texture(manually_converted, false, true, true);
+		}
+		if((this->m_stype == ScreenType::BOTTOM) || (this->m_stype == ScreenType::JOINT))
+			this->execute_single_update_texture(manually_converted, false, false);
 	}
 }
 
@@ -692,9 +891,9 @@ bool WindowScreen::apply_shaders_to_input(sf::RectangleShape &rect_data, sf::Ren
 	if(chosen_shader < 0)
 		return false;
 
-	float old_frame_pos_x = ((float)(NUM_FRAMES_BLENDED - 1)) / NUM_FRAMES_BLENDED;
+	float old_frame_pos_x = ((float)(this->num_frames_to_blend - 1)) / this->num_frames_to_blend;
 	if(this->curr_frame_texture_pos > 0)
-		old_frame_pos_x = -1.0 / NUM_FRAMES_BLENDED;
+		old_frame_pos_x = -1.0f / this->num_frames_to_blend;
 	sf::Glsl::Vec2 old_pos = {old_frame_pos_x, 0.0};
 	usable_shaders[chosen_shader].shader.setUniform("old_frame_offset", old_pos);
 	to_process_tex_data->draw(final_in_rect, &usable_shaders[chosen_shader].shader);
@@ -811,7 +1010,8 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 	this->m_out_rect_bot.to_process_tex = &this->m_out_rect_bot.out_tex;
 	this->m_out_rect_bot.to_backup_tex = &this->m_out_rect_bot.backup_tex;
 	this->post_texture_conversion_processing(out_rect_bot, this->m_out_rect_bot.to_process_tex, this->m_out_rect_bot.to_backup_tex, in_rect_bot, actually_draw, false, is_debug);
-	if(get_3d_enabled(this->capture_status) && (!this->display_data->interleaved_3d) && (this->m_stype != ScreenType::BOTTOM) && is_size_valid(out_rect_top.getSize())) {
+	bool has_to_do_top_right_screen = get_3d_enabled(this->capture_status) && ((!this->display_data->interleaved_3d) || (!this->shared_texture_available)) && (this->m_stype != ScreenType::BOTTOM) && is_size_valid(out_rect_top.getSize());
+	if(has_to_do_top_right_screen) {
 		out_rect_top_right.setTextureRect(out_rect_top.getTextureRect());
 		this->m_out_rect_top_right.to_process_tex = &this->m_out_rect_top_right.out_tex;
 		this->m_out_rect_top_right.to_backup_tex = &this->m_out_rect_top_right.backup_tex;
@@ -823,17 +1023,38 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 	else
 		this->m_win.clear();
 	this->window_bg_processing();
+	bool needs_to_glue_textures_3d = has_to_do_top_right_screen && this->display_data->interleaved_3d && (!this->shared_texture_available);
+	if(needs_to_glue_textures_3d) {
+		float x_divisor = 2.0f;
+		float y_divisor = 1.0f;
+		out_rect_top.setSize({out_rect_top.getSize().x / x_divisor, out_rect_top.getSize().y / y_divisor});
+		sf::IntRect texture_rect_top = out_rect_top.getTextureRect();
+		texture_rect_top.size.x /= (int)x_divisor;
+		texture_rect_top.size.y /= (int)y_divisor;
+		out_rect_top.setTextureRect(texture_rect_top);
+	}
 	this->draw_rect_to_window(out_rect_top, true);
 	this->draw_rect_to_window(out_rect_bot, false);
-	if(get_3d_enabled(this->capture_status) && (!this->display_data->interleaved_3d) && (this->m_stype != ScreenType::BOTTOM) && is_size_valid(out_rect_top.getSize())) {
+	if(has_to_do_top_right_screen) {
 		sf::Vector2f offset_second_screen = get_3d_offset_out_rect(&this->loaded_info, true);
+		if(needs_to_glue_textures_3d) {
+			float base_multiplier = 1.0f;
+			if(is_negatively_rotated(this->loaded_info.top_rotation))
+				base_multiplier = -1.0f;
+			if(is_vertically_rotated(this->loaded_info.top_rotation))
+				offset_second_screen = {0, base_multiplier * out_rect_top.getSize().x / 1.0f};
+			else
+				offset_second_screen = {base_multiplier * out_rect_top.getSize().x / 1.0f, 0};
+		}
 		out_rect_top_right.setTextureRect(out_rect_top.getTextureRect());
 		out_rect_top_right.setSize(out_rect_top.getSize());
 		out_rect_top_right.setPosition(out_rect_top.getPosition() + offset_second_screen);
 		out_rect_top_right.setRotation(out_rect_top.getRotation());
 		this->draw_rect_to_window(out_rect_top_right, true);
-		out_rect_bot.setPosition(out_rect_bot.getPosition() + offset_second_screen);
-		this->draw_rect_to_window(out_rect_bot, false);
+		if(!needs_to_glue_textures_3d) {
+			out_rect_bot.setPosition(out_rect_bot.getPosition() + offset_second_screen);
+			this->draw_rect_to_window(out_rect_bot, false);
+		}
 	}
 	this->execute_menu_draws();
 	this->notification->draw(this->m_win);
@@ -913,9 +1134,9 @@ void WindowScreen::set_position_screens(sf::Vector2f &curr_top_screen_size, sf::
 	int bot_screen_width = (int)curr_bot_screen_size.x;
 	int bot_screen_height = (int)curr_bot_screen_size.y;
 
-	if((this->loaded_info.top_rotation / 10) % 2)
+	if(is_vertically_rotated(this->loaded_info.top_rotation))
 		std::swap(top_screen_width, top_screen_height);
-	if((this->loaded_info.bot_rotation / 10) % 2)
+	if(is_vertically_rotated(this->loaded_info.bot_rotation))
 		std::swap(bot_screen_width, bot_screen_height);
 
 	if(this->m_stype == ScreenType::TOP)
@@ -986,7 +1207,7 @@ float WindowScreen::get_max_float_screen_multiplier(ResizingScreenData *own_scre
 	if(!is_size_valid(own_screen->size))
 		return 0;
 
-	if((other_rotation / 10) % 2)
+	if(is_vertically_rotated(other_rotation))
 		std::swap(width_limit, height_limit);
 	sf::Vector2f other_screen_size = sf::Vector2f((float)width_limit, (float)height_limit);
 	if((!is_size_valid(other_screen_size)) && is_two_screens_merged)
@@ -1012,7 +1233,7 @@ float WindowScreen::get_max_float_screen_multiplier(ResizingScreenData *own_scre
 	float own_width = own_screen->size.x;
 	float own_height = own_screen->size.y;
 	get_par_size(own_width, own_height, 1.0, own_screen->par, own_screen->divide_3d_par);
-	if((own_screen->rotation / 10) % 2)
+	if(is_vertically_rotated(own_screen->rotation))
 		std::swap(own_width, own_height);
 	if((own_height == 0) || (own_width == 0))
 		return 0;
@@ -1157,9 +1378,9 @@ void WindowScreen::non_integer_scale_screens(ResizingScreenData *top_screen_resi
 		std::swap(min_bigger_screen_height, min_smaller_screen_height);
 	}
 
-	if((top_screen_resize_data->rotation / 10) % 2)
+	if(is_vertically_rotated(top_screen_resize_data->rotation))
 		std::swap(min_top_screen_width, min_top_screen_height);
-	if((bot_screen_resize_data->rotation / 10) % 2)
+	if(is_vertically_rotated(bot_screen_resize_data->rotation))
 		std::swap(min_bot_screen_width, min_bot_screen_height);
 
 	sf::Vector2u curr_desk_mode_3d_size = get_desk_mode_3d_multiplied(&this->m_info);
@@ -1195,9 +1416,9 @@ void WindowScreen::merge_screens_data(ResizingScreenData* top_screen_resize_data
 	float bot_width = bot_screen_resize_data->size.x;
 	float bot_height = bot_screen_resize_data->size.y;
 	get_par_size(bot_width, bot_height, 1.0, bot_screen_resize_data->par, bot_screen_resize_data->divide_3d_par);
-	if((top_screen_resize_data->rotation / 10) % 2)
+	if(is_vertically_rotated(top_screen_resize_data->rotation))
 		std::swap(top_width, top_height);
-	if((bot_screen_resize_data->rotation / 10) % 2)
+	if(is_vertically_rotated(bot_screen_resize_data->rotation))
 		std::swap(bot_width, bot_height);
 	float final_width = std::max(top_width, bot_width);
 	float final_height = std::max(top_height, bot_height);
@@ -1296,9 +1517,9 @@ void WindowScreen::prepare_size_ratios(bool top_increase, bool bot_increase, boo
 }
 
 int WindowScreen::get_fullscreen_offset_x(int top_width, int top_height, int bot_width, int bot_height, int separator_contribute) {
-	if((this->loaded_info.top_rotation / 10) % 2)
+	if(is_vertically_rotated(this->loaded_info.top_rotation))
 		std::swap(top_width, top_height);
-	if((this->loaded_info.bot_rotation / 10) % 2)
+	if(is_vertically_rotated(this->loaded_info.bot_rotation))
 		std::swap(bot_width, bot_height);
 	int greatest_width = std::max(top_width, bot_width);
 	int offset_contribute = 0;
@@ -1319,9 +1540,9 @@ int WindowScreen::get_fullscreen_offset_x(int top_width, int top_height, int bot
 }
 
 int WindowScreen::get_fullscreen_offset_y(int top_width, int top_height, int bot_width, int bot_height, int separator_contribute) {
-	if((this->loaded_info.top_rotation / 10) % 2)
+	if(is_vertically_rotated(this->loaded_info.top_rotation))
 		std::swap(top_width, top_height);
-	if((this->loaded_info.bot_rotation / 10) % 2)
+	if(is_vertically_rotated(this->loaded_info.bot_rotation))
 		std::swap(bot_width, bot_height);
 	int greatest_height = std::max(top_height, bot_height);
 	int offset_contribute = 0;
@@ -1528,6 +1749,46 @@ sf::Vector2f WindowScreen::getShownScreenSize(bool is_top, ScreenInfo* info) {
 	return {(float)width, (float)height};
 }
 
+int WindowScreen::get_pos_x_screen_inside_data(bool is_top, bool is_second) {
+	if(!is_top)
+		return this->capture_status->device.bot_screen_x;
+	if(!is_second)
+		return this->capture_status->device.top_screen_x;
+	return this->capture_status->device.second_top_screen_x;
+}
+
+int WindowScreen::get_pos_y_screen_inside_data(bool is_top, bool is_second) {
+	if(!is_top)
+		return this->capture_status->device.bot_screen_y;
+	if(!is_second)
+		return this->capture_status->device.top_screen_y;
+	return this->capture_status->device.second_top_screen_y;
+}
+
+int WindowScreen::get_pos_x_screen_inside_in_tex(bool is_top, bool is_second) {
+	if(!this->shared_texture_available)
+		return 0;
+	if(is_vertically_rotated(this->capture_status->device.base_rotation)) {
+		if(this->m_stype == ScreenType::TOP)
+			return this->get_pos_x_screen_inside_data(is_top, is_second) - this->get_pos_x_screen_inside_data(is_top, false);
+		if(this->m_stype == ScreenType::BOTTOM)
+			return 0;
+	}
+	return this->get_pos_x_screen_inside_data(is_top, is_second);
+}
+
+int WindowScreen::get_pos_y_screen_inside_in_tex(bool is_top, bool is_second) {
+	if(!this->shared_texture_available)
+		return 0;
+	if(!is_vertically_rotated(this->capture_status->device.base_rotation)) {
+		if(this->m_stype == ScreenType::TOP)
+			return this->get_pos_y_screen_inside_data(is_top, is_second) - this->get_pos_y_screen_inside_data(is_top, false);
+		if(this->m_stype == ScreenType::BOTTOM)
+			return 0;
+	}
+	return this->get_pos_y_screen_inside_data(is_top, is_second);
+}
+
 void WindowScreen::crop() {
 	std::vector<const CropData*> *crops = this->get_crop_data_vector(&this->loaded_info);
 	int *crop_value = this->get_crop_index_ptr(&this->loaded_info);
@@ -1535,12 +1796,12 @@ void WindowScreen::crop() {
 	sf::Vector2f top_screen_size = getShownScreenSize(true, &this->loaded_info);
 	sf::Vector2f bot_screen_size = getShownScreenSize(false, &this->loaded_info);
 
-	this->resize_in_rect(this->m_in_rect_bot, this->capture_status->device.bot_screen_x + (*crops)[*crop_value]->bot_x, this->capture_status->device.bot_screen_y + (*crops)[*crop_value]->bot_y, (int)bot_screen_size.x, (int)bot_screen_size.y);
+	this->resize_in_rect(this->m_in_rect_bot, this->get_pos_x_screen_inside_in_tex(false) + (*crops)[*crop_value]->bot_x, this->get_pos_y_screen_inside_in_tex(false) + (*crops)[*crop_value]->bot_y, (int)bot_screen_size.x, (int)bot_screen_size.y);
 	if(get_3d_enabled(this->capture_status) && (!this->display_data->interleaved_3d)) {
-		int left_top_screen_x = this->capture_status->device.top_screen_x;
-		int left_top_screen_y = this->capture_status->device.top_screen_y;
-		int right_top_screen_x = this->capture_status->device.second_top_screen_x;
-		int right_top_screen_y = this->capture_status->device.second_top_screen_y;
+		int left_top_screen_x = this->get_pos_x_screen_inside_in_tex(true, false);
+		int left_top_screen_y = this->get_pos_y_screen_inside_in_tex(true, false);
+		int right_top_screen_x = this->get_pos_x_screen_inside_in_tex(true, true);
+		int right_top_screen_y = this->get_pos_y_screen_inside_in_tex(true, true);
 		if(!this->capture_status->device.is_second_top_screen_right) {
 			std::swap(left_top_screen_x, right_top_screen_x);
 			std::swap(left_top_screen_y, right_top_screen_y);
@@ -1549,10 +1810,19 @@ void WindowScreen::crop() {
 		this->resize_in_rect(this->m_in_rect_top_right, right_top_screen_x + (*crops)[*crop_value]->top_x, right_top_screen_y + (*crops)[*crop_value]->top_y, (int)top_screen_size.x, (int)top_screen_size.y);
 	}
 	else {
-		float x_multiplier = 1.0;
-		if(get_3d_enabled(this->capture_status) && this->display_data->interleaved_3d)
-			x_multiplier = 2.0;
-		this->resize_in_rect(this->m_in_rect_top, (int)(this->capture_status->device.top_screen_x + ((*crops)[*crop_value]->top_x * x_multiplier)), this->capture_status->device.top_screen_y + (*crops)[*crop_value]->top_y, (int)top_screen_size.x, (int)top_screen_size.y);
+		bool is_3d_interleaved = get_3d_enabled(this->capture_status) && this->display_data->interleaved_3d;
+		float x_multiplier = 1.0f;
+		if(is_3d_interleaved)
+			x_multiplier = 2.0f;
+		int starting_in_rect_x = (int)(this->get_pos_x_screen_inside_in_tex(true) + ((*crops)[*crop_value]->top_x * x_multiplier));
+		int starting_in_rect_y = (int)(this->get_pos_y_screen_inside_in_tex(true) + (*crops)[*crop_value]->top_y);
+		if(is_3d_interleaved && (!this->shared_texture_available))
+			top_screen_size.x /= 2.0f;
+		this->resize_in_rect(this->m_in_rect_top, starting_in_rect_x, starting_in_rect_y, (int)top_screen_size.x, (int)top_screen_size.y);
+		if(is_3d_interleaved && (!this->shared_texture_available)) {
+			int second_screen_x_starting_pos = std::max(0, ((int)((*crops)[*crop_value]->top_x * x_multiplier)) - TOP_WIDTH_3DS);
+			this->resize_in_rect(this->m_in_rect_top_right, second_screen_x_starting_pos, starting_in_rect_y, (int)top_screen_size.x, (int)top_screen_size.y);
+		}
 	}
 	this->loaded_operations.call_screen_settings_update = true;
 }
@@ -1572,5 +1842,14 @@ void WindowScreen::setWinSize(bool is_main_thread) {
 		this->main_thread_owns_window = is_main_thread;
 		this->m_win.setSize({(unsigned int)width, (unsigned int)height});
 		this->draw_lock->unlock();
+	}
+}
+
+void WindowScreen::process_own_out_text_data(bool print_to_notification) {
+	if(!this->own_out_text_data.consumed) {
+		ConsumeOutText(this->own_out_text_data, false);
+		if(print_to_notification)
+			this->print_notification(this->own_out_text_data.small_text, this->own_out_text_data.kind);
+		this->own_out_text_data.consumed = true;
 	}
 }

@@ -18,7 +18,7 @@ struct FileData {
 
 class FileConfigMenu : public OptionSelectionMenu {
 public:
-	FileConfigMenu(bool font_load_success, sf::Font &text_font);
+	FileConfigMenu(TextRectanglePool* text_pool);
 	~FileConfigMenu();
 	void setup_title(std::string added_name);
 	void prepare(float scaling_factor, int view_size_x, int view_size_y);

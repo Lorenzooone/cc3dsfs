@@ -70,6 +70,13 @@
 #define MAX_IN_VIDEO_SIZE (MAX_IN_VIDEO_WIDTH * MAX_IN_VIDEO_HEIGHT)
 #define MAX_IN_VIDEO_BPP_SIZE IN_VIDEO_BPP_SIZE_3DS
 
+#define MAX_IN_VIDEO_WIDTH_TOP IN_VIDEO_WIDTH_DS
+#define MAX_IN_VIDEO_HEIGHT_TOP (TOP_WIDTH_3DS + TOP_WIDTH_3DS)
+#define MAX_IN_VIDEO_WIDTH_SINGLE_TOP IN_VIDEO_WIDTH_DS
+#define MAX_IN_VIDEO_HEIGHT_SINGLE_TOP TOP_WIDTH_3DS
+#define MAX_IN_VIDEO_WIDTH_BOTTOM IN_VIDEO_WIDTH_DS
+#define MAX_IN_VIDEO_HEIGHT_BOTTOM BOT_WIDTH_3DS
+
 // 1096 is the value when things are ideal. However, it can actually happen that the transfer isn't 100% on time.
 // When that happens, a bit more audio data may get transfered. It's a ton on O3DS when Windows underprioritizes USB...
 // In general, it should be less than * 2, but you never know. For now, go for safety at x16...

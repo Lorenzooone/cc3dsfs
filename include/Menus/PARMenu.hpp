@@ -13,7 +13,7 @@
 
 class PARMenu : public OptionSelectionMenu {
 public:
-	PARMenu(bool font_load_success, sf::Font &text_font);
+	PARMenu(TextRectanglePool* text_pool);
 	~PARMenu();
 	void setup_title(std::string added_name);
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, int current_crop);

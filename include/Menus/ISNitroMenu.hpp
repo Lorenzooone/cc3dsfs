@@ -25,7 +25,7 @@ enum ISNitroMenuOutAction{
 
 class ISNitroMenu : public OptionSelectionMenu {
 public:
-	ISNitroMenu(bool font_load_success, sf::Font &text_font);
+	ISNitroMenu(TextRectanglePool* text_pool);
 	~ISNitroMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, CaptureStatus* capture_status);
 	void insert_data(CaptureDevice* device);

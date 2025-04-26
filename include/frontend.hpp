@@ -11,6 +11,7 @@
 #include "audio_data.hpp"
 #include "capture_structs.hpp"
 #include "TextRectangle.hpp"
+#include "TextRectanglePool.hpp"
 #include "sfml_gfx_structs.hpp"
 #include "ConnectionMenu.hpp"
 #include "MainMenu.hpp"
@@ -52,11 +53,19 @@ struct FPSArray {
 	int index;
 };
 
+struct OutTextData {
+	std::string full_text;
+	std::string small_text;
+	std::string preamble_name = NAME;
+	bool consumed = true;
+	TextKind kind;
+};
+
 class WindowScreen {
 public:
 	ScreenInfo m_info;
 
-	WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, SharedData* shared_data, AudioData* audio_data, ConsumerMutex *draw_lock, bool created_proper_folder);
+	WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, SharedData* shared_data, AudioData* audio_data, ConsumerMutex *draw_lock, bool created_proper_folder, bool disable_frame_blending);
 	~WindowScreen();
 
 	void build();
@@ -76,6 +85,7 @@ public:
 	void update_save_menu();
 
 	void print_notification(std::string text, TextKind kind = TEXT_KIND_NORMAL);
+	void process_own_out_text_data(bool print_to_notification = true);
 	int load_data();
 	int save_data();
 	bool open_capture();
@@ -103,6 +113,9 @@ private:
 		const PARData *par;
 		bool divide_3d_par;
 	};
+	OutTextData own_out_text_data;
+	InputVideoDataType last_update_texture_data_type;
+	bool use_texture_software_based_conv;
 	bool created_proper_folder;
 	CaptureStatus* capture_status;
 	std::string win_title;
@@ -119,7 +132,6 @@ private:
 	bool m_prepare_quit;
 	bool m_scheduled_split;
 	int ret_val;
-	bool font_load_success;
 	double frame_time;
 	DisplayData* display_data;
 	SharedData* shared_data;
@@ -190,7 +202,12 @@ private:
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_menu_change_time;
 	int curr_frame_texture_pos = 0;
 
-	sf::Texture in_tex;
+	int num_frames_to_blend;
+	sf::Texture full_in_tex;
+	bool shared_texture_available;
+	sf::Texture top_l_in_tex;
+	sf::Texture top_r_in_tex;
+	sf::Texture bot_in_tex;
 
 	sf::Font text_font;
 
@@ -212,6 +229,7 @@ private:
 	sf::VideoMode curr_desk_mode;
 
 	TextRectangle* notification;
+	TextRectanglePool* text_rectangle_pool;
 
 	ConsumerMutex display_lock;
 	ConsumerMutex *draw_lock;
@@ -230,6 +248,10 @@ private:
 	void free_ownership_of_window(bool is_main_thread);
 
 	void resize_in_rect(sf::RectangleShape &in_rect, int start_x, int start_y, int width, int height);
+	int get_pos_x_screen_inside_data(bool is_top, bool is_second = false);
+	int get_pos_y_screen_inside_data(bool is_top, bool is_second = false);
+	int get_pos_x_screen_inside_in_tex(bool is_top, bool is_second = false);
+	int get_pos_y_screen_inside_in_tex(bool is_top, bool is_second = false);
 	int get_screen_corner_modifier_x(int rotation, int width);
 	int get_screen_corner_modifier_y(int rotation, int height);
 	void print_notification_on_off(std::string base_text, bool value);
@@ -286,6 +308,10 @@ private:
 	void prepare_screen_rendering();
 	bool window_needs_work();
 	void window_factory(bool is_main_thread);
+	void opengl_error_out(std::string error_base, std::string error_str);
+	void opengl_error_check(std::string error_base);
+	bool single_update_texture(unsigned int m_texture, InputVideoDataType video_data_type, size_t pos_x_data, size_t pos_y_data, size_t width, size_t height, bool manually_converted);
+	void execute_single_update_texture(bool &manually_converted, bool do_full, bool is_top = false, bool is_second = false);
 	void update_texture();
 	int _choose_base_input_shader(bool is_top);
 	int _choose_color_emulation_shader(bool is_top);
@@ -371,32 +397,44 @@ struct FrontendData {
 	bool reload;
 };
 
+void ConsumeOutText(OutTextData &out_text_data, bool update_consumed = true);
+void UpdateOutText(OutTextData &out_text_data, std::string full_text, std::string small_text, TextKind kind);
+
 void FPSArrayInit(FPSArray *array);
 void FPSArrayDestroy(FPSArray *array);
 void FPSArrayInsertElement(FPSArray *array, double frame_time);
+
 void insert_basic_crops(std::vector<const CropData*> &crop_vector, ScreenType s_type, bool is_ds, bool allow_game_specific);
 void insert_basic_pars(std::vector<const PARData*> &par_vector);
 void insert_basic_color_profiles(std::vector<const ShaderColorEmulationData*> &color_profiles_vector);
+
 void reset_display_data(DisplayData *display_data);
 void reset_input_data(InputData* input_data);
 void reset_shared_data(SharedData* shared_data);
 void reset_fullscreen_info(ScreenInfo &info);
+
 void sanitize_enabled_info(ScreenInfo &top_bot_info, ScreenInfo &top_info, ScreenInfo &bot_info);
 void override_set_data_to_screen_info(override_win_data &override_win, ScreenInfo &info);
 void reset_screen_info(ScreenInfo &info);
 bool load_screen_info(std::string key, std::string value, std::string base, ScreenInfo &info);
 std::string save_screen_info(std::string base, const ScreenInfo &info);
+
 const PARData* get_base_par();
 void get_par_size(int &width, int &height, float multiplier_factor, const PARData *correction_factor, bool divide_3d_par);
 void get_par_size(float &width, float &height, float multiplier_factor, const PARData *correction_factor, bool divide_3d_par);
+
 SecondScreen3DRelativePosition get_second_screen_pos(ScreenInfo* info, ScreenType stype);
+
 void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL);
 void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &old_cc_device, const CaptureDevice &new_cc_device);
 void update_connected_specific_settings(FrontendData* frontend_data, const CaptureDevice &cc_device);
+
 void screen_display_thread(WindowScreen *screen);
+
 std::string get_name_non_int_mode(NonIntegerScalingModes input);
 std::string get_name_frame_blending_mode(FrameBlendingMode input);
 std::string get_name_input_colorspace_mode(InputColorspaceMode input);
 bool is_input_data_valid(InputData* input_data, bool consider_buttons);
 void default_sleep(float wanted_ms = -1);
+
 #endif

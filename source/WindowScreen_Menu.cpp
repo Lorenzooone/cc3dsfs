@@ -97,32 +97,32 @@ static double FPSArrayGetAverage(FPSArray *array) {
 
 void WindowScreen::init_menus() {
 	this->last_menu_change_time = std::chrono::high_resolution_clock::now();
-	this->connection_menu = new ConnectionMenu(this->font_load_success, this->text_font);
-	this->main_menu = new MainMenu(this->font_load_success, this->text_font);
-	this->video_menu = new VideoMenu(this->font_load_success, this->text_font);
-	this->crop_menu = new CropMenu(this->font_load_success, this->text_font);
-	this->par_menu = new PARMenu(this->font_load_success, this->text_font);
-	this->offset_menu = new OffsetMenu(this->font_load_success, this->text_font);
-	this->rotation_menu = new RotationMenu(this->font_load_success, this->text_font);
-	this->audio_menu = new AudioMenu(this->font_load_success, this->text_font);
-	this->bfi_menu = new BFIMenu(this->font_load_success, this->text_font);
-	this->relpos_menu = new RelativePositionMenu(this->font_load_success, this->text_font);
-	this->resolution_menu = new ResolutionMenu(this->font_load_success, this->text_font);
-	this->fileconfig_menu = new FileConfigMenu(this->font_load_success, this->text_font);
-	this->extra_menu = new ExtraSettingsMenu(this->font_load_success, this->text_font);
-	this->status_menu = new StatusMenu(this->font_load_success, this->text_font);
-	this->license_menu = new LicenseMenu(this->font_load_success, this->text_font);
-	this->shortcut_menu = new ShortcutMenu(this->font_load_success, this->text_font);
-	this->action_selection_menu = new ActionSelectionMenu(this->font_load_success, this->text_font);
-	this->scaling_ratio_menu = new ScalingRatioMenu(this->font_load_success, this->text_font);
-	this->is_nitro_menu = new ISNitroMenu(this->font_load_success, this->text_font);
-	this->video_effects_menu = new VideoEffectsMenu(this->font_load_success, this->text_font);
-	this->input_menu = new InputMenu(this->font_load_success, this->text_font);
-	this->audio_device_menu = new AudioDeviceMenu(this->font_load_success, this->text_font);
-	this->separator_menu = new SeparatorMenu(this->font_load_success, this->text_font);
-	this->color_correction_menu = new ColorCorrectionMenu(this->font_load_success, this->text_font);
-	this->main_3d_menu = new Main3DMenu(this->font_load_success, this->text_font);
-	this->second_screen_3d_relpos_menu = new SecondScreen3DRelativePositionMenu(this->font_load_success, this->text_font);
+	this->connection_menu = new ConnectionMenu(this->text_rectangle_pool);
+	this->main_menu = new MainMenu(this->text_rectangle_pool);
+	this->video_menu = new VideoMenu(this->text_rectangle_pool);
+	this->crop_menu = new CropMenu(this->text_rectangle_pool);
+	this->par_menu = new PARMenu(this->text_rectangle_pool);
+	this->offset_menu = new OffsetMenu(this->text_rectangle_pool);
+	this->rotation_menu = new RotationMenu(this->text_rectangle_pool);
+	this->audio_menu = new AudioMenu(this->text_rectangle_pool);
+	this->bfi_menu = new BFIMenu(this->text_rectangle_pool);
+	this->relpos_menu = new RelativePositionMenu(this->text_rectangle_pool);
+	this->resolution_menu = new ResolutionMenu(this->text_rectangle_pool);
+	this->fileconfig_menu = new FileConfigMenu(this->text_rectangle_pool);
+	this->extra_menu = new ExtraSettingsMenu(this->text_rectangle_pool);
+	this->status_menu = new StatusMenu(this->text_rectangle_pool);
+	this->license_menu = new LicenseMenu(this->text_rectangle_pool);
+	this->shortcut_menu = new ShortcutMenu(this->text_rectangle_pool);
+	this->action_selection_menu = new ActionSelectionMenu(this->text_rectangle_pool);
+	this->scaling_ratio_menu = new ScalingRatioMenu(this->text_rectangle_pool);
+	this->is_nitro_menu = new ISNitroMenu(this->text_rectangle_pool);
+	this->video_effects_menu = new VideoEffectsMenu(this->text_rectangle_pool);
+	this->input_menu = new InputMenu(this->text_rectangle_pool);
+	this->audio_device_menu = new AudioDeviceMenu(this->text_rectangle_pool);
+	this->separator_menu = new SeparatorMenu(this->text_rectangle_pool);
+	this->color_correction_menu = new ColorCorrectionMenu(this->text_rectangle_pool);
+	this->main_3d_menu = new Main3DMenu(this->text_rectangle_pool);
+	this->second_screen_3d_relpos_menu = new SecondScreen3DRelativePositionMenu(this->text_rectangle_pool);
 }
 
 void WindowScreen::destroy_menus() {

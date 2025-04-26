@@ -24,7 +24,7 @@ enum Main3DMenuOutAction{
 
 class Main3DMenu : public OptionSelectionMenu {
 public:
-	Main3DMenu(bool font_load_success, sf::Font &text_font);
+	Main3DMenu(TextRectanglePool* text_pool);
 	~Main3DMenu();
 	void prepare(float menu_scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info, DisplayData* display_data, CaptureStatus* status);
 	void insert_data(ScreenType stype);

@@ -1,7 +1,7 @@
 #include "ResolutionMenu.hpp"
 
-ResolutionMenu::ResolutionMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
-	this->initialize(font_load_success, text_font);
+ResolutionMenu::ResolutionMenu(TextRectanglePool* text_rectangle_pool) : OptionSelectionMenu(){
+	this->initialize(text_rectangle_pool);
 }
 
 ResolutionMenu::~ResolutionMenu() {

@@ -1,7 +1,7 @@
 #include "PARMenu.hpp"
 
-PARMenu::PARMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
-	this->initialize(font_load_success, text_font);
+PARMenu::PARMenu(TextRectanglePool* text_rectangle_pool) : OptionSelectionMenu(){
+	this->initialize(text_rectangle_pool);
 }
 
 PARMenu::~PARMenu() {

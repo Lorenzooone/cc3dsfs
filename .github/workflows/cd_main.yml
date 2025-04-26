@@ -16,9 +16,9 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-        - { name: Windows VS2022 x64,    os: windows-2022, flags: -A x64, artifact_name: win64}
-        - { name: Windows VS2022 ARM,    os: windows-2022, flags: -A ARM64, artifact_name: winarm64}
-        - { name: Windows VS2022 Win32,  os: windows-2022, flags: -A Win32, artifact_name: win32}
+        - { name: Windows VS2022 x64,    os: windows-2022, flags: -A x64 -DCMAKE_PARALLEL_MSVC=TRUE, artifact_name: win64}
+        - { name: Windows VS2022 ARM,    os: windows-2022, flags: -A ARM64 -DCMAKE_PARALLEL_MSVC=TRUE, artifact_name: winarm64}
+        - { name: Windows VS2022 Win32,  os: windows-2022, flags: -A Win32 -DCMAKE_PARALLEL_MSVC=TRUE, artifact_name: win32}
         - { name: Linux GCC x64,         os: ubuntu-latest, flags: 64, artifact_name: linux64}
         - { name: Linux GCC 32,          os: ubuntu-latest, flags: 32, artifact_name: linux32}
         - { name: Linux GCC ARM 64,      os: ubuntu-latest, flags: arm64, artifact_name: linuxarm64}

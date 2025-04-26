@@ -111,9 +111,58 @@ struct SharedData {
 	InputData input_data;
 };
 
-struct ALIGNED(8) VideoOutputData {
-	uint8_t screen_data[MAX_IN_VIDEO_SIZE][3];
+#pragma pack(push, 1)
+
+// The internal order needs to be reversed... This is so confusing...
+struct PACKED ALIGNED(2) VideoPixelRGB16 {
+	uint16_t b : 5;
+	uint16_t g : 6;
+	uint16_t r : 5;
 };
+
+// The internal order needs to be reversed... This is so confusing...
+struct PACKED ALIGNED(2) VideoPixelBGR16 {
+	uint16_t r : 5;
+	uint16_t g : 6;
+	uint16_t b : 5;
+};
+
+struct PACKED VideoPixelRGB {
+	uint8_t r;
+	uint8_t g;
+	uint8_t b;
+};
+
+struct PACKED VideoPixelBGR {
+	uint8_t b;
+	uint8_t g;
+	uint8_t r;
+};
+
+struct PACKED ALIGNED(16) VideoOutputDataRGB16 {
+	VideoPixelRGB16 screen_data[MAX_IN_VIDEO_SIZE];
+};
+
+struct PACKED ALIGNED(16) VideoOutputDataBGR16 {
+	VideoPixelBGR16 screen_data[MAX_IN_VIDEO_SIZE];
+};
+
+struct PACKED ALIGNED(16) VideoOutputDataRGB {
+	VideoPixelRGB screen_data[MAX_IN_VIDEO_SIZE];
+};
+
+struct PACKED ALIGNED(16) VideoOutputDataBGR {
+	VideoPixelBGR screen_data[MAX_IN_VIDEO_SIZE];
+};
+
+union PACKED ALIGNED(16) VideoOutputData {
+	VideoOutputDataRGB16 rgb16_video_output_data;
+	VideoOutputDataBGR16 bgr16_video_output_data;
+	VideoOutputDataRGB rgb_video_output_data;
+	VideoOutputDataBGR bgr_video_output_data;
+};
+
+#pragma pack(pop)
 
 struct CropData {
 	int top_width;

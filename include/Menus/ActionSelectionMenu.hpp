@@ -14,7 +14,7 @@
 
 class ActionSelectionMenu : public OptionSelectionMenu {
 public:
-	ActionSelectionMenu(bool font_load_success, sf::Font &text_font);
+	ActionSelectionMenu(TextRectanglePool* text_pool);
 	~ActionSelectionMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, PossibleWindowCommands curr_cmd);
 	void insert_data(std::vector<const WindowCommand*> &possible_actions);

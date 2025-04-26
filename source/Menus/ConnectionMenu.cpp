@@ -1,7 +1,7 @@
 #include "ConnectionMenu.hpp"
 
-ConnectionMenu::ConnectionMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
-	this->initialize(font_load_success, text_font);
+ConnectionMenu::ConnectionMenu(TextRectanglePool* text_rectangle_pool) : OptionSelectionMenu(){
+	this->initialize(text_rectangle_pool);
 }
 
 ConnectionMenu::~ConnectionMenu() {

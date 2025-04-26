@@ -5,6 +5,7 @@
 #include <chrono>
 
 #include "TextRectangle.hpp"
+#include "TextRectanglePool.hpp"
 #include "display_structs.hpp"
 #include "event_structs.hpp"
 
@@ -19,7 +20,7 @@ enum RelPosMenuOutAction{
 class RelativePositionMenu {
 public:
 	RelativePositionMenu();
-	RelativePositionMenu(bool font_load_success, sf::Font &text_font);
+	RelativePositionMenu(TextRectanglePool* text_pool);
 	virtual ~RelativePositionMenu();
 	bool poll(SFEvent &event_data);
 	void draw(float scaling_factor, sf::RenderTarget &window);
@@ -57,12 +58,13 @@ protected:
 	sf::Color menu_color;
 	std::string title;
 
-	void initialize(bool font_load_success, sf::Font &text_font);
+	void initialize(TextRectanglePool* text_pool);
 	void prepare_options();
 	void base_prepare(float menu_scaling_factor, int view_size_x, int view_size_y);
 	void prepare_text_slices(int x_multiplier, int x_divisor, int y_multiplier, int y_divisor, int index, float text_scaling_factor, bool center = false);
 
 	virtual bool is_option_selectable(int index);
+	virtual bool is_option_drawable(int index);
 	virtual void set_output_option(int index);
 	virtual std::string get_string_option(int index);
 	virtual void class_setup();

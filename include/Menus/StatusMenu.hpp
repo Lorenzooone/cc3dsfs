@@ -16,7 +16,7 @@ enum StatusMenuOutAction{
 
 class StatusMenu : public OptionSelectionMenu {
 public:
-	StatusMenu(bool font_load_success, sf::Font &text_font);
+	StatusMenu(TextRectanglePool* text_pool);
 	~StatusMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, double in_fps, double poll_fps, double draw_fps, CaptureStatus* capture_status);
 	void insert_data();

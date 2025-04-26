@@ -5,6 +5,7 @@
 #include <chrono>
 
 #include "TextRectangle.hpp"
+#include "TextRectanglePool.hpp"
 #include "event_structs.hpp"
 
 #define BACK_X_OUTPUT_OPTION -1
@@ -50,7 +51,7 @@ protected:
 	int single_option_multiplier;
 
 	int get_num_pages();
-	void initialize(bool font_load_success, sf::Font &text_font);
+	void initialize(TextRectanglePool* text_pool);
 	void prepare_options();
 	void base_prepare(float menu_scaling_factor, int view_size_x, int view_size_y);
 	std::string setTextOptionInt(int index, int value);

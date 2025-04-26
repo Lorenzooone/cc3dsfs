@@ -35,9 +35,9 @@ static const VideoEffectsMenuOptionInfo* pollable_options[] = {
 &color_correction_menu_option,
 };
 
-VideoEffectsMenu::VideoEffectsMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
+VideoEffectsMenu::VideoEffectsMenu(TextRectanglePool* text_rectangle_pool) : OptionSelectionMenu(){
 	this->options_indexes = new int[NUM_TOTAL_MENU_OPTIONS];
-	this->initialize(font_load_success, text_font);
+	this->initialize(text_rectangle_pool);
 	this->num_enabled_options = 0;
 }
 

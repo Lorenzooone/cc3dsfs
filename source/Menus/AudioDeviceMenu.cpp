@@ -1,7 +1,7 @@
 #include "AudioDeviceMenu.hpp"
 
-AudioDeviceMenu::AudioDeviceMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
-	this->initialize(font_load_success, text_font);
+AudioDeviceMenu::AudioDeviceMenu(TextRectanglePool* text_rectangle_pool) : OptionSelectionMenu(){
+	this->initialize(text_rectangle_pool);
 }
 
 AudioDeviceMenu::~AudioDeviceMenu() {

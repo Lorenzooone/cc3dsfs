@@ -20,7 +20,7 @@ enum SecondScreen3DRelPosMenuOutAction{
 
 class SecondScreen3DRelativePositionMenu : public RelativePositionMenu {
 public:
-	SecondScreen3DRelativePositionMenu(bool font_load_success, sf::Font &text_font);
+	SecondScreen3DRelativePositionMenu(TextRectanglePool* text_pool);
 	~SecondScreen3DRelativePositionMenu();
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_input_processed_time;
 	void reset_output_option();
@@ -29,6 +29,7 @@ public:
 	SecondScreen3DRelPosMenuOutAction selected_index = SecondScreen3DRelPosMenuOutAction::SECOND_SCREEN_3D_REL_POS_MENU_NO_ACTION;
 	SecondScreen3DRelativePosition selected_confirm_value = SECOND_SCREEN_3D_REL_POS_END;
 protected:
+	bool is_option_drawable(int index);
 	bool is_option_selectable(int index);
 	void set_output_option(int index);
 	std::string get_string_option(int index);

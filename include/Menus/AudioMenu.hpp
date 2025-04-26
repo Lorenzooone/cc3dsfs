@@ -26,7 +26,7 @@ enum AudioMenuOutAction{
 
 class AudioMenu : public OptionSelectionMenu {
 public:
-	AudioMenu(bool font_load_success, sf::Font &text_font);
+	AudioMenu(TextRectanglePool* text_pool);
 	~AudioMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, AudioData *audio_data);
 	void insert_data();

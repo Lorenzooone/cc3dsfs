@@ -18,7 +18,7 @@ enum ExtraSettingsMenuOutAction{
 
 class ExtraSettingsMenu : public OptionSelectionMenu {
 public:
-	ExtraSettingsMenu(bool font_load_success, sf::Font &text_font);
+	ExtraSettingsMenu(TextRectanglePool* text_pool);
 	~ExtraSettingsMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y);
 	void insert_data(ScreenType s_type, bool is_fullscreen);

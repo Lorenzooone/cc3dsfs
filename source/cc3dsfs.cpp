@@ -29,17 +29,11 @@
 #define NO_DATA_CONSECUTIVE_THRESHOLD 4
 #define TIME_AUDIO_DEVICE_CHECK 0.25
 
-struct OutTextData {
-	std::string full_text;
-	std::string small_text;
-	bool consumed;
-	TextKind kind;
-};
-
 struct override_all_data {
 	override_win_data override_top_bot_data;
 	override_win_data override_top_data;
 	override_win_data override_bot_data;
+	bool disable_frame_blending = false;
 	bool no_audio = false;
 	int volume = DEFAULT_NO_VOLUME_VALUE;
 	bool always_prevent_mouse_showing = false;
@@ -50,20 +44,6 @@ struct override_all_data {
 	bool recovery_mode = false;
 	bool quit_on_first_connection_failure = false;
 };
-
-static void ConsoleOutText(std::string full_text) {
-	if(full_text != "")
-		std::cout << "[" << NAME << "] " << full_text << std::endl;
-}
-
-static void UpdateOutText(OutTextData &out_text_data, std::string full_text, std::string small_text, TextKind kind) {
-	if(!out_text_data.consumed)
-		ConsoleOutText(out_text_data.full_text);
-	out_text_data.full_text = full_text;
-	out_text_data.small_text = small_text;
-	out_text_data.kind = kind;
-	out_text_data.consumed = false;
-}
 
 static void SuccessConnectionOutTextGenerator(OutTextData &out_text_data, CaptureData* capture_data) {
 	if(capture_data->status.connected)
@@ -528,7 +508,6 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	bool skip_io = false;
 	int num_allowed_blanks = MAX_ALLOWED_BLANKS;
 	OutTextData out_text_data;
-	out_text_data.consumed = true;
 	int ret_val = 0;
 	int poll_timeout = 0;
 	const bool endianness = is_big_endian();
@@ -537,9 +516,9 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	memset(out_buf, 0, sizeof(VideoOutputData));
 
 	draw_lock.unlock();
-	WindowScreen *top_screen = new WindowScreen(ScreenType::TOP, &capture_data->status, &frontend_data.display_data, &frontend_data.shared_data, audio_data, &draw_lock, created_proper_folder);
-	WindowScreen *bot_screen = new WindowScreen(ScreenType::BOTTOM, &capture_data->status, &frontend_data.display_data, &frontend_data.shared_data, audio_data, &draw_lock, created_proper_folder);
-	WindowScreen *joint_screen = new WindowScreen(ScreenType::JOINT, &capture_data->status, &frontend_data.display_data, &frontend_data.shared_data, audio_data, &draw_lock, created_proper_folder);
+	WindowScreen *top_screen = new WindowScreen(ScreenType::TOP, &capture_data->status, &frontend_data.display_data, &frontend_data.shared_data, audio_data, &draw_lock, created_proper_folder, override_data.disable_frame_blending);
+	WindowScreen *bot_screen = new WindowScreen(ScreenType::BOTTOM, &capture_data->status, &frontend_data.display_data, &frontend_data.shared_data, audio_data, &draw_lock, created_proper_folder, override_data.disable_frame_blending);
+	WindowScreen *joint_screen = new WindowScreen(ScreenType::JOINT, &capture_data->status, &frontend_data.display_data, &frontend_data.shared_data, audio_data, &draw_lock, created_proper_folder, override_data.disable_frame_blending);
 	frontend_data.top_screen = top_screen;
 	frontend_data.bot_screen = bot_screen;
 	frontend_data.joint_screen = joint_screen;
@@ -696,8 +675,11 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 			capture_data->status.new_error_text = false;
 		}
 
+		top_screen->process_own_out_text_data();
+		bot_screen->process_own_out_text_data();
+		joint_screen->process_own_out_text_data();
 		if((!out_text_data.consumed) && (!frontend_data.reload)) {
-			ConsoleOutText(out_text_data.full_text);
+			ConsumeOutText(out_text_data, false);
 			top_screen->print_notification(out_text_data.small_text, out_text_data.kind);
 			bot_screen->print_notification(out_text_data.small_text, out_text_data.kind);
 			joint_screen->print_notification(out_text_data.small_text, out_text_data.kind);
@@ -719,10 +701,10 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 
 	save_layout_file(override_data.loaded_profile, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, false, created_proper_folder);
 
-	if(!out_text_data.consumed) {
-		ConsoleOutText(out_text_data.full_text);
-		out_text_data.consumed = true;
-	}
+	top_screen->process_own_out_text_data(false);
+	bot_screen->process_own_out_text_data(false);
+	joint_screen->process_own_out_text_data(false);
+	ConsumeOutText(out_text_data);
 
 	delete out_buf;
 	return ret_val;
@@ -801,6 +783,8 @@ int main(int argc, char **argv) {
 			continue;
 		if(parse_existence_arg(i, argv, override_data.recovery_mode, true, "--recovery_mode"))
 			continue;
+		if(parse_existence_arg(i, argv, override_data.disable_frame_blending, true, "--no_frame_blend"))
+			continue;
 		if(parse_int_arg(i, argc, argv, override_data.override_top_bot_data.pos_x, "--pos_x_both"))
 			continue;
 		if(parse_int_arg(i, argc, argv, override_data.override_top_bot_data.pos_y, "--pos_y_both"))
@@ -852,41 +836,43 @@ int main(int argc, char **argv) {
 			continue;
 		#endif
 		std::cout << "Help:" << std::endl;
-		std::cout << "  --mono_app       Enables special mode for when only this application" << std::endl;
-		std::cout << "                   should run on the system. Disabled by default." << std::endl;
-		std::cout << "  --recovery_mode  Resets to the defaults." << std::endl;
-		std::cout << "  --pos_x_both     Set default x position for the window with both screens." << std::endl;
-		std::cout << "  --pos_y_both     Set default y position for the window with both screens." << std::endl;
-		std::cout << "  --scaling_both   Overrides the scale factor for the window with both screens." << std::endl;
-		std::cout << "  --enabled_both   Overrides the presence of the window with both screens." << std::endl;
-		std::cout << "                   1 On, 0 Off." << std::endl;
-		std::cout << "  --pos_x_top      Set default x position for the top screen's window." << std::endl;
-		std::cout << "  --pos_y_top      Set default y position for the top screen's window." << std::endl;
-		std::cout << "  --scaling_top    Overrides the top screen window's scale factor." << std::endl;
-		std::cout << "  --enabled_top    Overrides the presence of the top screen's window." << std::endl;
-		std::cout << "                   1 On, 0 Off." << std::endl;
-		std::cout << "  --pos_x_bot      Set default x position for the bottom screen's window." << std::endl;
-		std::cout << "  --pos_y_bot      Set default y position for the bottom screen's window." << std::endl;
-		std::cout << "  --scaling_bot    Overrides the bottom screen window's scale factor." << std::endl;
-		std::cout << "  --enabled_bot    Overrides the presence of the bottom screen's window." << std::endl;
-		std::cout << "                   1 On, 0 Off." << std::endl;
-		std::cout << "  --volume         Overrides the saved volume for the audio. 0 - 200" << std::endl;
-		std::cout << "  --no_audio       Disables audio output and processing completely." << std::endl;
-		std::cout << "  --no_cursor      Prevents the mouse cursor from showing, unless moved." << std::endl;
-		std::cout << "  --auto_connect   Automatically connects to the first available device," << std::endl;
-		std::cout << "                   even if multiple are present." << std::endl;
-		std::cout << "  --failure_close  Automatically closes the software if the first connection" << std::endl;
-		std::cout << "                   doesn't succeed." << std::endl;
-		std::cout << "  --auto_close     Automatically closes the software on disconnect." << std::endl;
-		std::cout << "  --profile        Loads the profile with the specified ID at startup" << std::endl;
-		std::cout << "                   instead of the default one. When the program closes," << std::endl;
-		std::cout << "                   the data is also saved to the specified profile." << std::endl;
+		std::cout << "  --mono_app        Enables special mode for when only this application" << std::endl;
+		std::cout << "                    should run on the system. Disabled by default." << std::endl;
+		std::cout << "  --recovery_mode   Resets to the defaults." << std::endl;
+		std::cout << "  --pos_x_both      Set default x position for the window with both screens." << std::endl;
+		std::cout << "  --pos_y_both      Set default y position for the window with both screens." << std::endl;
+		std::cout << "  --scaling_both    Overrides the scale factor for the window with both screens." << std::endl;
+		std::cout << "  --enabled_both    Overrides the presence of the window with both screens." << std::endl;
+		std::cout << "                    1 On, 0 Off." << std::endl;
+		std::cout << "  --pos_x_top       Set default x position for the top screen's window." << std::endl;
+		std::cout << "  --pos_y_top       Set default y position for the top screen's window." << std::endl;
+		std::cout << "  --scaling_top     Overrides the top screen window's scale factor." << std::endl;
+		std::cout << "  --enabled_top     Overrides the presence of the top screen's window." << std::endl;
+		std::cout << "                    1 On, 0 Off." << std::endl;
+		std::cout << "  --pos_x_bot       Set default x position for the bottom screen's window." << std::endl;
+		std::cout << "  --pos_y_bot       Set default y position for the bottom screen's window." << std::endl;
+		std::cout << "  --scaling_bot     Overrides the bottom screen window's scale factor." << std::endl;
+		std::cout << "  --enabled_bot     Overrides the presence of the bottom screen's window." << std::endl;
+		std::cout << "                    1 On, 0 Off." << std::endl;
+		std::cout << "  --no_frame_blend  Disables support for frame blending shader." << std::endl;
+		std::cout << "                    May improve compatibility with lower end hardware." << std::endl;
+		std::cout << "  --volume          Overrides the saved volume for the audio. 0 - 200" << std::endl;
+		std::cout << "  --no_audio        Disables audio output and processing completely." << std::endl;
+		std::cout << "  --no_cursor       Prevents the mouse cursor from showing, unless moved." << std::endl;
+		std::cout << "  --auto_connect    Automatically connects to the first available device," << std::endl;
+		std::cout << "                    even if multiple are present." << std::endl;
+		std::cout << "  --failure_close   Automatically closes the software if the first connection" << std::endl;
+		std::cout << "                    doesn't succeed." << std::endl;
+		std::cout << "  --auto_close      Automatically closes the software on disconnect." << std::endl;
+		std::cout << "  --profile         Loads the profile with the specified ID at startup" << std::endl;
+		std::cout << "                    instead of the default one. When the program closes," << std::endl;
+		std::cout << "                    the data is also saved to the specified profile." << std::endl;
 		#ifdef RASPI
-		std::cout << "  --pi_select ID   Specifies ID for the select GPIO button." << std::endl;
-		std::cout << "  --pi_menu ID     Specifies ID for the menu GPIO button." << std::endl;
-		std::cout << "  --pi_enter ID    Specifies ID for the enter GPIO button." << std::endl;
-		std::cout << "  --pi_power ID    Specifies ID for the poweroff GPIO button." << std::endl;
-		std::cout << "  --pi_pud_down    Sets the pull-up GPIO mode to down. Default is up." << std::endl;
+		std::cout << "  --pi_select ID    Specifies ID for the select GPIO button." << std::endl;
+		std::cout << "  --pi_menu ID      Specifies ID for the menu GPIO button." << std::endl;
+		std::cout << "  --pi_enter ID     Specifies ID for the enter GPIO button." << std::endl;
+		std::cout << "  --pi_power ID     Specifies ID for the poweroff GPIO button." << std::endl;
+		std::cout << "  --pi_pud_down     Sets the pull-up GPIO mode to down. Default is up." << std::endl;
 		#endif
 		return 0;
 	}

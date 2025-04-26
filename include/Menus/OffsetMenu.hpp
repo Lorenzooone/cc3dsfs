@@ -23,7 +23,7 @@ enum OffsetMenuOutAction{
 
 class OffsetMenu : public OptionSelectionMenu {
 public:
-	OffsetMenu(bool font_load_success, sf::Font &text_font);
+	OffsetMenu(TextRectanglePool* text_pool);
 	~OffsetMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info);
 	void insert_data();

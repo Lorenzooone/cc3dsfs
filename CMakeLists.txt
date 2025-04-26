@@ -1,10 +1,24 @@
 cmake_minimum_required(VERSION 3.16)
 set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build archs for Mac OS X" FORCE)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum OS X deployment version")
+set(CMAKE_PARALLEL_MSVC FALSE CACHE BOOL "Enables parallel compilation with MSVC")
+
+#Workaround due to cmake parallel being broken, and needing to set these
+#flags before the project is defined...
+if(${CMAKE_PARALLEL_MSVC})
+	message("Parallel build MSVC configuration")
+	set(CMAKE_C_FLAGS_INIT "${CMAKE_C_FLAGS_INIT} /MP")
+	set(CMAKE_CXX_FLAGS_INIT "${CMAKE_CXX_FLAGS_INIT} /MP")
+endif()
+
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 set(TARGET_LANGUAGES CXX C)
 project(cc3dsfs VERSION 1.0.0 LANGUAGES ${TARGET_LANGUAGES})
 include(ExternalProject)
+
+if((${CMAKE_PARALLEL_MSVC}) AND (NOT (MSVC)))
+	message(FATAL_ERROR "Parallel build option specific to MSVC used with wrong compiler!")
+endif()
 
 set(N3DSXL_LOOPY_SUPPORT 1)
 set(NEW_DS_LOOPY_SUPPORT 1)
@@ -57,6 +71,7 @@ else()
 	list(APPEND EXTRA_CXX_FLAGS "-Wno-ignored-qualifiers")
 	list(APPEND EXTRA_CXX_FLAGS "-Wno-missing-field-initializers")
 endif()
+
 set(RASPBERRY_PI_COMPILATION FALSE CACHE BOOL "Option for compiling the Raspberry Pi GPIO library in")
 set(SFML_BUILD_NETWORK FALSE)
 set(EXTRA_LIBRARIES "")
@@ -532,7 +547,7 @@ else()
 	set_source_files_properties(source/conversions.cpp PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:Release>:-O3;-funroll-loops>")
 endif()
 
-add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp source/Menus/ScalingRatioMenu.cpp source/Menus/ISNitroMenu.cpp source/Menus/VideoEffectsMenu.cpp source/CaptureDataBuffers.cpp source/Menus/InputMenu.cpp source/Menus/AudioDeviceMenu.cpp source/Menus/SeparatorMenu.cpp source/Menus/ColorCorrectionMenu.cpp source/Menus/Main3DMenu.cpp source/Menus/SecondScreen3DRelativePositionMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp ${TOOLS_DATA_DIR}/shaders_list.cpp ${SOURCE_CPP_EXTRA_FILES})
+add_executable(${OUTPUT_NAME} source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/TextRectanglePool.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp source/Menus/ScalingRatioMenu.cpp source/Menus/ISNitroMenu.cpp source/Menus/VideoEffectsMenu.cpp source/CaptureDataBuffers.cpp source/Menus/InputMenu.cpp source/Menus/AudioDeviceMenu.cpp source/Menus/SeparatorMenu.cpp source/Menus/ColorCorrectionMenu.cpp source/Menus/Main3DMenu.cpp source/Menus/SecondScreen3DRelativePositionMenu.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp ${TOOLS_DATA_DIR}/shaders_list.cpp ${SOURCE_CPP_EXTRA_FILES})
 
 if(NOT ("${EXTRA_DEPENDENCIES}" STREQUAL ""))
 	add_dependencies(${OUTPUT_NAME} ${EXTRA_DEPENDENCIES})

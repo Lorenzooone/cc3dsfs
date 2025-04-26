@@ -46,7 +46,7 @@ enum VideoMenuOutAction{
 
 class VideoMenu : public OptionSelectionMenu {
 public:
-	VideoMenu(bool font_load_success, sf::Font &text_font);
+	VideoMenu(TextRectanglePool* text_pool);
 	~VideoMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info, ScreenType screen_type);
 	void insert_data(ScreenType s_type, bool is_fullscreen, bool can_have_titlebar);

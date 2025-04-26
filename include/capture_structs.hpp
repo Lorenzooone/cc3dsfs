@@ -46,17 +46,18 @@ struct PACKED RGB83DSVideoInputData_3D {
 	uint8_t screen_data[IN_VIDEO_SIZE_3DS_3D][3];
 };
 
-#define OLD_DS_PIXEL_B_BITS 5
-#define OLD_DS_PIXEL_G_BITS 6
 #define OLD_DS_PIXEL_R_BITS 5
+#define OLD_DS_PIXEL_G_BITS 6
+#define OLD_DS_PIXEL_B_BITS 5
 
-struct PACKED USBOldDSPixelData {
-	uint16_t b : OLD_DS_PIXEL_B_BITS;
-	uint16_t g : OLD_DS_PIXEL_G_BITS;
+// The internal order needs to be reversed... This is so confusing...
+struct PACKED ALIGNED(2) USBOldDSPixelData {
 	uint16_t r : OLD_DS_PIXEL_R_BITS;
+	uint16_t g : OLD_DS_PIXEL_G_BITS;
+	uint16_t b : OLD_DS_PIXEL_B_BITS;
 };
 
-struct PACKED USBOldDSVideoInputData {
+struct PACKED ALIGNED(2) USBOldDSVideoInputData {
 	USBOldDSPixelData screen_data[IN_VIDEO_SIZE_DS];
 };
 
@@ -64,10 +65,11 @@ struct PACKED USBOldDSVideoInputData {
 #define OPTIMIZE_3DS_PIXEL_G_BITS 6
 #define OPTIMIZE_3DS_PIXEL_B_BITS 5
 
-struct PACKED USB5653DSOptimizePixelData {
-	uint16_t r : OPTIMIZE_3DS_PIXEL_R_BITS;
-	uint16_t g : OPTIMIZE_3DS_PIXEL_G_BITS;
+// The internal order needs to be reversed... This is so confusing...
+struct PACKED ALIGNED(2) USB5653DSOptimizePixelData {
 	uint16_t b : OPTIMIZE_3DS_PIXEL_B_BITS;
+	uint16_t g : OPTIMIZE_3DS_PIXEL_G_BITS;
+	uint16_t r : OPTIMIZE_3DS_PIXEL_R_BITS;
 };
 
 struct PACKED USB8883DSOptimizePixelData {
@@ -100,22 +102,22 @@ struct PACKED USB3DSOptimizeHeaderSoundData {
 	USB3DSOptimizeSingleSoundData samples[2];
 };
 
-struct PACKED USB5653DSOptimizeInputColumnData {
+struct PACKED ALIGNED(16) USB5653DSOptimizeInputColumnData {
 	USB3DSOptimizeHeaderSoundData header_sound;
 	USB5653DSOptimizePixelData pixel[HEIGHT_3DS][2];
 };
 
-struct PACKED USB5653DSOptimizeInputColumnData3D {
+struct PACKED ALIGNED(16) USB5653DSOptimizeInputColumnData3D {
 	USB3DSOptimizeHeaderSoundData header_sound;
 	USB5653DSOptimizePixelData pixel[HEIGHT_3DS][3];
 };
 
-struct PACKED USB8883DSOptimizeInputColumnData {
+struct PACKED ALIGNED(16) USB8883DSOptimizeInputColumnData {
 	USB3DSOptimizeHeaderSoundData header_sound;
 	USB8883DSOptimizePixelData pixel[HEIGHT_3DS][2];
 };
 
-struct PACKED USB8883DSOptimizeInputColumnData3D {
+struct PACKED ALIGNED(16) USB8883DSOptimizeInputColumnData3D {
 	USB3DSOptimizeHeaderSoundData header_sound;
 	USB8883DSOptimizePixelData pixel[HEIGHT_3DS][3];
 };
@@ -124,7 +126,7 @@ struct PACKED ISNitroEmulatorVideoInputData {
 	uint8_t screen_data[IN_VIDEO_SIZE_DS][3];
 };
 
-struct PACKED ISTWLCaptureVideoInputData {
+struct PACKED ALIGNED(2) ISTWLCaptureVideoInputData {
 	USBOldDSPixelData screen_data[IN_VIDEO_SIZE_DS];
 	uint8_t bit_6_rb_screen_data[(IN_VIDEO_SIZE_DS >> 3) * 2];
 };

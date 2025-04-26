@@ -20,7 +20,7 @@ enum VideoEffectsMenuOutAction{
 
 class VideoEffectsMenu : public OptionSelectionMenu {
 public:
-	VideoEffectsMenu(bool font_load_success, sf::Font &text_font);
+	VideoEffectsMenu(TextRectanglePool* text_pool);
 	~VideoEffectsMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info);
 	void insert_data();

@@ -32,7 +32,7 @@ enum MainMenuOutAction{
 
 class MainMenu : public OptionSelectionMenu {
 public:
-	MainMenu(bool font_load_success, sf::Font &text_font);
+	MainMenu(TextRectanglePool* text_pool);
 	~MainMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, bool connected);
 	void insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_mode, CaptureDevice* device, bool connected);

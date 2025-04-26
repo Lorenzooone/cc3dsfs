@@ -14,7 +14,7 @@
 
 class AudioDeviceMenu : public OptionSelectionMenu {
 public:
-	AudioDeviceMenu(bool font_load_success, sf::Font &text_font);
+	AudioDeviceMenu(TextRectanglePool* text_pool);
 	~AudioDeviceMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, const audio_output_device_data curr_device_data);
 	void insert_data(std::vector<std::string>* possible_devices);

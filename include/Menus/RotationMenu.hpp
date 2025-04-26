@@ -21,7 +21,7 @@ enum RotationMenuOutAction{
 
 class RotationMenu : public OptionSelectionMenu {
 public:
-	RotationMenu(bool font_load_success, sf::Font &text_font);
+	RotationMenu(TextRectanglePool* text_pool);
 	~RotationMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info);
 	void insert_data();

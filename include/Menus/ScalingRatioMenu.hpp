@@ -22,7 +22,7 @@ enum ScalingRatioMenuOutAction{
 
 class ScalingRatioMenu : public OptionSelectionMenu {
 public:
-	ScalingRatioMenu(bool font_load_success, sf::Font &text_font);
+	ScalingRatioMenu(TextRectanglePool* text_pool);
 	~ScalingRatioMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info);
 	void insert_data();

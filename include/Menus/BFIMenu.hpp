@@ -20,7 +20,7 @@ enum BFIMenuOutAction{
 
 class BFIMenu : public OptionSelectionMenu {
 public:
-	BFIMenu(bool font_load_success, sf::Font &text_font);
+	BFIMenu(TextRectanglePool* text_pool);
 	~BFIMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info);
 	void insert_data();

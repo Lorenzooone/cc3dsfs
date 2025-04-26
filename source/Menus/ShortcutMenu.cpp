@@ -1,7 +1,7 @@
 #include "ShortcutMenu.hpp"
 
-ShortcutMenu::ShortcutMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
-	this->initialize(font_load_success, text_font);
+ShortcutMenu::ShortcutMenu(TextRectanglePool* text_rectangle_pool) : OptionSelectionMenu(){
+	this->initialize(text_rectangle_pool);
 }
 
 ShortcutMenu::~ShortcutMenu() {

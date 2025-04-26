@@ -5,25 +5,24 @@ OptionSelectionMenu::OptionSelectionMenu() {
 }
 
 OptionSelectionMenu::~OptionSelectionMenu() {
-	for(int i = 0; i < this->num_elements_displayed_per_screen; i++)
-		delete this->labels[i];
 	delete []this->labels;
 	delete []this->selectable_labels;
 	delete []this->future_enabled_labels;
 	delete []this->loaded_enabled_labels;
 }
 
-void OptionSelectionMenu::initialize(bool font_load_success, sf::Font &text_font) {
+void OptionSelectionMenu::initialize(TextRectanglePool* text_pool) {
 	this->class_setup();
 	this->after_class_setup_connected_values();
 	this->menu_rectangle.setFillColor(this->menu_color);
 	this->menu_rectangle.setPosition({1, 1});
+	text_pool->request_num_text_rectangles(this->num_elements_displayed_per_screen);
 	this->labels = new TextRectangle*[this->num_elements_displayed_per_screen];
 	this->selectable_labels = new bool[this->num_elements_displayed_per_screen];
 	this->future_enabled_labels = new bool[this->num_elements_displayed_per_screen];
 	this->loaded_enabled_labels = new bool[this->num_elements_displayed_per_screen];
 	for(int i = 0; i < this->num_elements_displayed_per_screen; i++) {
-		this->labels[i] = new TextRectangle(font_load_success, text_font);
+		this->labels[i] = text_pool->get_text_rectangle(i);
 		this->labels[i]->setProportionalBox(false);
 		this->labels[i]->setText(std::to_string(i));
 		this->labels[i]->setShowText(true);

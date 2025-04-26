@@ -83,9 +83,9 @@ static const Main3DMenuOptionInfo* pollable_options[] = {
 &main_3d_menu_second_screen_position_settings_option,
 };
 
-Main3DMenu::Main3DMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
+Main3DMenu::Main3DMenu(TextRectanglePool* text_rectangle_pool) : OptionSelectionMenu(){
 	this->options_indexes = new int[NUM_TOTAL_MENU_OPTIONS];
-	this->initialize(font_load_success, text_font);
+	this->initialize(text_rectangle_pool);
 	this->num_enabled_options = 0;
 }
 

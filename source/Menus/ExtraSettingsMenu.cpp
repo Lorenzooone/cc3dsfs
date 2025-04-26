@@ -58,9 +58,9 @@ static const ExtraSettingsMenuOptionInfo* pollable_options[] = {
 &quit_option,
 };
 
-ExtraSettingsMenu::ExtraSettingsMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
+ExtraSettingsMenu::ExtraSettingsMenu(TextRectanglePool* text_rectangle_pool) : OptionSelectionMenu(){
 	this->options_indexes = new int[NUM_TOTAL_MENU_OPTIONS];
-	this->initialize(font_load_success, text_font);
+	this->initialize(text_rectangle_pool);
 	this->num_enabled_options = 0;
 }
 

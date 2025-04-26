@@ -1,6 +1,7 @@
 #include "frontend.hpp"
 #include <cmath>
 #include <thread>
+#include <iostream>
 #include <SFML/System.hpp>
 
 const CropData default_3ds_crop = {
@@ -1176,4 +1177,25 @@ std::string get_name_input_colorspace_mode(InputColorspaceMode input) {
 			break;
 	}
 	return output;
+}
+
+static void ConsoleOutText(std::string full_text, std::string preamble_name) {
+	if(full_text != "")
+		std::cout << "[" << preamble_name << "] " << full_text << std::endl;
+}
+
+void ConsumeOutText(OutTextData &out_text_data, bool update_consumed) {
+	if(!out_text_data.consumed)
+		ConsoleOutText(out_text_data.full_text, out_text_data.preamble_name);
+	if(update_consumed)
+		out_text_data.consumed = true;
+}
+
+void UpdateOutText(OutTextData &out_text_data, std::string full_text, std::string small_text, TextKind kind) {
+	if(!out_text_data.consumed)
+		ConsumeOutText(out_text_data);
+	out_text_data.full_text = full_text;
+	out_text_data.small_text = small_text;
+	out_text_data.kind = kind;
+	out_text_data.consumed = false;
 }

@@ -1,7 +1,7 @@
 #include "CropMenu.hpp"
 
-CropMenu::CropMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
-	this->initialize(font_load_success, text_font);
+CropMenu::CropMenu(TextRectanglePool* text_rectangle_pool) : OptionSelectionMenu(){
+	this->initialize(text_rectangle_pool);
 }
 
 CropMenu::~CropMenu() {

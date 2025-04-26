@@ -66,8 +66,8 @@ static const RelativePositionMenuOptionInfo* pollable_options[] = {
 RelativePositionMenu::RelativePositionMenu() {
 }
 
-RelativePositionMenu::RelativePositionMenu(bool font_load_success, sf::Font &text_font) {
-	this->initialize(font_load_success, text_font);
+RelativePositionMenu::RelativePositionMenu(TextRectanglePool* text_rectangle_pool) {
+	this->initialize(text_rectangle_pool);
 }
 
 RelativePositionMenu::~RelativePositionMenu() {
@@ -77,15 +77,16 @@ RelativePositionMenu::~RelativePositionMenu() {
 	delete []this->selectable_labels;
 }
 
-void RelativePositionMenu::initialize(bool font_load_success, sf::Font &text_font) {
+void RelativePositionMenu::initialize(TextRectanglePool* text_pool) {
 	this->class_setup();
 	this->after_class_setup_connected_values();
 	this->menu_rectangle.setFillColor(this->menu_color);
 	this->menu_rectangle.setPosition({1, 1});
+	text_pool->request_num_text_rectangles(this->num_elements_displayed_per_screen);
 	this->labels = new TextRectangle*[this->num_elements_displayed_per_screen];
 	this->selectable_labels = new bool[this->num_elements_displayed_per_screen];
 	for(int i = 0; i < this->num_elements_displayed_per_screen; i++) {
-		this->labels[i] = new TextRectangle(font_load_success, text_font);
+		this->labels[i] = text_pool->get_text_rectangle(i);
 		this->labels[i]->setProportionalBox(false);
 		this->labels[i]->setText(std::to_string(i));
 		this->labels[i]->setShowText(true);
@@ -222,6 +223,10 @@ void RelativePositionMenu::set_output_option(int index) {
 		this->selected_confirm_value = pollable_options[index]->out_action;
 		this->selected_index = REL_POS_MENU_CONFIRM;
 	}
+}
+
+bool RelativePositionMenu::is_option_drawable(int index) {
+	return true;
 }
 
 bool RelativePositionMenu::is_option_selectable(int index) {
@@ -428,7 +433,8 @@ void RelativePositionMenu::draw(float scaling_factor, sf::RenderTarget &window) 
 	this->menu_rectangle.setPosition({(float)this->loaded_data.pos_x, (float)this->loaded_data.pos_y});
 	window.draw(this->menu_rectangle);
 	for(int i = 0; i < this->num_elements_displayed_per_screen; i++) {
-		this->labels[i]->draw(window);
+		if(this->is_option_drawable(i))
+			this->labels[i]->draw(window);
 	}
 }
 

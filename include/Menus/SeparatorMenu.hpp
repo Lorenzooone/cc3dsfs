@@ -23,7 +23,7 @@ enum SeparatorMenuOutAction{
 
 class SeparatorMenu : public OptionSelectionMenu {
 public:
-	SeparatorMenu(bool font_load_success, sf::Font &text_font);
+	SeparatorMenu(TextRectanglePool* text_pool);
 	~SeparatorMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info);
 	void insert_data(bool is_fullscreen);

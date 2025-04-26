@@ -88,8 +88,8 @@ static const SecondScreen3DRelativePositionMenuOptionInfo* pollable_options[] = 
 &desc2_option,
 };
 
-SecondScreen3DRelativePositionMenu::SecondScreen3DRelativePositionMenu(bool font_load_success, sf::Font &text_font) {	
-	this->initialize(font_load_success, text_font);
+SecondScreen3DRelativePositionMenu::SecondScreen3DRelativePositionMenu(TextRectanglePool* text_rectangle_pool) {	
+	this->initialize(text_rectangle_pool);
 }
 
 SecondScreen3DRelativePositionMenu::~SecondScreen3DRelativePositionMenu() {
@@ -136,6 +136,14 @@ void SecondScreen3DRelativePositionMenu::set_output_option(int index) {
 		this->selected_index = pollable_options[index]->out_action;
 		this->selected_confirm_value = pollable_options[index]->out_position;
 	}
+}
+
+bool SecondScreen3DRelativePositionMenu::is_option_drawable(int index) {
+	if(index < this->elements_start_id)
+		return true;
+	if((this->stype != ScreenType::JOINT) && (!pollable_options[index - this->elements_start_id]->exists_non_joint))
+		return false;
+	return true;
 }
 
 bool SecondScreen3DRelativePositionMenu::is_option_selectable(int index) {

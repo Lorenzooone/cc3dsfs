@@ -32,9 +32,9 @@ static const RotationMenuOptionInfo* pollable_options[] = {
 &both_rotation_option,
 };
 
-RotationMenu::RotationMenu(bool font_load_success, sf::Font &text_font) : OptionSelectionMenu(){
+RotationMenu::RotationMenu(TextRectanglePool* text_rectangle_pool) : OptionSelectionMenu(){
 	this->options_indexes = new int[NUM_TOTAL_MENU_OPTIONS];
-	this->initialize(font_load_success, text_font);
+	this->initialize(text_rectangle_pool);
 	this->num_enabled_options = 0;
 }
 

@@ -21,7 +21,7 @@ enum InputMenuOutAction{
 
 class InputMenu : public OptionSelectionMenu {
 public:
-	InputMenu(bool font_load_success, sf::Font &text_font);
+	InputMenu(TextRectanglePool* text_pool);
 	~InputMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, InputData* input_data);
 	void insert_data(bool enabled_shortcuts, bool enabled_extra_buttons);
