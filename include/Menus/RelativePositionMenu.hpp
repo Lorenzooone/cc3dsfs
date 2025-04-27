@@ -24,7 +24,7 @@ public:
 	virtual ~RelativePositionMenu();
 	bool poll(SFEvent &event_data);
 	void draw(float scaling_factor, sf::RenderTarget &window);
-	void reset_data();
+	void reset_data(bool full_reset);
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_input_processed_time;
 	void reset_output_option();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y, BottomRelativePosition curr_bottom_pos);

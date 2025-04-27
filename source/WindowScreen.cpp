@@ -113,6 +113,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->audio_data = audio_data;
 	this->last_window_creation_time = std::chrono::high_resolution_clock::now();
 	this->last_mouse_action_time = std::chrono::high_resolution_clock::now();
+	this->last_touch_left_time = std::chrono::high_resolution_clock::now();
 	this->last_draw_time = std::chrono::high_resolution_clock::now();
 	this->last_poll_time = std::chrono::high_resolution_clock::now();
 	this->touch_right_click_action.started = false;

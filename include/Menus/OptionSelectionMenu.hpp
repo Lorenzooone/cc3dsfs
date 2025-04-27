@@ -22,7 +22,7 @@ public:
 	virtual ~OptionSelectionMenu();
 	bool poll(SFEvent &event_data);
 	void draw(float scaling_factor, sf::RenderTarget &window);
-	void reset_data();
+	void reset_data(bool full_reset);
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_input_processed_time;
 	virtual void reset_output_option();
 protected:

@@ -846,13 +846,19 @@ void WindowScreen::setup_no_menu() {
 	this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 }
 
+void WindowScreen::setup_connection_menu(std::vector<CaptureDevice> *devices_list, bool reset_data) {
+	// Skip the check here. It's special.
+	this->curr_menu = CONNECT_MENU_TYPE;
+	this->connection_menu->reset_data(reset_data);
+	this->connection_menu->insert_data(devices_list);
+}
+
 void WindowScreen::setup_main_menu(bool reset_data, bool skip_setup_check) {
 	if((!skip_setup_check) && (!this->can_setup_menu()))
 		return;
 	if(this->curr_menu != MAIN_MENU_TYPE) {
 		this->curr_menu = MAIN_MENU_TYPE;
-		if(reset_data)
-			this->main_menu->reset_data();
+		this->main_menu->reset_data(reset_data);
 		this->main_menu->insert_data(this->m_stype, this->m_info.is_fullscreen, this->display_data->mono_app_mode, &this->capture_status->device, this->capture_status->connected);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -863,8 +869,7 @@ void WindowScreen::setup_input_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != INPUT_MENU_TYPE) {
 		this->curr_menu = INPUT_MENU_TYPE;
-		if(reset_data)
-			this->input_menu->reset_data();
+		this->input_menu->reset_data(reset_data);
 		this->input_menu->insert_data(is_shortcut_valid(), are_extra_buttons_usable());
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -877,8 +882,7 @@ void WindowScreen::setup_audio_devices_menu(bool reset_data){
 		this->possible_audio_devices.clear();
 		this->possible_audio_devices = sf::PlaybackDevice::getAvailableDevices();
 		this->curr_menu = AUDIO_DEVICE_MENU_TYPE;
-		if(reset_data)
-			this->audio_device_menu->reset_data();
+		this->audio_device_menu->reset_data(reset_data);
 		this->audio_device_menu->insert_data(&this->possible_audio_devices);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -889,8 +893,7 @@ void WindowScreen::setup_video_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != VIDEO_MENU_TYPE) {
 		this->curr_menu = VIDEO_MENU_TYPE;
-		if(reset_data)
-			this->video_menu->reset_data();
+		this->video_menu->reset_data(reset_data);
 		this->video_menu->insert_data(this->m_stype, this->m_info.is_fullscreen, (!this->m_info.is_fullscreen) || this->m_info.failed_fullscreen);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -901,8 +904,7 @@ void WindowScreen::setup_crop_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != CROP_MENU_TYPE) {
 		this->curr_menu = CROP_MENU_TYPE;
-		if(reset_data)
-			this->crop_menu->reset_data();
+		this->crop_menu->reset_data(reset_data);
 		this->crop_menu->insert_data(this->get_crop_data_vector(&this->m_info));
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -916,8 +918,7 @@ void WindowScreen::setup_par_menu(bool is_top, bool reset_data) {
 		wanted_type = BOTTOM_PAR_MENU_TYPE;
 	if(this->curr_menu != wanted_type) {
 		this->curr_menu = wanted_type;
-		if(reset_data)
-			this->par_menu->reset_data();
+		this->par_menu->reset_data(reset_data);
 		std::string title_piece = "";
 		if((is_top) && (this->m_stype == ScreenType::JOINT))
 			title_piece = "Top";
@@ -934,8 +935,7 @@ void WindowScreen::setup_offset_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != OFFSET_MENU_TYPE) {
 		this->curr_menu = OFFSET_MENU_TYPE;
-		if(reset_data)
-			this->offset_menu->reset_data();
+		this->offset_menu->reset_data(reset_data);
 		this->offset_menu->insert_data();
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -946,8 +946,7 @@ void WindowScreen::setup_rotation_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != ROTATION_MENU_TYPE) {
 		this->curr_menu = ROTATION_MENU_TYPE;
-		if(reset_data)
-			this->rotation_menu->reset_data();
+		this->rotation_menu->reset_data(reset_data);
 		this->rotation_menu->insert_data();
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -958,8 +957,7 @@ void WindowScreen::setup_audio_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != AUDIO_MENU_TYPE) {
 		this->curr_menu = AUDIO_MENU_TYPE;
-		if(reset_data)
-			this->audio_menu->reset_data();
+		this->audio_menu->reset_data(reset_data);
 		this->audio_menu->insert_data();
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -970,8 +968,7 @@ void WindowScreen::setup_bfi_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != BFI_MENU_TYPE) {
 		this->curr_menu = BFI_MENU_TYPE;
-		if(reset_data)
-			this->bfi_menu->reset_data();
+		this->bfi_menu->reset_data(reset_data);
 		this->bfi_menu->insert_data();
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -1015,8 +1012,7 @@ void WindowScreen::setup_fileconfig_menu(bool is_save, bool reset_data, bool ski
 			this->possible_files.erase(this->possible_files.begin());
 		}
 		this->curr_menu = wanted_type;
-		if(reset_data)
-			this->fileconfig_menu->reset_data();
+		this->fileconfig_menu->reset_data(reset_data);
 		std::string title_piece = "Load";
 		if(is_save)
 			title_piece = "Save";
@@ -1048,8 +1044,7 @@ void WindowScreen::setup_resolution_menu(bool reset_data) {
 		}
 		if(this->possible_resolutions.size() > 0) {
 			this->curr_menu = RESOLUTION_MENU_TYPE;
-			if(reset_data)
-				this->resolution_menu->reset_data();
+			this->resolution_menu->reset_data(reset_data);
 			this->resolution_menu->insert_data(&this->possible_resolutions, sf::VideoMode::getDesktopMode());
 			this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 		}
@@ -1061,8 +1056,7 @@ void WindowScreen::setup_extra_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != EXTRA_MENU_TYPE) {
 		this->curr_menu = EXTRA_MENU_TYPE;
-		if(reset_data)
-			this->extra_menu->reset_data();
+		this->extra_menu->reset_data(reset_data);
 		this->extra_menu->insert_data(this->m_stype, this->m_info.is_fullscreen);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -1073,8 +1067,7 @@ void WindowScreen::setup_action_selection_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != ACTION_SELECTION_MENU_TYPE) {
 		this->curr_menu = ACTION_SELECTION_MENU_TYPE;
-		if(reset_data)
-			this->action_selection_menu->reset_data();
+		this->action_selection_menu->reset_data(reset_data);
 		this->possible_actions.clear();
 		create_window_commands_list(this->possible_actions, this->possible_buttons_extras[this->chosen_button] && this->display_data->mono_app_mode);
 		this->action_selection_menu->insert_data(this->possible_actions);
@@ -1089,8 +1082,7 @@ void WindowScreen::setup_shortcuts_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != SHORTCUTS_MENU_TYPE) {
 		this->curr_menu = SHORTCUTS_MENU_TYPE;
-		if(reset_data)
-			this->shortcut_menu->reset_data();
+		this->shortcut_menu->reset_data(reset_data);
 		this->possible_buttons_names.clear();
 		this->possible_buttons_ptrs.clear();
 		this->possible_buttons_extras.clear();
@@ -1114,8 +1106,7 @@ void WindowScreen::setup_status_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != STATUS_MENU_TYPE) {
 		this->curr_menu = STATUS_MENU_TYPE;
-		if(reset_data)
-			this->status_menu->reset_data();
+		this->status_menu->reset_data(reset_data);
 		this->status_menu->insert_data();
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -1126,8 +1117,7 @@ void WindowScreen::setup_licenses_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != LICENSES_MENU_TYPE) {
 		this->curr_menu = LICENSES_MENU_TYPE;
-		if(reset_data)
-			this->license_menu->reset_data();
+		this->license_menu->reset_data(reset_data);
 		this->license_menu->insert_data();
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -1138,8 +1128,7 @@ void WindowScreen::setup_relative_pos_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != RELATIVE_POS_MENU_TYPE) {
 		this->curr_menu = RELATIVE_POS_MENU_TYPE;
-		if(reset_data)
-			this->relpos_menu->reset_data();
+		this->relpos_menu->reset_data(reset_data);
 		this->relpos_menu->insert_data();
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -1150,8 +1139,7 @@ void WindowScreen::setup_scaling_ratio_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != SCALING_RATIO_MENU_TYPE) {
 		this->curr_menu = SCALING_RATIO_MENU_TYPE;
-		if(reset_data)
-			this->scaling_ratio_menu->reset_data();
+		this->scaling_ratio_menu->reset_data(reset_data);
 		this->scaling_ratio_menu->insert_data();
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -1162,8 +1150,7 @@ void WindowScreen::setup_is_nitro_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != ISN_MENU_TYPE) {
 		this->curr_menu = ISN_MENU_TYPE;
-		if(reset_data)
-			this->is_nitro_menu->reset_data();
+		this->is_nitro_menu->reset_data(reset_data);
 		this->is_nitro_menu->insert_data(&this->capture_status->device);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -1174,8 +1161,7 @@ void WindowScreen::setup_video_effects_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != VIDEO_EFFECTS_MENU_TYPE) {
 		this->curr_menu = VIDEO_EFFECTS_MENU_TYPE;
-		if(reset_data)
-			this->video_effects_menu->reset_data();
+		this->video_effects_menu->reset_data(reset_data);
 		this->video_effects_menu->insert_data();
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -1186,8 +1172,7 @@ void WindowScreen::setup_separator_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != SEPARATOR_MENU_TYPE) {
 		this->curr_menu = SEPARATOR_MENU_TYPE;
-		if(reset_data)
-			this->separator_menu->reset_data();
+		this->separator_menu->reset_data(reset_data);
 		this->separator_menu->insert_data(this->m_info.is_fullscreen);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -1198,8 +1183,7 @@ void WindowScreen::setup_color_correction_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != COLOR_CORRECTION_MENU_TYPE) {
 		this->curr_menu = COLOR_CORRECTION_MENU_TYPE;
-		if(reset_data)
-			this->color_correction_menu->reset_data();
+		this->color_correction_menu->reset_data(reset_data);
 		this->color_correction_menu->insert_data(&this->possible_color_profiles);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -1210,8 +1194,7 @@ void WindowScreen::setup_main_3d_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != MAIN_3D_MENU_TYPE) {
 		this->curr_menu = MAIN_3D_MENU_TYPE;
-		if(reset_data)
-			this->main_3d_menu->reset_data();
+		this->main_3d_menu->reset_data(reset_data);
 		this->main_3d_menu->insert_data(this->m_stype);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -1222,8 +1205,7 @@ void WindowScreen::setup_second_screen_3d_relpos_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != SECOND_SCREEN_RELATIVE_POS_MENU_TYPE) {
 		this->curr_menu = SECOND_SCREEN_RELATIVE_POS_MENU_TYPE;
-		if(reset_data)
-			this->second_screen_3d_relpos_menu->reset_data();
+		this->second_screen_3d_relpos_menu->reset_data(reset_data);
 		this->second_screen_3d_relpos_menu->insert_data(this->m_stype);
 		this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	}
@@ -2372,14 +2354,6 @@ void WindowScreen::poll(bool do_everything) {
 	}
 }
 
-void WindowScreen::setup_connection_menu(std::vector<CaptureDevice> *devices_list, bool reset_data) {
-	// Skip the check here. It's special.
-	this->curr_menu = CONNECT_MENU_TYPE;
-	if(reset_data)
-		this->connection_menu->reset_data();
-	this->connection_menu->insert_data(devices_list);
-}
-
 int WindowScreen::check_connection_menu_result() {
 	return this->connection_menu->selected_index;
 }
@@ -2549,7 +2523,11 @@ void WindowScreen::poll_window(bool do_everything) {
 						events_queue.emplace(true, sf::Mouse::Button::Right, touch_pos);
 						this->touch_right_click_action.start_time = std::chrono::high_resolution_clock::now();
 					}
-					events_queue.emplace(true, sf::Mouse::Button::Left, touch_pos);
+					const std::chrono::duration<double> difftouch = curr_time - this->last_touch_left_time;
+					if(difftouch.count() > this->touch_short_press_timer) {
+						events_queue.emplace(true, sf::Mouse::Button::Left, touch_pos);
+						this->last_touch_left_time = std::chrono::high_resolution_clock::now();
+					}
 				}
 				if(this->shared_data->input_data.enable_controller_input)
 					joystick_axis_poll(this->events_queue);

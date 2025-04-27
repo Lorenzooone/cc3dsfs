@@ -29,4 +29,5 @@ LOWER_RELEASE_TYPE=$(to_lower $RELEASE_TYPE)
 # Default with gradle-wrapper, slow in docker
 #./gradlew assemble${RELEASE_TYPE} ${GRADLE_FLAGS}
 # Use the pre-donwloaded gradle to speed build up
+
 (cd ${ANDROID_FOLDER} && gradle assemble${RELEASE_TYPE} ${GRADLE_FLAGS} && mkdir -p ${OUT_FOLDER} && cp app/build/outputs/apk/${LOWER_RELEASE_TYPE}/*.apk ${OUT_FOLDER})

@@ -777,9 +777,14 @@ int main(int argc, char **argv) {
 	int power_id = -1;
 	bool use_pud_up = true;
 	bool created_proper_folder = create_out_folder();
+	bool mono_app_default_value = false;
+	#ifdef SFML_SYSTEM_ANDROID
+		mono_app_default_value = true;
+	#endif
 	override_all_data override_data;
+	override_data.mono_app = mono_app_default_value;
 	for (int i = 1; i < argc; i++) {
-		if(parse_existence_arg(i, argv, override_data.mono_app, true, "--mono_app"))
+		if(parse_existence_arg(i, argv, override_data.mono_app, !mono_app_default_value, "--mono_app"))
 			continue;
 		if(parse_existence_arg(i, argv, override_data.recovery_mode, true, "--recovery_mode"))
 			continue;
@@ -835,9 +840,15 @@ int main(int argc, char **argv) {
 		if(parse_existence_arg(i, argv, use_pud_up, false, "--pi_pud_down"))
 			continue;
 		#endif
+		std::string mono_app_action_str = "Enables";
+		std::string default_mono_app_strn = "Disabled";
+		if(mono_app_default_value) {
+			mono_app_action_str = "Disables";
+			default_mono_app_strn = "Enabled";
+		}
 		std::cout << "Help:" << std::endl;
-		std::cout << "  --mono_app        Enables special mode for when only this application" << std::endl;
-		std::cout << "                    should run on the system. Disabled by default." << std::endl;
+		std::cout << "  --mono_app        "<< mono_app_action_str << " special mode for when only this application" << std::endl;
+		std::cout << "                    should run on the system. " << default_mono_app_strn << " by default." << std::endl;
 		std::cout << "  --recovery_mode   Resets to the defaults." << std::endl;
 		std::cout << "  --pos_x_both      Set default x position for the window with both screens." << std::endl;
 		std::cout << "  --pos_y_both      Set default y position for the window with both screens." << std::endl;

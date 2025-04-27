@@ -138,6 +138,7 @@ private:
 	AudioData* audio_data;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_mouse_action_time;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_window_creation_time;
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_touch_left_time;
 	HeldTime touch_right_click_action;
 	HeldTime touch_action;
 	HeldTime pgdown_action;
@@ -147,6 +148,7 @@ private:
 	HeldTime right_click_action;
 	HeldTime controller_button_action;
 	bool consumed_touch_long_press;
+	const float touch_short_press_timer = 0.2f;
 	const float touch_long_press_timer = 1.5f;
 	const float mouse_timeout = 5.0f;
 	const float v_sync_timeout = 5.0f;

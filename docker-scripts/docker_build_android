@@ -1,16 +1,20 @@
 #!/bin/sh
 
 SFML_EXTRACTED_TO_FOLDER=~
+LIBUSB_EXTRACTED_TO_FOLDER=~
 SFML_EXTRACTED_FOLDER=${SFML_EXTRACTED_TO_FOLDER}/SFML-master
+LIBUSB_EXTRACTED_FOLDER=${LIBUSB_EXTRACTED_TO_FOLDER}/libusb-master
 BUILD_ARCH_COMMAND=docker-scripts/docker_build_android_single_arch
 
 STL_CHOSEN=c++_static
 RELEASE_TYPE=Debug
 OUT_FOLDER=~/cc3dsfs/build
-ANDROID_FOLDER=${SFML_EXTRACTED_FOLDER}/examples/android
+ANDROID_FOLDER=android
 
 export LANG=C.UTF-8
 
-(cd ${SFML_EXTRACTED_TO_FOLDER} ; wget https://github.com/SFML/SFML/archive/refs/heads/master.zip ; unzip master.zip)
+(cd ${SFML_EXTRACTED_TO_FOLDER} ; rm -f master.zip ; wget https://github.com/SFML/SFML/archive/refs/heads/master.zip ; unzip master.zip)
+(cd ${LIBUSB_EXTRACTED_TO_FOLDER} ; rm -f master.zip ; wget https://github.com/libusb/libusb/archive/refs/heads/master.zip ; unzip master.zip)
+(cd ${LIBUSB_EXTRACTED_FOLDER}/android/jni ; ndk-build ; mkdir -p ${ANDROID_NDK_HOME}/sources/third_party/libusb/include ; cp -r ../libs/ ${ANDROID_NDK_HOME}/sources/third_party/libusb ; cp -r ../../libusb ${ANDROID_NDK_HOME}/sources/third_party/libusb/include )
 #${BUILD_ARCH_COMMAND} ${SFML_EXTRACTED_FOLDER} armeabi-v7a ${STL_CHOSEN} ${RELEASE_TYPE} ${OUT_FOLDER} ${ANDROID_FOLDER}
 ${BUILD_ARCH_COMMAND} ${SFML_EXTRACTED_FOLDER} arm64-v8a ${STL_CHOSEN} ${RELEASE_TYPE} ${OUT_FOLDER} ${ANDROID_FOLDER}

@@ -86,11 +86,13 @@ bool OptionSelectionMenu::can_execute_action() {
 	return false;
 }
 
-void OptionSelectionMenu::reset_data() {
+void OptionSelectionMenu::reset_data(bool full_reset) {
 	this->last_input_processed_time = std::chrono::high_resolution_clock::now();
-	this->reset_output_option();
-	this->future_data.option_selected = -1;
-	this->future_data.page = 0;
+	if(full_reset) {
+		this->reset_output_option();
+		this->future_data.option_selected = -1;
+		this->future_data.page = 0;
+	}
 }
 
 bool OptionSelectionMenu::is_option_location_left(int option) {
