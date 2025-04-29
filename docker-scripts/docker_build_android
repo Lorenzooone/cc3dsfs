@@ -2,9 +2,12 @@
 
 SFML_EXTRACTED_TO_FOLDER=~
 LIBUSB_EXTRACTED_TO_FOLDER=~
-SFML_EXTRACTED_FOLDER=${SFML_EXTRACTED_TO_FOLDER}/SFML-master
-LIBUSB_EXTRACTED_FOLDER=${LIBUSB_EXTRACTED_TO_FOLDER}/libusb-master
-BUILD_ARCH_COMMAND=docker-scripts/docker_build_android_single_arch
+SFML_BRANCH_NAME=master
+LIBUSB_BRANCH_NAME=android-rebase-2022-07
+SFML_EXTRACTED_FOLDER=${SFML_EXTRACTED_TO_FOLDER}/SFML-${SFML_BRANCH_NAME}
+LIBUSB_EXTRACTED_FOLDER=${LIBUSB_EXTRACTED_TO_FOLDER}/libusb-${LIBUSB_BRANCH_NAME}
+BUILD_APK_COMMAND=docker-scripts/docker_build_android_apk
+BUILD_LIBS_COMMAND=docker-scripts/docker_build_android_libraries
 
 STL_CHOSEN=c++_static
 RELEASE_TYPE=Debug
@@ -13,8 +16,9 @@ ANDROID_FOLDER=android
 
 export LANG=C.UTF-8
 
-(cd ${SFML_EXTRACTED_TO_FOLDER} ; rm -f master.zip ; wget https://github.com/SFML/SFML/archive/refs/heads/master.zip ; unzip master.zip)
-(cd ${LIBUSB_EXTRACTED_TO_FOLDER} ; rm -f master.zip ; wget https://github.com/libusb/libusb/archive/refs/heads/master.zip ; unzip master.zip)
-(cd ${LIBUSB_EXTRACTED_FOLDER}/android/jni ; ndk-build ; mkdir -p ${ANDROID_NDK_HOME}/sources/third_party/libusb/include ; cp -r ../libs/ ${ANDROID_NDK_HOME}/sources/third_party/libusb ; cp -r ../../libusb ${ANDROID_NDK_HOME}/sources/third_party/libusb/include )
-#${BUILD_ARCH_COMMAND} ${SFML_EXTRACTED_FOLDER} armeabi-v7a ${STL_CHOSEN} ${RELEASE_TYPE} ${OUT_FOLDER} ${ANDROID_FOLDER}
-${BUILD_ARCH_COMMAND} ${SFML_EXTRACTED_FOLDER} arm64-v8a ${STL_CHOSEN} ${RELEASE_TYPE} ${OUT_FOLDER} ${ANDROID_FOLDER}
+(cd ${SFML_EXTRACTED_TO_FOLDER} ; rm -f ${SFML_BRANCH_NAME}.zip ; wget https://github.com/SFML/SFML/archive/refs/heads/${SFML_BRANCH_NAME}.zip ; unzip ${SFML_BRANCH_NAME}.zip)
+(cd ${LIBUSB_EXTRACTED_TO_FOLDER} ; rm -f ${LIBUSB_BRANCH_NAME}.zip ; wget https://github.com/jagheterfredrik/libusb/archive/refs/heads/${LIBUSB_BRANCH_NAME}.zip ; unzip ${LIBUSB_BRANCH_NAME}.zip)
+
+${BUILD_LIBS_COMMAND} ${LIBUSB_EXTRACTED_FOLDER} ${SFML_EXTRACTED_FOLDER} ${STL_CHOSEN} ${RELEASE_TYPE}
+
+${BUILD_APK_COMMAND} ${STL_CHOSEN} ${RELEASE_TYPE} ${OUT_FOLDER} ${ANDROID_FOLDER}

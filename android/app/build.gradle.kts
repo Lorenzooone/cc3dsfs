@@ -1,5 +1,4 @@
 val NDK_VERSION by extra(project.properties["NDK_VERSION"] as? String ?: "26.1.10909125")
-val ARCH_ABI by extra(project.properties["ARCH_ABI"] as? String ?: "arm64-v8a")
 val MIN_SDK by extra((project.properties["MIN_SDK"] as? String ?: "21").toInt())
 val TARGET_SDK by extra((project.properties["TARGET_SDK"] as? String ?: "33").toInt())
 val STL_TYPE by extra(project.properties["STL_TYPE"] as? String ?: "c++_shared")
@@ -19,9 +18,7 @@ android {
         targetSdk = TARGET_SDK
         versionCode = 1
         versionName = "1.0"
-        ndk {
-            abiFilters.add(ARCH_ABI)
-        }
+
         externalNativeBuild {
             cmake {
                 arguments.add("-DCMAKE_SYSTEM_NAME=Android")
@@ -36,6 +33,17 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
         }
     }
+    bundle {
+		language {
+		    enableSplit = false
+		}
+		density {
+		    enableSplit = false
+		}
+		abi {
+		    enableSplit = true
+		}
+	}
     externalNativeBuild {
         cmake {
             path("../../CMakeLists.txt")
