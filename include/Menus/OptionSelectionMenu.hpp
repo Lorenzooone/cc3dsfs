@@ -1,12 +1,12 @@
 #ifndef __OPTIONSELECTIONMENU_HPP
 #define __OPTIONSELECTIONMENU_HPP
 
-#include <SFML/Graphics.hpp>
 #include <chrono>
+
+#include "GenericMenu.hpp"
 
 #include "TextRectangle.hpp"
 #include "TextRectanglePool.hpp"
-#include "event_structs.hpp"
 
 #define BACK_X_OUTPUT_OPTION -1
 
@@ -16,7 +16,7 @@
 #define INC_ACTION 2
 #define FALSE_ACTION 3
 
-class OptionSelectionMenu {
+class OptionSelectionMenu : public GenericMenu {
 public:
 	OptionSelectionMenu();
 	virtual ~OptionSelectionMenu();

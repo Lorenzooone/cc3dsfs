@@ -297,6 +297,7 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 	}
 	this->last_interleaved_3d = this->display_data->interleaved_3d;
 	this->loaded_menu = this->curr_menu;
+	this->loaded_menu_ptr = this->curr_menu_ptr;
 	loaded_operations = future_operations;
 	if(this->loaded_operations.call_create) {
 		this->last_draw_time = std::chrono::high_resolution_clock::now();

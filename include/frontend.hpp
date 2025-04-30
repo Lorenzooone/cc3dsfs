@@ -156,7 +156,9 @@ private:
 	const float bad_resolution_timeout = 30.0f;
 	const float menu_change_timeout = 0.3f;
 	CurrMenuType curr_menu = DEFAULT_MENU_TYPE;
+	GenericMenu* curr_menu_ptr = NULL;
 	CurrMenuType loaded_menu;
+	GenericMenu* loaded_menu_ptr;
 	ConnectionMenu *connection_menu;
 	MainMenu *main_menu;
 	VideoMenu *video_menu;
@@ -362,6 +364,7 @@ private:
 	void crop();
 	void setWinSize(bool is_main_thread);
 	bool can_setup_menu();
+	void switch_to_menu(CurrMenuType new_menu_type, GenericMenu* new_menu, bool reset_data = true, bool update_last_menu_change_time = true);
 	void setup_no_menu();
 	void setup_main_menu(bool reset_data = true, bool skip_setup_check = false);
 	void setup_video_menu(bool reset_data = true);

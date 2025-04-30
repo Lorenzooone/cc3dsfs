@@ -1,13 +1,13 @@
 #ifndef __RELPOSMENU_HPP
 #define __RELPOSMENU_HPP
 
-#include <SFML/Graphics.hpp>
 #include <chrono>
+
+#include "GenericMenu.hpp"
 
 #include "TextRectangle.hpp"
 #include "TextRectanglePool.hpp"
 #include "display_structs.hpp"
-#include "event_structs.hpp"
 
 #define BACK_X_OUTPUT_OPTION -1
 
@@ -17,7 +17,7 @@ enum RelPosMenuOutAction{
 	REL_POS_MENU_CONFIRM,
 };
 
-class RelativePositionMenu {
+class RelativePositionMenu : public GenericMenu {
 public:
 	RelativePositionMenu();
 	RelativePositionMenu(TextRectanglePool* text_pool);
