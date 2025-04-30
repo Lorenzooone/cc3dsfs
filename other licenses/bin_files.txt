@@ -1,0 +1,18 @@
+The authors of cc3dsfs do not claim ownership of any
+of the files included in the bin folder of the application's source code.
+
+The ftd2_ds2_* files were created by Loopy (who directly sent them
+so they could be used in cc3dsfs).
+
+The is_twl_cap* files were created to improve performance when using compatible
+hardware. It is also possible to recreate the tables they contain at runtime
+by using specific magic numbers. However, their contents seem to be fixed.
+So they are included as bin files instead.
+
+The nisetro_ds* file was obtained from the source available software
+NiseTro Preview (build 20100316), then edited for improved interoperability
+and support for multiple concurrent connections.
+
+The optimize* files were extracted from wireshark packets, then edited
+for usage with a more generic driver, improved interoperability, and
+support for multiple concurrent connections.
