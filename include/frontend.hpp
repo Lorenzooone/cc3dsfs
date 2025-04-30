@@ -95,6 +95,7 @@ public:
 
 private:
 	enum PossibleShaderTypes { BASE_INPUT_SHADER_TYPE, BASE_FINAL_OUTPUT_SHADER_TYPE, COLOR_PROCESSING_SHADER_TYPE };
+	enum PossibleSoftwareConvTypes { NO_SOFTWARE_CONV, TO_RGB_SOFTWARE_CONV, TO_RGBA_SOFTWARE_CONV };
 	struct ScreenOperations {
 		bool call_create;
 		bool call_close;
@@ -115,7 +116,7 @@ private:
 	};
 	OutTextData own_out_text_data;
 	InputVideoDataType last_update_texture_data_type;
-	bool use_texture_software_based_conv;
+	PossibleSoftwareConvTypes texture_software_based_conv;
 	bool created_proper_folder;
 	CaptureStatus* capture_status;
 	std::string win_title;

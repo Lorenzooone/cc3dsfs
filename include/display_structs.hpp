@@ -139,6 +139,13 @@ struct PACKED VideoPixelBGR {
 	uint8_t r;
 };
 
+struct PACKED VideoPixelRGBA {
+	uint8_t r;
+	uint8_t g;
+	uint8_t b;
+	uint8_t alpha;
+};
+
 struct PACKED ALIGNED(16) VideoOutputDataRGB16 {
 	VideoPixelRGB16 screen_data[MAX_IN_VIDEO_SIZE];
 };
@@ -155,11 +162,16 @@ struct PACKED ALIGNED(16) VideoOutputDataBGR {
 	VideoPixelBGR screen_data[MAX_IN_VIDEO_SIZE];
 };
 
+struct PACKED ALIGNED(16) VideoOutputDataRGBA {
+	VideoPixelRGBA screen_data[MAX_IN_VIDEO_SIZE];
+};
+
 union PACKED ALIGNED(16) VideoOutputData {
 	VideoOutputDataRGB16 rgb16_video_output_data;
 	VideoOutputDataBGR16 bgr16_video_output_data;
 	VideoOutputDataRGB rgb_video_output_data;
 	VideoOutputDataBGR bgr_video_output_data;
+	VideoOutputDataRGBA rgba_video_output_data;
 };
 
 #pragma pack(pop)

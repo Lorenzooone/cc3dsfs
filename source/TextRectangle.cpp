@@ -3,6 +3,7 @@
 TextRectangle::TextRectangle(bool font_load_success, sf::Font &text_font) : actual_text(text_font) {
 	this->reset_data(this->future_data);
 	this->font_load_success = font_load_success;
+	this->is_done_showing_text = true;
 	this->setRealSize(1, 1, false);
 	this->text_rect.out_rect.setTexture(&this->text_rect.out_tex.getTexture());
 	if(this->font_load_success)
@@ -265,6 +266,11 @@ void TextRectangle::updateText(int x_limit) {
 	this->text_rect.out_tex.display();
 	this->is_done_showing_text = false;
 	this->loaded_data.start_timer = this->loaded_data.is_timed;
+}
+
+// Only applies to text displayed with timer set to true
+bool TextRectangle::isTimerTextDone() {
+	return this->is_done_showing_text;
 }
 
 void TextRectangle::updateSlides(float* time_seconds) {

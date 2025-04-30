@@ -5,11 +5,20 @@ SFML_FOLDER=$2
 STL_CHOSEN=$3
 RELEASE_TYPE=$4
 
+CONFIGURE_SINGLE_ARCH_SFML_COMMAND=docker-scripts/docker_config_android_sfml_single_arch
 BUILD_SINGLE_ARCH_SFML_COMMAND=docker-scripts/docker_build_android_sfml_single_arch
 
-(cd ${LIBUSB_FOLDER}/android/jni ; ndk-build APP_PLATFORM=${ANDROID_SDK_VERSION} ; mkdir -p ${ANDROID_NDK_HOME}/sources/third_party/libusb/include ; cp -r ../libs/ ${ANDROID_NDK_HOME}/sources/third_party/libusb ; cp -r ../../libusb ${ANDROID_NDK_HOME}/sources/third_party/libusb/include)
+(cd ${LIBUSB_FOLDER}/android/jni ; ndk-build APP_PLATFORM=${ANDROID_SDK_VERSION} -j ; mkdir -p ${ANDROID_NDK_HOME}/sources/third_party/libusb/include ; cp -r ../libs/ ${ANDROID_NDK_HOME}/sources/third_party/libusb ; cp -r ../../libusb ${ANDROID_NDK_HOME}/sources/third_party/libusb/include)
 
-${BUILD_SINGLE_ARCH_SFML_COMMAND} ${SFML_FOLDER} armeabi-v7a ${STL_CHOSEN} ${RELEASE_TYPE}
-${BUILD_SINGLE_ARCH_SFML_COMMAND} ${SFML_FOLDER} arm64-v8a ${STL_CHOSEN} ${RELEASE_TYPE}
-${BUILD_SINGLE_ARCH_SFML_COMMAND} ${SFML_FOLDER} x86 ${STL_CHOSEN} ${RELEASE_TYPE}
-${BUILD_SINGLE_ARCH_SFML_COMMAND} ${SFML_FOLDER} x86_64 ${STL_CHOSEN} ${RELEASE_TYPE}
+${CONFIGURE_SINGLE_ARCH_SFML_COMMAND} ${SFML_FOLDER} armeabi-v7a ${STL_CHOSEN} ${RELEASE_TYPE} &
+${CONFIGURE_SINGLE_ARCH_SFML_COMMAND} ${SFML_FOLDER} arm64-v8a ${STL_CHOSEN} ${RELEASE_TYPE} &
+${CONFIGURE_SINGLE_ARCH_SFML_COMMAND} ${SFML_FOLDER} x86 ${STL_CHOSEN} ${RELEASE_TYPE} &
+${CONFIGURE_SINGLE_ARCH_SFML_COMMAND} ${SFML_FOLDER} x86_64 ${STL_CHOSEN} ${RELEASE_TYPE}
+
+wait $(jobs -p)
+echo "All libraries configured..."
+
+${BUILD_SINGLE_ARCH_SFML_COMMAND} ${SFML_FOLDER} armeabi-v7a
+${BUILD_SINGLE_ARCH_SFML_COMMAND} ${SFML_FOLDER} arm64-v8a
+${BUILD_SINGLE_ARCH_SFML_COMMAND} ${SFML_FOLDER} x86
+${BUILD_SINGLE_ARCH_SFML_COMMAND} ${SFML_FOLDER} x86_64

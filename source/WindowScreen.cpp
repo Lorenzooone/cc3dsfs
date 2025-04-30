@@ -62,7 +62,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	FPSArrayInit(&this->draw_fps);
 	FPSArrayInit(&this->poll_fps);
 	this->last_update_texture_data_type = VIDEO_DATA_RGB;
-	this->use_texture_software_based_conv = false;
+	this->texture_software_based_conv = NO_SOFTWARE_CONV;
 	this->num_frames_to_blend = NUM_FRAMES_BLENDED;
 	if(disable_frame_blending)
 		this->num_frames_to_blend = 1;
@@ -568,7 +568,7 @@ sf::String WindowScreen::title_factory() {
 #endif
 
 void WindowScreen::opengl_error_out(std::string error_base, std::string error_str) {
-	UpdateOutText(this->own_out_text_data, error_base + ": " + error_str, error_base, TEXT_KIND_ERROR);
+	UpdateOutText(this->own_out_text_data, error_base + ": " + error_str, error_base + ": " + error_str, TEXT_KIND_ERROR);
 }
 
 void WindowScreen::opengl_error_check(std::string error_base) {
@@ -590,6 +590,9 @@ bool WindowScreen::single_update_texture(unsigned int m_texture, InputVideoDataT
 	GLenum format = GL_RGB;
 	GLenum type = GL_UNSIGNED_BYTE;
 	size_t format_size = sizeof(VideoPixelRGB);
+
+	if(manually_converted && (this->texture_software_based_conv == TO_RGBA_SOFTWARE_CONV))
+		format = GL_RGBA;
 
 	if(!manually_converted) {
 		if(video_data_type == VIDEO_DATA_BGR) {
@@ -615,7 +618,15 @@ bool WindowScreen::single_update_texture(unsigned int m_texture, InputVideoDataT
 			if((format != GL_RGB) || (type != GL_UNSIGNED_BYTE)) {
 				UpdateOutText(this->own_out_text_data, "Switching to software-based texture updating", "", TEXT_KIND_NORMAL);
 				this->last_update_texture_data_type = video_data_type;
-				this->use_texture_software_based_conv = true;
+				this->texture_software_based_conv = TO_RGB_SOFTWARE_CONV;
+				return true;
+			}
+		}
+		if(glCheckInternalError == GL_INVALID_OPERATION) {
+			if((format != GL_RGBA) || (type != GL_UNSIGNED_BYTE)) {
+				UpdateOutText(this->own_out_text_data, "Switching to software-based texture updating", "", TEXT_KIND_NORMAL);
+				this->last_update_texture_data_type = video_data_type;
+				this->texture_software_based_conv = TO_RGBA_SOFTWARE_CONV;
 				return true;
 			}
 		}
@@ -710,12 +721,22 @@ void WindowScreen::execute_single_update_texture(bool &manually_converted, bool 
 	unsigned int m_texture = target_texture->getNativeHandle();
 	bool retry = true;
 	while(retry) {
-		bool software_based_conv = manually_converted || (this->use_texture_software_based_conv && (video_data_type == this->last_update_texture_data_type));
+		bool software_based_conv = manually_converted || ((this->texture_software_based_conv != NO_SOFTWARE_CONV) && (video_data_type == this->last_update_texture_data_type));
+
 		if(software_based_conv) {
-			if(!manually_converted)
-				manualConvertOutputToRGB(this->saved_buf, this->saved_buf, pos_x_conv, pos_y_conv, full_width, full_height, video_data_type);
+			if(!manually_converted) {
+				if(this->texture_software_based_conv == TO_RGB_SOFTWARE_CONV)
+					manualConvertOutputToRGB(this->saved_buf, this->saved_buf, pos_x_conv, pos_y_conv, full_width, full_height, video_data_type);
+				if(this->texture_software_based_conv == TO_RGBA_SOFTWARE_CONV)
+					manualConvertOutputToRGBA(this->saved_buf, this->saved_buf, pos_x_conv, pos_y_conv, full_width, full_height, video_data_type);
+			}
 			manually_converted = true;
 		}
+		else {
+			this->texture_software_based_conv = NO_SOFTWARE_CONV;
+			this->last_update_texture_data_type = video_data_type;
+		}
+
 		retry = this->single_update_texture(m_texture, video_data_type, pos_x_data, pos_y_data, width, height, manually_converted);
 	}
 }
@@ -1849,7 +1870,7 @@ void WindowScreen::setWinSize(bool is_main_thread) {
 void WindowScreen::process_own_out_text_data(bool print_to_notification) {
 	if(!this->own_out_text_data.consumed) {
 		ConsumeOutText(this->own_out_text_data, false);
-		if(print_to_notification)
+		if(print_to_notification && this->notification->isTimerTextDone())
 			this->print_notification(this->own_out_text_data.small_text, this->own_out_text_data.kind);
 		this->own_out_text_data.consumed = true;
 	}

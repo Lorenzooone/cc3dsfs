@@ -1075,3 +1075,83 @@ void manualConvertOutputToRGB(VideoOutputData* src, VideoOutputData* dst, size_t
 			break;
 	}
 }
+
+static void convert_rgb_to_rgba(VideoOutputData* src, VideoOutputData* dst, size_t pos_x_data, size_t pos_y_data, size_t width, size_t height) {
+	for (size_t i = 0; i < height; i++) {
+		for (size_t j = 0; j < width; j++) {
+			size_t pixel = ((height - 1 - i) * width) + (width - 1 - j) + pos_x_data + (pos_y_data * width);
+			uint8_t r = src->rgb_video_output_data.screen_data[pixel].r;
+			uint8_t g = src->rgb_video_output_data.screen_data[pixel].g;
+			uint8_t b = src->rgb_video_output_data.screen_data[pixel].b;
+			dst->rgba_video_output_data.screen_data[pixel].r = r;
+			dst->rgba_video_output_data.screen_data[pixel].g = g;
+			dst->rgba_video_output_data.screen_data[pixel].b = b;
+			dst->rgba_video_output_data.screen_data[pixel].alpha = 0xFF;
+		}
+	}
+}
+
+static void convert_rgb16_to_rgba(VideoOutputData* src, VideoOutputData* dst, size_t pos_x_data, size_t pos_y_data, size_t width, size_t height) {
+	for (size_t i = 0; i < height; i++) {
+		for (size_t j = 0; j < width; j++) {
+			size_t pixel = ((height - 1 - i) * width) + (width - 1 - j) + pos_x_data + (pos_y_data * width);
+			uint8_t r = to_8_bit_5(src->rgb16_video_output_data.screen_data[pixel].r);
+			uint8_t g = to_8_bit_6(src->rgb16_video_output_data.screen_data[pixel].g);
+			uint8_t b = to_8_bit_5(src->rgb16_video_output_data.screen_data[pixel].b);
+			dst->rgba_video_output_data.screen_data[pixel].r = r;
+			dst->rgba_video_output_data.screen_data[pixel].g = g;
+			dst->rgba_video_output_data.screen_data[pixel].b = b;
+			dst->rgba_video_output_data.screen_data[pixel].alpha = 0xFF;
+		}
+	}
+}
+
+static void convert_bgr_to_rgba(VideoOutputData* src, VideoOutputData* dst, size_t pos_x_data, size_t pos_y_data, size_t width, size_t height) {
+	for (size_t i = 0; i < height; i++) {
+		for (size_t j = 0; j < width; j++) {
+			size_t pixel = ((height - 1 - i) * width) + (width - 1 - j) + pos_x_data + (pos_y_data * width);
+			uint8_t r = src->bgr_video_output_data.screen_data[pixel].r;
+			uint8_t g = src->bgr_video_output_data.screen_data[pixel].g;
+			uint8_t b = src->bgr_video_output_data.screen_data[pixel].b;
+			dst->rgba_video_output_data.screen_data[pixel].r = r;
+			dst->rgba_video_output_data.screen_data[pixel].g = g;
+			dst->rgba_video_output_data.screen_data[pixel].b = b;
+			dst->rgba_video_output_data.screen_data[pixel].alpha = 0xFF;
+		}
+	}
+}
+
+static void convert_bgr16_to_rgba(VideoOutputData* src, VideoOutputData* dst, size_t pos_x_data, size_t pos_y_data, size_t width, size_t height) {
+	uint16_t* data_16_ptr = (uint16_t*)src;
+	for (size_t i = 0; i < height; i++) {
+		for (size_t j = 0; j < width; j++) {
+			size_t pixel = ((height - 1 - i) * width) + (width - 1 - j) + pos_x_data + (pos_y_data * width);
+			uint8_t r = to_8_bit_5(src->bgr16_video_output_data.screen_data[pixel].r);
+			uint8_t g = to_8_bit_6(src->bgr16_video_output_data.screen_data[pixel].g);
+			uint8_t b = to_8_bit_5(src->bgr16_video_output_data.screen_data[pixel].b);
+			dst->rgba_video_output_data.screen_data[pixel].r = r;
+			dst->rgba_video_output_data.screen_data[pixel].g = g;
+			dst->rgba_video_output_data.screen_data[pixel].b = b;
+			dst->rgba_video_output_data.screen_data[pixel].alpha = 0xFF;
+		}
+	}
+}
+
+void manualConvertOutputToRGBA(VideoOutputData* src, VideoOutputData* dst, size_t pos_x_data, size_t pos_y_data, size_t width, size_t height, InputVideoDataType video_data_type) {
+	switch (video_data_type) {
+		case VIDEO_DATA_RGB:
+			convert_rgb_to_rgba(src, dst, pos_x_data, pos_y_data, width, height);
+			break;
+		case VIDEO_DATA_RGB16:
+			convert_rgb16_to_rgba(src, dst, pos_x_data, pos_y_data, width, height);
+			break;
+		case VIDEO_DATA_BGR:
+			convert_bgr_to_rgba(src, dst, pos_x_data, pos_y_data, width, height);
+			break;
+		case VIDEO_DATA_BGR16:
+			convert_bgr16_to_rgba(src, dst, pos_x_data, pos_y_data, width, height);
+			break;
+		default:
+			break;
+	}
+}

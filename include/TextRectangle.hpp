@@ -26,6 +26,8 @@ public:
 	void setText(std::string text);
 	void setShowText(bool show_text);
 	void draw(sf::RenderTarget &window);
+	// Only applies to text displayed with timer set to true
+	bool isTimerTextDone();
 
 private:
 	out_rect_data text_rect;
