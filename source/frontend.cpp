@@ -1039,7 +1039,7 @@ JoystickAction get_joystick_action(uint32_t joystickId, uint32_t joy_button) {
 	return JOY_ACTION_NONE;
 }
 
-void update_output(FrontendData* frontend_data, double frame_time, VideoOutputData *out_buf) {
+void update_output(FrontendData* frontend_data, double frame_time, VideoOutputData *out_buf, InputVideoDataType video_data_type) {
 	if(frontend_data->reload) {
 		frontend_data->top_screen->reload();
 		frontend_data->bot_screen->reload();
@@ -1048,17 +1048,17 @@ void update_output(FrontendData* frontend_data, double frame_time, VideoOutputDa
 	}
 	// Make sure the window is closed before showing split/non-split
 	if(!frontend_data->joint_screen->m_info.window_enabled)
-		frontend_data->joint_screen->draw(frame_time, out_buf);
+		frontend_data->joint_screen->draw(frame_time, out_buf, video_data_type);
 	if(!frontend_data->top_screen->m_info.window_enabled)
-		frontend_data->top_screen->draw(frame_time, out_buf);
+		frontend_data->top_screen->draw(frame_time, out_buf, video_data_type);
 	if(!frontend_data->bot_screen->m_info.window_enabled)
-		frontend_data->bot_screen->draw(frame_time, out_buf);
+		frontend_data->bot_screen->draw(frame_time, out_buf, video_data_type);
 	if(frontend_data->joint_screen->m_info.window_enabled)
-		frontend_data->joint_screen->draw(frame_time, out_buf);
+		frontend_data->joint_screen->draw(frame_time, out_buf, video_data_type);
 	if(frontend_data->top_screen->m_info.window_enabled)
-		frontend_data->top_screen->draw(frame_time, out_buf);
+		frontend_data->top_screen->draw(frame_time, out_buf, video_data_type);
 	if(frontend_data->bot_screen->m_info.window_enabled)
-		frontend_data->bot_screen->draw(frame_time, out_buf);
+		frontend_data->bot_screen->draw(frame_time, out_buf, video_data_type);
 }
 
 static bool are_cc_device_screens_same(const CaptureDevice &old_cc_device, const CaptureDevice &new_cc_device) {

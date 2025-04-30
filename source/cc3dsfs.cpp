@@ -563,6 +563,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		else if(frontend_data.shared_data.input_data.fast_poll)
 			poll_timeout = LOW_POLL_DIVISOR;
 		VideoOutputData *chosen_buf = out_buf;
+		InputVideoDataType video_data_type = VIDEO_DATA_RGB;
 		bool blank_out = false;
 		bool is_connected = capture_data->status.connected;
 		if(is_connected != last_connected) {
@@ -586,6 +587,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 					if(capture_data->status.cooldown_curr_in || (!capture_data->status.connected))
 						blank_out = true;
 					else {
+						video_data_type = data_buffer->buffer_video_data_type;
 						bool conversion_success = convertVideoToOutput(out_buf, endianness, data_buffer, &capture_data->status, frontend_data.display_data.interleaved_3d);
 						if(!conversion_success)
 							UpdateOutText(out_text_data, "", "Video conversion failed...", TEXT_KIND_NORMAL);
@@ -619,7 +621,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		if(frontend_data.shared_data.input_data.fast_poll)
 			poll_all_windows(&frontend_data, poll_everything, polled);
 
-		update_output(&frontend_data, last_frame_time, chosen_buf);
+		update_output(&frontend_data, last_frame_time, chosen_buf, video_data_type);
 
 		if(!frontend_data.shared_data.input_data.fast_poll)
 			poll_all_windows(&frontend_data, poll_everything, polled);

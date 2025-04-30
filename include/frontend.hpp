@@ -76,7 +76,7 @@ public:
 	void display_thread();
 	void end();
 	void after_thread_join();
-	void draw(double frame_time, VideoOutputData* out_buf);
+	void draw(double frame_time, VideoOutputData* out_buf, InputVideoDataType video_data_type);
 	void setup_connection_menu(std::vector<CaptureDevice> *devices_list, bool reset_data = true);
 	int check_connection_menu_result();
 	void end_connection_menu();
@@ -115,6 +115,7 @@ private:
 		bool divide_3d_par;
 	};
 	OutTextData own_out_text_data;
+	InputVideoDataType curr_video_data_type;
 	InputVideoDataType last_update_texture_data_type;
 	PossibleSoftwareConvTypes texture_software_based_conv;
 	bool created_proper_folder;
@@ -431,7 +432,7 @@ void get_par_size(float &width, float &height, float multiplier_factor, const PA
 
 SecondScreen3DRelativePosition get_second_screen_pos(ScreenInfo* info, ScreenType stype);
 
-void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL);
+void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL, InputVideoDataType video_data_type = VIDEO_DATA_RGB);
 void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &old_cc_device, const CaptureDevice &new_cc_device);
 void update_connected_specific_settings(FrontendData* frontend_data, const CaptureDevice &cc_device);
 

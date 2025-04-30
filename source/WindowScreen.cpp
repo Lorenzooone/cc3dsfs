@@ -271,7 +271,7 @@ void WindowScreen::after_thread_join() {
 	}
 }
 
-void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
+void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoDataType video_data_type) {
 	FPSArrayInsertElement(&in_fps, frame_time);
 	if(!this->done_display)
 		return;
@@ -316,6 +316,7 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf) {
 			memset(this->saved_buf, 0, sizeof(VideoOutputData));
 			this->was_last_frame_null = true;
 		}
+		this->curr_video_data_type = video_data_type;
 		loaded_info = m_info;
 		m_info.initial_pos_x = DEFAULT_NO_POS_WINDOW_VALUE;
 		m_info.initial_pos_y = DEFAULT_NO_POS_WINDOW_VALUE;
@@ -648,7 +649,7 @@ bool WindowScreen::single_update_texture(unsigned int m_texture, InputVideoDataT
 }
 
 void WindowScreen::execute_single_update_texture(bool &manually_converted, bool do_full, bool is_top, bool is_second) {
-	InputVideoDataType video_data_type = this->capture_status->device.video_data_type;
+	InputVideoDataType video_data_type = this->curr_video_data_type;
 	size_t top_width = TOP_WIDTH_3DS;
 	size_t top_height = HEIGHT_3DS;
 	size_t single_top_width = TOP_WIDTH_3DS;
