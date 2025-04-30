@@ -16,6 +16,17 @@
 #include <queue>
 #include <cmath>
 
+#ifdef SFML_SYSTEM_ANDROID
+// Since we want to get the native activity from SFML, we'll have to use an
+// extra header here:
+#include <SFML/System/NativeActivity.hpp>
+#endif
+#ifdef ANDROID_COMPILATION
+#include <android/log.h>
+// These headers are only needed for direct NDK/JDK interaction
+#include <android/native_activity.h>
+#endif
+
 #define xstr(a) str(a)
 #define str(a) #a
 
@@ -276,24 +287,59 @@ std::string get_float_str_decimals(float value, int decimals) {
 	return return_text;
 }
 
+void ActualConsoleOutTextError(std::string out_string) {
+	#ifdef ANDROID_COMPILATION
+	__android_log_print(ANDROID_LOG_ERROR, NAME, "%s", out_string.c_str());
+	#else
+	std::cerr << out_string << std::endl;
+	#endif
+}
+
+void ActualConsoleOutText(std::string out_string) {
+	#ifdef ANDROID_COMPILATION
+	__android_log_print(ANDROID_LOG_INFO, NAME, "%s", out_string.c_str());
+	#else
+	std::cout << out_string << std::endl;
+	#endif
+}
+
 std::string LayoutNameGenerator(int index) {
 	if(index == STARTUP_FILE_INDEX)
 		return std::string(NAME) + ".cfg";
 	return "layout" + std::to_string(index) + ".cfg";
 }
 
+#ifdef ANDROID_COMPILATION
+ANativeActivity* getAndroidNativeActivity() {
+	#ifdef SFML_SYSTEM_ANDROID
+	return sf::getNativeActivity();
+	#else
+	return NULL;
+	#endif
+}
+#endif
+
 std::string LayoutPathGenerator(int index, bool created_proper_folder) {
 	bool success = false;
 	std::string cfg_dir;
-	#if !(defined(_WIN32) || defined(_WIN64))
-	const char* env_p = std::getenv("HOME");
-	if(created_proper_folder && env_p) {
-		cfg_dir = std::string(env_p) + "/.config/" + std::string(NAME);
-		success = true;
-	}
+	const char* env_p = NULL;
+
+	#ifdef ANDROID_COMPILATION
+	ANativeActivity* native_activity_ptr = getAndroidNativeActivity();
+	if(native_activity_ptr)
+		env_p = native_activity_ptr->internalDataPath;
+	#elif !(defined(_WIN32) || defined(_WIN64))
+	env_p = std::getenv("HOME");
 	#endif
-	if(!success)
-		cfg_dir = ".config/" + std::string(NAME);
+
+	if(!created_proper_folder)
+		env_p = NULL;
+
+	if(env_p != NULL)
+		cfg_dir = std::string(env_p) + "/";
+
+	cfg_dir += ".config/" + std::string(NAME);
+
 	if(index == STARTUP_FILE_INDEX)
 		return cfg_dir + "/";
 	return cfg_dir + "/presets/";

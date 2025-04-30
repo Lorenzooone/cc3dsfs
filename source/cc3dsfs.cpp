@@ -6,7 +6,6 @@
 #else
 #include <experimental/filesystem>
 #endif
-#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <cstring>
@@ -720,7 +719,7 @@ static bool create_folder(const std::string path) {
 		return true;
 	}
 	catch(...) {
-		std::cerr << "Error creating folder " << path << std::endl;
+		ActualConsoleOutTextError("Error creating folder " + path);
 	}
 	return false;
 }
@@ -749,7 +748,7 @@ static bool parse_int_arg(int &index, int argc, char **argv, int &target, std::s
 		target = std::stoi(argv[index]);
 	}
 	catch(...) {
-		std::cerr << "Error with input for: " << to_check << std::endl;
+		ActualConsoleOutTextError("Error with input for: " + to_check);
 	}
 	return true;
 }
@@ -763,7 +762,7 @@ static bool parse_double_arg(int &index, int argc, char **argv, double &target, 
 		target = std::stod(argv[index]);
 	}
 	catch(...) {
-		std::cerr << "Error with input for: " << to_check << std::endl;
+		ActualConsoleOutTextError("Error with input for: " + to_check);
 	}
 	return true;
 }
@@ -778,7 +777,7 @@ int main(int argc, char **argv) {
 	bool use_pud_up = true;
 	bool created_proper_folder = create_out_folder();
 	bool mono_app_default_value = false;
-	#ifdef SFML_SYSTEM_ANDROID
+	#ifdef ANDROID_COMPILATION
 		mono_app_default_value = true;
 	#endif
 	override_all_data override_data;
@@ -846,44 +845,44 @@ int main(int argc, char **argv) {
 			mono_app_action_str = "Disables";
 			default_mono_app_strn = "Enabled";
 		}
-		std::cout << "Help:" << std::endl;
-		std::cout << "  --mono_app        "<< mono_app_action_str << " special mode for when only this application" << std::endl;
-		std::cout << "                    should run on the system. " << default_mono_app_strn << " by default." << std::endl;
-		std::cout << "  --recovery_mode   Resets to the defaults." << std::endl;
-		std::cout << "  --pos_x_both      Set default x position for the window with both screens." << std::endl;
-		std::cout << "  --pos_y_both      Set default y position for the window with both screens." << std::endl;
-		std::cout << "  --scaling_both    Overrides the scale factor for the window with both screens." << std::endl;
-		std::cout << "  --enabled_both    Overrides the presence of the window with both screens." << std::endl;
-		std::cout << "                    1 On, 0 Off." << std::endl;
-		std::cout << "  --pos_x_top       Set default x position for the top screen's window." << std::endl;
-		std::cout << "  --pos_y_top       Set default y position for the top screen's window." << std::endl;
-		std::cout << "  --scaling_top     Overrides the top screen window's scale factor." << std::endl;
-		std::cout << "  --enabled_top     Overrides the presence of the top screen's window." << std::endl;
-		std::cout << "                    1 On, 0 Off." << std::endl;
-		std::cout << "  --pos_x_bot       Set default x position for the bottom screen's window." << std::endl;
-		std::cout << "  --pos_y_bot       Set default y position for the bottom screen's window." << std::endl;
-		std::cout << "  --scaling_bot     Overrides the bottom screen window's scale factor." << std::endl;
-		std::cout << "  --enabled_bot     Overrides the presence of the bottom screen's window." << std::endl;
-		std::cout << "                    1 On, 0 Off." << std::endl;
-		std::cout << "  --no_frame_blend  Disables support for frame blending shader." << std::endl;
-		std::cout << "                    May improve compatibility with lower end hardware." << std::endl;
-		std::cout << "  --volume          Overrides the saved volume for the audio. 0 - 200" << std::endl;
-		std::cout << "  --no_audio        Disables audio output and processing completely." << std::endl;
-		std::cout << "  --no_cursor       Prevents the mouse cursor from showing, unless moved." << std::endl;
-		std::cout << "  --auto_connect    Automatically connects to the first available device," << std::endl;
-		std::cout << "                    even if multiple are present." << std::endl;
-		std::cout << "  --failure_close   Automatically closes the software if the first connection" << std::endl;
-		std::cout << "                    doesn't succeed." << std::endl;
-		std::cout << "  --auto_close      Automatically closes the software on disconnect." << std::endl;
-		std::cout << "  --profile         Loads the profile with the specified ID at startup" << std::endl;
-		std::cout << "                    instead of the default one. When the program closes," << std::endl;
-		std::cout << "                    the data is also saved to the specified profile." << std::endl;
+		ActualConsoleOutText("Help:");
+		ActualConsoleOutText("  --mono_app        " + mono_app_action_str + " special mode for when only this application");
+		ActualConsoleOutText("                    should run on the system. " + default_mono_app_strn + " by default.");
+		ActualConsoleOutText("  --recovery_mode   Resets to the defaults.");
+		ActualConsoleOutText("  --pos_x_both      Set default x position for the window with both screens.");
+		ActualConsoleOutText("  --pos_y_both      Set default y position for the window with both screens.");
+		ActualConsoleOutText("  --scaling_both    Overrides the scale factor for the window with both screens.");
+		ActualConsoleOutText("  --enabled_both    Overrides the presence of the window with both screens.");
+		ActualConsoleOutText("                    1 On, 0 Off.");
+		ActualConsoleOutText("  --pos_x_top       Set default x position for the top screen's window.");
+		ActualConsoleOutText("  --pos_y_top       Set default y position for the top screen's window.");
+		ActualConsoleOutText("  --scaling_top     Overrides the top screen window's scale factor.");
+		ActualConsoleOutText("  --enabled_top     Overrides the presence of the top screen's window.");
+		ActualConsoleOutText("                    1 On, 0 Off.");
+		ActualConsoleOutText("  --pos_x_bot       Set default x position for the bottom screen's window.");
+		ActualConsoleOutText("  --pos_y_bot       Set default y position for the bottom screen's window.");
+		ActualConsoleOutText("  --scaling_bot     Overrides the bottom screen window's scale factor.");
+		ActualConsoleOutText("  --enabled_bot     Overrides the presence of the bottom screen's window.");
+		ActualConsoleOutText("                    1 On, 0 Off.");
+		ActualConsoleOutText("  --no_frame_blend  Disables support for frame blending shader.");
+		ActualConsoleOutText("                    May improve compatibility with lower end hardware.");
+		ActualConsoleOutText("  --volume          Overrides the saved volume for the audio. 0 - 200");
+		ActualConsoleOutText("  --no_audio        Disables audio output and processing completely.");
+		ActualConsoleOutText("  --no_cursor       Prevents the mouse cursor from showing, unless moved.");
+		ActualConsoleOutText("  --auto_connect    Automatically connects to the first available device,");
+		ActualConsoleOutText("                    even if multiple are present.");
+		ActualConsoleOutText("  --failure_close   Automatically closes the software if the first connection");
+		ActualConsoleOutText("                    doesn't succeed.");
+		ActualConsoleOutText("  --auto_close      Automatically closes the software on disconnect.");
+		ActualConsoleOutText("  --profile         Loads the profile with the specified ID at startup");
+		ActualConsoleOutText("                    instead of the default one. When the program closes,");
+		ActualConsoleOutText("                    the data is also saved to the specified profile.");
 		#ifdef RASPI
-		std::cout << "  --pi_select ID    Specifies ID for the select GPIO button." << std::endl;
-		std::cout << "  --pi_menu ID      Specifies ID for the menu GPIO button." << std::endl;
-		std::cout << "  --pi_enter ID     Specifies ID for the enter GPIO button." << std::endl;
-		std::cout << "  --pi_power ID     Specifies ID for the poweroff GPIO button." << std::endl;
-		std::cout << "  --pi_pud_down     Sets the pull-up GPIO mode to down. Default is up." << std::endl;
+		ActualConsoleOutText("  --pi_select ID    Specifies ID for the select GPIO button.");
+		ActualConsoleOutText("  --pi_menu ID      Specifies ID for the menu GPIO button.");
+		ActualConsoleOutText("  --pi_enter ID     Specifies ID for the enter GPIO button.");
+		ActualConsoleOutText("  --pi_power ID     Specifies ID for the poweroff GPIO button.");
+		ActualConsoleOutText("  --pi_pud_down     Sets the pull-up GPIO mode to down. Default is up.");
 		#endif
 		return 0;
 	}

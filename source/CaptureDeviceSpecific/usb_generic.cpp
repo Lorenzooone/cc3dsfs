@@ -1,15 +1,7 @@
 #include "usb_generic.hpp"
+#include "utils.hpp"
 #include <thread>
 #include <mutex>
-
-#ifdef SFML_SYSTEM_ANDROID
-// These headers are only needed for direct NDK/JDK interaction
-#include <android/native_activity.h>
-#include <jni.h>
-// Since we want to get the native activity from SFML, we'll have to use an
-// extra header here:
-#include <SFML/System/NativeActivity.hpp>
-#endif
 
 static bool usb_initialized = false;
 static libusb_context* usb_ctx = NULL; // libusb session context
@@ -20,13 +12,13 @@ std::mutex usb_thread_mutex;
 void usb_init() {
 	if(usb_initialized)
 		return;
-	#ifdef SFML_SYSTEM_ANDROID
-	// First we'll need the native activity handle
-	ANativeActivity& activity = *sf::getNativeActivity();
-	// Retrieve the JVM and JNI environment
-	JavaVM& vm  = *activity.vm;
-	JNIEnv& env = *activity.env;
-	libusb_set_option(usb_ctx, LIBUSB_OPTION_ANDROID_JAVAVM, &vm);
+	#ifdef ANDROID_COMPILATION
+	ANativeActivity* native_activity_ptr = getAndroidNativeActivity();
+	if(native_activity_ptr) {
+		// Retrieve the JVM environment
+		JavaVM* vm  = native_activity_ptr->vm;
+		libusb_set_option(usb_ctx, LIBUSB_OPTION_ANDROID_JAVAVM, vm);
+	}
 	#endif
 	int result = libusb_init(&usb_ctx); // open session
 	if (result < 0) {

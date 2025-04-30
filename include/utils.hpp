@@ -5,6 +5,20 @@
 #include <condition_variable>
 #include <chrono>
 
+#ifdef SFML_SYSTEM_ANDROID
+#define ANDROID_COMPILATION
+#else
+// Possible to add more stuff here...
+#ifdef ANDROID_COMPILATION
+#undef ANDROID_COMPILATION
+#endif
+#endif
+
+#ifdef ANDROID_COMPILATION
+// These headers are needed for direct NDK/JDK interaction
+#include <android/native_activity.h>
+#endif
+
 #if _MSC_VER && !__INTEL_COMPILER
 #define PACKED
 #define ALIGNED(x) alignas(x)
@@ -17,6 +31,12 @@
 
 #define NAME "cc3dsfs"
 
+#ifdef ANDROID_COMPILATION
+#define PRINT_FUNCTION(...) __android_log_print(ANDROID_LOG_INFO, NAME, __VA_ARGS__)
+#else
+#define PRINT_FUNCTION(...) printf(__VA_ARGS__)
+#endif
+
 // This isn't precise, however we can use it...
 // Use these to properly sleep, with small wakes to check if data is ready
 #define USB_FPS 60
@@ -28,7 +48,12 @@
 #define SIMPLE_RESET_DATA_INDEX -2
 #define CREATE_NEW_FILE_INDEX -3
 
+#ifdef ANDROID_COMPILATION
+ANativeActivity* getAndroidNativeActivity();
+#endif
 std::string get_version_string(bool get_letter = true);
+void ActualConsoleOutTextError(std::string out_string);
+void ActualConsoleOutText(std::string out_string);
 std::string LayoutNameGenerator(int index);
 std::string LayoutPathGenerator(int index, bool created_proper_folder);
 std::string load_layout_name(int index, bool created_proper_folder, bool &success);
