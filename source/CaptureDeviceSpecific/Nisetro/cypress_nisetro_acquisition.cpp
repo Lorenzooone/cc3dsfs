@@ -118,7 +118,7 @@ static void cypress_nisetro_connection_end(cy_device_device_handlers* handlers, 
 	delete handlers;
 }
 
-void list_devices_cyni_device(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list) {
+void list_devices_cyni_device(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list, bool* devices_allowed_scan) {
 	const size_t num_cyni_device_desc = GetNumCyNiDeviceDesc();
 	int* curr_serial_extra_id_cyni_device = new int[num_cyni_device_desc];
 	bool* no_access_elems = new bool[num_cyni_device_desc];
@@ -129,7 +129,8 @@ void list_devices_cyni_device(std::vector<CaptureDevice> &devices_list, std::vec
 		not_supported_elems[i] = false;
 		curr_serial_extra_id_cyni_device[i] = 0;
 		const cyni_device_usb_device* curr_device_desc = GetCyNiDeviceDesc((int)i);
-		usb_devices_to_check.push_back(get_cy_usb_info(curr_device_desc));
+		if(devices_allowed_scan[curr_device_desc->index_in_allowed_scan])
+			usb_devices_to_check.push_back(get_cy_usb_info(curr_device_desc));
 	}
 	cypress_libusb_list_devices(devices_list, no_access_elems, not_supported_elems, curr_serial_extra_id_cyni_device, usb_devices_to_check);
 

@@ -174,6 +174,7 @@ struct PACKED is_twl_capture_information_packet {
 
 static const is_device_usb_device usb_is_nitro_emu_rare_desc = {
 .name = "ISNEr", .long_name = "IS Nitro Emulator(R)",
+.index_in_allowed_scan = CC_IS_NITRO_EMULATOR,
 .vid = 0x0f6e, .pid = 0x0400,
 .default_config = 1, .default_interface = 0,
 .bulk_timeout = 500,
@@ -186,6 +187,7 @@ static const is_device_usb_device usb_is_nitro_emu_rare_desc = {
 
 static const is_device_usb_device usb_is_nitro_emu_common_desc = {
 .name = "ISNE", .long_name = "IS Nitro Emulator",
+.index_in_allowed_scan = CC_IS_NITRO_EMULATOR,
 .vid = 0x0f6e, .pid = 0x0404,
 .default_config = 1, .default_interface = 0,
 .bulk_timeout = 500,
@@ -198,6 +200,7 @@ static const is_device_usb_device usb_is_nitro_emu_common_desc = {
 
 static const is_device_usb_device usb_is_nitro_cap_desc = {
 .name = "ISNC", .long_name = "IS Nitro Capture",
+.index_in_allowed_scan = CC_IS_NITRO_CAPTURE,
 .vid = 0x0f6e, .pid = 0x0403,
 .default_config = 1, .default_interface = 0,
 .bulk_timeout = 500,
@@ -210,6 +213,7 @@ static const is_device_usb_device usb_is_nitro_cap_desc = {
 
 static const is_device_usb_device usb_is_twl_cap_desc = {
 .name = "ISTCD", .long_name = "IS TWL Capture (Dev)",
+.index_in_allowed_scan = CC_IS_TWL_CAPTURE,
 .vid = 0x0f6e, .pid = 0x0501,
 .default_config = 1, .default_interface = 0,
 .bulk_timeout = 500,
@@ -222,6 +226,7 @@ static const is_device_usb_device usb_is_twl_cap_desc = {
 
 static const is_device_usb_device usb_is_twl_cap_desc_2 = {
 .name = "ISTCR", .long_name = "IS TWL Capture (Ret)",
+.index_in_allowed_scan = CC_IS_TWL_CAPTURE,
 .vid = 0x0f6e, .pid = 0x0502,
 .default_config = 1, .default_interface = 0,
 .bulk_timeout = 500,

@@ -8,7 +8,7 @@
 #include "display_structs.hpp"
 #include "devicecapture.hpp"
 
-void list_devices_is_device(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list);
+void list_devices_is_device(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list, bool* devices_allowed_scan);
 bool is_device_connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* device);
 void is_device_acquisition_main_loop(CaptureData* capture_data);
 void usb_is_device_acquisition_cleanup(CaptureData* capture_data);

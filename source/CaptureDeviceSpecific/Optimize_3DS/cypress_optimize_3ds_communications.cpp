@@ -38,7 +38,7 @@ const uint8_t start_capture_third_buffer_565_old[] = { 0x61, 0x07, 0x00, 0x26, 0
 const uint8_t start_capture_third_buffer_888_old[] = { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x20, 0x00, 0x98, 0x00, 0x08, 0x00, 0xDE, 0x00, 0xF9, 0x18, 0x0F };
 
 static const cyop_device_usb_device cypress_optimize_new_3ds_generic_device = {
-.name = "EZ-USB -> Optimize New 3DS", .long_name = "EZ-USB -> Optimize New 3DS",
+.name = "Optimize New 3DS", .long_name = "Optimize New 3DS",
 .device_type = CYPRESS_OPTIMIZE_NEW_3DS_BLANK_DEVICE,
 .firmware_to_load = optimize_new_3ds_fw, .firmware_size = optimize_new_3ds_fw_len,
 .fpga_pl_565 = NULL, .fpga_pl_565_size = 0,
@@ -46,6 +46,7 @@ static const cyop_device_usb_device cypress_optimize_new_3ds_generic_device = {
 .is_new_device = true,
 .next_device = CYPRESS_OPTIMIZE_NEW_3DS_INSTANTIATED_DEVICE,
 .has_bcd_device_serial = false,
+.index_in_allowed_scan = CC_OPTIMIZE_N3DS,
 .usb_device_info = {
 	.vid = 0x0752, .pid = 0x8613,
 	.default_config = 1, .default_interface = 0,
@@ -72,6 +73,7 @@ static const cyop_device_usb_device cypress_optimize_new_3ds_instantiated_device
 .is_new_device = true,
 .next_device = CYPRESS_OPTIMIZE_NEW_3DS_INSTANTIATED_DEVICE,
 .has_bcd_device_serial = true,
+.index_in_allowed_scan = CC_OPTIMIZE_N3DS,
 .usb_device_info = {
 	.vid = 0x04B4, .pid = 0x1004,
 	.default_config = 1, .default_interface = 0,
@@ -90,7 +92,7 @@ static const cyop_device_usb_device cypress_optimize_new_3ds_instantiated_device
 };
 
 static const cyop_device_usb_device cypress_optimize_old_3ds_generic_device = {
-.name = "EZ-USB -> Optimize Old 3DS", .long_name = "EZ-USB -> Optimize Old 3DS",
+.name = "Optimize Old 3DS", .long_name = "Optimize Old 3DS",
 .device_type = CYPRESS_OPTIMIZE_OLD_3DS_BLANK_DEVICE,
 .firmware_to_load = optimize_old_3ds_fw, .firmware_size = optimize_old_3ds_fw_len,
 .fpga_pl_565 = NULL, .fpga_pl_565_size = 0,
@@ -98,6 +100,7 @@ static const cyop_device_usb_device cypress_optimize_old_3ds_generic_device = {
 .is_new_device = false,
 .next_device = CYPRESS_OPTIMIZE_OLD_3DS_INSTANTIATED_DEVICE,
 .has_bcd_device_serial = false,
+.index_in_allowed_scan = CC_OPTIMIZE_O3DS,
 .usb_device_info = {
 	.vid = 0x04B4, .pid = 0x8613,
 	.default_config = 1, .default_interface = 0,
@@ -124,6 +127,7 @@ static const cyop_device_usb_device cypress_optimize_old_3ds_instantiated_device
 .is_new_device = false,
 .next_device = CYPRESS_OPTIMIZE_OLD_3DS_INSTANTIATED_DEVICE,
 .has_bcd_device_serial = true,
+.index_in_allowed_scan = CC_OPTIMIZE_O3DS,
 .usb_device_info = {
 	.vid = 0x04B4, .pid = 0x1004,
 	.default_config = 1, .default_interface = 0,
@@ -494,7 +498,7 @@ static const uint8_t* get_start_capture_third_buffer(const cyop_device_usb_devic
 	return start_capture_third_buffer_565_old;
 }
 
-int StartCaptureDma(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_rgb888) {
+int StartCaptureDma(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_rgb888, bool is_3d) {
 	const uint8_t mono_buffer[] = { 0x40 };
 	int transferred = 0;
 	int ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), mono_buffer, sizeof(mono_buffer), &transferred);

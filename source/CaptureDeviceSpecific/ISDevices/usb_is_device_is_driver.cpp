@@ -230,7 +230,7 @@ void is_driver_end_connection(is_device_device_handlers* handlers) {
 	#endif
 }
 
-void is_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool* not_supported_elems, int *curr_serial_extra_id_is_device, const size_t num_is_device_desc) {
+void is_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool* not_supported_elems, int *curr_serial_extra_id_is_device, std::vector<const is_device_usb_device*> &device_descriptions) {
 	#ifdef _WIN32
 	HDEVINFO DeviceInfoSet = SetupDiGetClassDevs(
 		&is_device_driver_guid,
@@ -250,8 +250,8 @@ void is_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool* not_
 		uint16_t pid = 0;
 		if(!is_driver_get_device_pid_vid(path, vid, pid))
 			continue;
-		for(size_t j = 0; j < num_is_device_desc; j++) {
-			const is_device_usb_device* usb_device_desc = GetISDeviceDesc((int)j);
+		for(size_t j = 0; j < device_descriptions.size(); j++) {
+			const is_device_usb_device* usb_device_desc = device_descriptions[j];
 			if(not_supported_elems[j] && (usb_device_desc->vid == vid) && (usb_device_desc->pid == pid)) {
 				is_device_device_handlers handlers;
 				if(is_driver_setup_connection(&handlers, path, usb_device_desc->read_pipe, usb_device_desc->write_pipe, usb_device_desc->do_pipe_clear_reset))

@@ -69,7 +69,10 @@ void insert_device_ftd2_shared(std::vector<CaptureDevice> &devices_list, char* d
 	}
 }
 
-void list_devices_ftd2_shared(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list) {
+void list_devices_ftd2_shared(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list, bool* devices_allowed_scan) {
+	// If more devices used this, it would need to be expanded...
+	if(!devices_allowed_scan[CC_LOOPY_NEW_DS])
+		return;
 	list_devices_ftd2_compatibility(devices_list, no_access_list);
 }
 

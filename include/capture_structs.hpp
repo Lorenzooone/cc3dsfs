@@ -26,6 +26,7 @@ enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_F
 enum InputVideoDataType { VIDEO_DATA_RGB, VIDEO_DATA_BGR, VIDEO_DATA_RGB16, VIDEO_DATA_BGR16 };
 enum CaptureScreensType { CAPTURE_SCREENS_BOTH, CAPTURE_SCREENS_TOP, CAPTURE_SCREENS_BOTTOM, CAPTURE_SCREENS_ENUM_END };
 enum CaptureSpeedsType { CAPTURE_SPEEDS_FULL, CAPTURE_SPEEDS_HALF, CAPTURE_SPEEDS_THIRD, CAPTURE_SPEEDS_QUARTER, CAPTURE_SPEEDS_ENUM_END };
+enum PossibleCaptureDevices { CC_LOOPY_OLD_DS, CC_LOOPY_NEW_DS, CC_LOOPY_OLD_3DS, CC_LOOPY_NEW_N3DSXL, CC_IS_NITRO_EMULATOR, CC_IS_NITRO_CAPTURE, CC_IS_TWL_CAPTURE, CC_NISETRO_DS, CC_OPTIMIZE_O3DS, CC_OPTIMIZE_N3DS, CC_POSSIBLE_DEVICES_END };
 
 // Readers are Audio and Video. So 2.
 // Use 6 extra buffers. 5 for async writing in case the other 2 are busy,
@@ -325,10 +326,13 @@ struct CaptureStatus {
 	volatile int curr_delay = 0;
 	volatile bool reset_hardware = false;
 	bool requested_3d = false;
+	bool request_low_bw_format = true;
 	CaptureScreensType capture_type;
 	CaptureSpeedsType capture_speed;
 	int battery_percentage;
 	bool ac_adapter_connected;
+	// Needed for Nisetro DS(i) and Old Optimize 3DS
+	bool devices_allowed_scan[CC_POSSIBLE_DEVICES_END];
 	ConsumerMutex video_wait;
 	ConsumerMutex audio_wait;
 };

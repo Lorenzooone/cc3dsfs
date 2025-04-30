@@ -106,7 +106,7 @@ void is_device_libusb_end_connection(is_device_device_handlers* handlers, const 
 	handlers->usb_handle = NULL;
 }
 
-void is_device_libusb_list_devices(std::vector<CaptureDevice> &devices_list, bool* no_access_elems, bool* not_supported_elems, int* curr_serial_extra_id_is_device, const size_t num_is_device_desc) {
+void is_device_libusb_list_devices(std::vector<CaptureDevice> &devices_list, bool* no_access_elems, bool* not_supported_elems, int* curr_serial_extra_id_is_device, std::vector<const is_device_usb_device*> &device_descriptions) {
 	if(!usb_is_initialized())
 		return;
 	libusb_device **usb_devices;
@@ -117,8 +117,8 @@ void is_device_libusb_list_devices(std::vector<CaptureDevice> &devices_list, boo
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
 		if(result < 0)
 			continue;
-		for (size_t j = 0; j < num_is_device_desc; j++) {
-			result = is_device_libusb_insert_device(devices_list, GetISDeviceDesc((int)j), usb_devices[i], &usb_descriptor, curr_serial_extra_id_is_device[j]);
+		for (size_t j = 0; j < device_descriptions.size(); j++) {
+			result = is_device_libusb_insert_device(devices_list, device_descriptions[j], usb_devices[i], &usb_descriptor, curr_serial_extra_id_is_device[j]);
 			if (result != LIBUSB_ERROR_NOT_FOUND) {
 				if (result == LIBUSB_ERROR_ACCESS)
 					no_access_elems[j] = true;

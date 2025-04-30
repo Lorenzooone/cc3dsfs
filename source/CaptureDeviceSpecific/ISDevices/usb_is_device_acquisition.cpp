@@ -87,28 +87,33 @@ static is_device_device_handlers* usb_find_by_serial_number(const is_device_usb_
 	return final_handlers;
 }
 
-void list_devices_is_device(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list) {
+void list_devices_is_device(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list, bool* devices_allowed_scan) {
 	const size_t num_is_device_desc = GetNumISDeviceDesc();
 	int* curr_serial_extra_id_is_device = new int[num_is_device_desc];
 	bool* no_access_elems = new bool[num_is_device_desc];
 	bool* not_supported_elems = new bool[num_is_device_desc];
+	std::vector<const is_device_usb_device*> device_descriptions;
 	for(size_t i = 0; i < num_is_device_desc; i++) {
 		no_access_elems[i] = false;
 		not_supported_elems[i] = false;
 		curr_serial_extra_id_is_device[i] = 0;
+		const is_device_usb_device* usb_device_desc = GetISDeviceDesc((int)i);
+		if(devices_allowed_scan[usb_device_desc->index_in_allowed_scan])
+			device_descriptions.push_back(usb_device_desc);
+			
 	}
-	is_device_libusb_list_devices(devices_list, no_access_elems, not_supported_elems, curr_serial_extra_id_is_device, num_is_device_desc);
+	is_device_libusb_list_devices(devices_list, no_access_elems, not_supported_elems, curr_serial_extra_id_is_device, device_descriptions);
 
 	bool any_not_supported = false;
 	for(size_t i = 0; i < num_is_device_desc; i++)
 		any_not_supported |= not_supported_elems[i];
 	for(size_t i = 0; i < num_is_device_desc; i++)
 		if(no_access_elems[i]) {
-			const is_device_usb_device* usb_device = GetISDeviceDesc((int)i);
+			const is_device_usb_device* usb_device = device_descriptions[i];
 			no_access_list.emplace_back(usb_device->vid, usb_device->pid);
 		}
 	if(any_not_supported)
-		is_driver_list_devices(devices_list, not_supported_elems, curr_serial_extra_id_is_device, num_is_device_desc);
+		is_driver_list_devices(devices_list, not_supported_elems, curr_serial_extra_id_is_device, device_descriptions);
 
 	delete[] curr_serial_extra_id_is_device;
 	delete[] no_access_elems;

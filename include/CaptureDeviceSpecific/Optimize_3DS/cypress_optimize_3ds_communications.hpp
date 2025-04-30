@@ -29,6 +29,7 @@ struct cyop_device_usb_device {
 	bool is_new_device;
 	cypress_optimize_device_type next_device;
 	bool has_bcd_device_serial;
+	PossibleCaptureDevices index_in_allowed_scan;
 	cy_device_usb_device usb_device_info;
 };
 
@@ -40,7 +41,7 @@ const cy_device_usb_device* get_cy_usb_info(const cyop_device_usb_device* usb_de
 bool has_to_load_firmware(const cyop_device_usb_device* device);
 bool load_firmware(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint8_t patch_id);
 int capture_start(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_first_load, bool is_rgb888);
-int StartCaptureDma(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_rgb888);
+int StartCaptureDma(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_rgb888, bool is_3d);
 int capture_end(cy_device_device_handlers* handlers, const cyop_device_usb_device* device);
 int ReadFrame(cy_device_device_handlers* handlers, uint8_t* buf, int length, const cyop_device_usb_device* device_desc);
 int ReadFrameAsync(cy_device_device_handlers* handlers, uint8_t* buf, int length, const cyop_device_usb_device* device_desc, cy_async_callback_data* cb_data);

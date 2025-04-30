@@ -33,12 +33,13 @@
 #define NISETRO_DS_WANTED_VALUE_BASE 0xFF00
 
 static const cyni_device_usb_device cypress_fx2_generic_device = {
-.name = "EZ-USB -> Nisetro DS", .long_name = "EZ-USB -> Nisetro DS",
+.name = "NiseTro DS(i)", .long_name = "NiseTro DS(i)",
 .device_type = CYPRESS_NISETRO_BLANK_DEVICE,
 .video_data_type = VIDEO_DATA_RGB, 
 .firmware_to_load = nisetro_ds_fw, .firmware_size = nisetro_ds_fw_len,
 .next_device = CYPRESS_NISETRO_DS_DEVICE,
 .has_bcd_device_serial = false,
+.index_in_allowed_scan = CC_NISETRO_DS,
 .usb_device_info = {
 	.vid = 0x04B4, .pid = 0x8613,
 	.default_config = 1, .default_interface = 0,
@@ -57,12 +58,13 @@ static const cyni_device_usb_device cypress_fx2_generic_device = {
 };
 
 static const cyni_device_usb_device cypress_fx2_nisetro_ds_device = {
-.name = "Nisetro DS", .long_name = "Nisetro DS",
+.name = "Nisetro DS(i)", .long_name = "Nisetro DS(i)",
 .device_type = CYPRESS_NISETRO_DS_DEVICE,
 .video_data_type = VIDEO_DATA_RGB,
 .firmware_to_load = NULL, .firmware_size = 0,
 .next_device = CYPRESS_NISETRO_DS_DEVICE,
 .has_bcd_device_serial = true,
+.index_in_allowed_scan = CC_NISETRO_DS,
 .usb_device_info = {
 	.vid = 0x04B4, .pid = 0x1004,
 	.default_config = 1, .default_interface = 0,

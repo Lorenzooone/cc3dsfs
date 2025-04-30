@@ -23,6 +23,7 @@ struct cyni_device_usb_device {
 	size_t firmware_size;
 	cypress_nisetro_device_type next_device;
 	bool has_bcd_device_serial;
+	PossibleCaptureDevices index_in_allowed_scan;
 	cy_device_usb_device usb_device_info;
 };
 

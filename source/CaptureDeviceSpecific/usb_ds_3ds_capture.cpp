@@ -41,6 +41,7 @@ struct usb_device {
 	int cmdout_i2c_write;
 	int i2caddr_3dsconfig;
 	int bitstream_3dscfg_ver;
+	PossibleCaptureDevices index_in_allowed_scan;
 };
 
 static const usb_device usb_3ds_desc = {
@@ -52,7 +53,8 @@ static const usb_device usb_3ds_desc = {
 .cmdin_status = 0, .cmdin_frameinfo = 0,
 .cmdout_capture_start = 0x40, .cmdout_capture_stop = 0,
 .cmdin_i2c_read = 0x21, .cmdout_i2c_write = 0x21,
-.i2caddr_3dsconfig = 0x14, .bitstream_3dscfg_ver = 1
+.i2caddr_3dsconfig = 0x14, .bitstream_3dscfg_ver = 1,
+.index_in_allowed_scan = CC_LOOPY_OLD_3DS
 };
 
 static const usb_device usb_old_ds_desc = {
@@ -64,7 +66,8 @@ static const usb_device usb_old_ds_desc = {
 .cmdin_status = 0x31, .cmdin_frameinfo = 0x30,
 .cmdout_capture_start = 0x30, .cmdout_capture_stop = 0x31,
 .cmdin_i2c_read = 0, .cmdout_i2c_write = 0,
-.i2caddr_3dsconfig = 0, .bitstream_3dscfg_ver = 0
+.i2caddr_3dsconfig = 0, .bitstream_3dscfg_ver = 0,
+.index_in_allowed_scan = CC_LOOPY_OLD_DS
 };
 
 static const usb_device* usb_devices_desc_list[] = {
@@ -323,7 +326,7 @@ static void process_usb_capture_result(usb_capture_status result, std::chrono::t
 		capture_data->data_buffers.ReleaseWriterBuffer(0, false);
 }
 
-void list_devices_usb_ds_3ds(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list) {
+void list_devices_usb_ds_3ds(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list, bool* devices_allowed_scan) {
 	if(!usb_is_initialized())
 		return;
 	libusb_device **usb_devices;
@@ -341,12 +344,15 @@ void list_devices_usb_ds_3ds(std::vector<CaptureDevice> &devices_list, std::vect
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
 		if(result < 0)
 			continue;
-		for(size_t j = 0; j < num_usb_desc; j++)
+		for(size_t j = 0; j < num_usb_desc; j++) {
+			if(!devices_allowed_scan[usb_devices_desc_list[j]->index_in_allowed_scan])
+				continue;
 			if(insert_device(devices_list, usb_devices_desc_list[j], usb_devices[i], &usb_descriptor, curr_serial_extra_ids[j]) != LIBUSB_ERROR_NOT_FOUND) {
 				if (result == LIBUSB_ERROR_ACCESS)
 					no_access_elems[j] = true;
 				break;
 			}
+		}
 	}
 
 	if(num_devices >= 0)

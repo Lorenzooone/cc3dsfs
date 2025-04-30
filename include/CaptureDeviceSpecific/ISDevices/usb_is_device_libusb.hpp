@@ -5,7 +5,7 @@
 #include "capture_structs.hpp"
 #include "usb_is_device_communications.hpp"
 
-void is_device_libusb_list_devices(std::vector<CaptureDevice>& devices_list, bool* no_access_elems, bool* not_supported_elems, int* curr_serial_extra_id_is_device, const size_t num_is_device_desc);
+void is_device_libusb_list_devices(std::vector<CaptureDevice>& devices_list, bool* no_access_elems, bool* not_supported_elems, int* curr_serial_extra_id_is_device, std::vector<const is_device_usb_device*> &device_descriptions);
 is_device_device_handlers* is_device_libusb_serial_reconnection(const is_device_usb_device* usb_device_desc, CaptureDevice* device, int& curr_serial_extra_id);
 void is_device_libusb_end_connection(is_device_device_handlers* handlers, const is_device_usb_device* device_desc, bool interface_claimed);
 int is_device_libusb_bulk_out(is_device_device_handlers* handlers, const is_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred);

@@ -55,6 +55,7 @@ struct isd_async_callback_data {
 struct is_device_usb_device {
 	std::string name;
 	std::string long_name;
+	PossibleCaptureDevices index_in_allowed_scan;
 	int vid;
 	int pid;
 	int default_config;

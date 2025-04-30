@@ -31,7 +31,10 @@ void ftd3_insert_device(std::vector<CaptureDevice> &devices_list, std::string se
 	devices_list.emplace_back(ftd3_get_serial(serial_string, curr_serial_extra_id), short_name, long_name, CAPTURE_CONN_FTD3, (void*)NULL, true, true, true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, HEIGHT_3DS, (TOP_WIDTH_3DS * 2) + BOT_WIDTH_3DS, N3DSXL_SAMPLES_IN, 90, BOT_WIDTH_3DS, 0, BOT_WIDTH_3DS + TOP_WIDTH_3DS, 0, 0, 0, false, VIDEO_DATA_RGB, usb_speed);
 }
 
-void list_devices_ftd3(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list) {
+void list_devices_ftd3(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list, bool* devices_allowed_scan) {
+	// If more devices used this, it would need to be expanded...
+	if(!devices_allowed_scan[CC_LOOPY_NEW_N3DSXL])
+		return;
 	ftd3_list_devices_compat(devices_list, no_access_list, valid_3dscapture_descriptions);
 }
 

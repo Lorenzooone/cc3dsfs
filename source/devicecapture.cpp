@@ -85,23 +85,27 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	// Device Listing
 	std::vector<CaptureDevice> devices_list;
 	std::vector<no_access_recap_data> no_access_list;
+	bool devices_allowed_scan[CC_POSSIBLE_DEVICES_END];
+	for(int i = 0; i < CC_POSSIBLE_DEVICES_END; i++)
+		devices_allowed_scan[i] = capture_data->status.devices_allowed_scan[i];
+
 	#ifdef USE_CYNI_USB
-	list_devices_cyni_device(devices_list, no_access_list);
+	list_devices_cyni_device(devices_list, no_access_list, devices_allowed_scan);
 	#endif
 	#ifdef USE_CYPRESS_OPTIMIZE
-	list_devices_cyop_device(devices_list, no_access_list);
+	list_devices_cyop_device(devices_list, no_access_list, devices_allowed_scan);
 	#endif
 	#ifdef USE_FTD3
-	list_devices_ftd3(devices_list, no_access_list);
+	list_devices_ftd3(devices_list, no_access_list, devices_allowed_scan);
 	#endif
 	#ifdef USE_FTD2
-	list_devices_ftd2_shared(devices_list, no_access_list);
+	list_devices_ftd2_shared(devices_list, no_access_list, devices_allowed_scan);
 	#endif
 	#ifdef USE_DS_3DS_USB
-	list_devices_usb_ds_3ds(devices_list, no_access_list);
+	list_devices_usb_ds_3ds(devices_list, no_access_list, devices_allowed_scan);
 	#endif
 	#ifdef USE_IS_DEVICES_USB
-	list_devices_is_device(devices_list, no_access_list);
+	list_devices_is_device(devices_list, no_access_list, devices_allowed_scan);
 	#endif
 
 	if(devices_list.size() <= 0) {

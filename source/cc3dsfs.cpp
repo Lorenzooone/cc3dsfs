@@ -139,72 +139,87 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 			std::istringstream kvp(line);
 			std::string key;
 
-			if(std::getline(kvp, key, '=')) {
-				std::string value;
+			if(!std::getline(kvp, key, '='))
+				continue;
 
-				if(std::getline(kvp, value)) {
+			std::string value;
+			if(!std::getline(kvp, value))
+				continue;
 
-					if(load_screen_info(key, value, "bot_", bottom_info))
-						continue;
-					if(load_screen_info(key, value, "joint_", joint_info))
-						continue;
-					if(load_screen_info(key, value, "top_", top_info))
-						continue;
+			if(load_screen_info(key, value, "bot_", bottom_info))
+				continue;
+			if(load_screen_info(key, value, "joint_", joint_info))
+				continue;
+			if(load_screen_info(key, value, "top_", top_info))
+				continue;
 
-					if(key == "split") {
-						bool split = std::stoi(value);
-						joint_info.window_enabled = !split;
-						top_info.window_enabled = split;
-						bottom_info.window_enabled = split;
-						continue;
-					}
-
-					if(key == "requested_3d") {
-						set_3d_enabled(capture_status, std::stoi(value));
-						loaded_3d_request = true;
-						continue;
-					}
-
-					if(key == "interleaved_3d") {
-						display_data.interleaved_3d = std::stoi(value);
-						continue;
-					}
-
-					if(key == "last_connected_ds") {
-						display_data.last_connected_ds = std::stoi(value);
-						continue;
-					}
-
-					if(key == "is_screen_capture_type") {
-						capture_status->capture_type =  static_cast<CaptureScreensType>(std::stoi(value) % CaptureScreensType::CAPTURE_SCREENS_ENUM_END);
-						continue;
-					}
-
-					if(key == "is_speed_capture") {
-						capture_status->capture_speed =  static_cast<CaptureSpeedsType>(std::stoi(value) % CaptureSpeedsType::CAPTURE_SPEEDS_ENUM_END);
-						continue;
-					}
-
-					if(key == "is_battery_percentage") {
-						capture_status->battery_percentage =  std::stoi(value);
-						// Even though 1 is allowed, it spam-resets the Hardware...
-						// So don't allow it as the initial value!
-						if(capture_status->battery_percentage <= 5)
-							capture_status->battery_percentage = 5;
-						if(capture_status->battery_percentage > 100)
-							capture_status->battery_percentage = 100;
-						continue;
-					}
-
-					if(key == "is_ac_adapter_connected") {
-						capture_status->ac_adapter_connected =  std::stoi(value);
-						continue;
-					}
-
-					if(audio_data->load_audio_data(key, value))
-						continue;
-				}
+			if(key == "split") {
+				bool split = std::stoi(value);
+				joint_info.window_enabled = !split;
+				top_info.window_enabled = split;
+				bottom_info.window_enabled = split;
+				continue;
 			}
+
+			if(key == "requested_3d") {
+				set_3d_enabled(capture_status, std::stoi(value));
+				loaded_3d_request = true;
+				continue;
+			}
+
+			if(key == "interleaved_3d") {
+				display_data.interleaved_3d = std::stoi(value);
+				continue;
+			}
+
+			if(key == "request_low_bw_format") {
+				capture_status->request_low_bw_format = std::stoi(value);
+				continue;
+			}
+
+			if(key == "last_connected_ds") {
+				display_data.last_connected_ds = std::stoi(value);
+				continue;
+			}
+
+			if(key == "is_screen_capture_type") {
+				capture_status->capture_type =  static_cast<CaptureScreensType>(std::stoi(value) % CaptureScreensType::CAPTURE_SCREENS_ENUM_END);
+				continue;
+			}
+
+			if(key == "is_speed_capture") {
+				capture_status->capture_speed =  static_cast<CaptureSpeedsType>(std::stoi(value) % CaptureSpeedsType::CAPTURE_SPEEDS_ENUM_END);
+				continue;
+			}
+
+			if(key == "is_battery_percentage") {
+				capture_status->battery_percentage =  std::stoi(value);
+				// Even though 1 is allowed, it spam-resets the Hardware...
+				// So don't allow it as the initial value!
+				if(capture_status->battery_percentage <= 5)
+					capture_status->battery_percentage = 5;
+				if(capture_status->battery_percentage > 100)
+					capture_status->battery_percentage = 100;
+				continue;
+			}
+
+			if(key == "is_ac_adapter_connected") {
+				capture_status->ac_adapter_connected =  std::stoi(value);
+				continue;
+			}
+
+			if(key == "optimize_o3ds_scan_for") {
+				capture_status->devices_allowed_scan[CC_OPTIMIZE_O3DS] = std::stoi(value);
+				continue;
+			}
+
+			if(key == "nisetro_ds_scan_for") {
+				capture_status->devices_allowed_scan[CC_NISETRO_DS] = std::stoi(value);
+				continue;
+			}
+
+			if(audio_data->load_audio_data(key, value))
+				continue;
 		}
 		if(!loaded_3d_request)
 			set_3d_enabled(capture_status, false);
@@ -223,6 +238,9 @@ static void defaults_reload(FrontendData *frontend_data, AudioData* audio_data, 
 	capture_status->capture_speed = CAPTURE_SPEEDS_FULL;
 	capture_status->battery_percentage = 100;
 	capture_status->ac_adapter_connected = true;
+	capture_status->request_low_bw_format = true;
+	for(int i = 0; i < CC_POSSIBLE_DEVICES_END; i++)
+		capture_status->devices_allowed_scan[i] = true;
 	reset_screen_info(frontend_data->top_screen->m_info);
 	reset_screen_info(frontend_data->bot_screen->m_info);
 	reset_screen_info(frontend_data->joint_screen->m_info);
@@ -305,11 +323,14 @@ static bool save(const std::string path, const std::string name, const std::stri
 	file << save_screen_info("top_", top_info);
 	file << "requested_3d=" << capture_status->requested_3d << std::endl;
 	file << "interleaved_3d=" << display_data.interleaved_3d << std::endl;
+	file << "request_low_bw_format=" << capture_status->request_low_bw_format << std::endl;
 	file << "last_connected_ds=" << display_data.last_connected_ds << std::endl;
 	file << "is_screen_capture_type=" << capture_status->capture_type << std::endl;
 	file << "is_speed_capture=" << capture_status->capture_speed << std::endl;
 	file << "is_battery_percentage=" << capture_status->battery_percentage << std::endl;
 	file << "is_ac_adapter_connected=" << capture_status->ac_adapter_connected << std::endl;
+	file << "optimize_o3ds_scan_for=" << capture_status->devices_allowed_scan[CC_OPTIMIZE_O3DS] << std::endl;
+	file << "nisetro_ds_scan_for=" << capture_status->devices_allowed_scan[CC_NISETRO_DS] << std::endl;
 	file << audio_data->save_audio_data();
 
 	file.close();

@@ -7,7 +7,7 @@
 #include "usb_is_device_communications.hpp"
 #include "usb_is_device_acquisition_general.hpp"
 
-void is_driver_list_devices(std::vector<CaptureDevice>& devices_list, bool* not_supported_elems, int* curr_serial_extra_id_is_device, const size_t num_is_device_desc);
+void is_driver_list_devices(std::vector<CaptureDevice>& devices_list, bool* not_supported_elems, int* curr_serial_extra_id_is_device, std::vector<const is_device_usb_device*> &device_descriptions);
 is_device_device_handlers* is_driver_serial_reconnection(CaptureDevice* device);
 void is_driver_end_connection(is_device_device_handlers* handlers);
 bool is_driver_prepare_ctrl_in_handle(is_device_device_handlers* handlers);
