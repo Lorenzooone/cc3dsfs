@@ -97,6 +97,7 @@ static double FPSArrayGetAverage(FPSArray *array) {
 
 void WindowScreen::init_menus() {
 	this->last_menu_change_time = std::chrono::high_resolution_clock::now();
+	this->last_data_format_change_time = std::chrono::high_resolution_clock::now();
 	this->connection_menu = new ConnectionMenu(this->text_rectangle_pool);
 	this->main_menu = new MainMenu(this->text_rectangle_pool);
 	this->video_menu = new VideoMenu(this->text_rectangle_pool);
@@ -589,8 +590,13 @@ void WindowScreen::devices_allowed_change(PossibleCaptureDevices device) {
 }
 
 void WindowScreen::input_video_data_format_request_change(bool positive) {
+	std::chrono::time_point<std::chrono::high_resolution_clock> curr_time = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> diff = curr_time - this->last_data_format_change_time;
+	if(diff.count() < this->input_data_format_change_timeout)
+		return;
 	this->capture_status->request_low_bw_format = !this->capture_status->request_low_bw_format;
 	this->print_notification("Changing data format...\nPlease wait...");
+	this->last_data_format_change_time = curr_time;
 }
 
 bool WindowScreen::can_execute_cmd(const WindowCommand* window_cmd, bool is_extra, bool is_always) {

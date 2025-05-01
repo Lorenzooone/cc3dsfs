@@ -259,9 +259,9 @@ static inline void usb_rgb888convertInterleaveU16VideoToOutputDirectOpt(deinterl
 		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
 		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
 		for(size_t j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
-			out_ptr_bottom[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][bottom_pos]);
+			out_ptr_bottom[output_halfline_pixel].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][bottom_pos];
 		for(size_t j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
-			out_ptr_top[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_pos]);
+			out_ptr_top[output_halfline_pixel].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_pos];
 	}
 }
 
@@ -273,7 +273,7 @@ static inline void usb_rgb888convertInterleaveU16VideoToOutputDirectOptMonoTop(d
 		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
 		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
 		for(size_t j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
-			out_ptr_top[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_pos]);
+			out_ptr_top[output_halfline_pixel].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_pos];
 	}
 }
 
@@ -285,7 +285,7 @@ static inline void usb_rgb888convertInterleaveU16VideoToOutputDirectOptMonoBotto
 		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
 		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
 		for(size_t j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
-			out_ptr_bottom[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][bottom_pos]);
+			out_ptr_bottom[output_halfline_pixel].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][bottom_pos];
 	}
 }
 

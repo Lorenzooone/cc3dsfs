@@ -158,6 +158,7 @@ private:
 	const float v_sync_timeout = 5.0f;
 	const float bad_resolution_timeout = 30.0f;
 	const float menu_change_timeout = 0.3f;
+	const float input_data_format_change_timeout = 1.0f;
 
 	CurrMenuType curr_menu = DEFAULT_MENU_TYPE;
 	GenericMenu* curr_menu_ptr = NULL;
@@ -213,6 +214,7 @@ private:
 	FPSArray poll_fps;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_poll_time;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_menu_change_time;
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_data_format_change_time;
 	int curr_frame_texture_pos = 0;
 
 	int num_frames_to_blend;
