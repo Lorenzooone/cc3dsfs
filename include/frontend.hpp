@@ -39,6 +39,8 @@
 #include "ColorCorrectionMenu.hpp"
 #include "Main3DMenu.hpp"
 #include "SecondScreen3DRelativePositionMenu.hpp"
+#include "USBConflictResolutionMenu.hpp"
+#include "Optimize3DSMenu.hpp"
 #include "display_structs.hpp"
 #include "event_structs.hpp"
 #include "shaders_list.hpp"
@@ -156,10 +158,12 @@ private:
 	const float v_sync_timeout = 5.0f;
 	const float bad_resolution_timeout = 30.0f;
 	const float menu_change_timeout = 0.3f;
+
 	CurrMenuType curr_menu = DEFAULT_MENU_TYPE;
 	GenericMenu* curr_menu_ptr = NULL;
 	CurrMenuType loaded_menu;
 	GenericMenu* loaded_menu_ptr;
+
 	ConnectionMenu *connection_menu;
 	MainMenu *main_menu;
 	VideoMenu *video_menu;
@@ -186,6 +190,9 @@ private:
 	ColorCorrectionMenu *color_correction_menu;
 	Main3DMenu *main_3d_menu;
 	SecondScreen3DRelativePositionMenu *second_screen_3d_relpos_menu;
+	USBConflictResolutionMenu *usb_conflict_resolution_menu;
+	Optimize3DSMenu* optimize_3ds_menu;
+
 	std::vector<const CropData*> possible_crops;
 	std::vector<const CropData*> possible_crops_ds;
 	std::vector<const CropData*> possible_crops_with_games;
@@ -305,6 +312,8 @@ private:
 	void color_correction_value_change(int new_color_correction_value);
 	void second_screen_3d_pos_change(int new_second_screen_3d_pos);
 	void second_screen_3d_match_bottom_pos_change();
+	void devices_allowed_change(PossibleCaptureDevices device);
+	void input_video_data_format_request_change(bool positive);
 	bool query_reset_request();
 	void reset_held_times(bool force = true);
 	void poll_window(bool do_everything);
@@ -392,6 +401,8 @@ private:
 	void setup_color_correction_menu(bool reset_data = true);
 	void setup_main_3d_menu(bool reset_data = true);
 	void setup_second_screen_3d_relpos_menu(bool reset_data = true);
+	void setup_usb_conflict_resolution_menu(bool reset_data = true);
+	void setup_optimize_3ds_menu(bool reset_data = true);
 	void update_connection();
 };
 

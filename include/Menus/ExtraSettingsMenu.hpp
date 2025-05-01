@@ -14,6 +14,7 @@ enum ExtraSettingsMenuOutAction{
 	EXTRA_SETTINGS_MENU_QUIT_APPLICATION,
 	EXTRA_SETTINGS_MENU_FULLSCREEN,
 	EXTRA_SETTINGS_MENU_SPLIT,
+	EXTRA_SETTINGS_MENU_USB_CONFLICT_RESOLUTION,
 };
 
 class ExtraSettingsMenu : public OptionSelectionMenu {
@@ -21,7 +22,8 @@ public:
 	ExtraSettingsMenu(TextRectanglePool* text_pool);
 	~ExtraSettingsMenu();
 	void prepare(float scaling_factor, int view_size_x, int view_size_y);
-	void insert_data(ScreenType s_type, bool is_fullscreen);
+	static int get_total_possible_selectable_inserted(ScreenType s_type, bool is_fullscreen, bool is_mono_app);
+	void insert_data(ScreenType s_type, bool is_fullscreen, bool is_mono_app);
 	ExtraSettingsMenuOutAction selected_index = ExtraSettingsMenuOutAction::EXTRA_SETTINGS_MENU_NO_ACTION;
 	void reset_output_option();
 protected:

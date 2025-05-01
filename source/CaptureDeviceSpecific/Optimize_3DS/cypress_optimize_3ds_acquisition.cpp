@@ -225,6 +225,31 @@ uint64_t cyop_device_get_video_in_size(CaptureData* capture_data, bool is_3d, In
 	return cyop_device_get_video_in_size(&capture_data->status, is_3d, video_data_type);
 }
 
+bool is_device_optimize_3ds(CaptureDevice* device) {
+	if(device == NULL)
+		return false;
+	if(device->cc_type != CAPTURE_CONN_CYPRESS_OPTIMIZE)
+		return false;
+	return true;
+}
+
+static bool does_device_match_type(CaptureDevice* device, cypress_optimize_device_type type_searched_for) {
+	if(!is_device_optimize_3ds(device))
+		return false;
+	const cyop_device_usb_device* usb_device_info = (const cyop_device_usb_device*)device->descriptor;
+	if(usb_device_info == NULL)
+		return false;
+	return usb_device_info->device_type == type_searched_for;
+}
+
+bool is_device_optimize_o3ds(CaptureDevice* device) {
+	return does_device_match_type(device, CYPRESS_OPTIMIZE_OLD_3DS_INSTANTIATED_DEVICE);
+}
+
+bool is_device_optimize_n3ds(CaptureDevice* device) {
+	return does_device_match_type(device, CYPRESS_OPTIMIZE_NEW_3DS_INSTANTIATED_DEVICE);
+}
+
 static InputVideoDataType extract_wanted_input_video_data_type(CaptureStatus* capture_status) {
 	return capture_status->request_low_bw_format ? VIDEO_DATA_RGB16 : VIDEO_DATA_RGB;
 }

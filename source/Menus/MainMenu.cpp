@@ -1,5 +1,6 @@
 #include "MainMenu.hpp"
 #include "usb_is_device_acquisition.hpp"
+#include "cypress_optimize_3ds_acquisition.hpp"
 
 #define NUM_TOTAL_MENU_OPTIONS (sizeof(pollable_options)/sizeof(pollable_options[0]))
 
@@ -112,7 +113,7 @@ static const MainMenuOptionInfo extra_settings_option = {
 .base_name = "Extra Settings", .false_name = "",
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
-.enabled_normal_mode = false, .enabled_mono_mode = true, .is_cc_specific = false,
+.enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = false,
 .out_action = MAIN_MENU_EXTRA_SETTINGS};
 
 /*
@@ -145,6 +146,13 @@ static const MainMenuOptionInfo ist_settings_option = {
 .enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = true,
 .out_action = MAIN_MENU_IST_SETTINGS};
 
+static const MainMenuOptionInfo opti_3ds_settings_option = {
+.base_name = "Optimize 3DS Settings", .false_name = "",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = true,
+.out_action = MAIN_MENU_OPTIMIZE_3DS_SETTINGS};
+
 static const MainMenuOptionInfo* pollable_options[] = {
 &connect_option,
 &windowed_option,
@@ -160,6 +168,7 @@ static const MainMenuOptionInfo* pollable_options[] = {
 &status_option,
 &isn_settings_option,
 &ist_settings_option,
+&opti_3ds_settings_option,
 &licenses_option,
 &extra_settings_option,
 &quit_option,
@@ -199,6 +208,10 @@ static bool check_cc_specific_option(const MainMenuOptionInfo* option, CaptureDe
 	if((option->out_action == MAIN_MENU_IST_SETTINGS) && is_device_is_twl(device))
 		return true;
 	#endif
+	#ifdef USE_CYPRESS_OPTIMIZE
+	if((option->out_action == MAIN_MENU_OPTIMIZE_3DS_SETTINGS) && is_device_optimize_3ds(device))
+		return true;
+	#endif
 	return false;
 }
 
@@ -222,6 +235,8 @@ void MainMenu::insert_data(ScreenType s_type, bool is_fullscreen, bool mono_app_
 			valid = valid && pollable_options[i]->enabled_normal_mode;
 		if(pollable_options[i]->is_cc_specific)
 			valid = valid && connected && check_cc_specific_option(pollable_options[i], device);
+		if(pollable_options[i]->out_action == MAIN_MENU_EXTRA_SETTINGS)
+			valid = valid && (ExtraSettingsMenu::get_total_possible_selectable_inserted(s_type, is_fullscreen, mono_app_mode) > 0);
 		//if((pollable_options[i]->out_action == MAIN_MENU_SHORTCUT_SETTINGS) && (!enable_shortcut))
 		//	valid = false;
 		if(valid) {

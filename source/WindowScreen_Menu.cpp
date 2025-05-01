@@ -123,6 +123,8 @@ void WindowScreen::init_menus() {
 	this->color_correction_menu = new ColorCorrectionMenu(this->text_rectangle_pool);
 	this->main_3d_menu = new Main3DMenu(this->text_rectangle_pool);
 	this->second_screen_3d_relpos_menu = new SecondScreen3DRelativePositionMenu(this->text_rectangle_pool);
+	this->usb_conflict_resolution_menu = new USBConflictResolutionMenu(this->text_rectangle_pool);
+	this->optimize_3ds_menu = new Optimize3DSMenu(this->text_rectangle_pool);
 }
 
 void WindowScreen::destroy_menus() {
@@ -152,6 +154,8 @@ void WindowScreen::destroy_menus() {
 	delete this->color_correction_menu;
 	delete this->main_3d_menu;
 	delete this->second_screen_3d_relpos_menu;
+	delete this->usb_conflict_resolution_menu;
+	delete this->optimize_3ds_menu;
 }
 
 void WindowScreen::set_close(int ret_val) {
@@ -576,6 +580,17 @@ void WindowScreen::separator_fullscreen_multiplier_change(bool positive) {
 	if(!this->m_info.is_fullscreen)
 		return;
 	this->separator_multiplier_change(positive, this->m_info.separator_fullscreen_multiplier, SEP_FULLSCREEN_SCALING_MIN_MULTIPLIER, MAX_WINDOW_SCALING_VALUE);
+}
+
+void WindowScreen::devices_allowed_change(PossibleCaptureDevices device) {
+	if((device < 0) || (device >= CC_POSSIBLE_DEVICES_END))
+		return;
+	this->capture_status->devices_allowed_scan[device] = !this->capture_status->devices_allowed_scan[device];
+}
+
+void WindowScreen::input_video_data_format_request_change(bool positive) {
+	this->capture_status->request_low_bw_format = !this->capture_status->request_low_bw_format;
+	this->print_notification("Changing data format...\nPlease wait...");
 }
 
 bool WindowScreen::can_execute_cmd(const WindowCommand* window_cmd, bool is_extra, bool is_always) {
@@ -1038,7 +1053,7 @@ void WindowScreen::setup_extra_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != EXTRA_MENU_TYPE) {
 		this->switch_to_menu(EXTRA_MENU_TYPE, this->extra_menu, reset_data);
-		this->extra_menu->insert_data(this->m_stype, this->m_info.is_fullscreen);
+		this->extra_menu->insert_data(this->m_stype, this->m_info.is_fullscreen, this->display_data->mono_app_mode);
 	}
 }
 
@@ -1164,6 +1179,24 @@ void WindowScreen::setup_second_screen_3d_relpos_menu(bool reset_data) {
 	if(this->curr_menu != SECOND_SCREEN_RELATIVE_POS_MENU_TYPE) {
 		this->switch_to_menu(SECOND_SCREEN_RELATIVE_POS_MENU_TYPE, this->second_screen_3d_relpos_menu, reset_data);
 		this->second_screen_3d_relpos_menu->insert_data(this->m_stype);
+	}
+}
+
+void WindowScreen::setup_usb_conflict_resolution_menu(bool reset_data) {
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != USB_CONFLICT_RESOLUTION_MENU_TYPE) {
+		this->switch_to_menu(USB_CONFLICT_RESOLUTION_MENU_TYPE, this->usb_conflict_resolution_menu, reset_data);
+		this->usb_conflict_resolution_menu->insert_data();
+	}
+}
+
+void WindowScreen::setup_optimize_3ds_menu(bool reset_data) {
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != OPTIMIZE_3DS_MENU_TYPE) {
+		this->switch_to_menu(OPTIMIZE_3DS_MENU_TYPE, this->optimize_3ds_menu, reset_data);
+		this->optimize_3ds_menu->insert_data(&this->capture_status->device);
 	}
 }
 
@@ -1501,6 +1534,10 @@ void WindowScreen::poll(bool do_everything) {
 					case MAIN_MENU_IST_SETTINGS:
 					case MAIN_MENU_ISN_SETTINGS:
 						this->setup_is_nitro_menu();
+						done = true;
+						break;
+					case MAIN_MENU_OPTIMIZE_3DS_SETTINGS:
+						this->setup_optimize_3ds_menu();
 						done = true;
 						break;
 					case MAIN_MENU_SHUTDOWN:
@@ -1911,6 +1948,10 @@ void WindowScreen::poll(bool do_everything) {
 						this->split_change();
 						done = true;
 						break;
+					case EXTRA_SETTINGS_MENU_USB_CONFLICT_RESOLUTION:
+						this->setup_usb_conflict_resolution_menu();
+						done = true;
+						break;
 					default:
 						break;
 				}
@@ -2225,6 +2266,45 @@ void WindowScreen::poll(bool do_everything) {
 				}
 				this->loaded_menu_ptr->reset_output_option();
 				break;
+			case USB_CONFLICT_RESOLUTION_MENU_TYPE:
+				switch(this->usb_conflict_resolution_menu->selected_index) {
+					case USBCONRESO_MENU_BACK:
+						this->setup_extra_menu(false);
+						done = true;
+						break;
+					case USBCONRESO_MENU_NO_ACTION:
+						break;
+					case USBCONRESO_MENU_NISE_DS:
+						this->devices_allowed_change(CC_NISETRO_DS);
+						break;
+					case USBCONRESO_MENU_OPTI_O3DS:
+						this->devices_allowed_change(CC_OPTIMIZE_O3DS);
+						break;
+					default:
+						break;
+				}
+				this->loaded_menu_ptr->reset_output_option();
+				break;
+			case OPTIMIZE_3DS_MENU_TYPE:
+				switch(this->optimize_3ds_menu->selected_index) {
+					case OPTIMIZE3DS_MENU_BACK:
+						this->setup_main_menu(false);
+						done = true;
+						break;
+					case OPTIMIZE3DS_MENU_NO_ACTION:
+						break;
+					case OPTIMIZE3DS_MENU_INPUT_VIDEO_FORMAT_INC:
+						this->input_video_data_format_request_change(true);
+						break;
+					case OPTIMIZE3DS_MENU_INPUT_VIDEO_FORMAT_DEC:
+						this->input_video_data_format_request_change(false);
+						break;
+					default:
+						break;
+				}
+				this->loaded_menu_ptr->reset_output_option();
+				break;
+				break;
 			default:
 				break;
 		}
@@ -2509,6 +2589,12 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			break;
 		case SECOND_SCREEN_RELATIVE_POS_MENU_TYPE:
 			this->second_screen_3d_relpos_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+			break;
+		case USB_CONFLICT_RESOLUTION_MENU_TYPE:
+			this->usb_conflict_resolution_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->capture_status);
+			break;
+		case OPTIMIZE_3DS_MENU_TYPE:
+			this->optimize_3ds_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->capture_status);
 			break;
 		default:
 			break;

@@ -14,6 +14,9 @@ uint64_t cyop_device_get_video_in_size(CaptureStatus* status, bool is_3d, InputV
 uint64_t cyop_device_get_video_in_size(CaptureData* capture_data, bool is_3d, InputVideoDataType video_data_type);
 void cyop_device_acquisition_main_loop(CaptureData* capture_data);
 void usb_cyop_device_acquisition_cleanup(CaptureData* capture_data);
+bool is_device_optimize_3ds(CaptureDevice* device);
+bool is_device_optimize_o3ds(CaptureDevice* device);
+bool is_device_optimize_n3ds(CaptureDevice* device);
 void usb_cyop_device_init();
 void usb_cyop_device_close();
 

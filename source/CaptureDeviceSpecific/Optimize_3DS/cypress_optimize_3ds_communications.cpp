@@ -38,7 +38,7 @@ const uint8_t start_capture_third_buffer_565_old[] = { 0x61, 0x07, 0x00, 0x26, 0
 const uint8_t start_capture_third_buffer_888_old[] = { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x20, 0x00, 0x98, 0x00, 0x08, 0x00, 0xDE, 0x00, 0xF9, 0x18, 0x0F };
 
 static const cyop_device_usb_device cypress_optimize_new_3ds_generic_device = {
-.name = "Optimize New 3DS", .long_name = "Optimize New 3DS",
+.name = "FX2LP-O -> Opt. N3DS", .long_name = "EZ-USB FX2LP-O -> Optimize New 3DS",
 .device_type = CYPRESS_OPTIMIZE_NEW_3DS_BLANK_DEVICE,
 .firmware_to_load = optimize_new_3ds_fw, .firmware_size = optimize_new_3ds_fw_len,
 .fpga_pl_565 = NULL, .fpga_pl_565_size = 0,
@@ -92,7 +92,7 @@ static const cyop_device_usb_device cypress_optimize_new_3ds_instantiated_device
 };
 
 static const cyop_device_usb_device cypress_optimize_old_3ds_generic_device = {
-.name = "Optimize Old 3DS", .long_name = "Optimize Old 3DS",
+.name = "FX2LP -> Opt. O3DS", .long_name = "EZ-USB FX2LP -> Optimize Old 3DS",
 .device_type = CYPRESS_OPTIMIZE_OLD_3DS_BLANK_DEVICE,
 .firmware_to_load = optimize_old_3ds_fw, .firmware_size = optimize_old_3ds_fw_len,
 .fpga_pl_565 = NULL, .fpga_pl_565_size = 0,

@@ -331,7 +331,7 @@ struct CaptureStatus {
 	CaptureSpeedsType capture_speed;
 	int battery_percentage;
 	bool ac_adapter_connected;
-	// Needed for Nisetro DS(i) and Old Optimize 3DS
+	// Needed for possible compatibility issues
 	bool devices_allowed_scan[CC_POSSIBLE_DEVICES_END];
 	ConsumerMutex video_wait;
 	ConsumerMutex audio_wait;
