@@ -648,7 +648,7 @@ static void reset_buffer_processing_data(CypressOptimize3DSDeviceCaptureReceived
 	}
 }
 
-static int restart_captures_cc_reads(CaptureData* capture_data, CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, uint32_t &index, InputVideoDataType &stored_video_data_type, bool &stored_is_3d) {
+static int restart_captures_cc_reads(CaptureData* capture_data, CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, uint32_t &index, InputVideoDataType &stored_video_data_type, bool &stored_is_3d, bool could_use_3d) {
 	cy_device_device_handlers* handlers = (cy_device_device_handlers*)capture_data->handle;
 	const cyop_device_usb_device* usb_device_desc = (const cyop_device_usb_device*)capture_data->status.device.descriptor;
 	int retval = end_capture_from_capture_data(capture_data);
@@ -668,7 +668,7 @@ static int restart_captures_cc_reads(CaptureData* capture_data, CypressOptimize3
 			return retval;
 	}
 
-	bool is_new_3d = false;
+	bool is_new_3d = could_use_3d && get_3d_enabled(&capture_data->status);
 	if(is_new_3d != stored_is_3d) {
 		set_max_again = true;
 		stored_is_3d = is_new_3d;
@@ -682,11 +682,12 @@ static int restart_captures_cc_reads(CaptureData* capture_data, CypressOptimize3
 
 	if(!schedule_all_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, ""))
 		return -1;
+	capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
 	StartCaptureDma(handlers, usb_device_desc, stored_video_data_type == VIDEO_DATA_RGB, stored_is_3d);
 	return 0;
 }
 
-static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, InputVideoDataType &stored_video_data_type, bool &stored_is_3d) {
+static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, InputVideoDataType &stored_video_data_type, bool &stored_is_3d, bool could_use_3d) {
 	cy_device_device_handlers* handlers = (cy_device_device_handlers*)capture_data->handle;
 	const cyop_device_usb_device* usb_device_desc = (const cyop_device_usb_device*)capture_data->status.device.descriptor;
 	uint32_t index = 0;
@@ -705,10 +706,11 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 		ret = get_cypress_device_status(cypress_device_capture_recv_data);
 		if(ret < 0) {
 			int cause_error = ret;
+			capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM + NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS;
 			wait_all_cypress_device_buffers_free(capture_data, cypress_device_capture_recv_data);
 			bool has_recovered = false;
 			if(cause_error == LIBUSB_ERROR_TIMEOUT) {
-				int timeout_ret = restart_captures_cc_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d);
+				int timeout_ret = restart_captures_cc_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, could_use_3d);
 				if(timeout_ret >= 0)
 					has_recovered = true;
 			}
@@ -717,11 +719,12 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 				return false;
 			}
 		}
-		bool is_new_3d = false;
+		bool is_new_3d = could_use_3d && get_3d_enabled(&capture_data->status);
 		InputVideoDataType wanted_input_video_data_type = extract_wanted_input_video_data_type(capture_data);
 		if((wanted_input_video_data_type != stored_video_data_type) || (is_new_3d != stored_is_3d)) {
+			capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM + NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS;
 			wait_all_cypress_device_buffers_free(capture_data, cypress_device_capture_recv_data);
-			ret = restart_captures_cc_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d);
+			ret = restart_captures_cc_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, could_use_3d);
 			if(ret < 0) {
 				capture_error_print(true, capture_data, "Disconnected: Update mode error");
 				return false;
@@ -744,7 +747,8 @@ void cyop_device_acquisition_main_loop(CaptureData* capture_data) {
 	uint32_t last_index = -1;
 	int status = 0;
 	InputVideoDataType stored_video_data_type = extract_wanted_input_video_data_type(capture_data);
-	bool stored_is_3d = false;
+	bool could_use_3d = get_3d_enabled(&capture_data->status, true);
+	bool stored_is_3d = could_use_3d && get_3d_enabled(&capture_data->status);
 
 	uint8_t *ring_slice_buffer = new uint8_t[NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS * SINGLE_RING_BUFFER_SLICE_SIZE];
 	bool *is_ring_buffer_slice_data_ready = new bool[NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS];
@@ -798,7 +802,7 @@ void cyop_device_acquisition_main_loop(CaptureData* capture_data) {
 		cb_queue.push_back(&cypress_device_capture_recv_data[i].cb_data);
 	}
 	CypressSetupCypressDeviceAsyncThread(handlers, cb_queue, &async_processing_thread, &is_done_thread);
-	bool proper_return = cyop_device_acquisition_loop(capture_data, cypress_device_capture_recv_data, stored_video_data_type, stored_is_3d);
+	bool proper_return = cyop_device_acquisition_loop(capture_data, cypress_device_capture_recv_data, stored_video_data_type, stored_is_3d, could_use_3d);
 	wait_all_cypress_device_buffers_free(capture_data, cypress_device_capture_recv_data);
 	CypressEndCypressDeviceAsyncThread(handlers, cb_queue, &async_processing_thread, &is_done_thread);
 	delete []cypress_device_capture_recv_data;
