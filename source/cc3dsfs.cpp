@@ -468,7 +468,7 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 			audio.stop();
 			default_sleep();
 		}
-		
+
 		auto curr_time = std::chrono::high_resolution_clock::now();
 		const std::chrono::duration<double> diff = curr_time - last_device_check_time;
 		if(diff.count() >= TIME_AUDIO_DEVICE_CHECK) {
@@ -526,7 +526,8 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	frontend_data.display_data.force_disable_mouse = override_data.always_prevent_mouse_showing;
 	frontend_data.reload = true;
 	bool skip_io = false;
-	int num_allowed_blanks = MAX_ALLOWED_BLANKS;
+	const double max_time_no_frames_allowed = MAX_ALLOWED_NO_FRAME_TIME;
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_valid_frame_time = std::chrono::high_resolution_clock::now();
 	OutTextData out_text_data;
 	int ret_val = 0;
 	int poll_timeout = 0;
@@ -590,7 +591,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		if(is_connected != last_connected) {
 			update_connected_specific_settings(&frontend_data, capture_data->status.device);
 			no_data_consecutive = 0;
-			num_allowed_blanks = MAX_ALLOWED_BLANKS;
+			last_valid_frame_time = std::chrono::high_resolution_clock::now();
 		}
 		last_connected = is_connected;
 		if(is_connected) {
@@ -613,16 +614,16 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 						if(!conversion_success)
 							UpdateOutText(out_text_data, "", "Video conversion failed...", TEXT_KIND_NORMAL);
 					}
-					num_allowed_blanks = MAX_ALLOWED_BLANKS;
+					last_valid_frame_time = std::chrono::high_resolution_clock::now();
 					no_data_consecutive = 0;
 					data_processed = true;
 				}
 				capture_data->data_buffers.ReleaseReaderBuffer(CAPTURE_READER_VIDEO);
 			}
 			if(!data_processed) {
-				if(num_allowed_blanks > 0)
-					num_allowed_blanks--;
-				else 
+				auto curr_time = std::chrono::high_resolution_clock::now();
+				const std::chrono::duration<double> diff = curr_time - last_valid_frame_time;
+				if(diff.count() > max_time_no_frames_allowed)
 					blank_out = true;
 				if(capture_data->status.cooldown_curr_in || (!capture_data->status.connected))
 					blank_out = true;

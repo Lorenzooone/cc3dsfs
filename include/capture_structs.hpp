@@ -9,13 +9,14 @@
 // It may happen that a frame is lost.
 // This value prevents showing a black frame for that.
 // Shouldn't happen with recent updates, though...
-#define MAX_ALLOWED_BLANKS 1
+#define MAX_ALLOWED_NO_FRAME_TIME 0.120
 
 #define FIX_PARTIAL_FIRST_FRAME_NUM 3
 
 #define MAX_PACKET_SIZE_USB2 (1 << 9)
 #define EXTRA_DATA_BUFFER_USB_SIZE MAX_PACKET_SIZE_USB2
 #define EXTRA_DATA_BUFFER_FTD3XX_SIZE (1 << 10)
+#define ERROR_DATA_BUFFER_FTD3XX_SIZE (1 << 10)
 
 #define FTD2_INTRA_PACKET_HEADER_SIZE 2
 #define MAX_PACKET_SIZE_FTD2 (MAX_PACKET_SIZE_USB2 - FTD2_INTRA_PACKET_HEADER_SIZE)
@@ -136,12 +137,14 @@ struct ALIGNED(16) PACKED FTD3_3DSCaptureReceived {
 	RGB83DSVideoInputData video_in;
 	uint16_t audio_data[N3DSXL_SAMPLES_IN];
 	uint8_t unused_buffer[EXTRA_DATA_BUFFER_FTD3XX_SIZE];
+	uint8_t error_buffer[ERROR_DATA_BUFFER_FTD3XX_SIZE];
 };
 
 struct ALIGNED(16) PACKED FTD3_3DSCaptureReceived_3D {
 	RGB83DSVideoInputData_3D video_in;
 	uint16_t audio_data[N3DSXL_SAMPLES_IN];
 	uint8_t unused_buffer[EXTRA_DATA_BUFFER_FTD3XX_SIZE];
+	uint8_t error_buffer[ERROR_DATA_BUFFER_FTD3XX_SIZE];
 };
 
 struct ALIGNED(16) PACKED USB3DSCaptureReceived {

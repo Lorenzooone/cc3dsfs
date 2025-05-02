@@ -62,9 +62,21 @@ uint64_t ftd3_get_capture_size(CaptureData* capture_data) {
 	return ftd3_get_capture_size(get_3d_enabled(&capture_data->status));
 }
 
+static void early_data_output_update_exit(int inner_index, CaptureData* capture_data) {
+	capture_data->data_buffers.ReleaseWriterBuffer(inner_index, false);
+}
+
 void data_output_update(int inner_index, size_t read_data, CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &base_time, bool is_3d) {
 	if(is_3d && (read_data < ftd3_get_video_in_size(is_3d)) && (read_data >= ftd3_get_video_in_size(false)))
 		is_3d = false;
+
+	// Error detection for bad frames which may happen in some games...
+	// Examples: Kirby Planet Robobot and M&L: Dream Team
+	if(read_data > (ftd3_get_capture_size(is_3d) - ERROR_DATA_BUFFER_FTD3XX_SIZE))
+		return early_data_output_update_exit(inner_index, capture_data);
+	if(read_data < ftd3_get_video_in_size(is_3d))
+		return early_data_output_update_exit(inner_index, capture_data);
+
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - base_time;
 	base_time = curr_time;
