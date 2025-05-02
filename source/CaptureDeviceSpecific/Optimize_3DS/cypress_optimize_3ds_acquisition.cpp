@@ -29,6 +29,9 @@
 
 #define OPTIMIZE_3DS_CYPRESS_USB_WINDOWS_DRIVER CYPRESS_WINDOWS_OPTIMIZE_USB_DRIVER
 
+#define OPTIMIZE_RGB888_FORMAT VIDEO_DATA_RGB
+#define OPTIMIZE_RGB565_FORMAT VIDEO_DATA_RGB16
+
 struct CypressOptimize3DSDeviceCaptureReceivedData {
 	CypressOptimize3DSDeviceCaptureReceivedData* array_ptr;
 	volatile bool in_use;
@@ -107,7 +110,7 @@ std::string cypress_optimize_3ds_get_serial(const void* usb_device_desc, std::st
 }
 
 static CaptureDevice _cypress_optimize_3ds_create_device(const cyop_device_usb_device* usb_device_desc, std::string serial, std::string path) {
-	return CaptureDevice(serial, usb_device_desc->name, usb_device_desc->long_name, CAPTURE_CONN_CYPRESS_OPTIMIZE, (void*)usb_device_desc, true, true, true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, HEIGHT_3DS, (TOP_WIDTH_3DS * 2) + BOT_WIDTH_3DS, OPTIMIZE_3DS_AUDIO_BUFFER_MAX_SIZE * 8, 90, BOT_WIDTH_3DS, 0, BOT_WIDTH_3DS + TOP_WIDTH_3DS, 0, 0, 0, false, VIDEO_DATA_RGB16, 0x200, path);
+	return CaptureDevice(serial, usb_device_desc->name, usb_device_desc->long_name, CAPTURE_CONN_CYPRESS_OPTIMIZE, (void*)usb_device_desc, true, true, true, HEIGHT_3DS, TOP_WIDTH_3DS + BOT_WIDTH_3DS, HEIGHT_3DS, (TOP_WIDTH_3DS * 2) + BOT_WIDTH_3DS, OPTIMIZE_3DS_AUDIO_BUFFER_MAX_SIZE * 8, 90, BOT_WIDTH_3DS, 0, BOT_WIDTH_3DS + TOP_WIDTH_3DS, 0, 0, 0, false, OPTIMIZE_RGB565_FORMAT, 0x200, path);
 }
 
 CaptureDevice cypress_optimize_3ds_create_device(const void* usb_device_desc, std::string serial, std::string path) {
@@ -192,7 +195,7 @@ bool cyop_device_connect_usb(bool print_failed, CaptureData* capture_data, Captu
 }
 
 uint64_t cyop_device_get_video_in_size(bool is_3d, InputVideoDataType video_data_type) {
-	bool is_rgb888 = video_data_type == VIDEO_DATA_RGB;
+	bool is_rgb888 = video_data_type == OPTIMIZE_RGB888_FORMAT;
 	if(is_rgb888) {
 		if(is_3d)
 			return sizeof(USB8883DSOptimizeCaptureReceived_3D);
@@ -204,7 +207,7 @@ uint64_t cyop_device_get_video_in_size(bool is_3d, InputVideoDataType video_data
 }
 
 uint64_t cyop_device_get_video_in_size_extra_header(bool is_3d, InputVideoDataType video_data_type) {
-	bool is_rgb888 = video_data_type == VIDEO_DATA_RGB;
+	bool is_rgb888 = video_data_type == OPTIMIZE_RGB888_FORMAT;
 	if(is_rgb888) {
 		if(is_3d)
 			return sizeof(USB8883DSOptimizeCaptureReceived_3DExtraHeader);
@@ -251,7 +254,7 @@ bool is_device_optimize_n3ds(CaptureDevice* device) {
 }
 
 static InputVideoDataType extract_wanted_input_video_data_type(CaptureStatus* capture_status) {
-	return capture_status->request_low_bw_format ? VIDEO_DATA_RGB16 : VIDEO_DATA_RGB;
+	return capture_status->request_low_bw_format ? OPTIMIZE_RGB565_FORMAT : OPTIMIZE_RGB888_FORMAT;
 }
 
 static InputVideoDataType extract_wanted_input_video_data_type(CaptureData* capture_data) {
@@ -662,7 +665,7 @@ static int restart_captures_cc_reads(CaptureData* capture_data, CypressOptimize3
 	if(wanted_input_video_data_type != stored_video_data_type) {
 		set_max_again = true;
 		stored_video_data_type = wanted_input_video_data_type;
-		retval = capture_start(handlers, usb_device_desc, true, stored_video_data_type == VIDEO_DATA_RGB);
+		retval = capture_start(handlers, usb_device_desc, true, stored_video_data_type == OPTIMIZE_RGB888_FORMAT);
 		capture_data->status.device.video_data_type = stored_video_data_type;
 		if(retval < 0)
 			return retval;
@@ -683,7 +686,7 @@ static int restart_captures_cc_reads(CaptureData* capture_data, CypressOptimize3
 	if(!schedule_all_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, ""))
 		return -1;
 	capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
-	StartCaptureDma(handlers, usb_device_desc, stored_video_data_type == VIDEO_DATA_RGB, stored_is_3d);
+	StartCaptureDma(handlers, usb_device_desc, stored_video_data_type == OPTIMIZE_RGB888_FORMAT, stored_is_3d);
 	return 0;
 }
 
@@ -691,7 +694,7 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 	cy_device_device_handlers* handlers = (cy_device_device_handlers*)capture_data->handle;
 	const cyop_device_usb_device* usb_device_desc = (const cyop_device_usb_device*)capture_data->status.device.descriptor;
 	uint32_t index = 0;
-	int ret = capture_start(handlers, usb_device_desc, true, stored_video_data_type == VIDEO_DATA_RGB);
+	int ret = capture_start(handlers, usb_device_desc, true, stored_video_data_type == OPTIMIZE_RGB888_FORMAT);
 	capture_data->status.device.video_data_type = stored_video_data_type;
 	if (ret < 0) {
 		capture_error_print(true, capture_data, "Capture Start: Failed");
@@ -701,7 +704,7 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 	if(!schedule_all_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, "Initial Reads: Failed"))
 		return false;
 
-	StartCaptureDma(handlers, usb_device_desc, stored_video_data_type == VIDEO_DATA_RGB, stored_is_3d);
+	StartCaptureDma(handlers, usb_device_desc, stored_video_data_type == OPTIMIZE_RGB888_FORMAT, stored_is_3d);
 	while (capture_data->status.connected && capture_data->status.running) {
 		ret = get_cypress_device_status(cypress_device_capture_recv_data);
 		if(ret < 0) {
