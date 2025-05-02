@@ -5,7 +5,8 @@ if [ "$(id -u)" -eq "0" ]; then
    exit 1;
 fi
 
-DEFAULT_SCRIPT_KIOSK_MODE=cc3dsfs_script_tv_kit_2.sh
+PROGRAM_NAME=cc3dsfs
+DEFAULT_SCRIPT_KIOSK_MODE=${PROGRAM_NAME}_script_tv_kit_2.sh
 
 sudo apt update
 sudo apt -y install xterm gpiod xserver-xorg xinit libxcursor1 x11-xserver-utils pipewire pipewire-alsa
@@ -22,20 +23,20 @@ sudo systemctl disable bluetooth.service
 # various other things (crontab @reboot and rc.local) and they didn't work...
 echo "" >> ${HOME}/.bashrc
 echo 'if [ -z "${EXECUTED_ONCE}" ]; then' >> ${HOME}/.bashrc
-echo "  export EXECUTED_ONCE=1 ; startx ${HOME}/Desktop/cc3dsfs_script.sh" >> ${HOME}/.bashrc
+echo "  export EXECUTED_ONCE=1 ; startx ${HOME}/Desktop/${PROGRAM_NAME}_script.sh" >> ${HOME}/.bashrc
 echo 'fi' >> ${HOME}/.bashrc
 
 cp -Rf files/Desktop/ ${HOME}/
 if [ $(getconf LONG_BIT) -eq 32 ]; then
-  $(cd ${HOME}/Desktop ; ln -s cc3dsfs_versions/cc3dsfs_32 cc3dsfs)
+  $(cd ${HOME}/Desktop ; rm -f ${PROGRAM_NAME} ; ln -s ${PROGRAM_NAME}_versions/${PROGRAM_NAME}_32 ${PROGRAM_NAME})
 else
-  $(cd ${HOME}/Desktop ; ln -s cc3dsfs_versions/cc3dsfs_64 cc3dsfs)
+  $(cd ${HOME}/Desktop ; rm -f ${PROGRAM_NAME} ; ln -s ${PROGRAM_NAME}_versions/${PROGRAM_NAME}_64 ${PROGRAM_NAME})
 fi
-$(cd ${HOME}/Desktop ; ln -s premade_scripts/${DEFAULT_SCRIPT_KIOSK_MODE} cc3dsfs_script.sh)
+$(cd ${HOME}/Desktop ; rm -f ${PROGRAM_NAME}_script.sh ; ln -s premade_scripts/${DEFAULT_SCRIPT_KIOSK_MODE} ${PROGRAM_NAME}_script.sh)
 chmod +x -R ${HOME}/Desktop/premade_scripts/
-chmod +x -R ${HOME}/Desktop/cc3dsfs_versions/
-chmod +x ${HOME}/Desktop/cc3dsfs
-chmod +x ${HOME}/Desktop/cc3dsfs_script.sh
+chmod +x -R ${HOME}/Desktop/${PROGRAM_NAME}_versions/
+chmod +x ${HOME}/Desktop/${PROGRAM_NAME}
+chmod +x ${HOME}/Desktop/${PROGRAM_NAME}_script.sh
 
 if [ -e /boot/firmware/config.txt ]; then
   FIRMWARE=/firmware
