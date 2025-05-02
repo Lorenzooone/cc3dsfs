@@ -28,17 +28,6 @@
 #define NO_DATA_CONSECUTIVE_THRESHOLD 4
 #define TIME_AUDIO_DEVICE_CHECK 0.25
 
-#ifdef PERIODIC_AUDIO_DEVICE_RESCANNING
-	#undef PERIODIC_AUDIO_DEVICE_RESCANNING
-#endif
-
-#if (defined(RASPI) || defined(ANDROID_COMPILATION))
-	#define PERIODIC_AUDIO_DEVICE_RESCANNING false
-#else
-	#define PERIODIC_AUDIO_DEVICE_RESCANNING true
-#endif
-
-
 struct override_all_data {
 	override_win_data override_top_bot_data;
 	override_win_data override_top_data;
@@ -396,7 +385,7 @@ static bool handleAudioDeviceChanges(Audio &audio, AudioData *audio_data, std::o
 	int index = -1;
 	bool success = false;
 	bool preference_requested = in_use_audio_output_device_data.preference_requested;
-	bool check_audio_device = PERIODIC_AUDIO_DEVICE_RESCANNING;
+	bool check_audio_device = audio_data->get_auto_device_scan();
 	check_audio_device = check_audio_device || ((old_in_use_audio_output_device_data.preference_requested != in_use_audio_output_device_data.preference_requested) || (old_in_use_audio_output_device_data.preferred != in_use_audio_output_device_data.preferred));
 	if(check_audio_device && preference_requested) {
 		std::vector<std::string> audio_devices =  sf::PlaybackDevice::getAvailableDevices();

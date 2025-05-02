@@ -22,6 +22,7 @@ enum AudioMenuOutAction{
 	AUDIO_MENU_CHANGE_DEVICE,
 	AUDIO_MENU_MODE_DEC,
 	AUDIO_MENU_MODE_INC,
+	AUDIO_MENU_AUTO_SCAN,
 };
 
 class AudioMenu : public OptionSelectionMenu {

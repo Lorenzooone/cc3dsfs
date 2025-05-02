@@ -23,6 +23,7 @@ public:
 	void change_audio_mode_output(bool is_change_positive);
 	void change_audio_volume(bool is_change_positive);
 	void change_audio_mute();
+	void change_auto_device_scan();
 	void request_audio_restart();
 	void signal_conversion_error();
 	bool check_audio_restart_request();
@@ -35,6 +36,7 @@ public:
 	bool has_text_to_print();
 	std::string text_to_print();
 	bool get_mute();
+	bool get_auto_device_scan();
 	int get_real_volume();
 	bool load_audio_data(std::string key, std::string value);
 	std::string save_audio_data();
@@ -49,6 +51,7 @@ private:
 	AudioOutputType output_type;
 	audio_output_device_data output_device;
 	AudioMode mode_output;
+	bool periodic_output_audio_device_scan;
 	bool restart_request = false;
 	bool text_updated;
 	std::string text;
@@ -56,6 +59,7 @@ private:
 	void set_audio_output_type(int new_value);
 	void set_audio_mode_output(int new_value);
 	void set_audio_mute(bool new_mute);
+	void set_auto_device_scan(bool new_value);
 	void update_text(std::string text);
 	const std::string audio_mode_output_str = "audio_mode";
 	const std::string max_audio_latency_str = "max_audio_latency";
@@ -64,6 +68,7 @@ private:
 	const std::string output_type_str = "audio_output_type";
 	const std::string device_request_str = "audio_output_device_requested";
 	const std::string device_name_str = "audio_output_device_name";
+	const std::string auto_device_scan_str = "audio_auto_device_scan";
 };
 
 #endif

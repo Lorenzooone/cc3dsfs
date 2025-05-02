@@ -49,6 +49,11 @@ static const AudioMenuOptionInfo audio_next_device_option = {
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = AUDIO_MENU_NO_ACTION,
 .out_action = AUDIO_MENU_CHANGE_DEVICE};
 
+static const AudioMenuOptionInfo audio_auto_scan_option = {
+.base_name = "Disable Automatic Device Scan", .false_name = "Enable Automatic Device Scan",
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = AUDIO_MENU_NO_ACTION,
+.out_action = AUDIO_MENU_AUTO_SCAN};
+
 
 static const AudioMenuOptionInfo* pollable_options[] = {
 &audio_volume_option,
@@ -56,6 +61,7 @@ static const AudioMenuOptionInfo* pollable_options[] = {
 &audio_output_type_option,
 &audio_max_latency_option,
 &audio_mode_output_option,
+&audio_auto_scan_option,
 &audio_next_device_option,
 &audio_restart_option,
 };
@@ -152,6 +158,9 @@ void AudioMenu::prepare(float menu_scaling_factor, int view_size_x, int view_siz
 				break;
 			case AUDIO_MENU_MUTE:
 				this->labels[index]->setText(this->setTextOptionBool(real_index, audio_data->get_mute()));
+				break;
+			case AUDIO_MENU_AUTO_SCAN:
+				this->labels[index]->setText(this->setTextOptionBool(real_index, audio_data->get_auto_device_scan()));
 				break;
 			default:
 				break;

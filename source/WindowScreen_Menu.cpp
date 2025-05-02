@@ -1594,6 +1594,9 @@ void WindowScreen::poll(bool do_everything) {
 					case AUDIO_MENU_RESTART:
 						this->audio_data->request_audio_restart();
 						break;
+					case AUDIO_MENU_AUTO_SCAN:
+						this->audio_data->change_auto_device_scan();
+						break;
 					case AUDIO_MENU_CHANGE_DEVICE:
 						this->setup_audio_devices_menu();
 						done = true;

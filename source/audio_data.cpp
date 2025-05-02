@@ -1,4 +1,5 @@
 #include "audio_data.hpp"
+#include "utils.hpp"
 
 int searchAudioDevice(std::string device_name, std::vector<std::string> &audio_devices) {
 	int index = -1;
@@ -20,6 +21,11 @@ void AudioData::reset() {
 	this->mode_output = AUDIO_MODE_LOW_LATENCY;
 	this->restart_request = false;
 	this->text_updated = false;
+	#if (defined(RASPI) || defined(ANDROID_COMPILATION))
+	this->periodic_output_audio_device_scan = false;
+	#else
+	this->periodic_output_audio_device_scan = true;
+	#endif
 	this->output_device.preference_requested = false;
 	this->output_device.preferred = "";
 }
@@ -72,6 +78,10 @@ void AudioData::change_audio_mute() {
 		this->update_text("Audio muted");
 	else
 		this->update_text("Volume: " + std::to_string(this->get_final_volume()) + "%");
+}
+
+void AudioData::change_auto_device_scan() {
+	this->set_auto_device_scan(!this->periodic_output_audio_device_scan);
 }
 
 void AudioData::request_audio_restart() {
@@ -189,9 +199,17 @@ bool AudioData::get_mute() {
 	return this->mute;
 }
 
+bool AudioData::get_auto_device_scan() {
+	return this->periodic_output_audio_device_scan;
+}
+
 bool AudioData::load_audio_data(std::string key, std::string value) {
 	if (key == this->mute_str) {
 		this->set_audio_mute(std::stoi(value));
+		return true;
+	}
+	if (key == this->auto_device_scan_str) {
+		this->set_auto_device_scan(std::stoi(value));
 		return true;
 	}
 	if (key == this->volume_str) {
@@ -224,6 +242,7 @@ bool AudioData::load_audio_data(std::string key, std::string value) {
 std::string AudioData::save_audio_data() {
 	std::string out_str = "";
 	out_str += this->mute_str + "=" + std::to_string(this->mute) + "\n";
+	out_str += this->auto_device_scan_str + "=" + std::to_string(this->periodic_output_audio_device_scan) + "\n";
 	out_str += this->volume_str + "=" + std::to_string(this->volume) + "\n";
 	out_str += this->max_audio_latency_str + "=" + std::to_string(this->max_audio_latency) + "\n";
 	out_str += this->output_type_str + "=" + std::to_string(this->output_type) + "\n";
@@ -267,4 +286,8 @@ void AudioData::set_audio_volume(int new_volume) {
 
 void AudioData::set_audio_mute(bool new_mute) {
 	this->mute = new_mute;
+}
+
+void AudioData::set_auto_device_scan(bool new_value) {
+	this->periodic_output_audio_device_scan = new_value;
 }
