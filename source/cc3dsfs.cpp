@@ -28,6 +28,17 @@
 #define NO_DATA_CONSECUTIVE_THRESHOLD 4
 #define TIME_AUDIO_DEVICE_CHECK 0.25
 
+#ifdef PERIODIC_AUDIO_DEVICE_RESCANNING
+	#undef PERIODIC_AUDIO_DEVICE_RESCANNING
+#endif
+
+#if (defined(RASPI) || defined(ANDROID_COMPILATION))
+	#define PERIODIC_AUDIO_DEVICE_RESCANNING false
+#else
+	#define PERIODIC_AUDIO_DEVICE_RESCANNING true
+#endif
+
+
 struct override_all_data {
 	override_win_data override_top_bot_data;
 	override_win_data override_top_data;
@@ -380,10 +391,14 @@ static bool setDefaultAudioDevice(Audio &audio) {
 
 static bool handleAudioDeviceChanges(Audio &audio, AudioData *audio_data, std::optional<std::string> &curr_device, audio_output_device_data &in_use_audio_output_device_data) {
 	// Code for audio device selection
+	audio_output_device_data old_in_use_audio_output_device_data = in_use_audio_output_device_data;
 	in_use_audio_output_device_data = audio_data->get_audio_output_device_data();
 	int index = -1;
 	bool success = false;
-	if(in_use_audio_output_device_data.preference_requested) {
+	bool preference_requested = in_use_audio_output_device_data.preference_requested;
+	bool check_audio_device = PERIODIC_AUDIO_DEVICE_RESCANNING;
+	check_audio_device = check_audio_device || ((old_in_use_audio_output_device_data.preference_requested != in_use_audio_output_device_data.preference_requested) || (old_in_use_audio_output_device_data.preferred != in_use_audio_output_device_data.preferred));
+	if(check_audio_device && preference_requested) {
 		std::vector<std::string> audio_devices =  sf::PlaybackDevice::getAvailableDevices();
 		index = searchAudioDevice(in_use_audio_output_device_data.preferred, audio_devices);
 		if((index != -1) && (curr_device != audio_devices[index])) {
@@ -393,7 +408,7 @@ static bool handleAudioDeviceChanges(Audio &audio, AudioData *audio_data, std::o
 			curr_device = audio_devices[index];
 		}
 	}
-	if(index == -1) {
+	if(check_audio_device && ((!preference_requested) || (index == -1))) {
 		std::optional<std::string> default_device = sf::PlaybackDevice::getDefaultDevice();
 		if(default_device != curr_device)
 			success = setDefaultAudioDevice(audio);
