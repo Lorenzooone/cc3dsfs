@@ -210,11 +210,11 @@ uint64_t cyop_device_get_video_in_size_extra_header(bool is_3d, InputVideoDataTy
 	bool is_rgb888 = video_data_type == OPTIMIZE_RGB888_FORMAT;
 	if(is_rgb888) {
 		if(is_3d)
-			return sizeof(USB8883DSOptimizeCaptureReceived_3DExtraHeader);
+			return sizeof(USB8883DSOptimizeCaptureReceived_3D);
 		return sizeof(USB8883DSOptimizeCaptureReceivedExtraHeader);
 	}
 	if(is_3d)
-		return sizeof(USB5653DSOptimizeCaptureReceived_3DExtraHeader);
+		return sizeof(USB5653DSOptimizeCaptureReceived_3D);
 	return sizeof(USB5653DSOptimizeCaptureReceivedExtraHeader);
 }
 
@@ -371,14 +371,14 @@ static void copy_slice_data_to_buffer(uint8_t* dst, uint8_t *src, size_t start_s
 	}
 }
 
-static void cypress_output_to_thread(CaptureData* capture_data, uint8_t *buffer_arr, size_t start_slice_index, size_t start_slice_pos, int internal_index, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t read_size) {
+static void cypress_output_to_thread(CaptureData* capture_data, uint8_t *buffer_arr, size_t start_slice_index, size_t start_slice_pos, int internal_index, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t read_size, bool is_3d) {
 	// Output to the other threads...
 	CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(internal_index);
 	copy_slice_data_to_buffer((uint8_t*)&data_buf->capture_buf, buffer_arr, start_slice_index, start_slice_pos, read_size);
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - (*clock_start);
 	*clock_start = curr_time;
-	capture_data->data_buffers.WriteToBuffer(NULL, read_size, diff.count(), &capture_data->status.device, internal_index);
+	capture_data->data_buffers.WriteToBuffer(NULL, read_size, diff.count(), &capture_data->status.device, internal_index, is_3d);
 	if (capture_data->status.cooldown_curr_in)
 		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
 	capture_data->status.video_wait.unlock();
@@ -445,7 +445,7 @@ static void cypress_device_read_frame_synchronized(CypressOptimize3DSDeviceCaptu
 	}
 	if(curr_consecutive_available_bytes >= video_in_size) {
 		// Enough data. Time to do output...
-		cypress_output_to_thread(cypress_device_capture_recv_data->capture_data, cypress_device_capture_recv_data->ring_slice_buffer_arr, read_slice_index, read_slice_pos, 0, cypress_device_capture_recv_data->clock_start, video_in_size);
+		cypress_output_to_thread(cypress_device_capture_recv_data->capture_data, cypress_device_capture_recv_data->ring_slice_buffer_arr, read_slice_index, read_slice_pos, 0, cypress_device_capture_recv_data->clock_start, video_in_size, *cypress_device_capture_recv_data->stored_is_3d);
 		// Keep the ring buffer going.
 		size_t raw_new_pos = read_slice_pos + video_in_size;
 		int new_slice_index = (int)(read_slice_index + (raw_new_pos / SINGLE_RING_BUFFER_SLICE_SIZE));

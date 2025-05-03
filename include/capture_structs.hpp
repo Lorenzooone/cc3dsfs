@@ -109,9 +109,14 @@ struct PACKED ALIGNED(16) USB5653DSOptimizeInputColumnData {
 	USB5653DSOptimizePixelData pixel[HEIGHT_3DS][2];
 };
 
-struct PACKED ALIGNED(16) USB5653DSOptimizeInputColumnData3D {
+struct PACKED ALIGNED(16) USB5653DSOptimizeInputColumnData3DTopRScreen {
 	USB3DSOptimizeHeaderSoundData header_sound;
-	USB5653DSOptimizePixelData pixel[HEIGHT_3DS][3];
+	USB5653DSOptimizePixelData pixel[HEIGHT_3DS];
+};
+
+struct PACKED ALIGNED(16) USB5653DSOptimizeInputColumnData3D {
+	USB5653DSOptimizeInputColumnData3DTopRScreen top_r_screen_column;
+	USB5653DSOptimizeInputColumnData bot_top_l_screens_column;
 };
 
 struct PACKED ALIGNED(16) USB8883DSOptimizeInputColumnData {
@@ -121,7 +126,7 @@ struct PACKED ALIGNED(16) USB8883DSOptimizeInputColumnData {
 
 struct PACKED ALIGNED(16) USB8883DSOptimizeInputColumnData3D {
 	USB3DSOptimizeHeaderSoundData header_sound;
-	USB8883DSOptimizePixelData pixel[HEIGHT_3DS][3];
+	USB8883DSOptimizePixelData pixel[HEIGHT_3DS];
 };
 
 struct PACKED ISNitroEmulatorVideoInputData {
@@ -224,7 +229,7 @@ struct ALIGNED(16) PACKED USB5653DSOptimizeCaptureReceived {
 
 struct ALIGNED(16) PACKED USB5653DSOptimizeCaptureReceived_3D {
 	USB5653DSOptimizeInputColumnData3D columns_data[TOP_WIDTH_3DS];
-	USB5653DSOptimizePixelData bottom_only_column[HEIGHT_3DS][3];
+	USB5653DSOptimizeInputColumnData bottom_only_column;
 };
 
 struct ALIGNED(16) PACKED USB8883DSOptimizeCaptureReceived {
@@ -233,24 +238,16 @@ struct ALIGNED(16) PACKED USB8883DSOptimizeCaptureReceived {
 };
 
 struct ALIGNED(16) PACKED USB8883DSOptimizeCaptureReceived_3D {
-	USB8883DSOptimizeInputColumnData3D columns_data[TOP_WIDTH_3DS];
-	USB8883DSOptimizePixelData bottom_only_column[HEIGHT_3DS][3];
+	USB8883DSOptimizeInputColumnData3D columns_data[TOP_WIDTH_3DS][2];
+	USB8883DSOptimizeInputColumnData3D bottom_only_column;
 };
 
 struct ALIGNED(16) PACKED USB5653DSOptimizeCaptureReceivedExtraHeader {
 	USB5653DSOptimizeInputColumnData columns_data[TOP_WIDTH_3DS + 1];
 };
 
-struct ALIGNED(16) PACKED USB5653DSOptimizeCaptureReceived_3DExtraHeader {
-	USB5653DSOptimizeInputColumnData3D columns_data[TOP_WIDTH_3DS + 1];
-};
-
 struct ALIGNED(16) PACKED USB8883DSOptimizeCaptureReceivedExtraHeader {
 	USB8883DSOptimizeInputColumnData columns_data[TOP_WIDTH_3DS + 1];
-};
-
-struct ALIGNED(16) PACKED USB8883DSOptimizeCaptureReceived_3DExtraHeader {
-	USB8883DSOptimizeInputColumnData3D columns_data[TOP_WIDTH_3DS + 1];
 };
 
 #pragma pack(pop)
@@ -276,9 +273,7 @@ union CaptureReceived {
 	USB8883DSOptimizeCaptureReceived cypress_optimize_received_888;
 	USB8883DSOptimizeCaptureReceived_3D cypress_optimize_received_888_3d;
 	USB5653DSOptimizeCaptureReceivedExtraHeader cypress_optimize_received_565_extra_header;
-	USB5653DSOptimizeCaptureReceived_3DExtraHeader cypress_optimize_received_565_3d_extra_header;
 	USB8883DSOptimizeCaptureReceivedExtraHeader cypress_optimize_received_888_extra_header;
-	USB8883DSOptimizeCaptureReceived_3DExtraHeader cypress_optimize_received_888_3d_extra_header;
 };
 
 struct CaptureDevice {

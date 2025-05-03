@@ -17,12 +17,10 @@
 #define INTERLEAVED_RGB888_DATA_SIZE sizeof(uint16_t)
 #define INTERLEAVED_RGB888_TOTAL_SIZE (INTERLEAVED_RGB888_PIXEL_SIZE * INTERLEAVED_RGB888_PIXEL_NUM / INTERLEAVED_RGB888_DATA_SIZE)
 
+static USB3DSOptimizeHeaderSoundData* getAudioHeaderPtrOptimize3DS3D(CaptureReceived* buffer, bool is_rgb888, uint16_t column);
+
 struct interleaved_rgb565_pixels {
 	uint16_t pixels[INTERLEAVED_RGB565_TOTAL_SIZE][2];
-};
-
-struct ALIGNED(INTERLEAVED_RGB565_PIXEL_NUM * INTERLEAVED_RGB565_PIXEL_SIZE) interleaved_3d_rgb565_pixels {
-	uint16_t pixels[INTERLEAVED_RGB565_TOTAL_SIZE][3];
 };
 
 struct deinterleaved_rgb565_pixels {
@@ -31,10 +29,6 @@ struct deinterleaved_rgb565_pixels {
 
 struct ALIGNED(INTERLEAVED_RGB888_PIXEL_NUM * 2) interleaved_rgb888_u16_pixels {
 	uint16_t pixels[INTERLEAVED_RGB888_TOTAL_SIZE][2];
-};
-
-struct ALIGNED(INTERLEAVED_RGB888_PIXEL_NUM) interleaved_3d_rgb888_u16_pixels {
-	uint16_t pixels[INTERLEAVED_RGB888_TOTAL_SIZE][3];
 };
 
 struct ALIGNED(INTERLEAVED_RGB888_PIXEL_NUM) deinterleaved_rgb888_u16_pixels {
@@ -74,28 +68,37 @@ static inline uint16_t _reverse_endianness(uint16_t data) {
 	return (data >> 8) | ((data << 8) & 0xFF00);
 }
 
-static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLE(deinterleaved_rgb565_pixels* out_ptr_top, deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
+static inline void memcpy_data_u16le_origin(uint16_t* dst, uint8_t* src, size_t num_iters, bool is_big_endian) {
+	if(!is_big_endian)
+		memcpy(dst, src, num_iters * 2);
+	else
+		for(size_t i = 0; i < num_iters; i++)
+			dst[i] = (src[(i * 2) + 1] << 8) | src[i * 2];
+}
+
+static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLE(deinterleaved_rgb565_pixels* out_ptr_top, deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top = 1) {
 	//de-interleave pixels
 	const int bottom_pos = 0;
 	const int top_pos = 1;
 	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
 	for(size_t i = 0; i < real_num_iters; i++) {
 		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
-		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
+		size_t output_halfline_pixel_bottom = (output_halfline * real_num_iters) + i;
+		size_t output_halfline_pixel_top = (output_halfline * real_num_iters * multiplier_top) + i;
 		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_bottom[output_halfline_pixel].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][bottom_pos];
+			out_ptr_bottom[output_halfline_pixel_bottom].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][bottom_pos];
 		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_top[output_halfline_pixel].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_pos];
+			out_ptr_top[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_pos];
 	}
 }
 
-static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoTop(deinterleaved_rgb565_pixels* out_ptr_top, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
+static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoTop(deinterleaved_rgb565_pixels* out_ptr_top, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top = 1) {
 	//de-interleave pixels
 	const int top_pos = 1;
 	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
 	for(size_t i = 0; i < real_num_iters; i++) {
 		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
-		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
+		size_t output_halfline_pixel = (output_halfline * real_num_iters * multiplier_top) + i;
 		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
 			out_ptr_top[output_halfline_pixel].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_pos];
 	}
@@ -113,77 +116,29 @@ static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoBottom
 	}
 }
 
-static inline void usb_rgb565convertInterleave3DVideoToOutputDirectOptLE(deinterleaved_rgb565_pixels* out_ptr_top_l, deinterleaved_rgb565_pixels* out_ptr_top_r, deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_3d_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top) {
-	//de-interleave pixels
-	const int bottom_pos = 0;
-	const int top_l_pos = 1;
-	const int top_r_pos = 2;
-	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
-	const size_t output_halfline_pos = output_halfline * real_num_iters;
-	for(size_t i = 0; i < real_num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
-		size_t output_halfline_pixel_bottom = output_halfline_pos + i;
-		size_t output_halfline_pixel_top = (output_halfline_pos * multiplier_top) + i;
-		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_bottom[output_halfline_pixel_bottom].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][bottom_pos];
-		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_top_l[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_l_pos];
-		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_top_r[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_r_pos];
-	}
-}
-
-static inline void usb_rgb565convertInterleave3DVideoToOutputDirectOptLEMonoTop(deinterleaved_rgb565_pixels* out_ptr_top_l, deinterleaved_rgb565_pixels* out_ptr_top_r, interleaved_3d_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top) {
-	//de-interleave pixels
-	const int top_l_pos = 1;
-	const int top_r_pos = 2;
-	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
-	const size_t output_halfline_pos = output_halfline * real_num_iters;
-	for(size_t i = 0; i < real_num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
-		size_t output_halfline_pixel_top = (output_halfline_pos * multiplier_top) + i;
-		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_top_l[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_l_pos];
-		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_top_r[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_r_pos];
-	}
-}
-
-static inline void usb_rgb565convertInterleave3DVideoToOutputDirectOptLEMonoBottom(deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_3d_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
-	//de-interleave pixels
-	const int bottom_pos = 0;
-	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
-	const size_t output_halfline_pos = output_halfline * real_num_iters;
-	for(size_t i = 0; i < real_num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
-		size_t output_halfline_pixel = output_halfline_pos + i;
-		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_bottom[output_halfline_pixel].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][bottom_pos];
-	}
-}
-
-static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBE(deinterleaved_rgb565_pixels* out_ptr_top, deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
+static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBE(deinterleaved_rgb565_pixels* out_ptr_top, deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top = 1) {
 	//de-interleave pixels
 	const int bottom_pos = 0;
 	const int top_pos = 1;
 	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
 	for(size_t i = 0; i < real_num_iters; i++) {
 		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
-		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
+		size_t output_halfline_pixel_bottom = (output_halfline * real_num_iters) + i;
+		size_t output_halfline_pixel_top = (output_halfline * real_num_iters * multiplier_top) + i;
 		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_bottom[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][bottom_pos]);
+			out_ptr_bottom[output_halfline_pixel_bottom].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][bottom_pos]);
 		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_top[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_pos]);
+			out_ptr_top[output_halfline_pixel_top].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_pos]);
 	}
 }
 
-static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoTop(deinterleaved_rgb565_pixels* out_ptr_top, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
+static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoTop(deinterleaved_rgb565_pixels* out_ptr_top, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top = 1) {
 	//de-interleave pixels
 	const int top_pos = 1;
 	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
 	for(size_t i = 0; i < real_num_iters; i++) {
 		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
-		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
+		size_t output_halfline_pixel = (output_halfline * real_num_iters * multiplier_top) + i;
 		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
 			out_ptr_top[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_pos]);
 	}
@@ -198,55 +153,6 @@ static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoBottom
 		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
 		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
 			out_ptr_bottom[output_halfline_pixel].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][bottom_pos]);
-	}
-}
-
-static inline void usb_rgb565convertInterleave3DVideoToOutputDirectOptBE(deinterleaved_rgb565_pixels* out_ptr_top_l, deinterleaved_rgb565_pixels* out_ptr_top_r, deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_3d_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top) {
-	//de-interleave pixels
-	const int bottom_pos = 0;
-	const int top_l_pos = 1;
-	const int top_r_pos = 2;
-	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
-	const size_t output_halfline_pos = output_halfline * real_num_iters;
-	for(size_t i = 0; i < real_num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
-		size_t output_halfline_pixel_bottom = output_halfline_pos + i;
-		size_t output_halfline_pixel_top = (output_halfline_pos * multiplier_top) + i;
-		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_bottom[output_halfline_pixel_bottom].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][bottom_pos]);
-		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_top_l[output_halfline_pixel_top].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_l_pos]);
-		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_top_r[output_halfline_pixel_top].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_r_pos]);
-	}
-}
-
-static inline void usb_rgb565convertInterleave3DVideoToOutputDirectOptBEMonoTop(deinterleaved_rgb565_pixels* out_ptr_top_l, deinterleaved_rgb565_pixels* out_ptr_top_r, interleaved_3d_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top) {
-	//de-interleave pixels
-	const int top_l_pos = 1;
-	const int top_r_pos = 2;
-	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
-	const size_t output_halfline_pos = output_halfline * real_num_iters;
-	for(size_t i = 0; i < real_num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
-		size_t output_halfline_pixel_top = (output_halfline_pos * multiplier_top) + i;
-		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_top_l[output_halfline_pixel_top].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_l_pos]);
-		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_top_r[output_halfline_pixel_top].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][top_r_pos]);
-	}
-}
-
-static inline void usb_rgb565convertInterleave3DVideoToOutputDirectOptBEMonoBottom(deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_3d_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
-	//de-interleave pixels
-	const int bottom_pos = 0;
-	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
-	const size_t output_halfline_pos = output_halfline * real_num_iters;
-	for(size_t i = 0; i < real_num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
-		size_t output_halfline_pixel_bottom = output_halfline_pos + i;
-		for(size_t j = 0; j < INTERLEAVED_RGB565_TOTAL_SIZE; j++)
-			out_ptr_bottom[output_halfline_pixel_bottom].pixels[j] = _reverse_endianness(in_ptr[input_halfline_pixel].pixels[j][bottom_pos]);
 	}
 }
 
@@ -286,55 +192,6 @@ static inline void usb_rgb888convertInterleaveU16VideoToOutputDirectOptMonoBotto
 		size_t output_halfline_pixel = (output_halfline * real_num_iters) + i;
 		for(size_t j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
 			out_ptr_bottom[output_halfline_pixel].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][bottom_pos];
-	}
-}
-
-static inline void usb_rgb888convertInterleaveU163DVideoToOutputDirectOpt(deinterleaved_rgb888_u16_pixels* out_ptr_top_l, deinterleaved_rgb888_u16_pixels* out_ptr_top_r, deinterleaved_rgb888_u16_pixels* out_ptr_bottom, interleaved_3d_rgb888_u16_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top) {
-	//de-interleave pixels
-	const int bottom_pos = 0;
-	const int top_l_pos = 1;
-	const int top_r_pos = 2;
-	const size_t real_num_iters = num_iters / INTERLEAVED_RGB888_PIXEL_NUM;
-	const size_t output_halfline_pos = output_halfline * real_num_iters;
-	for(size_t i = 0; i < real_num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
-		size_t output_halfline_pixel_bottom = output_halfline_pos + i;
-		size_t output_halfline_pixel_top = (output_halfline_pos * multiplier_top) + i;
-		for(size_t j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
-			out_ptr_bottom[output_halfline_pixel_bottom].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][bottom_pos];
-		for(size_t j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
-			out_ptr_top_l[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_l_pos];
-		for(size_t j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
-			out_ptr_top_r[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_r_pos];
-	}
-}
-
-static inline void usb_rgb888convertInterleaveU163DVideoToOutputDirectOptMonoTop(deinterleaved_rgb888_u16_pixels* out_ptr_top_l, deinterleaved_rgb888_u16_pixels* out_ptr_top_r, interleaved_3d_rgb888_u16_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top) {
-	//de-interleave pixels
-	const int top_l_pos = 1;
-	const int top_r_pos = 2;
-	const size_t real_num_iters = num_iters / INTERLEAVED_RGB888_PIXEL_NUM;
-	const size_t output_halfline_pos = output_halfline * real_num_iters;
-	for(size_t i = 0; i < real_num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
-		size_t output_halfline_pixel_top = (output_halfline_pos * multiplier_top) + i;
-		for(size_t j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
-			out_ptr_top_l[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_l_pos];
-		for(size_t j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
-			out_ptr_top_r[output_halfline_pixel_top].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][top_r_pos];
-	}
-}
-
-static inline void usb_rgb888convertInterleaveU163DVideoToOutputDirectOptMonoBottom(deinterleaved_rgb888_u16_pixels* out_ptr_bottom, interleaved_3d_rgb888_u16_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
-	//de-interleave pixels
-	const int bottom_pos = 0;
-	const size_t real_num_iters = num_iters / INTERLEAVED_RGB888_PIXEL_NUM;
-	const size_t output_halfline_pos = output_halfline * real_num_iters;
-	for(size_t i = 0; i < real_num_iters; i++) {
-		size_t input_halfline_pixel = (input_halfline * real_num_iters) + i;
-		size_t output_halfline_pixel_bottom = output_halfline_pos + i;
-		for(size_t j = 0; j < INTERLEAVED_RGB888_TOTAL_SIZE; j++)
-			out_ptr_bottom[output_halfline_pixel_bottom].pixels[j] = in_ptr[input_halfline_pixel].pixels[j][bottom_pos];
 	}
 }
 
@@ -508,11 +365,12 @@ static inline void usb_3DS565Optimizeconvert3DVideoToOutputLineDirectOptLE(USB56
 	deinterleaved_rgb565_pixels* out_ptr_bottom = (deinterleaved_rgb565_pixels*)p_out->rgb16_video_output_data.screen_data;
 	deinterleaved_rgb565_pixels* out_ptr_top_l = out_ptr_bottom + ((BOT_SIZE_3DS * pixels_size) / ptr_out_size);
 	deinterleaved_rgb565_pixels* out_ptr_top_r = out_ptr_bottom + (((TOP_SIZE_3DS + BOT_SIZE_3DS) * pixels_size) / ptr_out_size);
-	interleaved_3d_rgb565_pixels* in_ptr = (interleaved_3d_rgb565_pixels*)p_in->bottom_only_column;
+	interleaved_rgb565_pixels* in_ptr = (interleaved_rgb565_pixels*)p_in->bottom_only_column.pixel;
 	if(column < column_last_bot_pos)
-		in_ptr = (interleaved_3d_rgb565_pixels*)p_in->columns_data[column].pixel;
-	else if(usb_OptimizeHasExtraHeaderSoundData(&p_in->columns_data[0].header_sound))
-		in_ptr = (interleaved_3d_rgb565_pixels*)(((USB5653DSOptimizeCaptureReceived_3DExtraHeader*)p_in)->columns_data[column].pixel);
+		in_ptr = (interleaved_rgb565_pixels*)p_in->columns_data[column].bot_top_l_screens_column.pixel;
+	//else if(usb_OptimizeHasExtraHeaderSoundData(&p_in->columns_data[0].header_sound)) {
+		//in_ptr = (interleaved_rgb565_pixels*)(((USB5653DSOptimizeCaptureReceived_3DExtraHeader*)p_in)->columns_data[column].pixel);
+	//}
 	int multiplier_top = 1;
 	if(interleaved_3d) {
 		multiplier_top = 2;
@@ -520,17 +378,19 @@ static inline void usb_3DS565Optimizeconvert3DVideoToOutputLineDirectOptLE(USB56
 	}
 	const uint32_t num_iters = HEIGHT_3DS;
 	if(column == column_last_bot_pos)
-		usb_rgb565convertInterleave3DVideoToOutputDirectOptLEMonoBottom(out_ptr_bottom, in_ptr, num_iters, 0, BOT_WIDTH_3DS - 1);
-	else if(column == column_pre_last_bot_pos) {
-		usb_rgb565convertInterleave3DVideoToOutputDirectOptLEMonoTop(out_ptr_top_l, out_ptr_top_r, in_ptr, num_iters, 0, column, multiplier_top);
-		usb_rgb565convertInterleave3DVideoToOutputDirectOptLEMonoBottom(out_ptr_bottom, in_ptr, num_iters, 0, BOT_WIDTH_3DS - 2);
-	}
-	else if(column < column_start_bot_pos)
-		usb_rgb565convertInterleave3DVideoToOutputDirectOptLEMonoTop(out_ptr_top_l, out_ptr_top_r, in_ptr, num_iters, 0, column, multiplier_top);
+		usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoBottom(out_ptr_bottom, in_ptr, num_iters, 0, BOT_WIDTH_3DS - 1);
 	else {
-		out_ptr_top_l += (column_start_bot_pos * HEIGHT_3DS * pixels_size) / ptr_out_size;
-		out_ptr_top_r += (column_start_bot_pos * HEIGHT_3DS * pixels_size) / ptr_out_size;
-		usb_rgb565convertInterleave3DVideoToOutputDirectOptLE(out_ptr_top_l, out_ptr_top_r, out_ptr_bottom, in_ptr, num_iters, 0, column - column_start_bot_pos, multiplier_top);
+		memcpy_data_u16le_origin((uint16_t*)(out_ptr_top_r + ((column * HEIGHT_3DS * multiplier_top * pixels_size) / ptr_out_size)), (uint8_t*)p_in->columns_data[column].top_r_screen_column.pixel, HEIGHT_3DS, false);
+		if(column == column_pre_last_bot_pos) {
+			usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoTop(out_ptr_top_l, in_ptr, num_iters, 0, column, multiplier_top);
+			usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoBottom(out_ptr_bottom, in_ptr, num_iters, 0, BOT_WIDTH_3DS - 2);
+		}
+		else if(column < column_start_bot_pos)
+			usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoTop(out_ptr_top_l, in_ptr, num_iters, 0, column, multiplier_top);
+		else {
+			out_ptr_top_l += (column_start_bot_pos * HEIGHT_3DS * multiplier_top * pixels_size) / ptr_out_size;
+			usb_rgb565convertInterleaveVideoToOutputDirectOptLE(out_ptr_top_l, out_ptr_bottom, in_ptr, num_iters, 0, column - column_start_bot_pos, multiplier_top);
+		}
 	}
 }
 
@@ -544,11 +404,12 @@ static inline void usb_3DS565Optimizeconvert3DVideoToOutputLineDirectOptBE(USB56
 	deinterleaved_rgb565_pixels* out_ptr_bottom = (deinterleaved_rgb565_pixels*)p_out->rgb16_video_output_data.screen_data;
 	deinterleaved_rgb565_pixels* out_ptr_top_l = out_ptr_bottom + ((BOT_SIZE_3DS * pixels_size) / ptr_out_size);
 	deinterleaved_rgb565_pixels* out_ptr_top_r = out_ptr_bottom + (((TOP_SIZE_3DS + BOT_SIZE_3DS) * pixels_size) / ptr_out_size);
-	interleaved_3d_rgb565_pixels* in_ptr = (interleaved_3d_rgb565_pixels*)p_in->bottom_only_column;
+	interleaved_rgb565_pixels* in_ptr = (interleaved_rgb565_pixels*)p_in->bottom_only_column.pixel;
 	if(column < column_last_bot_pos)
-		in_ptr = (interleaved_3d_rgb565_pixels*)p_in->columns_data[column].pixel;
-	else if(usb_OptimizeHasExtraHeaderSoundData(&p_in->columns_data[0].header_sound))
-		in_ptr = (interleaved_3d_rgb565_pixels*)(((USB5653DSOptimizeCaptureReceived_3DExtraHeader*)p_in)->columns_data[column].pixel);
+		in_ptr = (interleaved_rgb565_pixels*)p_in->columns_data[column].bot_top_l_screens_column.pixel;
+	//else if(usb_OptimizeHasExtraHeaderSoundData(&p_in->columns_data[0].header_sound)) {
+		//in_ptr = (interleaved_rgb565_pixels*)(((USB5653DSOptimizeCaptureReceived_3DExtraHeader*)p_in)->columns_data[column].pixel);
+	//}
 	int multiplier_top = 1;
 	if(interleaved_3d) {
 		multiplier_top = 2;
@@ -556,17 +417,19 @@ static inline void usb_3DS565Optimizeconvert3DVideoToOutputLineDirectOptBE(USB56
 	}
 	const uint32_t num_iters = HEIGHT_3DS;
 	if(column == column_last_bot_pos)
-		usb_rgb565convertInterleave3DVideoToOutputDirectOptBEMonoBottom(out_ptr_bottom, in_ptr, num_iters, 0, BOT_WIDTH_3DS - 1);
-	else if(column == column_pre_last_bot_pos) {
-		usb_rgb565convertInterleave3DVideoToOutputDirectOptBEMonoTop(out_ptr_top_l, out_ptr_top_r, in_ptr, num_iters, 0, column, multiplier_top);
-		usb_rgb565convertInterleave3DVideoToOutputDirectOptBEMonoBottom(out_ptr_bottom, in_ptr, num_iters, 0, BOT_WIDTH_3DS - 2);
-	}
-	else if(column < column_start_bot_pos)
-		usb_rgb565convertInterleave3DVideoToOutputDirectOptBEMonoTop(out_ptr_top_l, out_ptr_top_r, in_ptr, num_iters, 0, column, multiplier_top);
+		usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoBottom(out_ptr_bottom, in_ptr, num_iters, 0, BOT_WIDTH_3DS - 1);
 	else {
-		out_ptr_top_l += (column_start_bot_pos * HEIGHT_3DS * pixels_size) / ptr_out_size;
-		out_ptr_top_r += (column_start_bot_pos * HEIGHT_3DS * pixels_size) / ptr_out_size;
-		usb_rgb565convertInterleave3DVideoToOutputDirectOptBE(out_ptr_top_l, out_ptr_top_r, out_ptr_bottom, in_ptr, num_iters, 0, column - column_start_bot_pos, multiplier_top);
+		memcpy_data_u16le_origin((uint16_t*)(out_ptr_top_r + ((column * HEIGHT_3DS * multiplier_top * pixels_size) / ptr_out_size)), (uint8_t*)p_in->columns_data[column].top_r_screen_column.pixel, HEIGHT_3DS, true);
+		if(column == column_pre_last_bot_pos) {
+			usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoTop(out_ptr_top_l, in_ptr, num_iters, 0, column, multiplier_top);
+			usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoBottom(out_ptr_bottom, in_ptr, num_iters, 0, BOT_WIDTH_3DS - 2);
+		}
+		else if(column < column_start_bot_pos)
+			usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoTop(out_ptr_top_l, in_ptr, num_iters, 0, column, multiplier_top);
+		else {
+			out_ptr_top_l += (column_start_bot_pos * HEIGHT_3DS * pixels_size) / ptr_out_size;
+			usb_rgb565convertInterleaveVideoToOutputDirectOptBE(out_ptr_top_l, out_ptr_bottom, in_ptr, num_iters, 0, column - column_start_bot_pos, multiplier_top);
+		}
 	}
 }
 
@@ -599,40 +462,44 @@ static inline void usb_3DS888OptimizeconvertVideoToOutputLineDirectOpt(USB8883DS
 	}
 }
 
-static inline void usb_3DS888Optimizeconvert3DVideoToOutputLineDirectOpt(USB8883DSOptimizeCaptureReceived_3D *p_in, VideoOutputData *p_out, uint16_t column, bool interleaved_3d) {
-	//de-interleave pixels
+static inline void usb_3DS888Optimizeconvert3DVideoToOutputLineDirectOpt(USB8883DSOptimizeCaptureReceived_3D *p_in, VideoOutputData *p_out, uint16_t column, bool interleaved_3d, bool is_bottom_data) {
 	const int pixels_size = sizeof(VideoPixelRGB);
 	const size_t column_start_bot_pos = (SCREEN_WIDTH_FIRST_PIXEL_BOTTOM_3DS * 2) + 2;
 	const size_t column_pre_last_bot_pos = (SCREEN_WIDTH_FIRST_PIXEL_BOTTOM_3DS * 2);
-	const size_t column_last_bot_pos = TOP_WIDTH_3DS;
-	const size_t ptr_out_size = sizeof(deinterleaved_rgb888_u16_pixels);
-	deinterleaved_rgb888_u16_pixels* out_ptr_bottom = (deinterleaved_rgb888_u16_pixels*)p_out->rgb_video_output_data.screen_data;
-	deinterleaved_rgb888_u16_pixels* out_ptr_top_l = out_ptr_bottom + ((BOT_SIZE_3DS * pixels_size) / ptr_out_size);
-	deinterleaved_rgb888_u16_pixels* out_ptr_top_r = out_ptr_bottom + (((TOP_SIZE_3DS + BOT_SIZE_3DS) * pixels_size) / ptr_out_size);
-	interleaved_3d_rgb888_u16_pixels* in_ptr = (interleaved_3d_rgb888_u16_pixels*)p_in->bottom_only_column;
-	if(column < column_last_bot_pos)
-		in_ptr = (interleaved_3d_rgb888_u16_pixels*)p_in->columns_data[column].pixel;
-	else if(usb_OptimizeHasExtraHeaderSoundData(&p_in->columns_data[0].header_sound))
-		in_ptr = (interleaved_3d_rgb888_u16_pixels*)(((USB8883DSOptimizeCaptureReceived_3DExtraHeader*)p_in)->columns_data[column].pixel);
+	uint8_t* out_ptr_bottom = (uint8_t*)p_out->rgb_video_output_data.screen_data;
+	uint8_t* out_ptr_top_l = out_ptr_bottom + (BOT_SIZE_3DS * pixels_size);
+	uint8_t* out_ptr_top_r = out_ptr_top_l + (TOP_SIZE_3DS * pixels_size);
 	int multiplier_top = 1;
 	if(interleaved_3d) {
 		multiplier_top = 2;
-		out_ptr_top_r = out_ptr_top_l + (HEIGHT_3DS / ptr_out_size);
+		out_ptr_top_r = out_ptr_top_l + (HEIGHT_3DS * pixels_size);
 	}
-	const uint32_t num_iters = HEIGHT_3DS;
-	if(column == column_last_bot_pos)
-		usb_rgb888convertInterleaveU163DVideoToOutputDirectOptMonoBottom(out_ptr_bottom, in_ptr, num_iters, 0, BOT_WIDTH_3DS - 1);
-	else if(column == column_pre_last_bot_pos) {
-		usb_rgb888convertInterleaveU163DVideoToOutputDirectOptMonoTop(out_ptr_top_l, out_ptr_top_r, in_ptr, num_iters, 0, column, multiplier_top);
-		usb_rgb888convertInterleaveU163DVideoToOutputDirectOptMonoBottom(out_ptr_bottom, in_ptr, num_iters, 0, BOT_WIDTH_3DS - 2);
+
+	if((!is_bottom_data) && (column >= TOP_WIDTH_3DS))
+		return;
+
+	uint8_t* src_ptr = (uint8_t*)p_in->bottom_only_column.pixel;
+	uint8_t* dst_ptr_first = out_ptr_bottom;
+	uint8_t* dst_ptr_second = out_ptr_bottom;
+	if(is_bottom_data) {
+		if(column >= TOP_WIDTH_3DS) {
+			memcpy(out_ptr_bottom + ((BOT_WIDTH_3DS - 1) * HEIGHT_3DS * pixels_size), (uint8_t*)p_in->bottom_only_column.pixel, HEIGHT_3DS * pixels_size);
+		}
+		else {
+			int out_column_pos = -1;
+			if(column == column_pre_last_bot_pos)
+				out_column_pos = BOT_WIDTH_3DS - 2;
+			else if(column >= column_start_bot_pos)
+				out_column_pos = column - column_start_bot_pos;
+			if(out_column_pos == -1)
+				return;
+			memcpy(out_ptr_bottom + (out_column_pos * HEIGHT_3DS * pixels_size), (uint8_t*)p_in->columns_data[column][1].pixel, HEIGHT_3DS * pixels_size);
+		}
+		return;
 	}
-	else if(column < column_start_bot_pos)
-		usb_rgb888convertInterleaveU163DVideoToOutputDirectOptMonoTop(out_ptr_top_l, out_ptr_top_r, in_ptr, num_iters, 0, column, multiplier_top);
-	else {
-		out_ptr_top_l += (column_start_bot_pos * HEIGHT_3DS * pixels_size) / ptr_out_size;
-		out_ptr_top_r += (column_start_bot_pos * HEIGHT_3DS * pixels_size) / ptr_out_size;
-		usb_rgb888convertInterleaveU163DVideoToOutputDirectOpt(out_ptr_top_l, out_ptr_top_r, out_ptr_bottom, in_ptr, num_iters, 0, column - column_start_bot_pos, multiplier_top);
-	}
+
+	memcpy(out_ptr_top_l + (column * HEIGHT_3DS * pixels_size * multiplier_top), (uint8_t*)p_in->columns_data[column][0].pixel, HEIGHT_3DS * pixels_size);
+	memcpy(out_ptr_top_r + (column * HEIGHT_3DS * pixels_size * multiplier_top), (uint8_t*)p_in->columns_data[column][1].pixel, HEIGHT_3DS * pixels_size);
 }
 
 static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, const bool is_big_endian) {
@@ -763,8 +630,11 @@ static void usb_3ds_optimize_convertVideoToOutput(CaptureReceived *p_in, VideoOu
 			expand_2d_to_3d_convertVideoToOutput((uint8_t*)p_out->rgb_video_output_data.screen_data, sizeof(VideoPixelRGB), interleaved_3d, requested_3d);
 		}
 		else {
-			for(int i = 0; i < (TOP_WIDTH_3DS + 1); i++)
-				usb_3DS888Optimizeconvert3DVideoToOutputLineDirectOpt(&p_in->cypress_optimize_received_888_3d, p_out, i, interleaved_3d);
+			USB3DSOptimizeHeaderSoundData* first_column_header = getAudioHeaderPtrOptimize3DS3D(p_in, is_rgb888, 0);
+			bool is_bottom_data = (((uint8_t*)&first_column_header->header_info.column_info)[1] & 0x40) == 0;
+			for(int i = 0; i < (TOP_WIDTH_3DS + 1); i++) {
+				usb_3DS888Optimizeconvert3DVideoToOutputLineDirectOpt(&p_in->cypress_optimize_received_888_3d, p_out, i, interleaved_3d, is_bottom_data);
+			}
 		}
 	}
 }
@@ -864,26 +734,32 @@ bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, Capt
 	return converted;
 }
 
-static USB3DSOptimizeHeaderSoundData* getAudioHeaderPtrOptimize3DS(CaptureReceived* buffer, bool is_rgb888, bool is_data_3d, uint16_t column) {
-	if(!is_rgb888) {
-		if(!is_data_3d)
-			return &buffer->cypress_optimize_received_565.columns_data[column].header_sound;
-		return &buffer->cypress_optimize_received_565_3d.columns_data[column].header_sound;
-	}
-	if(!is_data_3d)
-		return &buffer->cypress_optimize_received_888.columns_data[column].header_sound;
-	return &buffer->cypress_optimize_received_888_3d.columns_data[column].header_sound;
+static USB3DSOptimizeHeaderSoundData* getAudioHeaderPtrOptimize3DS(CaptureReceived* buffer, bool is_rgb888, uint16_t column) {
+	if(!is_rgb888)
+		return &buffer->cypress_optimize_received_565.columns_data[column].header_sound;
+	return &buffer->cypress_optimize_received_888.columns_data[column].header_sound;
 }
 
-static USB3DSOptimizeHeaderSoundData* getAudioHeaderPtrOptimize3DSExtraHeader(CaptureReceived* buffer, bool is_rgb888, bool is_data_3d, uint16_t column) {
+static USB3DSOptimizeHeaderSoundData* getAudioHeaderPtrOptimize3DSExtraHeader(CaptureReceived* buffer, bool is_rgb888, uint16_t column) {
+	if(!is_rgb888)
+		return &buffer->cypress_optimize_received_565_extra_header.columns_data[column].header_sound;
+	return &buffer->cypress_optimize_received_888_extra_header.columns_data[column].header_sound;
+}
+
+static USB3DSOptimizeHeaderSoundData* getAudioHeaderPtrOptimize3DS3D(CaptureReceived* buffer, bool is_rgb888, uint16_t column) {
 	if(!is_rgb888) {
-		if(!is_data_3d)
-			return &buffer->cypress_optimize_received_565_extra_header.columns_data[column].header_sound;
-		return &buffer->cypress_optimize_received_565_3d_extra_header.columns_data[column].header_sound;
+		int target_column = column / 2;
+		if((column % 2) == 0)
+			return &buffer->cypress_optimize_received_565_3d.columns_data[target_column].top_r_screen_column.header_sound;
+		return &buffer->cypress_optimize_received_565_3d.columns_data[target_column].bot_top_l_screens_column.header_sound;
 	}
-	if(!is_data_3d)
-		return &buffer->cypress_optimize_received_888_extra_header.columns_data[column].header_sound;
-	return &buffer->cypress_optimize_received_888_3d_extra_header.columns_data[column].header_sound;
+	return &buffer->cypress_optimize_received_888_3d.columns_data[column / 2][column % 2].header_sound;
+}
+
+static USB3DSOptimizeHeaderSoundData* getAudioHeaderPtrOptimize3DS3DExtraHeader(CaptureReceived* buffer, bool is_rgb888) {
+	if(!is_rgb888)
+		return &buffer->cypress_optimize_received_565_3d.bottom_only_column.header_sound;
+	return &buffer->cypress_optimize_received_888_3d.bottom_only_column.header_sound;
 }
 
 static inline uint16_t read_sample_indexLE(USB3DSOptimizeSingleSoundData* sample) {
@@ -914,17 +790,17 @@ static inline void copyAudioFromSoundDataOptimize3DSBE(std::int16_t *p_out, USB3
 	last_inserted_index = read_index;
 }
 
-static void copyAudioOptimize3DSLE(std::int16_t *p_out, uint64_t &n_samples, uint16_t &last_buffer_index, CaptureReceived* buffer, bool is_rgb888, bool is_data_3d) {
+static void copyAudioOptimize3DSLE(std::int16_t *p_out, uint64_t &n_samples, uint16_t &last_buffer_index, CaptureReceived* buffer, bool is_rgb888) {
 	uint64_t num_inserted = 0;
 	int last_inserted_index = last_buffer_index;
 	for(int i = 0; i < TOP_WIDTH_3DS; i++) {
-		USB3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrOptimize3DS(buffer, is_rgb888, is_data_3d, i);
+		USB3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrOptimize3DS(buffer, is_rgb888, i);
 		copyAudioFromSoundDataOptimize3DSLE(p_out, &curr_column_data->samples[0], num_inserted, last_inserted_index);
 		copyAudioFromSoundDataOptimize3DSLE(p_out, &curr_column_data->samples[1], num_inserted, last_inserted_index);
 	}
-	USB3DSOptimizeHeaderSoundData* initial_column_data = getAudioHeaderPtrOptimize3DS(buffer, is_rgb888, is_data_3d, 0);
+	USB3DSOptimizeHeaderSoundData* initial_column_data = getAudioHeaderPtrOptimize3DS(buffer, is_rgb888, 0);
 	if(usb_OptimizeHasExtraHeaderSoundData(initial_column_data)) {
-		USB3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrOptimize3DSExtraHeader(buffer, is_rgb888, is_data_3d, TOP_WIDTH_3DS);
+		USB3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrOptimize3DSExtraHeader(buffer, is_rgb888, TOP_WIDTH_3DS);
 		copyAudioFromSoundDataOptimize3DSLE(p_out, &curr_column_data->samples[0], num_inserted, last_inserted_index);
 		copyAudioFromSoundDataOptimize3DSLE(p_out, &curr_column_data->samples[1], num_inserted, last_inserted_index);
 	}
@@ -932,20 +808,50 @@ static void copyAudioOptimize3DSLE(std::int16_t *p_out, uint64_t &n_samples, uin
 	n_samples = num_inserted * 2;
 }
 
-static void copyAudioOptimize3DSBE(std::int16_t *p_out, uint64_t &n_samples, uint16_t &last_buffer_index, CaptureReceived* buffer, bool is_rgb888, bool is_data_3d) {
+static void copyAudioOptimize3DS3DLE(std::int16_t *p_out, uint64_t &n_samples, uint16_t &last_buffer_index, CaptureReceived* buffer, bool is_rgb888) {
+	uint64_t num_inserted = 0;
+	int last_inserted_index = last_buffer_index;
+	for(int i = 0; i < TOP_WIDTH_3DS * 2; i++) {
+		USB3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrOptimize3DS3D(buffer, is_rgb888, i);
+		copyAudioFromSoundDataOptimize3DSLE(p_out, &curr_column_data->samples[0], num_inserted, last_inserted_index);
+		copyAudioFromSoundDataOptimize3DSLE(p_out, &curr_column_data->samples[1], num_inserted, last_inserted_index);
+	}
+	USB3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrOptimize3DS3DExtraHeader(buffer, is_rgb888);
+	copyAudioFromSoundDataOptimize3DSLE(p_out, &curr_column_data->samples[0], num_inserted, last_inserted_index);
+	copyAudioFromSoundDataOptimize3DSLE(p_out, &curr_column_data->samples[1], num_inserted, last_inserted_index);
+	last_buffer_index = last_inserted_index;
+	n_samples = num_inserted * 2;
+}
+
+static void copyAudioOptimize3DSBE(std::int16_t *p_out, uint64_t &n_samples, uint16_t &last_buffer_index, CaptureReceived* buffer, bool is_rgb888) {
 	uint64_t num_inserted = 0;
 	int last_inserted_index = last_buffer_index;
 	for(int i = 0; i < TOP_WIDTH_3DS; i++) {
-		USB3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrOptimize3DS(buffer, is_rgb888, is_data_3d, i);
+		USB3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrOptimize3DS(buffer, is_rgb888, i);
 		copyAudioFromSoundDataOptimize3DSBE(p_out, &curr_column_data->samples[0], num_inserted, last_inserted_index);
 		copyAudioFromSoundDataOptimize3DSBE(p_out, &curr_column_data->samples[1], num_inserted, last_inserted_index);
 	}
-	USB3DSOptimizeHeaderSoundData* initial_column_data = getAudioHeaderPtrOptimize3DS(buffer, is_rgb888, is_data_3d, 0);
+	USB3DSOptimizeHeaderSoundData* initial_column_data = getAudioHeaderPtrOptimize3DS(buffer, is_rgb888, 0);
 	if(usb_OptimizeHasExtraHeaderSoundData(initial_column_data)) {
-		USB3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrOptimize3DSExtraHeader(buffer, is_rgb888, is_data_3d, TOP_WIDTH_3DS);
+		USB3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrOptimize3DSExtraHeader(buffer, is_rgb888, TOP_WIDTH_3DS);
 		copyAudioFromSoundDataOptimize3DSBE(p_out, &curr_column_data->samples[0], num_inserted, last_inserted_index);
 		copyAudioFromSoundDataOptimize3DSBE(p_out, &curr_column_data->samples[1], num_inserted, last_inserted_index);
 	}
+	last_buffer_index = last_inserted_index;
+	n_samples = num_inserted * 2;
+}
+
+static void copyAudioOptimize3DS3DBE(std::int16_t *p_out, uint64_t &n_samples, uint16_t &last_buffer_index, CaptureReceived* buffer, bool is_rgb888) {
+	uint64_t num_inserted = 0;
+	int last_inserted_index = last_buffer_index;
+	for(int i = 0; i < TOP_WIDTH_3DS * 2; i++) {
+		USB3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrOptimize3DS3D(buffer, is_rgb888, i);
+		copyAudioFromSoundDataOptimize3DSBE(p_out, &curr_column_data->samples[0], num_inserted, last_inserted_index);
+		copyAudioFromSoundDataOptimize3DSBE(p_out, &curr_column_data->samples[1], num_inserted, last_inserted_index);
+	}
+	USB3DSOptimizeHeaderSoundData* curr_column_data = getAudioHeaderPtrOptimize3DS3DExtraHeader(buffer, is_rgb888);
+	copyAudioFromSoundDataOptimize3DSBE(p_out, &curr_column_data->samples[0], num_inserted, last_inserted_index);
+	copyAudioFromSoundDataOptimize3DSBE(p_out, &curr_column_data->samples[1], num_inserted, last_inserted_index);
 	last_buffer_index = last_inserted_index;
 	n_samples = num_inserted * 2;
 }
@@ -998,20 +904,24 @@ bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, uint16_t &la
 	#ifdef USE_CYPRESS_OPTIMIZE
 	if(status->device.cc_type == CAPTURE_CONN_CYPRESS_OPTIMIZE) {
 		bool is_rgb888 = video_data_type == VIDEO_DATA_RGB;
-		if(is_big_endian)
-			copyAudioOptimize3DSBE(p_out, n_samples, last_buffer_index, &data_buffer->capture_buf, is_rgb888, is_data_3d);
-		else
-			copyAudioOptimize3DSLE(p_out, n_samples, last_buffer_index, &data_buffer->capture_buf, is_rgb888, is_data_3d);
+		if(is_big_endian) {
+			if(is_data_3d)
+				copyAudioOptimize3DS3DBE(p_out, n_samples, last_buffer_index, &data_buffer->capture_buf, is_rgb888);
+			else
+				copyAudioOptimize3DSBE(p_out, n_samples, last_buffer_index, &data_buffer->capture_buf, is_rgb888);
+		}
+		else {
+			if(is_data_3d)
+				copyAudioOptimize3DS3DLE(p_out, n_samples, last_buffer_index, &data_buffer->capture_buf, is_rgb888);
+			else
+				copyAudioOptimize3DSLE(p_out, n_samples, last_buffer_index, &data_buffer->capture_buf, is_rgb888);
+		}
 		return true;
 	}
 	#endif
 	if(base_ptr == NULL)
 		return false;
-	if(!is_big_endian)
-		memcpy(p_out, base_ptr, (size_t)(n_samples * 2));
-	else
-		for(uint64_t i = 0; i < n_samples; i++)
-			p_out[i] = (base_ptr[(i * 2) + 1] << 8) | base_ptr[i * 2];
+	memcpy_data_u16le_origin((uint16_t*)p_out, base_ptr, (size_t)n_samples, is_big_endian);
 	return true;
 }
 

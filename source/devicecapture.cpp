@@ -326,6 +326,8 @@ bool get_device_3d_implemented(CaptureStatus* capture_status) {
 	switch(capture_status->device.cc_type) {
 		case CAPTURE_CONN_FTD3:
 			return true;
+		case CAPTURE_CONN_CYPRESS_OPTIMIZE:
+			return true;
 		default:
 			return false;
 	}
@@ -355,6 +357,18 @@ bool set_3d_enabled(CaptureStatus* capture_status, bool new_value) {
 
 bool update_3d_enabled(CaptureStatus* capture_status) {
 	return set_3d_enabled(capture_status, !capture_status->requested_3d);
+}
+
+float get_framerate_multiplier(CaptureStatus* capture_status) {
+	if(!capture_status->connected)
+		return 1;
+	if(capture_status->device.cc_type != CAPTURE_CONN_CYPRESS_OPTIMIZE)
+		return 1;
+	if(!get_3d_enabled(capture_status))
+		return 1;
+	if(capture_status->request_low_bw_format)
+		return 1;
+	return 0.5;
 }
 
 void capture_init() {

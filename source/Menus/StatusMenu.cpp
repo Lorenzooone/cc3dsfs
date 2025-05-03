@@ -161,13 +161,13 @@ void StatusMenu::prepare(float menu_scaling_factor, int view_size_x, int view_si
 					this->labels[index]->setText(get_usb_speed_text(get_usb_speed_of_device(capture_status)));
 					break;
 				case STATUS_MENU_FPS_IN:
-					this->labels[index + INC_ACTION]->setText(get_float_str_decimals((float)in_fps, 2));
+					this->labels[index + INC_ACTION]->setText(get_float_str_decimals((float)in_fps * get_framerate_multiplier(capture_status), 2));
 					break;
 				case STATUS_MENU_FPS_POLL:
 					this->labels[index + INC_ACTION]->setText(get_float_str_decimals((float)poll_fps, 2));
 					break;
 				case STATUS_MENU_FPS_DRAW:
-					this->labels[index + INC_ACTION]->setText(get_float_str_decimals((float)draw_fps, 2));
+					this->labels[index + INC_ACTION]->setText(get_float_str_decimals((float)draw_fps * get_framerate_multiplier(capture_status), 2));
 					break;
 				default:
 					break;
