@@ -158,6 +158,8 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->was_last_frame_null = true;
 	this->main_thread_owns_window = true;
 	this->created_proper_folder = created_proper_folder;
+	this->is_window_windowed = false;
+	this->saved_windowed_pos = sf::Vector2i(0, 0);
 }
 
 WindowScreen::~WindowScreen() {
@@ -504,10 +506,15 @@ void WindowScreen::window_factory(bool is_main_thread) {
 		this->main_thread_owns_window = is_main_thread;
 		bool previously_open = this->m_win.isOpen();
 		sf::Vector2i prev_pos = sf::Vector2i(0, 0);
-		if(previously_open)
+		// Was this called while the window is in Windowed mode?
+		// Regardless of how it will change...
+		if(previously_open && this->is_window_windowed) {
 			prev_pos = this->m_win.getPosition();
+			saved_windowed_pos = prev_pos;
+		}
 		if((this->loaded_info.initial_pos_x != DEFAULT_NO_POS_WINDOW_VALUE) && (this->loaded_info.initial_pos_y != DEFAULT_NO_POS_WINDOW_VALUE))
 			prev_pos = sf::Vector2i(this->loaded_info.initial_pos_x, this->loaded_info.initial_pos_y);
+		this->is_window_windowed = true;
 		if(!this->loaded_info.is_fullscreen) {
 			this->update_screen_settings();
 			if(this->loaded_info.have_titlebar)
@@ -517,16 +524,18 @@ void WindowScreen::window_factory(bool is_main_thread) {
 			this->update_view_size();
 		}
 		else {
-			if(!this->loaded_info.failed_fullscreen)
+			if(!this->loaded_info.failed_fullscreen) {
 				this->m_win.create(this->curr_desk_mode, this->title_factory(), sf::Style::Default, sf::State::Fullscreen);
+				this->is_window_windowed = false;
+			}
 			else if(this->loaded_info.have_titlebar)
 				this->m_win.create(this->curr_desk_mode, this->title_factory());
 			else
 				this->m_win.create(this->curr_desk_mode, this->title_factory(), sf::Style::None);
 		}
-		if(previously_open && this->loaded_operations.call_titlebar)
-			this->m_win.setPosition(prev_pos);
-		if((this->loaded_info.initial_pos_x != DEFAULT_NO_POS_WINDOW_VALUE) && (this->loaded_info.initial_pos_y != DEFAULT_NO_POS_WINDOW_VALUE))
+		if(previously_open && (!this->loaded_info.is_fullscreen))
+			this->m_win.setPosition(saved_windowed_pos);
+		if((this->loaded_info.initial_pos_x != DEFAULT_NO_POS_WINDOW_VALUE) && (this->loaded_info.initial_pos_y != DEFAULT_NO_POS_WINDOW_VALUE) && (!this->loaded_info.is_fullscreen))
 			this->m_win.setPosition(prev_pos);
 		this->last_window_creation_time = std::chrono::high_resolution_clock::now();
 		this->update_screen_settings();
