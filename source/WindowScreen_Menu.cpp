@@ -198,7 +198,7 @@ void WindowScreen::blur_change() {
 
 void WindowScreen::fast_poll_change() {
 	this->shared_data->input_data.fast_poll = !this->shared_data->input_data.fast_poll;
-	this->print_notification_on_off("Slow Poll", this->shared_data->input_data.fast_poll);
+	this->print_notification_on_off("Slow Input checks", this->shared_data->input_data.fast_poll);
 }
 
 void WindowScreen::is_nitro_capture_type_change(bool positive) {

@@ -25,7 +25,7 @@ static const InputMenuOptionInfo input_menu_toggle_mouse_option = {
 .out_action = INPUT_MENU_TOGGLE_MOUSE};
 
 static const InputMenuOptionInfo input_menu_toggle_fast_poll_option = {
-.base_name = "Disable Slow Poll", .false_name = "Enable Slow Poll",
+.base_name = "Speed up Input checks", .false_name = "Slow down Input checks",
 .out_action = INPUT_MENU_TOGGLE_FAST_POLL};
 
 static const InputMenuOptionInfo input_menu_shortcut_option = {

@@ -53,7 +53,7 @@ static const StatusMenuOptionInfo* pollable_options[] = {
 &status_usb_connection_option,
 &status_url_option,
 &status_fps_in_option,
-&status_fps_poll_option,
+//&status_fps_poll_option,
 &status_fps_draw_option,
 };
 
@@ -70,7 +70,7 @@ StatusMenu::~StatusMenu() {
 }
 
 void StatusMenu::class_setup() {
-	this->num_options_per_screen = 6;
+	this->num_options_per_screen = 5;
 	this->min_elements_text_scaling_factor = num_options_per_screen + 1;
 	this->width_factor_menu = 16;
 	this->width_divisor_menu = 9;
