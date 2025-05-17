@@ -148,7 +148,8 @@ bool load_firmware(cy_device_device_handlers* handlers, const cyni_device_usb_de
 		memcpy(buffer, fw_data + fw_pos, inside_len);
 		fw_pos += inside_len;
 		ret = cypress_ctrl_out_transfer(handlers, get_cy_usb_info(device), buffer, inside_len, 0xA0, offset, 0, &transferred);
-		if(ret < 0)
+		// The final one may fail due to the device reconfiguring itself...
+		if((ret < 0) && (!done))
 			return free_firmware_and_return(fw_data, false);
 	}
 	return free_firmware_and_return(fw_data, true);

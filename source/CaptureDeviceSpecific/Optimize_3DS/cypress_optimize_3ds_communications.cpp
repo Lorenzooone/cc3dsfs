@@ -227,8 +227,9 @@ bool load_firmware(cy_device_device_handlers* handlers, const cyop_device_usb_de
 	}
 	buffer[0] = 0;
 	ret = cypress_ctrl_out_transfer(handlers, get_cy_usb_info(device), buffer, 1, 0xA0, 0xE600, 0, &transferred);
-	if(ret < 0)
-		return free_firmware_and_return(fw_data, false);
+	// This may fail due to the device reconfiguring itself...
+	//if(ret < 0)
+	//	return free_firmware_and_return(fw_data, false);
 	return free_firmware_and_return(fw_data, true);
 }
 
