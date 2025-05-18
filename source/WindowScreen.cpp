@@ -160,6 +160,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->created_proper_folder = created_proper_folder;
 	this->is_window_windowed = false;
 	this->saved_windowed_pos = sf::Vector2i(0, 0);
+	this->was_windowed_pos_saved = false;
 }
 
 WindowScreen::~WindowScreen() {
@@ -510,7 +511,8 @@ void WindowScreen::window_factory(bool is_main_thread) {
 		// Regardless of how it will change...
 		if(previously_open && this->is_window_windowed) {
 			prev_pos = this->m_win.getPosition();
-			saved_windowed_pos = prev_pos;
+			this->saved_windowed_pos = prev_pos;
+			this->was_windowed_pos_saved = true;
 		}
 		if((this->loaded_info.initial_pos_x != DEFAULT_NO_POS_WINDOW_VALUE) && (this->loaded_info.initial_pos_y != DEFAULT_NO_POS_WINDOW_VALUE))
 			prev_pos = sf::Vector2i(this->loaded_info.initial_pos_x, this->loaded_info.initial_pos_y);
@@ -533,7 +535,7 @@ void WindowScreen::window_factory(bool is_main_thread) {
 			else
 				this->m_win.create(this->curr_desk_mode, this->title_factory(), sf::Style::None);
 		}
-		if(previously_open && (!this->loaded_info.is_fullscreen))
+		if(previously_open && (!this->loaded_info.is_fullscreen) && this->was_windowed_pos_saved)
 			this->m_win.setPosition(saved_windowed_pos);
 		if((this->loaded_info.initial_pos_x != DEFAULT_NO_POS_WINDOW_VALUE) && (this->loaded_info.initial_pos_y != DEFAULT_NO_POS_WINDOW_VALUE) && (!this->loaded_info.is_fullscreen))
 			this->m_win.setPosition(prev_pos);

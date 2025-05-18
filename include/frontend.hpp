@@ -126,6 +126,7 @@ private:
 	sf::RenderWindow m_win;
 	bool is_window_windowed;
 	sf::Vector2i saved_windowed_pos;
+	bool was_windowed_pos_saved;
 	int m_width, m_height;
 	int m_width_no_manip, m_height_no_manip;
 	int m_window_width, m_window_height;
