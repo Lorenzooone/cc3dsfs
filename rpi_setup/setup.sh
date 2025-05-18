@@ -37,6 +37,8 @@ chmod +x -R ${HOME}/Desktop/premade_scripts/
 chmod +x -R ${HOME}/Desktop/${PROGRAM_NAME}_versions/
 chmod +x ${HOME}/Desktop/${PROGRAM_NAME}
 chmod +x ${HOME}/Desktop/${PROGRAM_NAME}_script.sh
+chmod +x ${HOME}/Desktop/update_to_unstable.sh
+chmod +x ${HOME}/Desktop/update_to_stable.sh
 
 if [ -e /boot/firmware/config.txt ]; then
   FIRMWARE=/firmware
