@@ -17,6 +17,7 @@
 #ifdef ANDROID_COMPILATION
 // These headers are needed for direct NDK/JDK interaction
 #include <android/native_activity.h>
+#include <android/log.h>
 #endif
 
 #if _MSC_VER && !__INTEL_COMPILER

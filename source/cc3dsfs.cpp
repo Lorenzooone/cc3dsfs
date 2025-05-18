@@ -38,6 +38,7 @@ struct override_all_data {
 	bool always_prevent_mouse_showing = false;
 	bool auto_connect_to_first = false;
 	bool auto_close = false;
+	bool auto_save = true;
 	int loaded_profile = STARTUP_FILE_INDEX;
 	bool mono_app = false;
 	bool recovery_mode = false;
@@ -726,7 +727,8 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	bot_screen->after_thread_join();
 	joint_screen->after_thread_join();
 
-	save_layout_file(override_data.loaded_profile, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, false, created_proper_folder);
+	if(override_data.auto_save)
+		save_layout_file(override_data.loaded_profile, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, false, created_proper_folder);
 
 	top_screen->process_own_out_text_data(false);
 	bot_screen->process_own_out_text_data(false);
@@ -855,6 +857,8 @@ int main(int argc, char **argv) {
 			continue;
 		if(parse_int_arg(i, argc, argv, override_data.loaded_profile, "--profile"))
 			continue;
+		if(parse_existence_arg(i, argv, override_data.auto_save, false, "--no_auto_save"))
+			continue;
 		#ifdef RASPI
 		if(parse_int_arg(i, argc, argv, page_up_id, "--pi_select"))
 			continue;
@@ -905,6 +909,7 @@ int main(int argc, char **argv) {
 		ActualConsoleOutText("  --profile         Loads the profile with the specified ID at startup");
 		ActualConsoleOutText("                    instead of the default one. When the program closes,");
 		ActualConsoleOutText("                    the data is also saved to the specified profile.");
+		ActualConsoleOutText("  --no_auto_save    Disables automatic save when closing the software.");
 		#ifdef RASPI
 		ActualConsoleOutText("  --pi_select ID    Specifies ID for the select GPIO button.");
 		ActualConsoleOutText("  --pi_menu ID      Specifies ID for the menu GPIO button.");
