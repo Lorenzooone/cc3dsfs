@@ -90,6 +90,8 @@ public:
 	void process_own_out_text_data(bool print_to_notification = true);
 	int load_data();
 	int save_data();
+	bool is_open();
+	bool has_focus();
 	bool open_capture();
 	bool close_capture();
 	bool scheduled_split();
@@ -448,6 +450,7 @@ void get_par_size(float &width, float &height, float multiplier_factor, const PA
 
 SecondScreen3DRelativePosition get_second_screen_pos(ScreenInfo* info, ScreenType stype);
 
+bool should_do_output(FrontendData* frontend_data);
 void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL, InputVideoDataType video_data_type = VIDEO_DATA_RGB);
 void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &old_cc_device, const CaptureDevice &new_cc_device);
 void update_connected_specific_settings(FrontendData* frontend_data, const CaptureDevice &cc_device);

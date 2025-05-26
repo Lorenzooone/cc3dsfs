@@ -1,4 +1,5 @@
 #include "frontend.hpp"
+#include "utils.hpp"
 #include <cmath>
 #include <thread>
 #include <SFML/System.hpp>
@@ -1037,6 +1038,20 @@ JoystickAction get_joystick_action(uint32_t joystickId, uint32_t joy_button) {
 	if((joy_button == 6) || (joy_button == 7))
 		return JOY_ACTION_MENU;
 	return JOY_ACTION_NONE;
+}
+
+bool should_do_output(FrontendData* frontend_data) {
+	#ifndef ANDROID_COMPILATION
+	return (frontend_data->joint_screen->m_info.window_enabled) || (frontend_data->bot_screen->m_info.window_enabled) || (frontend_data->top_screen->m_info.window_enabled);
+	#else
+	if(frontend_data->joint_screen->m_info.window_enabled)
+		return (!frontend_data->joint_screen->is_open()) || frontend_data->joint_screen->has_focus();
+	if(frontend_data->bot_screen->m_info.window_enabled)
+		return (!frontend_data->bot_screen->is_open()) || frontend_data->bot_screen->has_focus();
+	if(frontend_data->top_screen->m_info.window_enabled)
+		return (!frontend_data->top_screen->is_open()) || frontend_data->top_screen->has_focus();
+	return false;
+	#endif
 }
 
 void update_output(FrontendData* frontend_data, double frame_time, VideoOutputData *out_buf, InputVideoDataType video_data_type) {

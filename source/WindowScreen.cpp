@@ -265,6 +265,14 @@ void WindowScreen::end() {
 	this->display_lock.unlock();
 }
 
+bool WindowScreen::is_open() {
+	return this->m_win.isOpen();
+}
+
+bool WindowScreen::has_focus() {
+	return this->m_win.isOpen() && this->m_win.hasFocus();
+}
+
 void WindowScreen::after_thread_join() {
 	if(this->m_win.isOpen()) {
 		this->draw_lock->lock();

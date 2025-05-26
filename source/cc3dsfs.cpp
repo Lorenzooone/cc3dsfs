@@ -407,7 +407,7 @@ static bool handleAudioDeviceChanges(Audio &audio, AudioData *audio_data, std::o
 	return success;
 }
 
-static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
+static void soundCall(AudioData *audio_data, CaptureData* capture_data, volatile bool* can_do_output) {
 	std::int16_t (*out_buf)[MAX_SAMPLES_IN] = new std::int16_t[NUM_CONCURRENT_AUDIO_BUFFERS][MAX_SAMPLES_IN];
 	Audio audio(audio_data);
 	int audio_buf_counter = 0;
@@ -419,7 +419,7 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data) {
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_device_check_time = std::chrono::high_resolution_clock::now();
 
 	while(capture_data->status.running) {
-		if(capture_data->status.connected && capture_data->status.device.has_audio) {
+		if(capture_data->status.connected && capture_data->status.device.has_audio && (*can_do_output)) {
 			bool timed_out = !capture_data->status.audio_wait.timed_lock();
 
 			if(!capture_data->status.cooldown_curr_in) {
@@ -520,7 +520,7 @@ static float get_time_multiplier(CaptureData* capture_data, bool should_ignore_d
 	}
 }
 
-static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data, bool created_proper_folder, override_all_data &override_data) {
+static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data, bool created_proper_folder, override_all_data &override_data, volatile bool* can_do_output) {
 	VideoOutputData *out_buf;
 	double last_frame_time = 0.0;
 	FrontendData frontend_data;
@@ -648,7 +648,10 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		if(frontend_data.shared_data.input_data.fast_poll)
 			poll_all_windows(&frontend_data, poll_everything, polled);
 
-		update_output(&frontend_data, last_frame_time, chosen_buf, video_data_type);
+		*can_do_output = should_do_output(&frontend_data);
+
+		if(*can_do_output)
+			update_output(&frontend_data, last_frame_time, chosen_buf, video_data_type);
 
 		if(!frontend_data.shared_data.input_data.fast_poll)
 			poll_all_windows(&frontend_data, poll_everything, polled);
@@ -806,6 +809,7 @@ int main(int argc, char **argv) {
 	int power_id = -1;
 	bool use_pud_up = true;
 	bool created_proper_folder = create_out_folder();
+	volatile bool can_do_output = true;
 	bool mono_app_default_value = false;
 	#ifdef ANDROID_COMPILATION
 		mono_app_default_value = true;
@@ -928,9 +932,9 @@ int main(int argc, char **argv) {
 	std::thread capture_thread(captureCall, capture_data);
 	std::thread audio_thread;
 	if(!override_data.no_audio)
-		audio_thread = std::thread(soundCall, &audio_data, capture_data);
+		audio_thread = std::thread(soundCall, &audio_data, capture_data, &can_do_output);
 
-	int ret_val = mainVideoOutputCall(&audio_data, capture_data, created_proper_folder, override_data);
+	int ret_val = mainVideoOutputCall(&audio_data, capture_data, created_proper_folder, override_data, &can_do_output);
 	if(!override_data.no_audio)
 		audio_thread.join();
 	capture_thread.join();
