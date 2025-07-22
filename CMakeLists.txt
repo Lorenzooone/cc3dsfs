@@ -81,6 +81,7 @@ else()
 endif()
 
 set(RASPBERRY_PI_COMPILATION FALSE CACHE BOOL "Option for compiling the Raspberry Pi GPIO library in")
+set(SFML_USE_DRM FALSE CACHE BOOL "Option for compiling SFML for DRM on Linux")
 set(SFML_BUILD_NETWORK FALSE)
 set(EXTRA_LIBRARIES "")
 if(MINGW_CROSS_COMPILATION)

@@ -384,17 +384,15 @@ static void audioDeviceNotificationCallback(bool& requestAudioResearch, bool res
 	if(resetting)
 		return;
 	switch (notification)
-    {
-        case sf::PlaybackDevice::Notification::DeviceStopped:
-        {
-            if(sf::PlaybackDevice::isDefaultDevice())
-                break;
-            requestAudioResearch = true;
-            break;
-        }
-        default:
-        	break;
-    }
+	{
+		case sf::PlaybackDevice::Notification::DeviceStopped:
+			if(sf::PlaybackDevice::isDefaultDevice())
+				break;
+			requestAudioResearch = true;
+			break;
+		default:
+			break;
+	}
 }
 
 static bool handleAudioDeviceChanges(Audio &audio, AudioData *audio_data, std::optional<std::string> &curr_device, audio_output_device_data &in_use_audio_output_device_data, bool &requestAudioResearch, bool &resetting) {
