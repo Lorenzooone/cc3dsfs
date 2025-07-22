@@ -501,6 +501,7 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data, volatile
 		}
 	}
 
+	sf::PlaybackDevice::setNotificationCallback([](sf::PlaybackDevice::Notification notification){});
 	audio.stop_audio();
 	audio.stop();
 	delete []out_buf;
