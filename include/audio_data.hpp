@@ -13,6 +13,8 @@ struct audio_output_device_data {
 	std::string preferred = "";
 };
 
+const std::string default_sfml_audio_device_name = "DEFAULT_DEVICE_SFML";
+
 int searchAudioDevice(std::string device_name, std::vector<std::string> &audio_devices);
 
 class AudioData {

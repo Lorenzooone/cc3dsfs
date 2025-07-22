@@ -61,7 +61,7 @@ static const AudioMenuOptionInfo* pollable_options[] = {
 &audio_output_type_option,
 &audio_max_latency_option,
 &audio_mode_output_option,
-&audio_auto_scan_option,
+//&audio_auto_scan_option,
 &audio_next_device_option,
 &audio_restart_option,
 };
