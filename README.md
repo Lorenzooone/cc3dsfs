@@ -49,6 +49,7 @@ sudo apt install \
     libdrm-dev \
     libgbm-dev \
     libfreetype-dev \
+    libharfbuzz-dev \
     xorg-dev
 ```
 
@@ -75,7 +76,7 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release -DRASPBERRY_PI_COMPILATION=TRUE ; cmak
 ### Docker Compilation
 
 Alternatively, one may use Docker to compile the Linux version for its different architectures by running: `docker run --rm -it -v ${PWD}:/home/builder/cc3dsfs lorenzooone/cc3dsfs:<builder>`
-The following builders are available: builder32, builder64, builderarm32 and builderarm64.
+The following builders are available: builder32, builder64, builderarm32, builderarm64 and builderandroid (in beta).
 
 ## Controls
 

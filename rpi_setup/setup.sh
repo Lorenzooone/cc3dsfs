@@ -9,7 +9,7 @@ PROGRAM_NAME=cc3dsfs
 DEFAULT_SCRIPT_KIOSK_MODE=${PROGRAM_NAME}_script_tv_kit_2.sh
 
 sudo apt update
-sudo apt -y install xterm gpiod xserver-xorg xinit libxcursor1 x11-xserver-utils pipewire pipewire-alsa
+sudo apt -y install xterm gpiod xserver-xorg xinit libxcursor1 x11-xserver-utils pipewire pipewire-alsa libharfbuzz-icu0
 
 sudo raspi-config nonint do_boot_behaviour B2
 

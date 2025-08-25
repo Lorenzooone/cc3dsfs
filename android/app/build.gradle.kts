@@ -3,6 +3,7 @@ val MIN_SDK by extra((project.properties["MIN_SDK"] as? String ?: "21").toInt())
 val TARGET_SDK by extra((project.properties["TARGET_SDK"] as? String ?: "33").toInt())
 val STL_TYPE by extra(project.properties["STL_TYPE"] as? String ?: "c++_shared")
 val SFML_STATIC by extra(project.properties["SFML_STATIC"] as? String ?: "OFF")
+val CMAKE_VERSION by extra(project.properties["CMAKE_VERSION"] as? String ?: "3.30.5")
 
 plugins {
     id("com.android.application")
@@ -47,6 +48,7 @@ android {
     externalNativeBuild {
         cmake {
             path("../../CMakeLists.txt")
+            version = "${CMAKE_VERSION}"
         }
     }
 }
