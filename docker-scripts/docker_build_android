@@ -3,7 +3,9 @@
 SFML_EXTRACTED_TO_FOLDER=~
 LIBUSB_EXTRACTED_TO_FOLDER=~
 SFML_BRANCH_NAME=master
+SFML_AUTHOR=SFML
 LIBUSB_BRANCH_NAME=android-rebase-2022-07
+LIBUSB_AUTHOR=jagheterfredrik
 SFML_EXTRACTED_FOLDER=${SFML_EXTRACTED_TO_FOLDER}/SFML-${SFML_BRANCH_NAME}
 LIBUSB_EXTRACTED_FOLDER=${LIBUSB_EXTRACTED_TO_FOLDER}/libusb-${LIBUSB_BRANCH_NAME}
 BUILD_APK_COMMAND=docker-scripts/docker_build_android_apk
@@ -16,8 +18,8 @@ ANDROID_FOLDER=android
 
 export LANG=C.UTF-8
 
-(cd ${SFML_EXTRACTED_TO_FOLDER} ; rm -f ${SFML_BRANCH_NAME}.zip ; wget https://github.com/SFML/SFML/archive/refs/heads/${SFML_BRANCH_NAME}.zip ; unzip ${SFML_BRANCH_NAME}.zip)
-(cd ${LIBUSB_EXTRACTED_TO_FOLDER} ; rm -f ${LIBUSB_BRANCH_NAME}.zip ; wget https://github.com/jagheterfredrik/libusb/archive/refs/heads/${LIBUSB_BRANCH_NAME}.zip ; unzip ${LIBUSB_BRANCH_NAME}.zip)
+(cd ${SFML_EXTRACTED_TO_FOLDER} ; rm -f ${SFML_BRANCH_NAME}.zip ; rm -rf ${SFML_EXTRACTED_FOLDER} ; wget https://github.com/${SFML_AUTHOR}/SFML/archive/refs/heads/${SFML_BRANCH_NAME}.zip ; unzip ${SFML_BRANCH_NAME}.zip)
+(cd ${LIBUSB_EXTRACTED_TO_FOLDER} ; rm -f ${LIBUSB_BRANCH_NAME}.zip ; rm -rf ${LIBUSB_EXTRACTED_FOLDER} ; wget https://github.com/${LIBUSB_AUTHOR}/libusb/archive/refs/heads/${LIBUSB_BRANCH_NAME}.zip ; unzip ${LIBUSB_BRANCH_NAME}.zip)
 
 ${BUILD_LIBS_COMMAND} ${LIBUSB_EXTRACTED_FOLDER} ${SFML_EXTRACTED_FOLDER} ${STL_CHOSEN} ${RELEASE_TYPE}
 

@@ -86,10 +86,22 @@ USER builder
 CMD /docker_build_starter docker-scripts/docker_build_arm64
 
 ################################################################################
-###  Build Android                                                           ###
+###  Build riscv 64                                                            ###
+################################################################################
+FROM base_builder as builderriscv64
+COPY linux_install_packages.sh /
+RUN chmod +x /linux_install_packages.sh ; /linux_install_packages.sh riscv64
+WORKDIR /home/builder/building
+COPY  docker_build_starter /
+RUN chmod +x /docker_build_starter
+USER builder
+CMD /docker_build_starter docker-scripts/docker_build_riscv64
+
+################################################################################
+###  Build Android without caching                                           ###
 ################################################################################
 # Different from all others
-FROM saschpe/android-ndk:31-jdk11.0.13_8-ndk23.0.7599858-cmake3.18.1 as builderandroid
+FROM saschpe/android-ndk:31-jdk11.0.13_8-ndk23.0.7599858-cmake3.18.1 as builderandroid_nocache
 ARG CMAKE_VERSION_SDKMANAGER_ANDROID
 RUN apt update && apt install -y lsb-release g++ build-essential wget git libssl-dev pkg-config zip unzip
 RUN curl -s "https://get.sdkman.io" | bash
@@ -117,4 +129,15 @@ RUN chown -R builder:builder $GRADLE_DIR
 COPY --from=cmake_builder_focal cmake.tar.gz /cmake.tar.gz
 RUN mkdir -p /cmake_folder && cd /cmake_folder && tar -xvf /cmake.tar.gz --strip-components=1 && cp -rf * /usr/local/
 USER builder
+CMD /docker_build_starter docker-scripts/docker_build_android
+
+################################################################################
+###  Build Android with caching                                              ###
+################################################################################
+# Different from all others
+FROM builderandroid_nocache as builderandroid
+RUN git clone https://github.com/Lorenzooone/cc3dsfs.git
+RUN mv cc3dsfs ../cc3dsfs_to_cache
+RUN cd ../cc3dsfs_to_cache ; chmod -R +x . ; ./docker-scripts/docker_build_android
+RUN rm -rf ../cc3dsfs_to_cache
 CMD /docker_build_starter docker-scripts/docker_build_android
