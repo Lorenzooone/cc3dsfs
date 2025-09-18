@@ -4,6 +4,8 @@
 #include <thread>
 #include <SFML/System.hpp>
 
+#define DEBUG_PRINT_CONTROLLER_INFO
+
 const CropData default_3ds_crop = {
 .top_width = TOP_WIDTH_3DS, .top_height = HEIGHT_3DS,
 .top_x = 0, .top_y = 0,
@@ -921,9 +923,26 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 }
 
 void joystick_axis_poll(std::queue<SFEvent> &events_queue) {
+	#ifdef DEBUG_PRINT_CONTROLLER_INFO
+	static bool printed_once = false;
+	bool has_already_printed_once = printed_once;
+	#endif
+
 	for(unsigned int i = 0; i < sf::Joystick::Count; i++) {
 		if(!sf::Joystick::isConnected(i))
 			continue;
+
+		#ifdef DEBUG_PRINT_CONTROLLER_INFO
+		if(!has_already_printed_once) {
+			printed_once = true;
+			ActualConsoleOutText("Controller " + std::to_string(i + 1) + ":");
+			sf::Joystick::Identification joy_details = sf::Joystick::getIdentification(i);
+			ActualConsoleOutText("\tName: " + joy_details.name);
+			ActualConsoleOutText("\tVID: " + std::to_string(joy_details.vendorId));
+			ActualConsoleOutText("\tPID: " + std::to_string(joy_details.vendorId));
+		}
+		#endif
+
 		for(unsigned int j = 0; j < sf::Joystick::AxisCount; j++) {
 			sf::Joystick::Axis axis = sf::Joystick::Axis((unsigned int)sf::Joystick::Axis::X + j);
 			if(sf::Joystick::hasAxis(i, axis))

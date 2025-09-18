@@ -153,7 +153,7 @@ bool Audio::onGetData(sf::SoundStream::Chunk &data) {
 	}
 	if(max_diff > greatest_diff)
 		greatest_diff = max_diff;
-	printf("Current diff: %d - Greatest measured diff: %d\n", max_diff, greatest_diff);
+	ActualConsoleOutText("Current diff: " + std::to_string(max_diff) + " - Greatest measured diff: " + std::to_string(greatest_diff));
 	#endif
 
 	// Basically, look into how low the time between calls of the function is
