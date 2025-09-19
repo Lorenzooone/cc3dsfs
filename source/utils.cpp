@@ -226,9 +226,7 @@ uint32_t ms_since_start() {
 	return (uint32_t)(diff.count() * 1000);
 }
 
-std::string to_hex(uint16_t value) {
-	const int num_digits = sizeof(value) * 2;
-	char digits[num_digits];
+static std::string to_hex_base(const uint64_t value, char* digits, const int num_digits) {
 	for(int i = 0; i < num_digits; i++) {
 		uint8_t subvalue = (value >> (4 * (num_digits - 1 - i))) & 0xF;
 		char digit = '0' + subvalue;
@@ -236,7 +234,20 @@ std::string to_hex(uint16_t value) {
 			digit = 'A' + (subvalue - 0xA);
 		digits[i] = digit;
 	}
+	digits[num_digits] = '\0';
 	return static_cast<std::string>(digits);
+}
+
+std::string to_hex_u8(const uint8_t value) {
+	const int num_digits = sizeof(value) * 2;
+	char digits[num_digits + 1];
+	return to_hex_base(value, digits, num_digits);
+}
+
+std::string to_hex_u16(const uint16_t value) {
+	const int num_digits = sizeof(value) * 2;
+	char digits[num_digits + 1];
+	return to_hex_base(value, digits, num_digits);
 }
 
 void init_threads(void) {

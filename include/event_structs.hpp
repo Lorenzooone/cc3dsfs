@@ -33,6 +33,7 @@ struct SFEvent {
 };
 
 void joystick_axis_poll(std::queue<SFEvent> &events_queue);
+void joystick_print_all();
 JoystickDirection get_joystick_direction(uint32_t joystickId, sf::Joystick::Axis axis, float position);
 JoystickAction get_joystick_action(uint32_t joystickId, uint32_t joy_button);
 void init_extra_buttons_poll(int page_up_id, int page_down_id, int enter_id, int power_id, bool use_pud_up);

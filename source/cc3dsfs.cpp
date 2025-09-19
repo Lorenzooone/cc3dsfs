@@ -33,6 +33,7 @@ struct override_all_data {
 	override_win_data override_top_data;
 	override_win_data override_bot_data;
 	bool disable_frame_blending = false;
+	bool print_controller_list = false;
 	bool no_audio = false;
 	int volume = DEFAULT_NO_VOLUME_VALUE;
 	bool always_prevent_mouse_showing = false;
@@ -599,6 +600,9 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	SuccessConnectionOutTextGenerator(out_text_data, capture_data);
 	int no_data_consecutive = 0;
 
+	if(override_data.print_controller_list)
+		joystick_print_all();
+
 	while(capture_data->status.running) {
 
 		bool polled = false;
@@ -883,6 +887,8 @@ int main(int argc, char **argv) {
 			continue;
 		if(parse_existence_arg(i, argv, override_data.auto_save, false, "--no_auto_save"))
 			continue;
+		if(parse_existence_arg(i, argv, override_data.print_controller_list, true, "--list_joysticks"))
+			continue;
 		#ifdef RASPI
 		if(parse_int_arg(i, argc, argv, page_up_id, "--pi_select"))
 			continue;
@@ -934,6 +940,7 @@ int main(int argc, char **argv) {
 		ActualConsoleOutText("                    instead of the default one. When the program closes,");
 		ActualConsoleOutText("                    the data is also saved to the specified profile.");
 		ActualConsoleOutText("  --no_auto_save    Disables automatic save when closing the software.");
+		ActualConsoleOutText("  --list_joysticks  Prints a list of all the detected joysticks.");
 		#ifdef RASPI
 		ActualConsoleOutText("  --pi_select ID    Specifies ID for the select GPIO button.");
 		ActualConsoleOutText("  --pi_menu ID      Specifies ID for the menu GPIO button.");

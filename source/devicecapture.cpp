@@ -118,7 +118,7 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 				if(no_access_list[i].vid == -1)
 					full_error_part += no_access_list[i].name;
 				else
-					full_error_part += "VID: " + to_hex(no_access_list[i].vid) + ", PID: " + to_hex(no_access_list[i].pid);
+					full_error_part += "VID: " + to_hex_u16(no_access_list[i].vid) + ", PID: " + to_hex_u16(no_access_list[i].pid);
 			}
 			capture_error_print(print_failed, capture_data, "No device was found\nPossible permission error", "No device was found - Possible permission error" + full_error_part);
 		}

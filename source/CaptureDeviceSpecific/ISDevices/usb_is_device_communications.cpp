@@ -359,12 +359,15 @@ static void enc_dec_table_add_usage(is_device_twl_enc_dec_table* table) {
 
 static void table_print(uint8_t* data, size_t size) {
 	/*
+	std::string output = "";
 	for(size_t i = 0; i < size; i++) {
-		printf("%02x ", data[i]);
+		output += to_hex_u8(data[i]);
 		if((i % 0x10) == 0xF)
-			printf("\n");
+			output += "\n";
+		else
+			output += " ";
 	}
-	printf("\n");
+	ActualConsoleOutText(output);
 	*/
 }
 
