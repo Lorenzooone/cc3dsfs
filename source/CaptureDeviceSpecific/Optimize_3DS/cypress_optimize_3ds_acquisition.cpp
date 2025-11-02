@@ -724,8 +724,10 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 
 	if(is_key_valid)
 		add_key_for_device_id_to_file(device_id, read_key, usb_device_desc);
-	else
+	else {
 		read_key = read_key_for_device_id_from_file(device_id, usb_device_desc);
+		is_key_valid = check_key_matches_device_id(device_id, read_key, usb_device_desc);
+	}
 
 	capture_data->status.device.device_id = device_id;
 	capture_data->status.device.key = read_key;
@@ -762,7 +764,7 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 		}
 		bool is_new_3d = could_use_3d && get_3d_enabled(&capture_data->status);
 		InputVideoDataType wanted_input_video_data_type = extract_wanted_input_video_data_type(capture_data);
-		force_capture_start_key = (!check_key_matches_device_id(device_id, read_key, usb_device_desc)) && key_missing_capture_start_again_check_time(clock_last_capture_start);
+		force_capture_start_key = (!is_key_valid) && (!check_key_matches_device_id(device_id, read_key, usb_device_desc)) && key_missing_capture_start_again_check_time(clock_last_capture_start);
 		if((wanted_input_video_data_type != stored_video_data_type) || (is_new_3d != stored_is_3d) || force_capture_start_key) {
 			capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM + NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS;
 			wait_all_cypress_device_buffers_free(capture_data, cypress_device_capture_recv_data);
