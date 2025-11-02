@@ -17,6 +17,7 @@ void usb_cyop_device_acquisition_cleanup(CaptureData* capture_data);
 bool is_device_optimize_3ds(CaptureDevice* device);
 bool is_device_optimize_o3ds(CaptureDevice* device);
 bool is_device_optimize_n3ds(CaptureDevice* device);
+bool cyop_is_key_for_device_id(CaptureDevice* device, std::string key);
 void usb_cyop_device_init();
 void usb_cyop_device_close();
 

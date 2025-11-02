@@ -357,7 +357,7 @@ if(USE_LIBUSB_SUPPORT)
 	add_compile_flag("USE_LIBUSB")
 endif()
 if(IS_DEVICES_SUPPORT)
-	list(APPEND SOURCE_CPP_EXTRA_FILES ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_communications.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_acquisition.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_nitro_acquisition_capture.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_twl_acquisition_capture.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_nitro_acquisition_emulator.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_is_driver.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_libusb.cpp ${TOOLS_DATA_DIR}/is_twl_cap_crc32_table.cpp ${TOOLS_DATA_DIR}/is_twl_cap_init_seed_table.cpp)
+	list(APPEND SOURCE_CPP_EXTRA_FILES ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_communications.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_acquisition.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_nitro_acquisition_capture.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_twl_acquisition_capture.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_nitro_acquisition_emulator.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_is_driver.cpp ${SOURCE_CPP_IS_DEVICES_FILES_BASE_PATH}/usb_is_device_libusb.cpp ${TOOLS_DATA_DIR}/ccitt32_crc32_table.cpp ${TOOLS_DATA_DIR}/is_twl_cap_init_seed_table.cpp)
 	add_compile_flag("USE_IS_DEVICES_USB")
 endif()
 if(OLD_DS_3DS_LOOPY_SUPPORT)
@@ -372,7 +372,7 @@ if(CYPRESS_NISETRO_SUPPORT)
 	add_compile_flag("USE_CYNI_USB")
 endif()
 if(OPTIMIZE_3DS_SUPPORT)
-	list(APPEND SOURCE_CPP_EXTRA_FILES ${SOURCE_CPP_CYPRESS_OPTIMIZE_3DS_FILES_BASE_PATH}/cypress_optimize_3ds_communications.cpp ${SOURCE_CPP_CYPRESS_OPTIMIZE_3DS_FILES_BASE_PATH}/cypress_optimize_3ds_acquisition.cpp ${TOOLS_DATA_DIR}/optimize_new_3ds_fw.cpp ${TOOLS_DATA_DIR}/optimize_new_3ds_565_fpga_pl.cpp ${TOOLS_DATA_DIR}/optimize_new_3ds_888_fpga_pl.cpp ${TOOLS_DATA_DIR}/optimize_old_3ds_fw.cpp ${TOOLS_DATA_DIR}/optimize_old_3ds_565_fpga_pl.cpp ${TOOLS_DATA_DIR}/optimize_old_3ds_888_fpga_pl.cpp)
+	list(APPEND SOURCE_CPP_EXTRA_FILES ${SOURCE_CPP_CYPRESS_OPTIMIZE_3DS_FILES_BASE_PATH}/cypress_optimize_3ds_communications.cpp ${SOURCE_CPP_CYPRESS_OPTIMIZE_3DS_FILES_BASE_PATH}/cypress_optimize_3ds_acquisition.cpp ${TOOLS_DATA_DIR}/optimize_new_3ds_fw.cpp ${TOOLS_DATA_DIR}/optimize_new_3ds_565_fpga_pl.cpp ${TOOLS_DATA_DIR}/optimize_new_3ds_888_fpga_pl.cpp ${TOOLS_DATA_DIR}/optimize_old_3ds_fw.cpp ${TOOLS_DATA_DIR}/optimize_old_3ds_565_fpga_pl.cpp ${TOOLS_DATA_DIR}/optimize_old_3ds_888_fpga_pl.cpp ${TOOLS_DATA_DIR}/adler_crc32_table_sp.cpp ${TOOLS_DATA_DIR}/optimize_key_to_byte_table.cpp)
 	add_compile_flag("USE_CYPRESS_OPTIMIZE")
 endif()
 if(NEW_DS_LOOPY_SUPPORT)
@@ -578,10 +578,17 @@ add_custom_command(
 )
 
 add_custom_command(
-	OUTPUT ${TOOLS_DATA_DIR}/is_twl_cap_crc32_table.cpp
-	COMMENT "Convert binary to C - IS TWL CRC32 table"
-	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/is_twl_cap_crc32_table.bin ${TOOLS_DATA_DIR} is_twl_cap_crc32_table is_twl_cap_crc32_table
-	DEPENDS ${CMAKE_SOURCE_DIR}/bin/is_twl_cap_crc32_table.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
+	OUTPUT ${TOOLS_DATA_DIR}/adler_crc32_table_sp.cpp
+	COMMENT "Convert binary to C - Adler CRC32 Special table"
+	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/adler_crc32_table_sp.bin ${TOOLS_DATA_DIR} adler_crc32_table_sp adler_crc32_table_sp
+	DEPENDS ${CMAKE_SOURCE_DIR}/bin/adler_crc32_table_sp.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
+)
+
+add_custom_command(
+	OUTPUT ${TOOLS_DATA_DIR}/ccitt32_crc32_table.cpp
+	COMMENT "Convert binary to C - CCITT32 CRC32 table"
+	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/ccitt32_crc32_table.bin ${TOOLS_DATA_DIR} ccitt32_crc32_table ccitt32_crc32_table
+	DEPENDS ${CMAKE_SOURCE_DIR}/bin/ccitt32_crc32_table.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
 )
 
 add_custom_command(
@@ -645,6 +652,13 @@ add_custom_command(
 	COMMENT "Convert FPGA 888 PL binary to C - Optimize Old 3DS"
 	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/optimize_old_3ds_888_fpga_pl.bin ${TOOLS_DATA_DIR} optimize_old_3ds_888_fpga_pl optimize_old_3ds_888_fpga_pl
 	DEPENDS ${CMAKE_SOURCE_DIR}/bin/optimize_old_3ds_888_fpga_pl.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
+)
+
+add_custom_command(
+	OUTPUT ${TOOLS_DATA_DIR}/optimize_key_to_byte_table.cpp
+	COMMENT "Convert table to C - Optimize Key to 5 bits"
+	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/optimize_key_to_byte_table.bin ${TOOLS_DATA_DIR} optimize_key_to_byte_table optimize_key_to_byte_table
+	DEPENDS ${CMAKE_SOURCE_DIR}/bin/optimize_key_to_byte_table.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
 )
 
 set(SHADERS_LIST "")

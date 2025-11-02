@@ -67,7 +67,7 @@ class WindowScreen {
 public:
 	ScreenInfo m_info;
 
-	WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, SharedData* shared_data, AudioData* audio_data, ConsumerMutex *draw_lock, bool created_proper_folder, bool disable_frame_blending);
+	WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, SharedData* shared_data, AudioData* audio_data, ConsumerMutex *draw_lock, bool disable_frame_blending);
 	~WindowScreen();
 
 	void build();
@@ -122,7 +122,6 @@ private:
 	InputVideoDataType curr_video_data_type;
 	InputVideoDataType last_update_texture_data_type;
 	PossibleSoftwareConvTypes texture_software_based_conv;
-	bool created_proper_folder;
 	CaptureStatus* capture_status;
 	std::string win_title;
 	sf::RenderWindow m_win;
@@ -135,6 +134,7 @@ private:
 	int m_prepare_load;
 	int m_prepare_save;
 	bool last_connected_status;
+	int last_title_check_id;
 	bool last_enabled_3d;
 	bool last_interleaved_3d;
 	bool m_prepare_open;

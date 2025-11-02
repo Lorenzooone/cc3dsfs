@@ -69,6 +69,16 @@ void capture_error_print(bool print_failed, CaptureData* capture_data, std::stri
 	}
 }
 
+void capture_warning_print(CaptureData* capture_data, std::string graphical_string, std::string detailed_string) {
+	capture_data->status.graphical_error_text = graphical_string;
+	capture_data->status.detailed_error_text = detailed_string;
+	capture_data->status.new_error_text = true;
+}
+
+void capture_warning_print(CaptureData* capture_data, std::string warning_string) {
+	capture_warning_print(capture_data, warning_string, warning_string);
+}
+
 bool connect(bool print_failed, CaptureData* capture_data, FrontendData* frontend_data, bool auto_connect_to_first) {
 	capture_data->status.new_error_text = false;
 	if (capture_data->status.connected) {
@@ -286,12 +296,28 @@ uint64_t get_video_in_size(CaptureData* capture_data, bool is_3d, InputVideoData
 	return 0;
 }
 
-std::string get_name_of_device(CaptureStatus* capture_status, bool use_long) {
+std::string get_device_id_string(CaptureStatus* capture_status) {
+	if(!capture_status->connected)
+		return "";
+	if(capture_status->device.device_id == 0)
+		return "";
+
+	if(capture_status->device.cc_type == CAPTURE_CONN_CYPRESS_OPTIMIZE)
+		return to_hex_u60(capture_status->device.device_id);
+
+	return "";
+}
+
+std::string get_name_of_device(CaptureStatus* capture_status, bool use_long, bool want_real_serial) {
 	if(!capture_status->connected)
 		return "Not connected";
+	std:: string serial_str = " - " + capture_status->device.serial_number;
+	std::string device_id_string = get_device_id_string(capture_status);
+	if(want_real_serial && (device_id_string != ""))
+		serial_str = " - " + device_id_string;
 	if(!use_long)
-		return capture_status->device.name + " - " + capture_status->device.serial_number;
-	return capture_status->device.long_name + " - " + capture_status->device.serial_number;
+		return capture_status->device.name + serial_str;
+	return capture_status->device.long_name + serial_str;
 }
 
 int get_usb_speed_of_device(CaptureStatus* capture_status) {

@@ -12,11 +12,18 @@
 #include "optimize_old_3ds_565_fpga_pl.h"
 #include "optimize_old_3ds_888_fpga_pl.h"
 
+#include "optimize_key_to_byte_table.h"
+
+// CRC32 table is a slightly edited crc32-adler.
+// First entry all FFs instead of 00s.
+#include "adler_crc32_table_sp.h"
+
 #include <libusb.h>
 #include <cstring>
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <algorithm>
 
 // This code was developed by exclusively looking at Wireshark USB packet
 // captures to learn the USB device's protocol.
@@ -32,14 +39,23 @@
 #define OPTIMIZE_NEW_3DS_WANTED_VALUE_BASE 0xFE00
 #define OPTIMIZE_OLD_3DS_WANTED_VALUE_BASE 0xFD00
 
-const uint8_t start_capture_third_buffer_565_new[]    = { 0x61, 0x07, 0x00, 0x0F, 0x00, 0x3E, 0x00, 0xF8, 0x00, 0x38, 0x00, 0x51, 0x80, 0x5C, 0x01, 0x00 };
-const uint8_t start_capture_third_buffer_565_3d_new[] = { 0x61, 0x07, 0x00, 0x0F, 0x00, 0x3E, 0x00, 0xF8, 0x00, 0x3C, 0x00, 0x51, 0x80, 0x5C, 0x01, 0x00 };
-const uint8_t start_capture_third_buffer_888_new[]    = { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x28, 0x00, 0x62, 0x00, 0x3A, 0x00, 0x51, 0x80, 0x5C, 0x01, 0x00 };
-const uint8_t start_capture_third_buffer_888_3d_new[] = { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x28, 0x00, 0x62, 0x00, 0x16, 0x00, 0x51, 0x80, 0x5C, 0x01, 0x00 };
-const uint8_t start_capture_third_buffer_565_old[]    = { 0x61, 0x07, 0x00, 0x26, 0x00, 0x22, 0x00, 0x98, 0x00, 0x08, 0x00, 0xDE, 0x00, 0xF9, 0x18, 0x0F };
-const uint8_t start_capture_third_buffer_565_3d_old[] = { 0x61, 0x07, 0x00, 0x26, 0x00, 0x22, 0x00, 0x98, 0x00, 0x08, 0x00, 0xDF, 0x00, 0xF9, 0x18, 0x0F };
-const uint8_t start_capture_third_buffer_888_old[]    = { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x20, 0x00, 0x98, 0x00, 0x08, 0x00, 0xDE, 0x00, 0xF9, 0x18, 0x0F };
-const uint8_t start_capture_third_buffer_888_3d_old[] = { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x20, 0x00, 0x98, 0x00, 0x08, 0x00, 0xD5, 0x00, 0xF9, 0x18, 0x0F };
+#define OPTIMIZE_NUM_KEY_CHARS 20
+#define OPTIMIZE_NUM_KEY_CHARS_WITH_DASHES (OPTIMIZE_NUM_KEY_CHARS + 4)
+#define OPTIMIZE_NUM_KEY_BYTES 12
+
+#define OPTIMIZE_EEPROM_NEW_SIZE 0x80
+#define OPTIMIZE_EEPROM_STRUCT_SIZE 0x79
+
+const size_t key_bytes_to_serial_bytes_map[OPTIMIZE_NUM_KEY_BYTES] = {0, 7, 8, 9, 1, 4, 6, 3, 10, 2, 11, 5};
+
+const uint8_t start_capture_setup_key_buffer_565_new[]    = { 0x61, 0x07, 0x00, 0x0F, 0x00, 0x3E, 0x00, 0xF8, 0x00, 0x38, 0x00, 0x00, 0x80, 0x00, 0x01, 0x00 };
+const uint8_t start_capture_setup_key_buffer_565_3d_new[] = { 0x61, 0x07, 0x00, 0x0F, 0x00, 0x3E, 0x00, 0xF8, 0x00, 0x3C, 0x00, 0x00, 0x80, 0x00, 0x01, 0x00 };
+const uint8_t start_capture_setup_key_buffer_888_new[]    = { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x28, 0x00, 0x62, 0x00, 0x3A, 0x00, 0x00, 0x80, 0x00, 0x01, 0x00 };
+const uint8_t start_capture_setup_key_buffer_888_3d_new[] = { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x28, 0x00, 0x62, 0x00, 0x16, 0x00, 0x00, 0x80, 0x00, 0x01, 0x00 };
+const uint8_t start_capture_setup_key_buffer_565_old[]    = { 0x61, 0x07, 0x00, 0x26, 0x00, 0x22, 0x00, 0x98, 0x00, 0x08, 0x00, 0x0E, 0x00, 0x00, 0x18, 0x00 };
+const uint8_t start_capture_setup_key_buffer_565_3d_old[] = { 0x61, 0x07, 0x00, 0x26, 0x00, 0x22, 0x00, 0x98, 0x00, 0x08, 0x00, 0x0F, 0x00, 0x00, 0x18, 0x00 };
+const uint8_t start_capture_setup_key_buffer_888_old[]    = { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x20, 0x00, 0x98, 0x00, 0x08, 0x00, 0x0E, 0x00, 0x00, 0x18, 0x00 };
+const uint8_t start_capture_setup_key_buffer_888_3d_old[] = { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x20, 0x00, 0x98, 0x00, 0x08, 0x00, 0x05, 0x00, 0x00, 0x18, 0x00 };
 
 static const cyop_device_usb_device cypress_optimize_new_3ds_generic_device = {
 .name = "FX2LP-O -> Opt. N3DS", .long_name = "EZ-USB FX2LP-O -> Optimize New 3DS",
@@ -69,7 +85,7 @@ static const cyop_device_usb_device cypress_optimize_new_3ds_generic_device = {
 };
 
 static const cyop_device_usb_device cypress_optimize_new_3ds_instantiated_device = {
-.name = "Optimize New 3DS", .long_name = "Optimize New 3DS",
+.name = "Optimize N3DS", .long_name = "Optimize New 3DS",
 .device_type = CYPRESS_OPTIMIZE_NEW_3DS_INSTANTIATED_DEVICE,
 .firmware_to_load = NULL, .firmware_size = 0,
 .fpga_pl_565 = optimize_new_3ds_565_fpga_pl, .fpga_pl_565_size = optimize_new_3ds_565_fpga_pl_len,
@@ -123,7 +139,7 @@ static const cyop_device_usb_device cypress_optimize_old_3ds_generic_device = {
 };
 
 static const cyop_device_usb_device cypress_optimize_old_3ds_instantiated_device = {
-.name = "Optimize Old 3DS", .long_name = "Optimize Old 3DS",
+.name = "Optimize O3DS", .long_name = "Optimize Old 3DS",
 .device_type = CYPRESS_OPTIMIZE_OLD_3DS_INSTANTIATED_DEVICE,
 .firmware_to_load = NULL, .firmware_size = 0,
 .fpga_pl_565 = optimize_old_3ds_565_fpga_pl, .fpga_pl_565_size = optimize_old_3ds_565_fpga_pl_len,
@@ -156,6 +172,16 @@ static const cyop_device_usb_device* all_usb_cyop_device_devices_desc[] = {
 	&cypress_optimize_old_3ds_instantiated_device,
 };
 
+static uint32_t calc_crc32_adler(uint8_t* data, size_t size) {
+	uint32_t value = 0xFFFFFFFF;
+	for(size_t i = 0; i < size; i++) {
+		uint8_t inner_value = data[i] ^ value;
+		value >>= 8;
+		value ^= read_le32(adler_crc32_table_sp, inner_value);
+	}
+	return ~value;
+}
+
 const cy_device_usb_device* get_cy_usb_info(const cyop_device_usb_device* usb_device_desc) {
 	return &usb_device_desc->usb_device_info;
 }
@@ -186,6 +212,71 @@ bool has_to_load_firmware(const cyop_device_usb_device* device) {
 static bool free_firmware_and_return(uint8_t* fw_data, bool retval) {
 	delete []fw_data;
 	return retval;
+}
+
+static bool key_to_key_bytes(uint8_t* in, uint8_t* out) {
+	uint16_t value_converted = 0;
+	size_t converted_pos = 0;
+	size_t out_index = 0;
+
+	for(size_t i = 0; i < OPTIMIZE_NUM_KEY_CHARS; i++) {
+		uint8_t character = in[i];
+		if(optimize_key_to_byte_table[character] == 0xFF)
+			return false;
+		value_converted |= optimize_key_to_byte_table[character] << converted_pos;
+		converted_pos += 5;
+		if(converted_pos >= 8) {
+			out[out_index++] = value_converted & 0xFF;
+			converted_pos -= 8;
+			value_converted >>= 8;
+		}
+	}
+	if(converted_pos > 0)
+		out[out_index++] = value_converted & 0xFF;
+	return true;
+}
+
+static bool key_bytes_to_serial_bytes(uint8_t* in, uint8_t* out, bool is_new_cc) {
+	uint8_t xor_factor = 0xAB;
+	if(is_new_cc)
+		xor_factor = 0x5A;
+	int table_accessing_base_value = 0x22;
+	if(is_new_cc)
+		table_accessing_base_value = -0x45;
+
+	for(int i = 0; i < OPTIMIZE_NUM_KEY_BYTES; i++)
+		out[key_bytes_to_serial_bytes_map[i]] = in[i];
+	uint8_t checksum_byte = (out[0] ^ xor_factor) & 0xFE;
+	out[0] = out[0] & 1;
+
+	for(int i = 1; i < 8; i++) {
+		uint32_t xor_val = read_le32(adler_crc32_table_sp, (checksum_byte + (i * table_accessing_base_value)) & 0xFF);
+		write_le32(out + i, read_le32(out + i) ^ xor_val);
+	}
+
+	uint8_t sum = 0;
+	// The last one is skipped... For whatever reason?
+	for(int i = 0; i < OPTIMIZE_NUM_KEY_BYTES - 1; i++)
+		sum += out[i];
+	return (read_le32(adler_crc32_table_sp, sum) & 0xFE) == checksum_byte;
+}
+
+static bool key_to_data(std::string in_str, uint8_t* out, bool is_new_cc) {
+	in_str.erase(std::remove(in_str.begin(), in_str.end(), '-'), in_str.end());
+	in_str.erase(std::remove(in_str.begin(), in_str.end(), '&'), in_str.end());
+	in_str.erase(std::remove(in_str.begin(), in_str.end(), ':'), in_str.end());
+
+	if(in_str.length() != OPTIMIZE_NUM_KEY_CHARS)
+		return false;
+
+	uint8_t key_string_bytes[OPTIMIZE_NUM_KEY_CHARS];
+	uint8_t key_bytes[OPTIMIZE_NUM_KEY_BYTES + 1]; // The last 4 bits of the key are ignored?!
+
+	write_string(key_string_bytes, in_str);
+	if(!key_to_key_bytes(key_string_bytes, key_bytes))
+		return false;
+
+	return key_bytes_to_serial_bytes(key_bytes, out, is_new_cc);
 }
 
 bool load_firmware(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint8_t patch_id) {
@@ -233,28 +324,56 @@ bool load_firmware(cy_device_device_handlers* handlers, const cyop_device_usb_de
 	return free_firmware_and_return(fw_data, true);
 }
 
-static int read_device_info(cy_device_device_handlers* handlers, const cyop_device_usb_device* device) {
-	const int read_block_size = 0x10;
-	const int num_reads = 8;
-	uint8_t in_buffer[read_block_size * num_reads];
+static bool is_eeprom_data_valid(uint8_t* eeprom_data) {
+	uint32_t crc = calc_crc32_adler(eeprom_data, OPTIMIZE_EEPROM_STRUCT_SIZE);
+	return crc == read_le32(eeprom_data + 0x7C);
+}
+
+static std::string extract_key_from_eeprom(uint8_t* eeprom_data) {
+	if(!is_eeprom_data_valid(eeprom_data))
+		return "";
+	if(eeprom_data[8] != 0x66) // Key ID byte
+		return "";
+	return read_string(eeprom_data + 0x10, OPTIMIZE_NUM_KEY_CHARS_WITH_DASHES);
+}
+
+static int read_device_info(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint8_t* in_buffer, size_t read_size) {
+	const size_t read_block_size = 0x10;
+	const size_t num_reads = (read_size + read_block_size - 1) / read_block_size;
 	int transferred = 0;
 	int ret = 0;
 	uint8_t first_out_buffer[] = { 0x38, 0x00, 0x10, 0x30 };
-	for(int i = 0; i < num_reads; i++) {
-		first_out_buffer[1] = i * read_block_size;
+	for(size_t i = 0; i < num_reads; i++) {
+		size_t single_read_size = read_size - (i * read_block_size);
+		if(single_read_size > read_block_size)
+			single_read_size = read_block_size;
+		first_out_buffer[1] = (uint8_t)(i * read_block_size);
 		ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), first_out_buffer, sizeof(first_out_buffer), &transferred);
 		if(ret < 0)
 			return ret;
-		ret = cypress_ctrl_bulk_in_transfer(handlers, get_cy_usb_info(device), in_buffer + (i * read_block_size), read_block_size, &transferred);
+		ret = cypress_ctrl_bulk_in_transfer(handlers, get_cy_usb_info(device), in_buffer + ((int)(i * read_block_size)), single_read_size, &transferred);
 		if(ret < 0)
 			return ret;
-		if(transferred < read_block_size)
+		if(transferred < ((int)single_read_size))
 			return -1;
 	}
 	return ret;
 }
 
-static int read_second_device_id(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint64_t &second_device_id) {
+static uint64_t bytes_to_serial_device_id(uint8_t* in_buffer) {
+	// From multiple dumps, this seems to be the algorithm.
+	// There may be something missing.
+	uint8_t in_transformed_buffer[sizeof(uint64_t)];
+
+	for(size_t i = 0; i < (sizeof(in_transformed_buffer) - 1); i++)
+		in_transformed_buffer[i] = (reverse_u8(in_buffer[sizeof(in_transformed_buffer) - 1 - i]) >> 7) | (reverse_u8(in_buffer[sizeof(in_transformed_buffer) - 1 - i - 1]) << 1);
+	// Bugged?! Why doesn't it use in_buffer[7]'s first 7 bits?!
+	in_transformed_buffer[sizeof(in_transformed_buffer) - 1] = (reverse_u8(in_buffer[0]) >> 7);
+
+	return read_le64(in_transformed_buffer);
+}
+
+static int read_direct_serial_device_id(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint64_t &device_id) {
 	const uint8_t first_out_buffer[] = { 0x60, 0x02, 0x30, 0xFF, 0x60, 0xD0, 0x60, 0x02, 0x30, 0xFF, 0x60, 0xCB, 0x60, 0x02, 0x00, 0xFF, 0x00, 0xFF };
 	uint8_t in_buffer[sizeof(uint64_t)];
 	int transferred = 0;
@@ -270,11 +389,12 @@ static int read_second_device_id(cy_device_device_handlers* handlers, const cyop
 		return ret;
 	if(((size_t)transferred) < sizeof(in_buffer))
 		return -1;
-	second_device_id = read_le64(in_buffer);
+
+	device_id = bytes_to_serial_device_id(in_buffer);
 	return ret;
 }
 
-static int read_device_id(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint64_t &device_id, bool &is_full_0s) {
+static int read_cached_device_id(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint64_t &device_id, bool &is_full_0s) {
 	const uint8_t out_buffer[] = { 0x70 };
 	uint8_t in_buffer[0x10];
 	int transferred = 0;
@@ -321,7 +441,7 @@ static int start_command_send(cy_device_device_handlers* handlers, const cyop_de
 	return ret;
 }
 
-static int dual_first_unk_value_setup_read(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint32_t &value32, uint64_t &device_id, uint64_t &second_device_id) {
+static int read_device_id_serial(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint32_t &value32, uint64_t &device_id) {	
 	const uint8_t first_buffer[] = { 0x64, 0x60, 0x01, 0xFF, 0xFF, 0x60, 0x02, 0x00, 0xFF, 0x00, 0xFF };
 	int transferred = 0;
 	int ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), first_buffer, sizeof(first_buffer), &transferred);
@@ -336,11 +456,11 @@ static int dual_first_unk_value_setup_read(cy_device_device_handlers* handlers, 
 			return ret;
 	}
 	bool is_full_0s = false;
-	ret = read_device_id(handlers, device, device_id, is_full_0s);
+	ret = read_cached_device_id(handlers, device, device_id, is_full_0s);
 	if(ret < 0)
 		return ret;
 	if(is_full_0s)
-		ret = read_second_device_id(handlers, device, second_device_id);
+		ret = read_direct_serial_device_id(handlers, device, device_id);
 	if(ret < 0)
 		return ret;
 	return ret;
@@ -440,17 +560,15 @@ static int final_capture_start_transfer(cy_device_device_handlers* handlers, con
 	return ret;
 }
 
-int capture_start(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_first_load, bool is_rgb888) {
+int capture_start(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_first_load, bool is_rgb888, uint64_t &device_id, std::string &read_key) {
 	int ret = 0;
 	uint32_t value32 = 0;
-	uint64_t device_id = 0;
-	uint64_t second_device_id = 0;
 	if(is_first_load) {
 		for(int i = 0; i < 3; i++) {
 			cypress_pipe_reset_ctrl_bulk_in(handlers, get_cy_usb_info(device));
 			cypress_pipe_reset_ctrl_bulk_out(handlers, get_cy_usb_info(device));
 		}
-		ret = dual_first_unk_value_setup_read(handlers, device, value32, device_id, second_device_id);
+		ret = read_device_id_serial(handlers, device, value32, device_id);
 		if(ret < 0)
 			return ret;
 	}
@@ -458,13 +576,15 @@ int capture_start(cy_device_device_handlers* handlers, const cyop_device_usb_dev
 	if(ret < 0)
 		return ret;
 	if(device->is_new_device) {
-		ret = read_device_info(handlers, device);
+		uint8_t eeprom_data[OPTIMIZE_EEPROM_NEW_SIZE];
+		ret = read_device_info(handlers, device, eeprom_data, OPTIMIZE_EEPROM_NEW_SIZE);
 		if(ret < 0)
 			return ret;
+		read_key = extract_key_from_eeprom(eeprom_data);
 	}
 	cypress_pipe_reset_ctrl_bulk_in(handlers, get_cy_usb_info(device));
 	cypress_pipe_reset_ctrl_bulk_out(handlers, get_cy_usb_info(device));
-	ret = dual_first_unk_value_setup_read(handlers, device, value32, device_id, second_device_id);
+	ret = read_device_id_serial(handlers, device, value32, device_id);
 	if(ret < 0)
 		return ret;
 
@@ -478,9 +598,6 @@ int capture_start(cy_device_device_handlers* handlers, const cyop_device_usb_dev
 	if(ret < 0)
 		return ret;
 
-	// No clue about the algorithm to determine this...
-	// Would need different examples to understand it.
-	device_id = 0;
 	ret = insert_device_id(handlers, device, device_id);
 	if(ret < 0)
 		return ret;
@@ -492,28 +609,75 @@ int capture_start(cy_device_device_handlers* handlers, const cyop_device_usb_dev
 	return ret;
 }
 
-static const uint8_t* get_start_capture_third_buffer(const cyop_device_usb_device* device, bool is_rgb888, bool is_3d) {
+static const uint8_t* get_start_capture_setup_key_buffer(const cyop_device_usb_device* device, bool is_rgb888, bool is_3d) {
 	if(device->is_new_device) {
 		if(is_rgb888) {
 			if(is_3d)
-				return start_capture_third_buffer_888_3d_new;
-			return start_capture_third_buffer_888_new;
+				return start_capture_setup_key_buffer_888_3d_new;
+			return start_capture_setup_key_buffer_888_new;
 		}
 		if(is_3d)
-			return start_capture_third_buffer_565_3d_new;
-		return start_capture_third_buffer_565_new;
+			return start_capture_setup_key_buffer_565_3d_new;
+		return start_capture_setup_key_buffer_565_new;
 	}
 	if(is_rgb888) {
 		if(is_3d)
-			return start_capture_third_buffer_888_3d_old;
-		return start_capture_third_buffer_888_old;
+			return start_capture_setup_key_buffer_888_3d_old;
+		return start_capture_setup_key_buffer_888_old;
 	}
 	if(is_3d)
-		return start_capture_third_buffer_565_3d_old;
-	return start_capture_third_buffer_565_old;
+		return start_capture_setup_key_buffer_565_3d_old;
+	return start_capture_setup_key_buffer_565_old;
 }
 
-int StartCaptureDma(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_rgb888, bool is_3d) {
+bool check_key_matches_device_id(uint64_t device_id, std::string key, bool is_new_device) {
+	uint8_t key_bytes[OPTIMIZE_NUM_KEY_BYTES];
+	bool is_key_valid = key_to_data(key, key_bytes, is_new_device);
+	if(!is_key_valid)
+		return false;
+	return device_id == read_be64(key_bytes);
+}
+
+bool check_key_matches_device_id(uint64_t device_id, std::string key, const cyop_device_usb_device* device) {
+	if(device == NULL)
+		return false;
+	return check_key_matches_device_id(device_id, key, device->is_new_device);
+}
+
+bool check_key_valid(std::string key, bool is_new_device) {
+	uint8_t key_bytes[OPTIMIZE_NUM_KEY_BYTES];
+	bool is_key_valid = key_to_data(key, key_bytes, is_new_device);
+	// Extra checks here, if I ever feel like it.
+	return is_key_valid;
+}
+
+bool check_key_valid(std::string key, const cyop_device_usb_device* device) {
+	if(device == NULL)
+		return false;
+	return check_key_valid(key, device->is_new_device);
+}
+
+static void populate_capture_setup_key_buffer(const cyop_device_usb_device* device, uint8_t* setup_key_buffer, std::string key) {
+	if(key == "")
+		return;
+
+	uint8_t key_bytes[OPTIMIZE_NUM_KEY_BYTES];
+	bool is_key_valid = key_to_data(key, key_bytes, device->is_new_device);
+
+	if(!is_key_valid)
+		return;
+
+	if(device->is_new_device) {
+		setup_key_buffer[11] = key_bytes[11];
+		setup_key_buffer[13] = key_bytes[10];
+		return;
+	}
+	setup_key_buffer[11] |= key_bytes[10] & 0xF0;
+	setup_key_buffer[13] = ((key_bytes[10] & 0xF) << 4) | (key_bytes[11] >> 4);
+	setup_key_buffer[15] = key_bytes[11] & 0xF;
+}
+
+int StartCaptureDma(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_rgb888, bool is_3d, std::string key) {
 	const uint8_t mono_buffer[] = { 0x40 };
 	int transferred = 0;
 	int ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), mono_buffer, sizeof(mono_buffer), &transferred);
@@ -523,10 +687,11 @@ int StartCaptureDma(cy_device_device_handlers* handlers, const cyop_device_usb_d
 	ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), second_buffer, sizeof(second_buffer), &transferred);
 	if(ret < 0)
 		return ret;
-	const uint8_t* third_buffer = get_start_capture_third_buffer(device, is_rgb888, is_3d);
-	uint8_t real_third_buffer[sizeof(start_capture_third_buffer_888_new)];
-	memcpy(real_third_buffer, third_buffer, sizeof(real_third_buffer));
-	ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), real_third_buffer, sizeof(real_third_buffer), &transferred);
+	const uint8_t* base_setup_key_buffer = get_start_capture_setup_key_buffer(device, is_rgb888, is_3d);
+	uint8_t setup_key_buffer[sizeof(start_capture_setup_key_buffer_888_new)];
+	memcpy(setup_key_buffer, base_setup_key_buffer, sizeof(setup_key_buffer));
+	populate_capture_setup_key_buffer(device, setup_key_buffer, key);
+	ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), setup_key_buffer, sizeof(setup_key_buffer), &transferred);
 	if(ret < 0)
 		return ret;
 	uint8_t in_buffer[7];

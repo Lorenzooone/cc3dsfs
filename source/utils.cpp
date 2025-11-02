@@ -9,6 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
@@ -62,6 +63,17 @@ uint32_t reverse_endianness(uint32_t value) {
 
 uint16_t reverse_endianness(uint16_t value) {
 	return ((value & 0xFF) << 8) | ((value & 0xFF00) >> 8);
+}
+
+static uint64_t reverse_ux(uint64_t data, int bits_num) {
+	uint64_t out_data = 0;
+	for(int i = 0; i < bits_num; i++)
+		out_data |= ((data >> i) & 1) << (bits_num - 1 - i);
+	return out_data;
+}
+
+uint8_t reverse_u8(uint8_t data) {
+	return (uint8_t)reverse_ux(data, sizeof(uint8_t) * 8);
 }
 
 uint32_t to_le(uint32_t value) {
@@ -250,6 +262,24 @@ std::string to_hex_u16(const uint16_t value) {
 	return to_hex_base(value, digits, num_digits);
 }
 
+std::string to_hex_u32(const uint32_t value) {
+	const int num_digits = sizeof(value) * 2;
+	char digits[num_digits + 1];
+	return to_hex_base(value, digits, num_digits);
+}
+
+std::string to_hex_u60(const uint64_t value) {
+	const int num_digits = (sizeof(value) * 2) - 1;
+	char digits[num_digits + 1];
+	return to_hex_base(value, digits, num_digits);
+}
+
+std::string to_hex_u64(const uint64_t value) {
+	const int num_digits = sizeof(value) * 2;
+	char digits[num_digits + 1];
+	return to_hex_base(value, digits, num_digits);
+}
+
 void init_threads(void) {
 	#if defined(__linux__) && defined(XLIB_BASED)
 	XInitThreads();
@@ -330,39 +360,54 @@ ANativeActivity* getAndroidNativeActivity() {
 }
 #endif
 
-std::string LayoutPathGenerator(int index, bool created_proper_folder) {
-	bool success = false;
-	std::string cfg_dir;
+std::string get_base_path(bool for_presets, bool do_existence_check) {
+	std::string cfg_dir = "./";
 	const char* env_p = NULL;
+	bool add_config = true;
 
 	#ifdef ANDROID_COMPILATION
 	ANativeActivity* native_activity_ptr = getAndroidNativeActivity();
 	if(native_activity_ptr)
 		env_p = native_activity_ptr->internalDataPath;
 	#elif !(defined(_WIN32) || defined(_WIN64))
-	env_p = std::getenv("HOME");
+	std::string folder_env = std::string(NAME) + "_CFG_DIR";
+	std::transform(folder_env.begin(), folder_env.end(), folder_env.begin(), ::toupper);
+	env_p = std::getenv(folder_env.c_str());
+	if(env_p == NULL)
+		env_p = std::getenv("HOME");
+	else
+		add_config = false;
 	#endif
 
-	if(!created_proper_folder)
-		env_p = NULL;
+	if(env_p != NULL) {
+		std::string target_folder = std::string(env_p);
+		if((target_folder != "")  && ((!do_existence_check) || std::filesystem::is_directory(std::filesystem::path(target_folder))))
+			cfg_dir = std::string(env_p) + "/";
+	}
 
-	if(env_p != NULL)
-		cfg_dir = std::string(env_p) + "/";
+	if(add_config)
+		cfg_dir += ".config/" + std::string(NAME);
 
-	cfg_dir += ".config/" + std::string(NAME);
-
-	if(index == STARTUP_FILE_INDEX)
+	if(!for_presets)
 		return cfg_dir + "/";
 	return cfg_dir + "/presets/";
 }
 
-std::string load_layout_name(int index, bool created_proper_folder, bool &success) {
+std::string get_base_path_keys() {
+	return get_base_path(false) + "keys/";
+}
+
+std::string LayoutPathGenerator(int index) {
+	return get_base_path(index != STARTUP_FILE_INDEX);
+}
+
+std::string load_layout_name(int index, bool &success) {
 	if(index == STARTUP_FILE_INDEX) {
 		success = true;
 		return "Initial";
 	}
 	std::string name = LayoutNameGenerator(index);
-	std::string path = LayoutPathGenerator(index, created_proper_folder);
+	std::string path = LayoutPathGenerator(index);
 
 	std::ifstream file(path + name);
 	std::string line;

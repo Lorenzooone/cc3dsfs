@@ -254,7 +254,7 @@ static void defaults_reload(FrontendData *frontend_data, AudioData* audio_data, 
 	frontend_data->reload = true;
 }
 
-static void load_layout_file(int load_index, FrontendData *frontend_data, AudioData* audio_data, OutTextData &out_text_data, CaptureStatus* capture_status, bool skip_io, bool do_print, bool created_proper_folder, bool is_first_load) {
+static void load_layout_file(int load_index, FrontendData *frontend_data, AudioData* audio_data, OutTextData &out_text_data, CaptureStatus* capture_status, bool skip_io, bool do_print, bool is_first_load) {
 	if(skip_io)
 		return;
 
@@ -269,12 +269,12 @@ static void load_layout_file(int load_index, FrontendData *frontend_data, AudioD
 
 	bool name_load_success = false;
 	std::string layout_name = LayoutNameGenerator(load_index);
-	std::string layout_path = LayoutPathGenerator(load_index, created_proper_folder);
-	std::string shared_layout_path = LayoutPathGenerator(STARTUP_FILE_INDEX, created_proper_folder);
+	std::string layout_path = LayoutPathGenerator(load_index);
+	std::string shared_layout_path = get_base_path(false);
 	std::string shared_layout_name = "shared.cfg";
 	bool op_success = load(layout_path, layout_name, frontend_data->top_screen->m_info, frontend_data->bot_screen->m_info, frontend_data->joint_screen->m_info, frontend_data->display_data, audio_data, out_text_data, capture_status);
 	if(do_print && op_success) {
-		std::string load_name = load_layout_name(load_index, created_proper_folder, name_load_success);
+		std::string load_name = load_layout_name(load_index, name_load_success);
 		UpdateOutText(out_text_data, "Layout loaded from: " + layout_path + layout_name, "Layout " + load_name + " loaded", TEXT_KIND_SUCCESS);
 	}
 	else if(!op_success) {
@@ -339,7 +339,7 @@ static bool save(const std::string path, const std::string name, const std::stri
 	return true;
 }
 
-static void save_layout_file(int save_index, FrontendData *frontend_data, AudioData* audio_data, OutTextData &out_text_data, CaptureStatus* capture_status, bool skip_io, bool do_print, bool created_proper_folder) {
+static void save_layout_file(int save_index, FrontendData *frontend_data, AudioData* audio_data, OutTextData &out_text_data, CaptureStatus* capture_status, bool skip_io, bool do_print) {
 	if(skip_io)
 		return;
 
@@ -347,10 +347,10 @@ static void save_layout_file(int save_index, FrontendData *frontend_data, AudioD
 		return;
 
 	bool name_load_success = false;
-	std::string save_name = load_layout_name(save_index, created_proper_folder, name_load_success);
+	std::string save_name = load_layout_name(save_index, name_load_success);
 	std::string layout_name = LayoutNameGenerator(save_index);
-	std::string layout_path = LayoutPathGenerator(save_index, created_proper_folder);
-	std::string shared_layout_path = LayoutPathGenerator(STARTUP_FILE_INDEX, created_proper_folder);
+	std::string layout_path = LayoutPathGenerator(save_index);
+	std::string shared_layout_path = LayoutPathGenerator(STARTUP_FILE_INDEX);
 	std::string shared_layout_name = "shared.cfg";
 	bool op_success = save(layout_path, layout_name, save_name, frontend_data->top_screen->m_info, frontend_data->bot_screen->m_info, frontend_data->joint_screen->m_info, frontend_data->display_data, audio_data, out_text_data, capture_status);
 	if(do_print && op_success) {
@@ -541,7 +541,7 @@ static float get_time_multiplier(CaptureData* capture_data, bool should_ignore_d
 	}
 }
 
-static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data, bool created_proper_folder, override_all_data &override_data, volatile bool* can_do_output) {
+static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data, override_all_data &override_data, volatile bool* can_do_output) {
 	VideoOutputData *out_buf;
 	double last_frame_time = 0.0;
 	FrontendData frontend_data;
@@ -563,15 +563,15 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	memset(out_buf, 0, sizeof(VideoOutputData));
 
 	draw_lock.unlock();
-	WindowScreen *top_screen = new WindowScreen(ScreenType::TOP, &capture_data->status, &frontend_data.display_data, &frontend_data.shared_data, audio_data, &draw_lock, created_proper_folder, override_data.disable_frame_blending);
-	WindowScreen *bot_screen = new WindowScreen(ScreenType::BOTTOM, &capture_data->status, &frontend_data.display_data, &frontend_data.shared_data, audio_data, &draw_lock, created_proper_folder, override_data.disable_frame_blending);
-	WindowScreen *joint_screen = new WindowScreen(ScreenType::JOINT, &capture_data->status, &frontend_data.display_data, &frontend_data.shared_data, audio_data, &draw_lock, created_proper_folder, override_data.disable_frame_blending);
+	WindowScreen *top_screen = new WindowScreen(ScreenType::TOP, &capture_data->status, &frontend_data.display_data, &frontend_data.shared_data, audio_data, &draw_lock, override_data.disable_frame_blending);
+	WindowScreen *bot_screen = new WindowScreen(ScreenType::BOTTOM, &capture_data->status, &frontend_data.display_data, &frontend_data.shared_data, audio_data, &draw_lock, override_data.disable_frame_blending);
+	WindowScreen *joint_screen = new WindowScreen(ScreenType::JOINT, &capture_data->status, &frontend_data.display_data, &frontend_data.shared_data, audio_data, &draw_lock, override_data.disable_frame_blending);
 	frontend_data.top_screen = top_screen;
 	frontend_data.bot_screen = bot_screen;
 	frontend_data.joint_screen = joint_screen;
 
 	if(!override_data.recovery_mode)
-		load_layout_file(override_data.loaded_profile, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, false, created_proper_folder, true);
+		load_layout_file(override_data.loaded_profile, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, false, true);
 	if(override_data.volume != DEFAULT_NO_VOLUME_VALUE)
 		audio_data->set_audio_volume(override_data.volume);
 	override_set_data_to_screen_info(override_data.override_top_bot_data, frontend_data.joint_screen->m_info);
@@ -710,12 +710,12 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		if((load_index = top_screen->load_data()) || (load_index = bot_screen->load_data()) || (load_index = joint_screen->load_data())) {
 			// This value should only be loaded when starting the program...
 			bool previous_last_connected_ds = frontend_data.display_data.last_connected_ds;
-			load_layout_file(load_index, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, true, created_proper_folder, false);
+			load_layout_file(load_index, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, true, false);
 			frontend_data.display_data.last_connected_ds = previous_last_connected_ds;
 		}
 		
 		if((save_index = top_screen->save_data()) || (save_index = bot_screen->save_data()) || (save_index = joint_screen->save_data())) {
-			save_layout_file(save_index, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, true, created_proper_folder);
+			save_layout_file(save_index, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, true);
 			top_screen->update_save_menu();
 			bot_screen->update_save_menu();
 			joint_screen->update_save_menu();
@@ -755,7 +755,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	joint_screen->after_thread_join();
 
 	if(override_data.auto_save)
-		save_layout_file(override_data.loaded_profile, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, false, created_proper_folder);
+		save_layout_file(override_data.loaded_profile, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, false);
 
 	top_screen->process_own_out_text_data(false);
 	bot_screen->process_own_out_text_data(false);
@@ -782,10 +782,11 @@ static bool create_folder(const std::string path) {
 }
 
 static bool create_out_folder() {
-	bool success = create_folder(LayoutPathGenerator(STARTUP_FILE_INDEX, true));
+	bool success = create_folder(get_base_path(false, false));
 	if(!success)
-		create_folder(LayoutPathGenerator(STARTUP_FILE_INDEX, false));
-	create_folder(LayoutPathGenerator(1, success));
+		create_folder(get_base_path(false));
+	create_folder(get_base_path(true));
+	create_folder(get_base_path_keys());
 	return success;
 }
 
@@ -832,7 +833,6 @@ int main(int argc, char **argv) {
 	int enter_id = -1;
 	int power_id = -1;
 	bool use_pud_up = true;
-	bool created_proper_folder = create_out_folder();
 	volatile bool can_do_output = true;
 	bool mono_app_default_value = false;
 	#ifdef ANDROID_COMPILATION
@@ -950,6 +950,7 @@ int main(int argc, char **argv) {
 		#endif
 		return 0;
 	}
+	create_out_folder();
 	init_extra_buttons_poll(page_up_id, page_down_id, enter_id, power_id, use_pud_up);
 	AudioData audio_data;
 	audio_data.reset();
@@ -961,7 +962,7 @@ int main(int argc, char **argv) {
 	if(!override_data.no_audio)
 		audio_thread = std::thread(soundCall, &audio_data, capture_data, &can_do_output);
 
-	int ret_val = mainVideoOutputCall(&audio_data, capture_data, created_proper_folder, override_data, &can_do_output);
+	int ret_val = mainVideoOutputCall(&audio_data, capture_data, override_data, &can_do_output);
 	if(!override_data.no_audio)
 		audio_thread.join();
 	capture_thread.join();

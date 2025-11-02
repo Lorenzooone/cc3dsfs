@@ -33,7 +33,7 @@
 #define NISETRO_DS_WANTED_VALUE_BASE 0xFF00
 
 static const cyni_device_usb_device cypress_fx2_generic_device = {
-.name = "FX2LP -> NiseTro DS", .long_name = "EZ-USB FX2LP ->NiseTro DS(i)",
+.name = "FX2LP -> NiseTro DS", .long_name = "EZ-USB FX2LP -> NiseTro DS(i)",
 .device_type = CYPRESS_NISETRO_BLANK_DEVICE,
 .video_data_type = VIDEO_DATA_RGB, 
 .firmware_to_load = nisetro_ds_fw, .firmware_size = nisetro_ds_fw_len,

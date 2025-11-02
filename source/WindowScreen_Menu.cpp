@@ -998,18 +998,18 @@ void WindowScreen::setup_fileconfig_menu(bool is_save, bool reset_data, bool ski
 			this->possible_files.push_back(file_data);
 		}
 		file_data.index = STARTUP_FILE_INDEX;
-		file_data.name = load_layout_name(file_data.index, this->created_proper_folder, success);
+		file_data.name = load_layout_name(file_data.index, success);
 		this->possible_files.push_back(file_data);
 		for(int i = 1; i <= 4; i++) {
 			file_data.index = i;
-			file_data.name = load_layout_name(file_data.index, this->created_proper_folder, success);
+			file_data.name = load_layout_name(file_data.index, success);
 			this->possible_files.push_back(file_data);
 		}
 		int first_free;
 		bool failed = false;
 		for(first_free = 5; first_free <= 100; first_free++) {
 			file_data.index = first_free;
-			file_data.name = load_layout_name(file_data.index, this->created_proper_folder, success);
+			file_data.name = load_layout_name(file_data.index, success);
 			if(!success) {
 				failed = true;
 				break;

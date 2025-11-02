@@ -37,7 +37,7 @@ static bool is_size_valid(sf::Vector2f size) {
 	return (size.x > 0.0) && (size.y > 0.0);
 }
 
-WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, SharedData* shared_data, AudioData* audio_data, ConsumerMutex *draw_lock, bool created_proper_folder, bool disable_frame_blending) {
+WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, DisplayData* display_data, SharedData* shared_data, AudioData* audio_data, ConsumerMutex *draw_lock, bool disable_frame_blending) {
 	this->draw_lock = draw_lock;
 	this->m_stype = stype;
 	insert_basic_crops(this->possible_crops, this->m_stype, false, false);
@@ -133,6 +133,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	if(this->m_stype == ScreenType::JOINT)
 		this->own_out_text_data.preamble_name += " joint window";
 	this->last_connected_status = false;
+	this->last_title_check_id = 0;
 	this->last_enabled_3d = false;
 	this->last_interleaved_3d = false;
 	this->capture_status = capture_status;
@@ -157,7 +158,6 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	n_shader_refs += 1;
 	this->was_last_frame_null = true;
 	this->main_thread_owns_window = true;
-	this->created_proper_folder = created_proper_folder;
 	this->is_window_windowed = false;
 	this->saved_windowed_pos = sf::Vector2i(0, 0);
 	this->was_windowed_pos_saved = false;
@@ -361,9 +361,10 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoD
 }
 
 void WindowScreen::update_connection() {
-	if(this->last_connected_status == this->capture_status->connected)
-		return;
+	if((this->last_connected_status == this->capture_status->connected) && (this->last_title_check_id == this->capture_status->title_check_id))
+		return;	
 	this->last_connected_status = this->capture_status->connected;
+	this->last_title_check_id = this->capture_status->title_check_id;
 	if(this->m_win.isOpen()) {
 		this->m_win.setTitle(this->title_factory());
 	}
@@ -566,7 +567,7 @@ void WindowScreen::window_factory(bool is_main_thread) {
 std::string WindowScreen::_title_factory() {
 	std::string title = this->win_title;
 	if(this->capture_status->connected)
-		title += " - " + get_name_of_device(this->capture_status);
+		title += " - " + get_name_of_device(this->capture_status, false, true);
 	return title;
  }
  

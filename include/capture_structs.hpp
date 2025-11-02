@@ -288,9 +288,11 @@ struct CaptureDevice {
 	std::string name = "";
 	std::string long_name = "";
 	std::string path = "";
+	std::string key = "";
 	CaptureConnectionType cc_type = CAPTURE_CONN_USB;
 	InputVideoDataType video_data_type = VIDEO_DATA_RGB;
 	const void* descriptor = NULL;
+	uint64_t device_id = 0; // Different from serial_number...
 	bool is_3ds = false;
 	bool has_3d = false;
 	bool has_audio = false;
@@ -316,7 +318,8 @@ struct CaptureStatus {
 	CaptureDevice device;
 	std::string graphical_error_text;
 	std::string detailed_error_text;
-	bool new_error_text;
+	bool new_error_text = false;
+	int title_check_id = 0;
 	volatile int cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
 	volatile bool connected = false;
 	volatile bool running = true;

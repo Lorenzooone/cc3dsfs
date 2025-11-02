@@ -95,7 +95,11 @@ static std::string _cypress_nisetro_get_serial(const cyni_device_usb_device* usb
 std::string cypress_nisetro_get_serial(const void* usb_device_desc, std::string serial, uint16_t bcd_device, int& curr_serial_extra_id) {
 	if(usb_device_desc == NULL)
 		return "";
-	return _cypress_nisetro_get_serial((const cyni_device_usb_device*)usb_device_desc, serial, bcd_device, curr_serial_extra_id);
+	const cyni_device_usb_device* in_usb_device_desc = (const cyni_device_usb_device*)usb_device_desc;
+	std::string preamble = "";
+	if(in_usb_device_desc->has_bcd_device_serial)
+		preamble = "USB ";
+	return preamble + _cypress_nisetro_get_serial(in_usb_device_desc, serial, bcd_device, curr_serial_extra_id);
 }
 
 static CaptureDevice _cypress_nisetro_create_device(const cyni_device_usb_device* usb_device_desc, std::string serial, std::string path) {

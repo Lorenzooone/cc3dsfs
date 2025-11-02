@@ -4,6 +4,8 @@
 cc3dsfs
 cc3dsfs.exe
 *.conf
+*.cfg
+keys/
 *.a
 *.zip
 ftd3xx/
@@ -14,3 +16,4 @@ build*/
 out/
 .vs/
 CMakeSettings.json
+*_icon_*

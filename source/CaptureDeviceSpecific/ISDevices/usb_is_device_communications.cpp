@@ -3,7 +3,8 @@
 #include "usb_is_device_libusb.hpp"
 #include "usb_is_device_is_driver.hpp"
 #include "is_twl_cap_init_seed_table.h"
-#include "is_twl_cap_crc32_table.h"
+// From web.mit.edu/wwwdev/src/harvest-1.3.pl3/components/gatherer/standard/unbinhex/crc/ccitt32.c
+#include "ccitt32_crc32_table.h"
 #include "usb_generic.hpp"
 
 #include <libusb.h>
@@ -278,7 +279,7 @@ static uint32_t get_crc32_data_comm(uint8_t* data, size_t size) {
 	for(size_t i = 0; i < size; i++) {
 		uint8_t inner_value = (value >> 24) ^ data[i];
 		value <<= 8;
-		value ^= read_le32(is_twl_cap_crc32_table, inner_value);
+		value ^= read_le32(ccitt32_crc32_table, inner_value);
 	}
 	return ~value;
 }
