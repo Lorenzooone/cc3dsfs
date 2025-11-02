@@ -40,6 +40,8 @@ const cyop_device_usb_device* GetNextDeviceDesc(const cyop_device_usb_device* de
 const cy_device_usb_device* get_cy_usb_info(const cyop_device_usb_device* usb_device_desc);
 bool has_to_load_firmware(const cyop_device_usb_device* device);
 bool load_firmware(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint8_t patch_id);
+bool read_firmware(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint8_t* buffer_out, size_t read_size);
+bool reset_cpu(cy_device_device_handlers* handlers, const cyop_device_usb_device* device);
 int capture_start(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_first_load, bool is_rgb888, uint64_t &device_id, std::string &read_key);
 int StartCaptureDma(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_rgb888, bool is_3d, std::string key);
 int capture_end(cy_device_device_handlers* handlers, const cyop_device_usb_device* device);

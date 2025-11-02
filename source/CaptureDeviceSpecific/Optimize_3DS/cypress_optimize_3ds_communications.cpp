@@ -58,7 +58,7 @@ const uint8_t start_capture_setup_key_buffer_888_old[]    = { 0x61, 0x07, 0x00, 
 const uint8_t start_capture_setup_key_buffer_888_3d_old[] = { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x20, 0x00, 0x98, 0x00, 0x08, 0x00, 0x05, 0x00, 0x00, 0x18, 0x00 };
 
 static const cyop_device_usb_device cypress_optimize_new_3ds_generic_device = {
-.name = "FX2LP-O -> Opt. N3DS", .long_name = "EZ-USB FX2LP-O -> Optimize New 3DS",
+.name = "FX2LO->Opt. N3DS", .long_name = "EZ-USB FX2LPO -> Optimize New 3DS",
 .device_type = CYPRESS_OPTIMIZE_NEW_3DS_BLANK_DEVICE,
 .firmware_to_load = optimize_new_3ds_fw, .firmware_size = optimize_new_3ds_fw_len,
 .fpga_pl_565 = NULL, .fpga_pl_565_size = 0,
@@ -85,7 +85,7 @@ static const cyop_device_usb_device cypress_optimize_new_3ds_generic_device = {
 };
 
 static const cyop_device_usb_device cypress_optimize_new_3ds_instantiated_device = {
-.name = "Optimize N3DS", .long_name = "Optimize New 3DS",
+.name = "Opt. N3DS", .long_name = "Optimize New 3DS",
 .device_type = CYPRESS_OPTIMIZE_NEW_3DS_INSTANTIATED_DEVICE,
 .firmware_to_load = NULL, .firmware_size = 0,
 .fpga_pl_565 = optimize_new_3ds_565_fpga_pl, .fpga_pl_565_size = optimize_new_3ds_565_fpga_pl_len,
@@ -112,7 +112,7 @@ static const cyop_device_usb_device cypress_optimize_new_3ds_instantiated_device
 };
 
 static const cyop_device_usb_device cypress_optimize_old_3ds_generic_device = {
-.name = "FX2LP -> Opt. O3DS", .long_name = "EZ-USB FX2LP -> Optimize Old 3DS",
+.name = "FX2LP->Opt. O3DS", .long_name = "EZ-USB FX2LP -> Optimize Old 3DS",
 .device_type = CYPRESS_OPTIMIZE_OLD_3DS_BLANK_DEVICE,
 .firmware_to_load = optimize_old_3ds_fw, .firmware_size = optimize_old_3ds_fw_len,
 .fpga_pl_565 = NULL, .fpga_pl_565_size = 0,
@@ -139,7 +139,7 @@ static const cyop_device_usb_device cypress_optimize_old_3ds_generic_device = {
 };
 
 static const cyop_device_usb_device cypress_optimize_old_3ds_instantiated_device = {
-.name = "Optimize O3DS", .long_name = "Optimize Old 3DS",
+.name = "Opt. O3DS", .long_name = "Optimize Old 3DS",
 .device_type = CYPRESS_OPTIMIZE_OLD_3DS_INSTANTIATED_DEVICE,
 .firmware_to_load = NULL, .firmware_size = 0,
 .fpga_pl_565 = optimize_old_3ds_565_fpga_pl, .fpga_pl_565_size = optimize_old_3ds_565_fpga_pl_len,
@@ -324,6 +324,36 @@ bool load_firmware(cy_device_device_handlers* handlers, const cyop_device_usb_de
 	return free_firmware_and_return(fw_data, true);
 }
 
+bool read_firmware(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint8_t* buffer_out, size_t read_size) {
+	size_t transfer_max_size = 0x400;
+	size_t num_transfers = (read_size + transfer_max_size - 1) / transfer_max_size;
+	int transferred = 0;
+	bool done = false;
+	int ret = 0;
+	for(size_t i = 0; i < num_transfers; i++) {
+		size_t transfer_size = read_size - (transfer_max_size * i);
+		if(transfer_size > transfer_max_size)
+			transfer_size = transfer_max_size;
+		size_t position = transfer_max_size * i;
+		ret = cypress_ctrl_in_transfer(handlers, get_cy_usb_info(device), buffer_out + position, (int)transfer_size, 0xA0, (uint16_t)position, 0, &transferred);
+		if(ret < 0)
+			return false;
+	}
+	return true;
+}
+
+bool reset_cpu(cy_device_device_handlers* handlers, const cyop_device_usb_device* device) {
+	int transferred = 0;
+	uint8_t buffer[1];
+	buffer[0] = 1;
+	int ret = cypress_ctrl_out_transfer(handlers, get_cy_usb_info(device), buffer, 1, 0xA0, 0xE600, 0, &transferred);
+	if(ret < 0)
+		return false;
+	buffer[0] = 0;
+	ret = cypress_ctrl_out_transfer(handlers, get_cy_usb_info(device), buffer, 1, 0xA0, 0xE600, 0, &transferred);
+	return ret >= 0;
+}
+
 static bool is_eeprom_data_valid(uint8_t* eeprom_data) {
 	uint32_t crc = calc_crc32_adler(eeprom_data, OPTIMIZE_EEPROM_STRUCT_SIZE);
 	return crc == read_le32(eeprom_data + 0x7C);
@@ -337,7 +367,7 @@ static std::string extract_key_from_eeprom(uint8_t* eeprom_data) {
 	return read_string(eeprom_data + 0x10, OPTIMIZE_NUM_KEY_CHARS_WITH_DASHES);
 }
 
-static int read_device_info(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint8_t* in_buffer, size_t read_size) {
+static int read_device_eeprom(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint8_t* in_buffer, size_t read_size) {
 	const size_t read_block_size = 0x10;
 	const size_t num_reads = (read_size + read_block_size - 1) / read_block_size;
 	int transferred = 0;
@@ -351,10 +381,36 @@ static int read_device_info(cy_device_device_handlers* handlers, const cyop_devi
 		ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), first_out_buffer, sizeof(first_out_buffer), &transferred);
 		if(ret < 0)
 			return ret;
-		ret = cypress_ctrl_bulk_in_transfer(handlers, get_cy_usb_info(device), in_buffer + ((int)(i * read_block_size)), single_read_size, &transferred);
+		ret = cypress_ctrl_bulk_in_transfer(handlers, get_cy_usb_info(device), in_buffer + (i * read_block_size), (int)single_read_size, &transferred);
 		if(ret < 0)
 			return ret;
 		if(transferred < ((int)single_read_size))
+			return -1;
+	}
+	return ret;
+}
+
+static int write_device_eeprom(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint8_t* out_buffer, size_t write_size) {
+	const size_t write_block_size = 0x10;
+	const size_t num_writes = (write_size + write_block_size - 1) / write_block_size;
+	int transferred = 0;
+	int ret = 0;
+	uint8_t out_post[] = { 0x39, 0x00, 0x10 };
+	uint8_t out_pre[] = { 0x31 };
+	uint8_t inside_out_buffer[sizeof(out_pre) + write_block_size + sizeof(out_post)];
+	for(size_t i = 0; i < num_writes; i++) {
+		size_t single_write_size = write_size - (i * write_block_size);
+		if(single_write_size > write_block_size)
+			single_write_size = write_block_size;
+		out_post[1] = (uint8_t)(i * write_block_size);
+		memcpy(inside_out_buffer, out_pre, sizeof(out_pre));
+		memcpy(inside_out_buffer + sizeof(out_pre), out_buffer + ((int)(i * write_block_size)), single_write_size);
+		memcpy(inside_out_buffer + sizeof(out_pre) + single_write_size, out_post, sizeof(out_post));
+		size_t full_write_size = sizeof(out_pre) + single_write_size + sizeof(out_post);
+		ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), inside_out_buffer, (int)full_write_size, &transferred);
+		if(ret < 0)
+			return ret;
+		if(transferred < ((int)full_write_size))
 			return -1;
 	}
 	return ret;
@@ -577,7 +633,7 @@ int capture_start(cy_device_device_handlers* handlers, const cyop_device_usb_dev
 		return ret;
 	if(device->is_new_device) {
 		uint8_t eeprom_data[OPTIMIZE_EEPROM_NEW_SIZE];
-		ret = read_device_info(handlers, device, eeprom_data, OPTIMIZE_EEPROM_NEW_SIZE);
+		ret = read_device_eeprom(handlers, device, eeprom_data, OPTIMIZE_EEPROM_NEW_SIZE);
 		if(ret < 0)
 			return ret;
 		read_key = extract_key_from_eeprom(eeprom_data);
