@@ -84,6 +84,13 @@ static cy_device_device_handlers* usb_reconnect(const cyni_device_usb_device* us
 	return final_handlers;
 }
 
+static std::string process_serial_string(const cyni_device_usb_device* usb_device_desc, std::string out_serial) {
+	std::string preamble = "";
+	if((usb_device_desc != NULL) && usb_device_desc->has_bcd_device_serial)
+		preamble = "USB ";
+	return preamble + out_serial;
+}
+
 static std::string _cypress_nisetro_get_serial(const cyni_device_usb_device* usb_device_desc, std::string serial, uint16_t bcd_device, int& curr_serial_extra_id) {
 	if((!usb_device_desc->has_bcd_device_serial) && (serial != ""))
 		return serial;
@@ -96,10 +103,7 @@ std::string cypress_nisetro_get_serial(const void* usb_device_desc, std::string 
 	if(usb_device_desc == NULL)
 		return "";
 	const cyni_device_usb_device* in_usb_device_desc = (const cyni_device_usb_device*)usb_device_desc;
-	std::string preamble = "";
-	if(in_usb_device_desc->has_bcd_device_serial)
-		preamble = "USB ";
-	return preamble + _cypress_nisetro_get_serial(in_usb_device_desc, serial, bcd_device, curr_serial_extra_id);
+	return process_serial_string(in_usb_device_desc, _cypress_nisetro_get_serial(in_usb_device_desc, serial, bcd_device, curr_serial_extra_id));
 }
 
 static CaptureDevice _cypress_nisetro_create_device(const cyni_device_usb_device* usb_device_desc, std::string serial, std::string path) {
@@ -168,7 +172,7 @@ bool cyni_device_connect_usb(bool print_failed, CaptureData* capture_data, Captu
 			return false;
 		}
 		cypress_nisetro_connection_end(handlers, usb_device_info);
-		std::string new_serial_number = std::to_string(free_fw_id);
+		std::string new_serial_number = process_serial_string(next_usb_device_info, std::to_string(free_fw_id));
 		CaptureDevice new_device;
 		for(int i = 0; i < 20; i++) {
 			default_sleep(500);
