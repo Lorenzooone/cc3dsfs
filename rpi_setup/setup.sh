@@ -10,7 +10,7 @@ BASE_SOURCE_DIR="."
 BASE_TARGET_DIR=${HOME}
 
 sudo apt update
-sudo apt -y install xterm gpiod xserver-xorg xinit libxcursor1 x11-xserver-utils pipewire pipewire-alsa libharfbuzz-icu0
+sudo apt -y install xterm xserver-xorg xinit libxcursor1 x11-xserver-utils pipewire pipewire-alsa libharfbuzz-icu0 libgpiod3
 
 sudo raspi-config nonint do_boot_behaviour B2
 

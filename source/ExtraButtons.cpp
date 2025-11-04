@@ -1,4 +1,5 @@
 #include "ExtraButtons.hpp"
+#include "utils.hpp"
 
 #define NUM_PI_BUTTONS (sizeof(pi_buttons) / sizeof(pi_buttons[0]))
 
@@ -25,9 +26,9 @@ void ExtraButton::initialize(int id, sf::Keyboard::Key corresponding_key, bool i
 		this->gpioline_ptr = NULL;
 	if(this->gpioline_ptr) {
 		if(use_pud_up)
-			gpiod_line_request_input_flags(this->gpioline_ptr, "cc3dsfs", GPIOD_LINE_REQUEST_FLAG_BIAS_PULL_UP);
+			gpiod_line_request_input_flags(this->gpioline_ptr, NAME, GPIOD_LINE_REQUEST_FLAG_BIAS_PULL_UP);
 		else
-			gpiod_line_request_input_flags(this->gpioline_ptr, "cc3dsfs", GPIOD_LINE_REQUEST_FLAG_BIAS_PULL_DOWN);
+			gpiod_line_request_input_flags(this->gpioline_ptr, NAME, GPIOD_LINE_REQUEST_FLAG_BIAS_PULL_DOWN);
 	}
 	#endif
 }

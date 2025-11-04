@@ -3,9 +3,7 @@
 
 #include <chrono>
 #include "event_structs.hpp"
-#ifdef RASPI
-#include <gpiod.h>
-#endif
+#include "libgpiod_compat.h"
 
 class ExtraButton {
 public:

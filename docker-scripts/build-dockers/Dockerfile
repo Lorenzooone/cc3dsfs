@@ -36,13 +36,19 @@ RUN useradd builder -m
 RUN mkdir -p /home/builder/cc3dsfs
 RUN mkdir -p /home/builder/building
 RUN chown -R builder:builder /home/builder
+COPY linux_install_shared_packages.sh /
+RUN chmod +x /linux_install_shared_packages.sh ; /linux_install_shared_packages.sh
 
 ################################################################################
 ###  Build x86_32                                                            ###
 ################################################################################
 FROM base_builder as builder32
-COPY linux_install_packages.sh /
-RUN chmod +x /linux_install_packages.sh ; /linux_install_packages.sh i386
+ENV ARCH_USABLE=i386
+ENV ARCH_COMPILER_NAME=i686-linux-gnu
+COPY linux_install_arch_packages.sh /
+RUN chmod +x /linux_install_arch_packages.sh ; /linux_install_arch_packages.sh ${ARCH_USABLE}
+COPY linux_compile_install_packages.sh /
+RUN chmod +x /linux_compile_install_packages.sh ; /linux_compile_install_packages.sh ${ARCH_COMPILER_NAME}
 WORKDIR /home/builder/building
 COPY  docker_build_starter /
 RUN chmod +x /docker_build_starter
@@ -53,8 +59,12 @@ CMD /docker_build_starter docker-scripts/docker_build_x86_32
 ###  Build x86_64                                                            ###
 ################################################################################
 FROM base_builder as builder64
-COPY linux_install_packages.sh /
-RUN chmod +x /linux_install_packages.sh ; /linux_install_packages.sh amd64
+ENV ARCH_USABLE=amd64
+ENV ARCH_COMPILER_NAME=x86_64-linux-gnu
+COPY linux_install_arch_packages.sh /
+RUN chmod +x /linux_install_arch_packages.sh ; /linux_install_arch_packages.sh ${ARCH_USABLE}
+COPY linux_compile_install_packages.sh /
+RUN chmod +x /linux_compile_install_packages.sh ; /linux_compile_install_packages.sh ${ARCH_COMPILER_NAME}
 WORKDIR /home/builder/building
 COPY  docker_build_starter /
 RUN chmod +x /docker_build_starter
@@ -65,8 +75,12 @@ CMD /docker_build_starter docker-scripts/docker_build_x86_64
 ###  Build arm 32                                                            ###
 ################################################################################
 FROM base_builder as builderarm32
-COPY linux_install_packages.sh /
-RUN chmod +x /linux_install_packages.sh ; /linux_install_packages.sh armhf
+ENV ARCH_USABLE=armhf
+ENV ARCH_COMPILER_NAME=arm-linux-gnueabihf
+COPY linux_install_arch_packages.sh /
+RUN chmod +x /linux_install_arch_packages.sh ; /linux_install_arch_packages.sh ${ARCH_USABLE}
+COPY linux_compile_install_packages.sh /
+RUN chmod +x /linux_compile_install_packages.sh ; /linux_compile_install_packages.sh ${ARCH_COMPILER_NAME}
 WORKDIR /home/builder/building
 COPY  docker_build_starter /
 RUN chmod +x /docker_build_starter
@@ -77,8 +91,12 @@ CMD /docker_build_starter docker-scripts/docker_build_arm32
 ###  Build arm 64                                                            ###
 ################################################################################
 FROM base_builder as builderarm64
-COPY linux_install_packages.sh /
-RUN chmod +x /linux_install_packages.sh ; /linux_install_packages.sh arm64
+ENV ARCH_USABLE=arm64
+ENV ARCH_COMPILER_NAME=aarch64-linux-gnu
+COPY linux_install_arch_packages.sh /
+RUN chmod +x /linux_install_arch_packages.sh ; /linux_install_arch_packages.sh ${ARCH_USABLE}
+COPY linux_compile_install_packages.sh /
+RUN chmod +x /linux_compile_install_packages.sh ; /linux_compile_install_packages.sh ${ARCH_COMPILER_NAME}
 WORKDIR /home/builder/building
 COPY  docker_build_starter /
 RUN chmod +x /docker_build_starter
@@ -86,11 +104,15 @@ USER builder
 CMD /docker_build_starter docker-scripts/docker_build_arm64
 
 ################################################################################
-###  Build riscv 64                                                            ###
+###  Build riscv 64                                                          ###
 ################################################################################
 FROM base_builder as builderriscv64
-COPY linux_install_packages.sh /
-RUN chmod +x /linux_install_packages.sh ; /linux_install_packages.sh riscv64
+ENV ARCH_USABLE=riscv64
+ENV ARCH_COMPILER_NAME=riscv64-linux-gnu
+COPY linux_install_arch_packages.sh /
+RUN chmod +x /linux_install_arch_packages.sh ; /linux_install_arch_packages.sh ${ARCH_USABLE}
+COPY linux_compile_install_packages.sh /
+RUN chmod +x /linux_compile_install_packages.sh ; /linux_compile_install_packages.sh ${ARCH_COMPILER_NAME}
 WORKDIR /home/builder/building
 COPY  docker_build_starter /
 RUN chmod +x /docker_build_starter
