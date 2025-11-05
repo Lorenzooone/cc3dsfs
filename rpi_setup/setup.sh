@@ -52,6 +52,9 @@ sudo cp -f ${BASE_SOURCE_DIR}/files/config.txt /boot${FIRMWARE}/config.txt
 sudo cp -Rf ${BASE_SOURCE_DIR}/files/usr/ /
 sudo cp -Rf ${BASE_SOURCE_DIR}/files/etc/ /
 sudo chmod +x /etc/rc.local
+# Raspberry Pi OS comes with this now by default?! Why?!
+sudo mkdir -p /etc/cloud/
+sudo touch /etc/cloud/cloud-init.disabled
 
 sleep 5
 
