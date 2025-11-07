@@ -5,6 +5,7 @@
 #include <cstring>
 #include <cmath>
 #include "font_ttf.h"
+#include "font_mono_ttf.h"
 #include "shaders_list.hpp"
 #include "devicecapture.hpp"
 #include <conversions.hpp>
@@ -55,8 +56,9 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 	this->ret_val = 0;
 	reset_screen_info(this->m_info);
 	bool font_load_success = this->text_font.openFromMemory(font_ttf, font_ttf_len);
-	this->notification = new TextRectangle(font_load_success, this->text_font);
-	this->text_rectangle_pool = new TextRectanglePool(font_load_success, &this->text_font);
+	bool font_mono_load_success = this->text_font_mono.openFromMemory(font_mono_ttf, font_mono_ttf_len);
+	this->notification = new TextRectangle(font_load_success, &this->text_font, font_mono_load_success, &this->text_font_mono);
+	this->text_rectangle_pool = new TextRectanglePool(font_load_success, &this->text_font, font_mono_load_success, &this->text_font_mono);
 	this->init_menus();
 	FPSArrayInit(&this->in_fps);
 	FPSArrayInit(&this->draw_fps);

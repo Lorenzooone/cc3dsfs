@@ -47,6 +47,7 @@ protected:
 	virtual size_t get_num_options();
 	virtual std::string get_string_option(int index, int action);
 	virtual void class_setup();
+	virtual float get_option_text_factor(int index) { return 1.0; }
 
 	int single_option_multiplier;
 

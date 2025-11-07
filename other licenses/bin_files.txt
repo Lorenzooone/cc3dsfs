@@ -13,6 +13,8 @@ The nisetro_ds* file was obtained from the source available software
 NiseTro Preview (build 20100316), then edited for improved interoperability
 and support for multiple concurrent connections.
 
-The optimize* files were extracted from wireshark packets, then edited
-for usage with a more generic driver, improved interoperability, and
-support for multiple concurrent connections.
+The optimize* files (minus the optimize_serial_key_* files) were extracted
+from wireshark packets, then edited for usage with a more generic driver,
+improved interoperability, and support for multiple concurrent connections.
+Copyright of optimize* files (minus the optimize_serial_key_* files):
+non-standard - Tanishige Ryu

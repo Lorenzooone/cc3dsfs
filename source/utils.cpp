@@ -9,7 +9,11 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#if (!defined(_MSC_VER)) || (_MSC_VER > 1916)
 #include <filesystem>
+#else
+#include <experimental/filesystem>
+#endif
 #include <mutex>
 #include <condition_variable>
 #include <chrono>

@@ -1131,7 +1131,7 @@ void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &o
 }
 
 void update_connected_specific_settings(FrontendData* frontend_data, const CaptureDevice &cc_device) {
-	if(cc_device.cc_type == CAPTURE_CONN_IS_NITRO) {
+	if((cc_device.cc_type == CAPTURE_CONN_IS_NITRO) || (cc_device.cc_type == CAPTURE_CONN_CYPRESS_OPTIMIZE)) {
 		frontend_data->top_screen->update_capture_specific_settings();
 		frontend_data->bot_screen->update_capture_specific_settings();
 		frontend_data->joint_screen->update_capture_specific_settings();

@@ -47,6 +47,7 @@ int StartCaptureDma(cy_device_device_handlers* handlers, const cyop_device_usb_d
 int capture_end(cy_device_device_handlers* handlers, const cyop_device_usb_device* device);
 int ReadFrame(cy_device_device_handlers* handlers, uint8_t* buf, int length, const cyop_device_usb_device* device_desc);
 int ReadFrameAsync(cy_device_device_handlers* handlers, uint8_t* buf, int length, const cyop_device_usb_device* device_desc, cy_async_callback_data* cb_data);
+uint64_t get_device_id_from_key(std::string key, bool is_new_device);
 bool check_key_matches_device_id(uint64_t device_id, std::string key, bool is_new_device);
 bool check_key_matches_device_id(uint64_t device_id, std::string key, const cyop_device_usb_device* device);
 bool check_key_valid(std::string key, bool is_new_device);

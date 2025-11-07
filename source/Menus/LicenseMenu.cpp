@@ -91,6 +91,21 @@ static const LicenseMenuOptionInfo font_license_3_option = {
 static const LicenseMenuOptionInfo font_license_4_option = {
 .base_name = "open-font-license-official-text/"};
 
+static const LicenseMenuOptionInfo font_mono_license_0_option = {
+.base_name = "This software uses the font"};
+
+static const LicenseMenuOptionInfo font_mono_license_1_option = {
+.base_name = "SpaceMono-Regular."};
+
+static const LicenseMenuOptionInfo font_mono_license_2_option = {
+.base_name = "For its license, check:"};
+
+static const LicenseMenuOptionInfo font_mono_license_3_option = {
+.base_name = "openfontlicense.org/"};
+
+static const LicenseMenuOptionInfo font_mono_license_4_option = {
+.base_name = "open-font-license-official-text/"};
+
 static const LicenseMenuOptionInfo isng_license_0_option = {
 .base_name = "Portions of this software are"};
 
@@ -158,6 +173,11 @@ static const LicenseMenuOptionInfo* pollable_options[] = {
 &font_license_2_option,
 &font_license_3_option,
 &font_license_4_option,
+&font_mono_license_0_option,
+&font_mono_license_1_option,
+&font_mono_license_2_option,
+&font_mono_license_3_option,
+&font_mono_license_4_option,
 &cc3dsfs_license_0_option,
 &cc3dsfs_license_1_option,
 &cc3dsfs_license_2_option,

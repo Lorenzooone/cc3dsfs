@@ -2,5 +2,8 @@
 
 <resources>
     <usb-device vendor-id="1027" product-id="24596" class="0" subclass="0" protocol="0" />
+    <usb-device vendor-id="1874" product-id="34323" class="0" subclass="0" protocol="0" />
+    <usb-device vendor-id="1204" product-id="34323" class="0" subclass="0" protocol="0" />
+    <usb-device vendor-id="1204" product-id="4100" class="0" subclass="0" protocol="0" />
 </resources>
 

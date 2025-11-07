@@ -98,7 +98,7 @@ void ExtraButton::poll(std::queue<SFEvent> &events_queue) {
 	}
 	else
 		this->started = false;
-	events_queue.emplace(pressed, this->corresponding_key, this->is_power, true);
+	events_queue.emplace(pressed, this->corresponding_key, false, false, false, false, this->is_power, true);
 }
 
 std::string get_extra_button_name(sf::Keyboard::Key corresponding_key) {

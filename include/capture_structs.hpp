@@ -328,6 +328,7 @@ struct CaptureStatus {
 	volatile bool reset_hardware = false;
 	bool requested_3d = false;
 	bool request_low_bw_format = true;
+	bool key_updated = false;
 	CaptureScreensType capture_type;
 	CaptureSpeedsType capture_speed;
 	int battery_percentage;

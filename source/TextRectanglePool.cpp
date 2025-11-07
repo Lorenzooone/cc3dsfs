@@ -1,9 +1,11 @@
 #include "TextRectangle.hpp"
 #include "TextRectanglePool.hpp"
 
-TextRectanglePool::TextRectanglePool(bool font_load_success, sf::Font *text_font) {
+TextRectanglePool::TextRectanglePool(bool font_load_success, sf::Font *text_font, bool font_mono_load_success, sf::Font *text_font_mono) {
 	this->font_load_success = font_load_success;
 	this->text_font = text_font;
+	this->font_mono_load_success = font_mono_load_success;
+	this->text_font_mono = text_font_mono;
 	this->num_loaded_text_rectangles = 0;
 	this->text_rectangles_list = NULL;
 }
@@ -30,7 +32,7 @@ void TextRectanglePool::request_num_text_rectangles(int num_wanted_text_rectangl
 
 	// Create new TextRectangles
 	for(int i = this->num_loaded_text_rectangles; i < num_wanted_text_rectangles; i++) {
-		new_text_rectangle_ptrs[i] = new TextRectangle(this->font_load_success, *this->text_font);
+		new_text_rectangle_ptrs[i] = new TextRectangle(this->font_load_success, this->text_font, this->font_mono_load_success, this->text_font_mono);
 	}
 
 	if(this->num_loaded_text_rectangles > 0)

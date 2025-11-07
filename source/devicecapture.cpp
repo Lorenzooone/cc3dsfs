@@ -12,6 +12,7 @@
 #include <iostream>
 
 #define CONNECTION_NO_DEVICE_SELECTED (-1)
+#define NO_SERIAL_KEY_STR "No Serial Key"
 
 static bool poll_connection_window_screen(WindowScreen *screen, int &chosen_index) {
 	screen->poll();
@@ -308,6 +309,37 @@ std::string get_device_id_string(CaptureStatus* capture_status) {
 	return "";
 }
 
+std::string get_device_serial_key_string(CaptureStatus* capture_status) {
+	if(!capture_status->connected)
+		return NO_SERIAL_KEY_STR;
+	if(capture_status->device.device_id == 0)
+		return NO_SERIAL_KEY_STR;
+	if(capture_status->device.key == "")
+		return NO_SERIAL_KEY_STR;
+
+	return capture_status->device.key;
+}
+
+void check_device_serial_key_update(CaptureStatus* capture_status, bool differentiator, std::string key) {
+	if(get_device_serial_key_string(capture_status) != NO_SERIAL_KEY_STR)
+		return;
+	if(capture_status->key_updated)
+		return;
+
+	switch(capture_status->device.cc_type) {
+		case CAPTURE_CONN_CYPRESS_OPTIMIZE:
+			#ifdef USE_CYPRESS_OPTIMIZE
+			if(differentiator != is_device_optimize_n3ds(&capture_status->device))
+				break;
+			if(cyop_is_key_for_device_id(&capture_status->device, key))
+				capture_status->key_updated = true;
+			#endif
+			break;
+		default:
+			break;
+	}
+}
+
 std::string get_name_of_device(CaptureStatus* capture_status, bool use_long, bool want_real_serial) {
 	if(!capture_status->connected)
 		return "Not connected";
@@ -395,6 +427,22 @@ float get_framerate_multiplier(CaptureStatus* capture_status) {
 	if(capture_status->request_low_bw_format)
 		return 1;
 	return 0.5;
+}
+
+KeySaveError save_cc_key(std::string key, CaptureConnectionType conn_type, bool differentiator) {
+	KeySaveError error = KEY_SAVE_METHOD_NOT_FOUND;
+
+	switch(conn_type) {
+		case CAPTURE_CONN_CYPRESS_OPTIMIZE:
+			#ifdef USE_CYPRESS_OPTIMIZE
+			error = add_key_to_file(key, differentiator);
+			#endif
+			break;
+		default:
+			break;
+	}
+
+	return error;
 }
 
 void capture_init() {

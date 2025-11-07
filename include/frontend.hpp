@@ -41,6 +41,7 @@
 #include "SecondScreen3DRelativePositionMenu.hpp"
 #include "USBConflictResolutionMenu.hpp"
 #include "Optimize3DSMenu.hpp"
+#include "OptimizeSerialKeyAddMenu.hpp"
 #include "display_structs.hpp"
 #include "event_structs.hpp"
 #include "shaders_list.hpp"
@@ -198,6 +199,7 @@ private:
 	SecondScreen3DRelativePositionMenu *second_screen_3d_relpos_menu;
 	USBConflictResolutionMenu *usb_conflict_resolution_menu;
 	Optimize3DSMenu* optimize_3ds_menu;
+	OptimizeSerialKeyAddMenu* optimize_serial_key_add_menu;
 
 	std::vector<const CropData*> possible_crops;
 	std::vector<const CropData*> possible_crops_ds;
@@ -230,6 +232,7 @@ private:
 	sf::Texture bot_in_tex;
 
 	sf::Font text_font;
+	sf::Font text_font_mono;
 
 	volatile bool main_thread_owns_window;
 	volatile bool is_window_factory_done;
@@ -321,6 +324,7 @@ private:
 	void second_screen_3d_match_bottom_pos_change();
 	void devices_allowed_change(PossibleCaptureDevices device);
 	void input_video_data_format_request_change(bool positive);
+	bool add_new_cc_key(std::string key, CaptureConnectionType conn_type, bool discriminator);
 	bool query_reset_request();
 	void reset_held_times(bool force = true);
 	void poll_window(bool do_everything);
@@ -410,7 +414,9 @@ private:
 	void setup_second_screen_3d_relpos_menu(bool reset_data = true);
 	void setup_usb_conflict_resolution_menu(bool reset_data = true);
 	void setup_optimize_3ds_menu(bool reset_data = true);
+	void setup_optimize_serial_key_add_menu(bool reset_data = true);
 	void update_connection();
+	bool has_menu_textbox();
 };
 
 struct FrontendData {

@@ -10,6 +10,13 @@
 #include <libusb.h>
 #include <chrono>
 #include <cstring>
+#if (!defined(_MSC_VER)) || (_MSC_VER > 1916)
+#include <filesystem>
+#else
+#include <experimental/filesystem>
+#endif
+#include <fstream>
+#include <sstream>
 
 // This code was developed by exclusively looking at Wireshark USB packet
 // captures to learn the USB device's protocol.
@@ -60,8 +67,8 @@ struct CypressOptimize3DSDeviceCaptureReceivedData {
 static void cypress_device_read_frame_cb(void* user_data, int transfer_length, int transfer_status);
 static int get_cypress_device_status(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data);
 static void error_cypress_device_status(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, int error_val);
-static std::string read_key_for_device_id_from_file(uint64_t device_id, const cyop_device_usb_device* usb_device_desc);
-static void add_key_for_device_id_to_file(uint64_t device_id, std::string key, const cyop_device_usb_device* usb_device_desc);
+static std::string read_key_for_device_id_from_file(uint64_t device_id, bool is_new_device);
+static void add_key_for_device_id_to_file(uint64_t device_id, std::string key, bool is_new_device);
 
 static cy_device_device_handlers* usb_find_by_serial_number(const cyop_device_usb_device* usb_device_desc, std::string wanted_serial_number, CaptureDevice* new_device) {
 	cy_device_device_handlers* final_handlers = NULL;
@@ -714,6 +721,26 @@ static void cyop_key_missing_warning_message(CaptureData* capture_data) {
 	capture_warning_print(capture_data, "Key missing!\nClose to Timeout!\nReconfigured FPGA!", "Key missing! Close to Timeout! Reconfigured FPGA!");
 }
 
+static void cyop_key_check_and_interrogate_file(CaptureStatus* capture_status, const cyop_device_usb_device* usb_device_desc, uint64_t device_id, bool &is_key_valid, std::string &read_key) {
+	if(is_key_valid)
+		return;
+
+	// This can only happen during the first connection
+	is_key_valid = check_key_matches_device_id(device_id, read_key, usb_device_desc);
+
+	// This also can only happen during the first connection
+	if(is_key_valid)
+		add_key_for_device_id_to_file(device_id, read_key, usb_device_desc);
+	else {
+		read_key = read_key_for_device_id_from_file(device_id, usb_device_desc->is_new_device);
+		is_key_valid = check_key_matches_device_id(device_id, read_key, usb_device_desc->is_new_device);
+	}
+
+	capture_status->device.device_id = device_id;
+	capture_status->device.key = read_key;
+	capture_status->key_updated = false;
+}
+
 static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, InputVideoDataType &stored_video_data_type, bool &stored_is_3d, bool could_use_3d) {
 	cy_device_device_handlers* handlers = (cy_device_device_handlers*)capture_data->handle;
 	const cyop_device_usb_device* usb_device_desc = (const cyop_device_usb_device*)capture_data->status.device.descriptor;
@@ -723,19 +750,13 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 	bool force_capture_start_key = false;
 	int ret = capture_start(handlers, usb_device_desc, true, stored_video_data_type == OPTIMIZE_RGB888_FORMAT, device_id, read_key);
 	capture_data->status.title_check_id += 1;
+	capture_data->status.key_updated = false;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_capture_start = std::chrono::high_resolution_clock::now();
-	bool is_key_valid = check_key_matches_device_id(device_id, read_key, usb_device_desc);
 
-	if(is_key_valid)
-		add_key_for_device_id_to_file(device_id, read_key, usb_device_desc);
-	else {
-		read_key = read_key_for_device_id_from_file(device_id, usb_device_desc);
-		is_key_valid = check_key_matches_device_id(device_id, read_key, usb_device_desc);
-	}
-
-	capture_data->status.device.device_id = device_id;
-	capture_data->status.device.key = read_key;
+	bool is_key_valid = false;
+	cyop_key_check_and_interrogate_file(&capture_data->status, usb_device_desc, device_id, is_key_valid, read_key);
 	capture_data->status.device.video_data_type = stored_video_data_type;
+
 	if (ret < 0) {
 		capture_error_print(true, capture_data, "Capture Start: Failed");
 		return false;
@@ -754,10 +775,11 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 			bool has_recovered = false;
 			if(cause_error == LIBUSB_ERROR_TIMEOUT) {
 				force_capture_start_key = (!check_key_matches_device_id(device_id, read_key, usb_device_desc)) && key_missing_capture_start_again_check_time(clock_last_capture_start);
+				cyop_key_check_and_interrogate_file(&capture_data->status, usb_device_desc, device_id, is_key_valid, read_key);
 				int timeout_ret = restart_captures_cc_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, could_use_3d, force_capture_start_key, read_key, clock_last_capture_start);
 				if(timeout_ret >= 0) {
 					has_recovered = true;
-					if(force_capture_start_key)
+					if(force_capture_start_key && (!is_key_valid))
 						cyop_key_missing_warning_message(capture_data);
 				}
 			}
@@ -769,15 +791,16 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 		bool is_new_3d = could_use_3d && get_3d_enabled(&capture_data->status);
 		InputVideoDataType wanted_input_video_data_type = extract_wanted_input_video_data_type(capture_data);
 		force_capture_start_key = (!is_key_valid) && (!check_key_matches_device_id(device_id, read_key, usb_device_desc)) && key_missing_capture_start_again_check_time(clock_last_capture_start);
-		if((wanted_input_video_data_type != stored_video_data_type) || (is_new_3d != stored_is_3d) || force_capture_start_key) {
+		if((wanted_input_video_data_type != stored_video_data_type) || (is_new_3d != stored_is_3d) || force_capture_start_key || capture_data->status.key_updated) {
 			capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM + NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS;
 			wait_all_cypress_device_buffers_free(capture_data, cypress_device_capture_recv_data);
+			cyop_key_check_and_interrogate_file(&capture_data->status, usb_device_desc, device_id, is_key_valid, read_key);
 			ret = restart_captures_cc_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, could_use_3d, force_capture_start_key, read_key, clock_last_capture_start);
 			if(ret < 0) {
 				capture_error_print(true, capture_data, "Disconnected: Update mode error");
 				return false;
 			}
-			if(force_capture_start_key)
+			if(force_capture_start_key && (!is_key_valid))
 				cyop_key_missing_warning_message(capture_data);
 		}
 		if(!get_buffer_and_schedule_read(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, "Setup Read: Failed"))
@@ -877,21 +900,18 @@ bool cyop_is_key_for_device(CaptureDevice* device, std::string key) {
 	return check_key_matches_device_id(device->device_id, key, (const cyop_device_usb_device*)device->descriptor);
 }
 
-static std::string get_keys_file_path(const cyop_device_usb_device* usb_device_desc) {
+static std::string get_keys_file_path(bool is_new_device) {
 	std::string path = get_base_path_keys();
 
-	if(usb_device_desc->is_new_device)
+	if(is_new_device)
 		path += "optimize_new_3ds.txt";
 	else
 		path += "optimize_old_3ds.txt";
 	return path;
 }
 
-static std::string read_key_for_device_id_from_file(uint64_t device_id, const cyop_device_usb_device* usb_device_desc) {
-	if(usb_device_desc == NULL)
-		return "";
-
-	std::ifstream file(get_keys_file_path(usb_device_desc));
+static std::string read_key_for_device_id_from_file(uint64_t device_id, bool is_new_device) {
+	std::ifstream file(get_keys_file_path(is_new_device));
 	std::string line;
 	std::string out_key = "";
 
@@ -904,7 +924,7 @@ static std::string read_key_for_device_id_from_file(uint64_t device_id, const cy
 			std::string value;
 			if(!std::getline(kvp, value))
 				continue;
-			if(check_key_matches_device_id(device_id, value, usb_device_desc)) {
+			if(check_key_matches_device_id(device_id, value, is_new_device)) {
 				out_key = value;
 				break;
 			}
@@ -918,19 +938,39 @@ static std::string read_key_for_device_id_from_file(uint64_t device_id, const cy
 	return out_key;
 }
 
-static void add_key_for_device_id_to_file(uint64_t device_id, std::string key, const cyop_device_usb_device* usb_device_desc) {
+static void add_key_for_device_id_to_file(uint64_t device_id, std::string key, bool is_new_device) {
 	// This is fine for a limited amount of keys.
 	// It should be optimized if many keys need to be stored...
-	if(usb_device_desc == NULL)
-		return;
 	if(key == "")
 		return;
-	if(read_key_for_device_id_from_file(device_id, usb_device_desc) == key)
+	if(read_key_for_device_id_from_file(device_id, is_new_device) == key)
 		return;
 
-	std::ofstream file(get_keys_file_path(usb_device_desc), std::ios_base::app | std::ios_base::out);
+	std::ofstream file(get_keys_file_path(is_new_device), std::ios_base::app | std::ios_base::out);
 	file << key << std::endl;
 	file.close();
+}
+
+KeySaveError add_key_to_file(std::string key, bool is_for_new_3ds) {
+	uint64_t device_id = get_device_id_from_key(key, is_for_new_3ds);
+	if(device_id == 0)
+		return KEY_INVALID;
+	if(read_key_for_device_id_from_file(device_id, is_for_new_3ds) == key)
+		return KEY_ALREADY_PRESENT;
+	add_key_for_device_id_to_file(device_id, key, is_for_new_3ds);
+	return KEY_SAVED;
+}
+
+bool cyop_is_key_for_device_id(CaptureDevice* device, std::string key) {
+	if(device == NULL)
+		return false;
+	if(device->cc_type != CAPTURE_CONN_CYPRESS_OPTIMIZE)
+		return false;
+	if(device->device_id == 0)
+		return false;
+	if(key == "")
+		return false;
+	return check_key_matches_device_id(device->device_id, key, (const cyop_device_usb_device*)device->descriptor);
 }
 
 void usb_cyop_device_init() {

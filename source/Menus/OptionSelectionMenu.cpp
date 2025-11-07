@@ -494,7 +494,9 @@ void OptionSelectionMenu::draw(float scaling_factor, sf::RenderTarget &window) {
 }
 
 void OptionSelectionMenu::prepare_text_slices(int x_multiplier, int x_divisor, int y_multiplier, int y_divisor, int index, float text_scaling_factor, bool center) {
-	this->labels[index]->setTextFactor(text_scaling_factor);
+	int elem_index = index - this->elements_start_id;
+	int start = this->num_options_per_screen * this->future_data.page;
+	this->labels[index]->setTextFactor(text_scaling_factor * this->get_option_text_factor((elem_index / this->single_option_multiplier) + start));
 	int x_base_pos = (this->future_data.menu_width * x_multiplier) / x_divisor;
 	int y_base_pos = (this->future_data.menu_height * y_multiplier) / y_divisor;
 	int x_size = ((this->future_data.menu_width * (x_multiplier + 1)) / x_divisor) - x_base_pos;

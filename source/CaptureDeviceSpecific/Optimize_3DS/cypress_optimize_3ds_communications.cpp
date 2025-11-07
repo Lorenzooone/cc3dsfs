@@ -2,6 +2,7 @@
 #include "cypress_optimize_3ds_communications.hpp"
 #include "cypress_shared_communications.hpp"
 #include "cypress_optimize_3ds_acquisition_general.hpp"
+#include "cypress_optimize_3ds_acquisition.hpp"
 #include "usb_generic.hpp"
 
 #include "optimize_new_3ds_fw.h"
@@ -12,7 +13,7 @@
 #include "optimize_old_3ds_565_fpga_pl.h"
 #include "optimize_old_3ds_888_fpga_pl.h"
 
-#include "optimize_key_to_byte_table.h"
+#include "optimize_serial_key_to_byte_table.h"
 
 // CRC32 table is a slightly edited crc32-adler.
 // First entry all FFs instead of 00s.
@@ -39,8 +40,8 @@
 #define OPTIMIZE_NEW_3DS_WANTED_VALUE_BASE 0xFE00
 #define OPTIMIZE_OLD_3DS_WANTED_VALUE_BASE 0xFD00
 
-#define OPTIMIZE_NUM_KEY_CHARS 20
-#define OPTIMIZE_NUM_KEY_CHARS_WITH_DASHES (OPTIMIZE_NUM_KEY_CHARS + 4)
+#define OPTIMIZE_NUM_KEY_CHARS SERIAL_KEY_OPTIMIZE_NO_DASHES_SIZE
+#define OPTIMIZE_NUM_KEY_CHARS_WITH_DASHES SERIAL_KEY_OPTIMIZE_WITH_DASHES_SIZE
 #define OPTIMIZE_NUM_KEY_BYTES 12
 
 #define OPTIMIZE_EEPROM_NEW_SIZE 0x80
@@ -221,9 +222,9 @@ static bool key_to_key_bytes(uint8_t* in, uint8_t* out) {
 
 	for(size_t i = 0; i < OPTIMIZE_NUM_KEY_CHARS; i++) {
 		uint8_t character = in[i];
-		if(optimize_key_to_byte_table[character] == 0xFF)
+		if(optimize_serial_key_to_byte_table[character] == 0xFF)
 			return false;
-		value_converted |= optimize_key_to_byte_table[character] << converted_pos;
+		value_converted |= optimize_serial_key_to_byte_table[character] << converted_pos;
 		converted_pos += 5;
 		if(converted_pos >= 8) {
 			out[out_index++] = value_converted & 0xFF;
@@ -686,12 +687,19 @@ static const uint8_t* get_start_capture_setup_key_buffer(const cyop_device_usb_d
 	return start_capture_setup_key_buffer_565_old;
 }
 
-bool check_key_matches_device_id(uint64_t device_id, std::string key, bool is_new_device) {
+uint64_t get_device_id_from_key(std::string key, bool is_new_device) {
 	uint8_t key_bytes[OPTIMIZE_NUM_KEY_BYTES];
 	bool is_key_valid = key_to_data(key, key_bytes, is_new_device);
 	if(!is_key_valid)
+		return 0;
+	return read_be64(key_bytes);
+}
+
+bool check_key_matches_device_id(uint64_t device_id, std::string key, bool is_new_device) {
+	uint64_t device_id_read = get_device_id_from_key(key, is_new_device);
+	if(device_id_read == 0)
 		return false;
-	return device_id == read_be64(key_bytes);
+	return device_id == device_id_read;
 }
 
 bool check_key_matches_device_id(uint64_t device_id, std::string key, const cyop_device_usb_device* device) {

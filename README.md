@@ -136,9 +136,11 @@ The current configuration can be saved to various extra profiles, creating the g
 
 The name of profiles can be changed by altering the __name__ field in its file.
 
-On Linux and MacOS, the profiles can be found at the "${HOME}/.config/cc3dsfs" folder. By default, "/home/<user_name>/.config/cc3dsfs".
+On Linux and MacOS, by default the profiles can be found at the "${HOME}/.config/cc3dsfs" folder. Or "/home/<user_name>/.config/cc3dsfs".
 
 On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the directory in which the program runs from.
+
+The CC3DSFS\_CFG\_DIR environment variable can be used to specify a different target folder for cc3dsfs to store its data.
 
 ## Notes
 - On Linux, you may need to include the udev USB access rules. You can use the .rules files available in the repository's usb\_rules directory, or define your own. For ease of use, releases come bundled with a script to do it named install\_usb\_rules.sh. It may require elevated permissions to execute properly. You may get a permission error if the rules are not installed.
@@ -153,4 +155,5 @@ On Windows, the profiles can be found in the ".config/cc3dsfs" folder inside the
 - When using the new 2024 Loopy DS Capture Card on Windows, the default driver (FTD2XX) adds one extra frame of latency. To remove that, consider switching to WinUSB as the driver. To change driver, download a software to install drivers like [Zadig](https://zadig.akeo.ie/), select the device in question and select WinUSB. Then install the driver and wait for it to finish. The application will now use WinUSB, with better latency (the serial shown in the Status menu will have an l where there previously was a d).
 - There are multiple capture cards which use the same EZ-USB FX2LP board, creating a conflict. This means that when the user connects a device which uses the EZ-USB FX2LP board, they need to select one capture card among the possible ones. To avoid this extra step, the user can disable scanning for the conflicting capture cards they do not intend to use. The settings to do this are available under Extra Settings -> USB Conflict Resolution.
 - MacOS does not allow running multiple instances of the same application, normally. If you want to run multiple instances of cc3dsfs on MacOS, open the terminal in the folder where cc3dsfs is and type `open -n cc3dsfs.app`.
-- The CC3DSFS\_CFG\_DIR environment variable can be used to specify where cc3dsfs will store its data.
+- To properly use the Optimize capture cards with cc3dsfs, a serial key is needed. This can be added via the _Optimize 3DS Settings_, under the _Add New Serial Key_ option. You can use CTRL+V in the textbox to copy the serial key, or insert it manually. To obtain the key, get your device ID (it can be copied from the _Optimize 3DS Settings_ menu) and type it in the [Official site](https://optimize.ath.cx/productkey_en.html). Using a keyboard to do this is suggested (but not required).
+- Keys are saved under the keys folder inside the cc3dsfs config folder.

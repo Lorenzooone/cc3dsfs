@@ -10,7 +10,7 @@ enum JoystickAction {JOY_ACTION_NONE, JOY_ACTION_CONFIRM, JOY_ACTION_NEGATE, JOY
 enum EventType {EVENT_NONE, EVENT_JOYSTICK_BTN_PRESSED, EVENT_JOYSTICK_BTN_RELEASED, EVENT_JOYSTICK_MOVED, EVENT_MOUSE_BTN_PRESSED, EVENT_MOUSE_MOVED, EVENT_KEY_PRESSED, EVENT_TEXT_ENTERED, EVENT_CLOSED, EVENT_KEY_RELEASED, EVENT_MOUSE_BTN_RELEASED};
 
 struct SFEvent {
-	SFEvent(bool pressed, sf::Keyboard::Key code, bool poweroff_cmd = false, bool is_extra = false) : type(pressed ? EVENT_KEY_PRESSED : EVENT_KEY_RELEASED), code(code), poweroff_cmd(poweroff_cmd), is_extra(is_extra) {}
+	SFEvent(bool pressed, sf::Keyboard::Key code, bool alt, bool control, bool shift, bool system, bool poweroff_cmd = false, bool is_extra = false) : type(pressed ? EVENT_KEY_PRESSED : EVENT_KEY_RELEASED), code(code), alt(alt), control(control), shift(shift), system(system), poweroff_cmd(poweroff_cmd), is_extra(is_extra) {}
 	SFEvent(uint32_t unicode) : type(EVENT_TEXT_ENTERED), unicode(unicode) {}
 	SFEvent(bool pressed, uint32_t joystickId, uint32_t joy_button) : type(pressed ? EVENT_JOYSTICK_BTN_PRESSED : EVENT_MOUSE_BTN_RELEASED), joystickId(joystickId), joy_button(joy_button) {}
 	SFEvent(uint32_t joystickId, sf::Joystick::Axis axis, float position) : type(EVENT_JOYSTICK_MOVED), joystickId(joystickId), axis(axis), position(position) {}
@@ -20,6 +20,10 @@ struct SFEvent {
 
 	EventType type;
 	sf::Keyboard::Key code;
+	bool alt;
+	bool control;
+	bool shift;
+	bool system;
 	uint32_t unicode;
 	uint32_t joystickId;
 	uint32_t joy_button;

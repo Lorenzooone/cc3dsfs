@@ -1,6 +1,12 @@
 #ifndef __CYPRESS_OPTIMIZE_3DS_ACQUISITION_HPP
 #define __CYPRESS_OPTIMIZE_3DS_ACQUISITION_HPP
 
+#define SERIAL_KEY_OPTIMIZE_NO_DASHES_SIZE 20
+#define SERIAL_KEY_OPTIMIZE_DASHES_REPEATED_POS 4
+// Not the last one, so -1
+#define SERIAL_KEY_OPTIMIZE_DASHES_NUM ((SERIAL_KEY_OPTIMIZE_NO_DASHES_SIZE / SERIAL_KEY_OPTIMIZE_DASHES_REPEATED_POS) - 1)
+#define SERIAL_KEY_OPTIMIZE_WITH_DASHES_SIZE (SERIAL_KEY_OPTIMIZE_NO_DASHES_SIZE + SERIAL_KEY_OPTIMIZE_DASHES_NUM)
+
 #include <vector>
 #include "utils.hpp"
 #include "hw_defs.hpp"
@@ -18,6 +24,7 @@ bool is_device_optimize_3ds(CaptureDevice* device);
 bool is_device_optimize_o3ds(CaptureDevice* device);
 bool is_device_optimize_n3ds(CaptureDevice* device);
 bool cyop_is_key_for_device_id(CaptureDevice* device, std::string key);
+KeySaveError add_key_to_file(std::string key, bool is_for_new_3ds);
 void usb_cyop_device_init();
 void usb_cyop_device_close();
 

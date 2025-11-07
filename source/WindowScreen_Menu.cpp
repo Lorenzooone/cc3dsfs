@@ -126,6 +126,7 @@ void WindowScreen::init_menus() {
 	this->second_screen_3d_relpos_menu = new SecondScreen3DRelativePositionMenu(this->text_rectangle_pool);
 	this->usb_conflict_resolution_menu = new USBConflictResolutionMenu(this->text_rectangle_pool);
 	this->optimize_3ds_menu = new Optimize3DSMenu(this->text_rectangle_pool);
+	this->optimize_serial_key_add_menu = new OptimizeSerialKeyAddMenu(this->text_rectangle_pool);
 }
 
 void WindowScreen::destroy_menus() {
@@ -157,6 +158,7 @@ void WindowScreen::destroy_menus() {
 	delete this->second_screen_3d_relpos_menu;
 	delete this->usb_conflict_resolution_menu;
 	delete this->optimize_3ds_menu;
+	delete this->optimize_serial_key_add_menu;
 }
 
 void WindowScreen::set_close(int ret_val) {
@@ -599,6 +601,29 @@ void WindowScreen::input_video_data_format_request_change(bool positive) {
 	this->last_data_format_change_time = curr_time;
 }
 
+bool WindowScreen::add_new_cc_key(std::string key, CaptureConnectionType conn_type, bool discriminator) {
+	bool ret = false;
+	KeySaveError save_error = save_cc_key(key, conn_type, discriminator);
+	switch(save_error) {
+		case KEY_SAVE_METHOD_NOT_FOUND:
+			this->print_notification("Key saving method missing", TEXT_KIND_ERROR);
+			break;
+		case KEY_INVALID:
+			this->print_notification("Key invalid", TEXT_KIND_ERROR);
+			break;
+		case KEY_ALREADY_PRESENT:
+			this->print_notification("Key already present", TEXT_KIND_WARNING);
+			break;
+		case KEY_SAVED:
+			this->print_notification("Key saved successfully");
+			ret = true;
+			break;
+		default:
+			break;
+	}
+	return ret;
+}
+
 bool WindowScreen::can_execute_cmd(const WindowCommand* window_cmd, bool is_extra, bool is_always) {
 	if((!window_cmd->usable_always) && is_always)
 		return false;
@@ -741,6 +766,10 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 			break;
 
 		case EVENT_TEXT_ENTERED:
+			if(this->has_menu_textbox()) {
+				consumed = false;
+				break;
+			}
 			switch(event_data.unicode) {
 				case 's':
 					this->execute_cmd(WINDOW_COMMAND_SPLIT);
@@ -863,6 +892,8 @@ bool WindowScreen::can_setup_menu() {
 }
 
 void WindowScreen::switch_to_menu(CurrMenuType new_menu_type, GenericMenu* new_menu, bool reset_data, bool update_last_menu_change_time) {
+	if((this->curr_menu != new_menu_type) && (this->curr_menu_ptr != NULL))
+		this->curr_menu_ptr->on_menu_unloaded();
 	this->curr_menu = new_menu_type;
 	this->curr_menu_ptr = new_menu;
 	if(this->curr_menu_ptr != NULL)
@@ -1206,11 +1237,26 @@ void WindowScreen::setup_optimize_3ds_menu(bool reset_data) {
 	}
 }
 
+void WindowScreen::setup_optimize_serial_key_add_menu(bool reset_data) {
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != OPTIMIZE_SERIAL_KEY_ADD_MENU_TYPE) {
+		this->switch_to_menu(OPTIMIZE_SERIAL_KEY_ADD_MENU_TYPE, this->optimize_serial_key_add_menu, reset_data);
+		this->optimize_serial_key_add_menu->insert_data(&this->capture_status->device);
+	}
+}
+
 void WindowScreen::update_save_menu() {
 	if(this->curr_menu == SAVE_MENU_TYPE) {
 		this->curr_menu = DEFAULT_MENU_TYPE;
 		this->setup_fileconfig_menu(true, false, true);
 	}
+}
+
+bool WindowScreen::has_menu_textbox() {
+	if(this->loaded_menu_ptr == NULL)
+		return false;
+	return this->loaded_menu_ptr->is_inside_textbox;
 }
 
 bool WindowScreen::no_menu_poll(SFEvent &event_data) {
@@ -1286,6 +1332,10 @@ bool WindowScreen::main_poll(SFEvent &event_data) {
 	bool consumed = true;
 	switch(event_data.type) {
 		case EVENT_TEXT_ENTERED:
+			if(this->has_menu_textbox()) {
+				consumed = false;
+				break;
+			}
 			switch(event_data.unicode) {
 				case 'c':
 					this->execute_cmd(WINDOW_COMMAND_CROP);
@@ -2302,6 +2352,17 @@ void WindowScreen::poll(bool do_everything) {
 						break;
 					case OPTIMIZE3DS_MENU_NO_ACTION:
 						break;
+					case OPTIMIZE3DS_MENU_INFO_DEVICE_ID:
+						break;
+					case OPTIMIZE3DS_MENU_COPY_DEVICE_ID:
+						sf::Clipboard::setString(get_device_id_string(this->capture_status));
+						this->print_notification("Device ID copied!");
+						break;
+					case OPTIMIZE3DS_MENU_OPTIMIZE_SERIAL_KEY:
+						break;
+					case OPTIMIZE3DS_MENU_OPTIMIZE_SERIAL_KEY_MENU:
+						this->setup_optimize_serial_key_add_menu();
+						break;
 					case OPTIMIZE3DS_MENU_INPUT_VIDEO_FORMAT_INC:
 						this->input_video_data_format_request_change(true);
 						break;
@@ -2313,6 +2374,37 @@ void WindowScreen::poll(bool do_everything) {
 				}
 				this->loaded_menu_ptr->reset_output_option();
 				break;
+			case OPTIMIZE_SERIAL_KEY_ADD_MENU_TYPE:
+				switch(this->optimize_serial_key_add_menu->selected_index) {
+					case OPTIMIZE_SERIAL_KEY_ADD_MENU_BACK:
+						this->setup_optimize_3ds_menu(false);
+						done = true;
+						break;
+					case OPTIMIZE_SERIAL_KEY_ADD_MENU_NO_ACTION:
+						break;
+					case OPTIMIZE_SERIAL_KEY_ADD_MENU_CONFIRM:
+						if(add_new_cc_key(this->optimize_serial_key_add_menu->get_key(), CAPTURE_CONN_CYPRESS_OPTIMIZE, this->optimize_serial_key_add_menu->key_for_new)) {
+							check_device_serial_key_update(this->capture_status, this->optimize_serial_key_add_menu->key_for_new, this->optimize_serial_key_add_menu->get_key());
+							this->setup_optimize_3ds_menu(false);
+							done = true;
+						}
+						break;
+					case OPTIMIZE_SERIAL_KEY_ADD_MENU_TARGET_DEC:
+						this->optimize_serial_key_add_menu->key_for_new = !this->optimize_serial_key_add_menu->key_for_new;
+						break;
+					case OPTIMIZE_SERIAL_KEY_ADD_MENU_TARGET_INC:
+						this->optimize_serial_key_add_menu->key_for_new = !this->optimize_serial_key_add_menu->key_for_new;
+						break;
+					case OPTIMIZE_SERIAL_KEY_ADD_MENU_TARGET_INFO:
+						break;
+					case OPTIMIZE_SERIAL_KEY_ADD_MENU_SELECT_TEXTBOX:
+						break;
+					case OPTIMIZE_SERIAL_KEY_ADD_MENU_KEY_PRINT:
+						break;
+					default:
+						break;
+				}
+				this->loaded_menu_ptr->reset_output_option();
 				break;
 			default:
 				break;
@@ -2341,6 +2433,10 @@ void WindowScreen::update_capture_specific_settings() {
 		this->setup_main_menu(true, true);
 	}
 	if(this->curr_menu == ISN_MENU_TYPE)
+		this->setup_no_menu();
+	if(this->curr_menu == OPTIMIZE_3DS_MENU_TYPE)
+		this->setup_no_menu();
+	if(this->curr_menu == OPTIMIZE_SERIAL_KEY_ADD_MENU_TYPE)
 		this->setup_no_menu();
 }
 
@@ -2427,11 +2523,11 @@ void WindowScreen::poll_window(bool do_everything) {
 					events_queue.emplace(EVENT_CLOSED);
 				else if(const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
 					if(this->shared_data->input_data.enable_keyboard_input)
-						events_queue.emplace(true, keyPressed->code);
+						events_queue.emplace(true, keyPressed->code, keyPressed->alt, keyPressed->control, keyPressed->shift, keyPressed->system);
 				}
 				else if(const auto* keyReleased = event->getIf<sf::Event::KeyReleased>()) {
 					if(this->shared_data->input_data.enable_keyboard_input)
-						events_queue.emplace(false, keyReleased->code);
+						events_queue.emplace(false, keyReleased->code, keyReleased->alt, keyReleased->control, keyReleased->shift, keyReleased->system);
 				}
 				else if(const auto* textEntered = event->getIf<sf::Event::TextEntered>()) {
 					if(this->shared_data->input_data.enable_keyboard_input)
@@ -2604,6 +2700,9 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			break;
 		case OPTIMIZE_3DS_MENU_TYPE:
 			this->optimize_3ds_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->capture_status);
+			break;
+		case OPTIMIZE_SERIAL_KEY_ADD_MENU_TYPE:
+			this->optimize_serial_key_add_menu->prepare(menu_scaling_factor, view_size_x, view_size_y);
 			break;
 		default:
 			break;

@@ -14,6 +14,10 @@ enum Optimize3DSMenuOutAction{
 	OPTIMIZE3DS_MENU_BACK,
 	OPTIMIZE3DS_MENU_INPUT_VIDEO_FORMAT_INC,
 	OPTIMIZE3DS_MENU_INPUT_VIDEO_FORMAT_DEC,
+	OPTIMIZE3DS_MENU_INFO_DEVICE_ID,
+	OPTIMIZE3DS_MENU_COPY_DEVICE_ID,
+	OPTIMIZE3DS_MENU_OPTIMIZE_SERIAL_KEY,
+	OPTIMIZE3DS_MENU_OPTIMIZE_SERIAL_KEY_MENU,
 };
 
 class Optimize3DSMenu : public OptionSelectionMenu {
@@ -30,6 +34,7 @@ protected:
 	void set_output_option(int index, int action);
 	size_t get_num_options();
 	std::string get_string_option(int index, int action);
+	float get_option_text_factor(int index);
 	void class_setup();
 private:
 	int *options_indexes;

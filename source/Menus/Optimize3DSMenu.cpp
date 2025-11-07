@@ -16,17 +16,47 @@ struct Optimize3DSMenuOptionInfo {
 	const Optimize3DSMenuOutAction out_action;
 };
 
-static const Optimize3DSMenuOptionInfo optimize_o3ds_hw_option = {
-.base_name = "Hardware: Old 3DS", .false_name = "", .is_selectable = false,
+static const Optimize3DSMenuOptionInfo optimize_o3ds_device_id_option = {
+.base_name = "Old 3DS Device ID:", .false_name = "", .is_selectable = false,
 .optimize_o3ds_valid = true, .optimize_n3ds_valid = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_NO_ACTION};
 
-static const Optimize3DSMenuOptionInfo optimize_n3ds_hw_option = {
-.base_name = "Hardware: New 3DS", .false_name = "", .is_selectable = false,
+static const Optimize3DSMenuOptionInfo optimize_n3ds_device_id_option = {
+.base_name = "New 3DS Device ID:", .false_name = "", .is_selectable = false,
 .optimize_o3ds_valid = false, .optimize_n3ds_valid = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_NO_ACTION};
+
+static const Optimize3DSMenuOptionInfo optimize_3ds_device_id_option = {
+.base_name = "Device ID", .false_name = "", .is_selectable = false,
+.optimize_o3ds_valid = true, .optimize_n3ds_valid = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
+.out_action = OPTIMIZE3DS_MENU_INFO_DEVICE_ID};
+
+static const Optimize3DSMenuOptionInfo optimize_copy_3ds_device_id_option = {
+.base_name = "Copy Device ID to clipboard", .false_name = "", .is_selectable = true,
+.optimize_o3ds_valid = true, .optimize_n3ds_valid = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
+.out_action = OPTIMIZE3DS_MENU_COPY_DEVICE_ID};
+
+static const Optimize3DSMenuOptionInfo optimize_serial_key_info_option = {
+.base_name = "Serial Key:", .false_name = "", .is_selectable = false,
+.optimize_o3ds_valid = true, .optimize_n3ds_valid = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
+.out_action = OPTIMIZE3DS_MENU_NO_ACTION};
+
+static const Optimize3DSMenuOptionInfo optimize_serial_key_option = {
+.base_name = "", .false_name = "", .is_selectable = false,
+.optimize_o3ds_valid = true, .optimize_n3ds_valid = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
+.out_action = OPTIMIZE3DS_MENU_OPTIMIZE_SERIAL_KEY};
+
+static const Optimize3DSMenuOptionInfo optimize_serial_key_menu_option = {
+.base_name = "Add New Serial Key", .false_name = "", .is_selectable = true,
+.optimize_o3ds_valid = true, .optimize_n3ds_valid = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
+.out_action = OPTIMIZE3DS_MENU_OPTIMIZE_SERIAL_KEY_MENU};
 
 static const Optimize3DSMenuOptionInfo optimize_3ds_format_explanation_0 = {
 .base_name = "Possible Data Types:", .false_name = "", .is_selectable = false,
@@ -65,8 +95,13 @@ static const Optimize3DSMenuOptionInfo optimize_3ds_change_format = {
 .out_action = OPTIMIZE3DS_MENU_INPUT_VIDEO_FORMAT_DEC};
 
 static const Optimize3DSMenuOptionInfo* pollable_options[] = {
-//&optimize_o3ds_hw_option,
-//&optimize_n3ds_hw_option,
+//&optimize_o3ds_device_id_option,
+//&optimize_n3ds_device_id_option,
+&optimize_3ds_device_id_option,
+&optimize_copy_3ds_device_id_option,
+&optimize_serial_key_info_option,
+&optimize_serial_key_option,
+&optimize_serial_key_menu_option,
 &optimize_3ds_format_explanation_0,
 &optimize_3ds_format_explanation_1,
 //&optimize_3ds_format_explanation_2,
@@ -162,6 +197,17 @@ static std::string get_data_format_name(bool request_low_bw_format) {
 	return request_low_bw_format ? "RGB565" : "RGB888";
 }
 
+float Optimize3DSMenu::get_option_text_factor(int index) {
+	if(index <= 0)
+		return 1.0f;
+	if(index >= ((int)NUM_TOTAL_MENU_OPTIONS))
+		return 1.0f;
+	index = this->options_indexes[index];
+	if(pollable_options[index]->out_action == OPTIMIZE3DS_MENU_OPTIMIZE_SERIAL_KEY)
+		return 0.85f;
+	return 1.0f;
+}
+
 void Optimize3DSMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, CaptureStatus* capture_status) {
 	int num_pages = this->get_num_pages();
 	if(this->future_data.page >= num_pages)
@@ -176,6 +222,12 @@ void Optimize3DSMenu::prepare(float menu_scaling_factor, int view_size_x, int vi
 		switch(pollable_options[option_index]->out_action) {
 			case OPTIMIZE3DS_MENU_INPUT_VIDEO_FORMAT_DEC:
 				this->labels[index]->setText(this->setTextOptionString(real_index, get_data_format_name(capture_status->request_low_bw_format)));
+				break;
+			case OPTIMIZE3DS_MENU_INFO_DEVICE_ID:
+				this->labels[index]->setText(this->setTextOptionString(real_index, get_device_id_string(capture_status)));
+				break;
+			case OPTIMIZE3DS_MENU_OPTIMIZE_SERIAL_KEY:
+				this->labels[index]->setText(get_device_serial_key_string(capture_status));
 				break;
 			default:
 				break;
