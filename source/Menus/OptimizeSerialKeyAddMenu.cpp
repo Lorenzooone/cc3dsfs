@@ -616,7 +616,7 @@ bool OptimizeSerialKeyAddMenu::poll(SFEvent &event_data) {
 				if(event_data.system)
 					is_paste_command = true;
 				#endif
-				if(!is_paste_command) {
+				if((!is_paste_command) || (!started_inside_textbox)) {
 					consumed = false;
 					break;
 				}
