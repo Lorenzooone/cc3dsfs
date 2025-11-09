@@ -526,6 +526,8 @@ void OptimizeSerialKeyAddMenu::right_code() {
 }
 
 void OptimizeSerialKeyAddMenu::quit_textbox(bool change_option_selected) {
+	if(this->is_inside_textbox && change_option_selected)
+		sf::Keyboard::setVirtualKeyboardVisible(false);
 	this->is_inside_textbox = false;
 	if(change_option_selected)
 		this->future_data.option_selected = this->get_next_option_selected_after_key_input() + this->elements_start_id;

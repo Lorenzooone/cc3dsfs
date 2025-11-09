@@ -3,4 +3,5 @@
 SFML_FOLDER=$1
 ARCH_CHOSEN=$2
 
-(cd ${SFML_FOLDER}/build/${ARCH_CHOSEN} ; make -j ; make install)
+BUILD_FOLDER=${SFML_FOLDER}/build/${ARCH_CHOSEN}
+(cd ${BUILD_FOLDER} ; make -j ; make install)
