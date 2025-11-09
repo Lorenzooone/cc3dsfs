@@ -498,7 +498,7 @@ static int start_command_send(cy_device_device_handlers* handlers, const cyop_de
 	return ret;
 }
 
-static int read_device_id_serial(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint32_t &value32, uint64_t &device_id) {	
+static int read_device_id_serial(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint32_t &value32, uint64_t &device_id, bool is_first_load) {	
 	const uint8_t first_buffer[] = { 0x64, 0x60, 0x01, 0xFF, 0xFF, 0x60, 0x02, 0x00, 0xFF, 0x00, 0xFF };
 	int transferred = 0;
 	int ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), first_buffer, sizeof(first_buffer), &transferred);
@@ -516,7 +516,7 @@ static int read_device_id_serial(cy_device_device_handlers* handlers, const cyop
 	ret = read_cached_device_id(handlers, device, device_id, is_full_0s);
 	if(ret < 0)
 		return ret;
-	if(is_full_0s)
+	if(is_full_0s || is_first_load)
 		ret = read_direct_serial_device_id(handlers, device, device_id);
 	if(ret < 0)
 		return ret;
@@ -625,7 +625,7 @@ int capture_start(cy_device_device_handlers* handlers, const cyop_device_usb_dev
 			cypress_pipe_reset_ctrl_bulk_in(handlers, get_cy_usb_info(device));
 			cypress_pipe_reset_ctrl_bulk_out(handlers, get_cy_usb_info(device));
 		}
-		ret = read_device_id_serial(handlers, device, value32, device_id);
+		ret = read_device_id_serial(handlers, device, value32, device_id, true);
 		if(ret < 0)
 			return ret;
 	}
@@ -641,7 +641,7 @@ int capture_start(cy_device_device_handlers* handlers, const cyop_device_usb_dev
 	}
 	cypress_pipe_reset_ctrl_bulk_in(handlers, get_cy_usb_info(device));
 	cypress_pipe_reset_ctrl_bulk_out(handlers, get_cy_usb_info(device));
-	ret = read_device_id_serial(handlers, device, value32, device_id);
+	ret = read_device_id_serial(handlers, device, value32, device_id, is_first_load);
 	if(ret < 0)
 		return ret;
 

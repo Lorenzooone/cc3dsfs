@@ -691,7 +691,7 @@ static int restart_captures_cc_reads(CaptureData* capture_data, CypressOptimize3
 		stored_video_data_type = wanted_input_video_data_type;
 		uint64_t device_id_dummy;
 		std::string read_key_dummy;
-		retval = capture_start(handlers, usb_device_desc, true, stored_video_data_type == OPTIMIZE_RGB888_FORMAT, device_id_dummy, read_key_dummy);
+		retval = capture_start(handlers, usb_device_desc, false, stored_video_data_type == OPTIMIZE_RGB888_FORMAT, device_id_dummy, read_key_dummy);
 		clock_last_capture_start = std::chrono::high_resolution_clock::now();
 		capture_data->status.device.video_data_type = stored_video_data_type;
 		if(retval < 0)
