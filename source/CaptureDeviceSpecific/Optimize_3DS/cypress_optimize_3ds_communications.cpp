@@ -736,9 +736,9 @@ static void populate_capture_setup_key_buffer(const cyop_device_usb_device* devi
 		setup_key_buffer[13] = key_bytes[10];
 		return;
 	}
-	setup_key_buffer[11] |= key_bytes[10] & 0xF0;
+	setup_key_buffer[11] |= (key_bytes[11] & 0xF) << 4;
 	setup_key_buffer[13] = ((key_bytes[10] & 0xF) << 4) | (key_bytes[11] >> 4);
-	setup_key_buffer[15] = key_bytes[11] & 0xF;
+	setup_key_buffer[15] = key_bytes[10] >> 4;
 }
 
 int StartCaptureDma(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_rgb888, bool is_3d, std::string key) {
