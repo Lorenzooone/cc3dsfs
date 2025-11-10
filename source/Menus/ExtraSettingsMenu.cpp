@@ -23,6 +23,13 @@ static const ExtraSettingsMenuOptionInfo warning_option = {
 .active_regular = true, .active_mono_app = true,
 .out_action = EXTRA_SETTINGS_MENU_NO_ACTION};
 
+static const ExtraSettingsMenuOptionInfo reset_to_default_option = {
+.base_name = "Reset Settings", .is_selectable = true,
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.active_regular = true, .active_mono_app = true,
+.out_action = EXTRA_SETTINGS_MENU_RESET_SETTINGS};
+
 static const ExtraSettingsMenuOptionInfo windowed_option = {
 .base_name = "Windowed Mode", .is_selectable = true,
 .active_fullscreen = true, .active_windowed_screen = false,
@@ -67,6 +74,7 @@ static const ExtraSettingsMenuOptionInfo usb_conflict_resolution_menu_option = {
 
 static const ExtraSettingsMenuOptionInfo* pollable_options[] = {
 &warning_option,
+&reset_to_default_option,
 &windowed_option,
 &fullscreen_option,
 &join_screens_option,

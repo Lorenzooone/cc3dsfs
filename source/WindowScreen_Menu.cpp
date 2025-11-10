@@ -1994,6 +1994,11 @@ void WindowScreen::poll(bool do_everything) {
 						break;
 					case EXTRA_SETTINGS_MENU_NO_ACTION:
 						break;
+					case EXTRA_SETTINGS_MENU_RESET_SETTINGS:
+						this->m_prepare_load = SIMPLE_RESET_DATA_INDEX;
+						this->setup_no_menu();
+						done = true;
+						break;
 					case EXTRA_SETTINGS_MENU_QUIT_APPLICATION:
 						this->set_close(0);
 						this->setup_no_menu();
