@@ -9,8 +9,29 @@ PROGRAM_NAME=cc3dsfs
 BASE_SOURCE_DIR="."
 BASE_TARGET_DIR=${HOME}
 
+
 sudo apt update
-sudo apt -y install xterm xserver-xorg xinit libxcursor1 x11-xserver-utils pipewire pipewire-alsa libharfbuzz-icu0 libgpiod3
+sudo apt -y install xterm xserver-xorg xinit libxcursor1 x11-xserver-utils pipewire pipewire-alsa libharfbuzz-icu0 lsb-release
+if [ $? -ne 0 ]; then
+    echo "Error while installing required packages! Exiting early!"
+    exit 1
+fi
+
+codename=$(lsb_release -sc)
+echo "Types: deb deb-src
+URIs: http://deb.debian.org/debian
+Suites: ${codename}-backports
+Components: main
+Enabled: yes
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg" > backports
+sudo mv backports /etc/apt/sources.list.d/debian-backports.sources
+
+sudo apt update
+sudo apt -y install libgpiod3 || sudo apt -y install -t ${codename}-backports libgpiod3
+if [ $? -ne 0 ]; then
+    echo "Error while installing required package libgpiod3! Exiting early!"
+    exit 1
+fi
 
 sudo raspi-config nonint do_boot_behaviour B2
 

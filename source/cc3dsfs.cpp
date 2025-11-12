@@ -359,6 +359,17 @@ static void save_layout_file(int save_index, FrontendData *frontend_data, AudioD
 	bool shared_op_success = save_shared(shared_layout_path, shared_layout_name, &frontend_data->shared_data, out_text_data, op_success);
 }
 
+static void touch_file_at_path(const std::string path) {
+	std::ofstream file(path);
+	if(!file.good())
+		return;
+
+	file << NAME << std::endl;
+
+	file.close();
+}
+
+
 static void executeSoundRestart(Audio &audio, AudioData* audio_data, bool do_restart) {
 	if(do_restart) {
 		audio.stop();
@@ -825,6 +836,20 @@ static bool parse_double_arg(int &index, int argc, char **argv, double &target, 
 	return true;
 }
 
+static bool parse_string_arg(int &index, int argc, char **argv, std::string &target, std::string to_check) {
+	if(argv[index] != to_check)
+		return false;
+	if((++index) >= argc)
+		return true;
+	try {
+		target = std::string(argv[index]);
+	}
+	catch(...) {
+		ActualConsoleOutTextError("Error with input for: " + to_check);
+	}
+	return true;
+}
+
 int main(int argc, char **argv) {
 	init_threads();
 	init_start_time();
@@ -835,6 +860,7 @@ int main(int argc, char **argv) {
 	bool use_pud_up = true;
 	volatile bool can_do_output = true;
 	bool mono_app_default_value = false;
+	std::string touch_file_path = "";
 	#ifdef ANDROID_COMPILATION
 		mono_app_default_value = true;
 	#endif
@@ -889,6 +915,8 @@ int main(int argc, char **argv) {
 			continue;
 		if(parse_existence_arg(i, argv, override_data.print_controller_list, true, "--list_joysticks"))
 			continue;
+		if(parse_string_arg(i, argc, argv, touch_file_path, "--touch_file"))
+			continue;
 		#ifdef RASPI
 		if(parse_int_arg(i, argc, argv, page_up_id, "--pi_select"))
 			continue;
@@ -941,6 +969,7 @@ int main(int argc, char **argv) {
 		ActualConsoleOutText("                    the data is also saved to the specified profile.");
 		ActualConsoleOutText("  --no_auto_save    Disables automatic save when closing the software.");
 		ActualConsoleOutText("  --list_joysticks  Prints a list of all the detected joysticks.");
+		ActualConsoleOutText("  --touch_file      Path of a file that the program should create before closing.");
 		#ifdef RASPI
 		ActualConsoleOutText("  --pi_select ID    Specifies ID for the select GPIO button.");
 		ActualConsoleOutText("  --pi_menu ID      Specifies ID for the menu GPIO button.");
@@ -970,6 +999,9 @@ int main(int argc, char **argv) {
 	end_extra_buttons_poll();
 	capture_close();
 	complete_threads();
+
+	if(touch_file_path != "")
+		touch_file_at_path(touch_file_path);
 
 	return ret_val;
 }
