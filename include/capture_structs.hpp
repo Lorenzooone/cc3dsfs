@@ -91,7 +91,7 @@ struct PACKED USB3DSOptimizeColumnInfo {
 	uint16_t column_index : 10;
 	uint16_t unk : 4;
 	uint16_t buffer_num : 1;
-	uint16_t has_extra_header_data : 1;
+	uint16_t has_extra_header_data_2d_only : 1;
 };
 
 struct PACKED USB3DSOptimizeHeaderData {
@@ -242,6 +242,10 @@ struct ALIGNED(16) PACKED USB8883DSOptimizeCaptureReceived_3D {
 	USB8883DSOptimizeInputColumnData3D bottom_only_column;
 };
 
+struct ALIGNED(16) PACKED USB8883DSOptimizeCaptureReceived_3D_Forced2DSingleScreen {
+	USB8883DSOptimizeInputColumnData3D columns_data[TOP_WIDTH_3DS + 1];
+};
+
 struct ALIGNED(16) PACKED USB5653DSOptimizeCaptureReceivedExtraHeader {
 	USB5653DSOptimizeInputColumnData columns_data[TOP_WIDTH_3DS + 1];
 };
@@ -272,6 +276,7 @@ union CaptureReceived {
 	USB5653DSOptimizeCaptureReceived_3D cypress_optimize_received_565_3d;
 	USB8883DSOptimizeCaptureReceived cypress_optimize_received_888;
 	USB8883DSOptimizeCaptureReceived_3D cypress_optimize_received_888_3d;
+	USB8883DSOptimizeCaptureReceived_3D_Forced2DSingleScreen cypress_optimize_received_888_3d_2d;
 	USB5653DSOptimizeCaptureReceivedExtraHeader cypress_optimize_received_565_extra_header;
 	USB8883DSOptimizeCaptureReceivedExtraHeader cypress_optimize_received_888_extra_header;
 };
@@ -347,6 +352,7 @@ struct CaptureDataSingleBuffer {
 	double time_in_buf;
 	uint32_t inner_index;
 	bool is_3d;
+	bool should_be_3d;
 	InputVideoDataType buffer_video_data_type;
 };
 
@@ -355,10 +361,10 @@ public:
 	CaptureDataBuffers();
 	CaptureDataSingleBuffer* GetReaderBuffer(CaptureReaderType reader_type);
 	void ReleaseReaderBuffer(CaptureReaderType reader_type);
-	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type, size_t offset, int index, bool is_3d = false);
-	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type, int index, bool is_3d = false);
-	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, size_t offset, int index, bool is_3d = false);
-	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, int index, bool is_3d = false);
+	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type, size_t offset, int index, bool is_3d = false, bool should_be_3d = false);
+	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, CaptureScreensType capture_type, int index, bool is_3d = false, bool should_be_3d = false);
+	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, size_t offset, int index, bool is_3d = false, bool should_be_3d = false);
+	void WriteToBuffer(CaptureReceived* buffer, uint64_t read, double time_in_buf, CaptureDevice* device, int index, bool is_3d = false, bool should_be_3d = false);
 	CaptureDataSingleBuffer* GetWriterBuffer(int index = 0);
 	void ReleaseWriterBuffer(int index = 0, bool update_last_curr_in = true);
 private:

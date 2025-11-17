@@ -212,11 +212,14 @@ bool cyop_device_connect_usb(bool print_failed, CaptureData* capture_data, Captu
 	return true;
 }
 
-uint64_t cyop_device_get_video_in_size(bool is_3d, InputVideoDataType video_data_type) {
+uint64_t cyop_device_get_video_in_size(bool is_3d, bool should_be_3d, InputVideoDataType video_data_type) {
 	bool is_rgb888 = video_data_type == OPTIMIZE_RGB888_FORMAT;
 	if(is_rgb888) {
-		if(is_3d)
-			return sizeof(USB8883DSOptimizeCaptureReceived_3D);
+		if(should_be_3d) {
+			if(is_3d)
+				return sizeof(USB8883DSOptimizeCaptureReceived_3D);
+			return sizeof(USB8883DSOptimizeCaptureReceived_3D_Forced2DSingleScreen);
+		}
 		return sizeof(USB8883DSOptimizeCaptureReceived);
 	}
 	if(is_3d)
@@ -224,11 +227,14 @@ uint64_t cyop_device_get_video_in_size(bool is_3d, InputVideoDataType video_data
 	return sizeof(USB5653DSOptimizeCaptureReceived);
 }
 
-uint64_t cyop_device_get_video_in_size_extra_header(bool is_3d, InputVideoDataType video_data_type) {
+uint64_t cyop_device_get_video_in_size_extra_header(bool is_3d, bool should_be_3d, InputVideoDataType video_data_type) {
 	bool is_rgb888 = video_data_type == OPTIMIZE_RGB888_FORMAT;
 	if(is_rgb888) {
-		if(is_3d)
-			return sizeof(USB8883DSOptimizeCaptureReceived_3D);
+		if(should_be_3d) {
+			if(is_3d)
+				return sizeof(USB8883DSOptimizeCaptureReceived_3D);
+			return sizeof(USB8883DSOptimizeCaptureReceived_3D_Forced2DSingleScreen);
+		}
 		return sizeof(USB8883DSOptimizeCaptureReceivedExtraHeader);
 	}
 	if(is_3d)
@@ -237,13 +243,13 @@ uint64_t cyop_device_get_video_in_size_extra_header(bool is_3d, InputVideoDataTy
 }
 
 
-uint64_t cyop_device_get_video_in_size(CaptureStatus* status, bool is_3d, InputVideoDataType video_data_type) {
-	return cyop_device_get_video_in_size(is_3d, video_data_type);
+uint64_t cyop_device_get_video_in_size(CaptureStatus* status, bool is_3d, bool should_be_3d, InputVideoDataType video_data_type) {
+	return cyop_device_get_video_in_size(is_3d, should_be_3d, video_data_type);
 }
 
 
-uint64_t cyop_device_get_video_in_size(CaptureData* capture_data, bool is_3d, InputVideoDataType video_data_type) {
-	return cyop_device_get_video_in_size(&capture_data->status, is_3d, video_data_type);
+uint64_t cyop_device_get_video_in_size(CaptureData* capture_data, bool is_3d, bool should_be_3d, InputVideoDataType video_data_type) {
+	return cyop_device_get_video_in_size(&capture_data->status, is_3d, should_be_3d, video_data_type);
 }
 
 bool is_device_optimize_3ds(CaptureDevice* device) {
@@ -293,7 +299,7 @@ static int cypress_device_read_frame_request(CaptureData* capture_data, CypressO
 	const cyop_device_usb_device* usb_device_info = (const cyop_device_usb_device*)capture_data->status.device.descriptor;
 	cypress_device_capture_recv_data->index = index;
 	cypress_device_capture_recv_data->cb_data.function = cypress_device_read_frame_cb;
-	//size_t read_size = cyop_device_get_video_in_size(is_3d, video_data_type);
+	//size_t read_size = cyop_device_get_video_in_size(is_3d, is_3d, video_data_type);
 	size_t read_size = SINGLE_RING_BUFFER_SLICE_SIZE;
 	int new_buffer_slice_index = ((*cypress_device_capture_recv_data->last_ring_buffer_slice_allocated) + 1) % NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS;
 	uint8_t* buffer = &cypress_device_capture_recv_data->ring_slice_buffer_arr[new_buffer_slice_index * SINGLE_RING_BUFFER_SLICE_SIZE];
@@ -343,7 +349,7 @@ static void end_cypress_device_read_frame_cb(CypressOptimize3DSDeviceCaptureRece
 static USB3DSOptimizeColumnInfo convert_to_column_info(uint16_t value) {
 	// The macos compiler requires this... :/
 	USB3DSOptimizeColumnInfo column_info;
-	column_info.has_extra_header_data = (value >> 15) & 1;
+	column_info.has_extra_header_data_2d_only = (value >> 15) & 1;
 	column_info.buffer_num = (value >> 14) & 1;
 	column_info.unk = (value >> 10) & 0xF;
 	column_info.column_index = value & 0x3FF;
@@ -351,13 +357,98 @@ static USB3DSOptimizeColumnInfo convert_to_column_info(uint16_t value) {
 }
 
 static bool get_expect_extra_header_in_buffer(uint16_t value) {
-	return convert_to_column_info(value).has_extra_header_data;
+	return convert_to_column_info(value).has_extra_header_data_2d_only;
+}
+
+static bool get_is_data_2d_only(uint16_t value) {
+	return convert_to_column_info(value).has_extra_header_data_2d_only;
+}
+
+static bool get_is_pos_column_synch_in_buffer(uint8_t* buffer, size_t pos_to_check, uint16_t column_index) {
+	if(read_le16(buffer + pos_to_check) != SYNCH_VALUE_OPTIMIZE)
+		return false;
+	return convert_to_column_info(read_le16(buffer + pos_to_check + 2)).column_index == column_index;
+}
+
+static bool get_is_pos_column_synch_in_buffer(USB3DSOptimizeHeaderSoundData* in_ptr, uint16_t column_index) {
+	return get_is_pos_column_synch_in_buffer((uint8_t*)&in_ptr->header_info, 0, column_index);
 }
 
 static bool get_is_pos_first_synch_in_buffer(uint8_t* buffer, size_t pos_to_check) {
-	if(read_le16(buffer + pos_to_check) != SYNCH_VALUE_OPTIMIZE)
+	return get_is_pos_column_synch_in_buffer(buffer, pos_to_check, 0);
+}
+
+static bool get_is_buffer_rgb565_fully_synced(CaptureReceived* buffer) {
+	USB5653DSOptimizeCaptureReceived* real_buffer = &buffer->cypress_optimize_received_565;
+	USB5653DSOptimizeCaptureReceivedExtraHeader* real_buffer_special = &buffer->cypress_optimize_received_565_extra_header;
+	bool is_special = get_expect_extra_header_in_buffer(read_le16((uint8_t*)&real_buffer->columns_data[0].header_sound.header_info.column_info));
+	for(int i = 0; i < TOP_WIDTH_3DS; i++)
+		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i].header_sound, i))
+			return false;
+	if(is_special && (!get_is_pos_column_synch_in_buffer(&real_buffer_special->columns_data[TOP_WIDTH_3DS].header_sound, TOP_WIDTH_3DS)))
 		return false;
-	return convert_to_column_info(read_le16(buffer + pos_to_check + 2)).column_index == 0;
+	return true;
+}
+
+static bool get_is_buffer_rgb565_3d_fully_synced(CaptureReceived* buffer) {
+	USB5653DSOptimizeCaptureReceived_3D* real_buffer = &buffer->cypress_optimize_received_565_3d;
+	for(int i = 0; i < TOP_WIDTH_3DS; i++) {
+		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i].top_r_screen_column.header_sound, i * 2))
+			return false;
+		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i].bot_top_l_screens_column.header_sound, (i * 2) + 1))
+			return false;
+	}
+	if(!get_is_pos_column_synch_in_buffer(&real_buffer->bottom_only_column.header_sound, TOP_WIDTH_3DS * 2))
+			return false;
+	return true;
+}
+
+static bool get_is_buffer_rgb888_fully_synced(CaptureReceived* buffer) {
+	USB8883DSOptimizeCaptureReceived* real_buffer = &buffer->cypress_optimize_received_888;
+	USB8883DSOptimizeCaptureReceivedExtraHeader* real_buffer_special = &buffer->cypress_optimize_received_888_extra_header;
+	bool is_special = get_expect_extra_header_in_buffer(read_le16((uint8_t*)&real_buffer->columns_data[0].header_sound.header_info.column_info));
+	for(int i = 0; i < TOP_WIDTH_3DS; i++)
+		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i].header_sound, i))
+			return false;
+	if(is_special && (!get_is_pos_column_synch_in_buffer(&real_buffer_special->columns_data[TOP_WIDTH_3DS].header_sound, TOP_WIDTH_3DS)))
+		return false;
+	return true;
+}
+
+static bool get_is_buffer_rgb888_3d_fully_synced(CaptureReceived* buffer) {
+	USB8883DSOptimizeCaptureReceived_3D* real_buffer = &buffer->cypress_optimize_received_888_3d;
+	for(int i = 0; i < TOP_WIDTH_3DS; i++) {
+		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i][0].header_sound, i * 2))
+			return false;
+		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i][1].header_sound, (i * 2) + 1))
+			return false;
+	}
+	if(!get_is_pos_column_synch_in_buffer(&real_buffer->bottom_only_column.header_sound, TOP_WIDTH_3DS * 2))
+		return false;
+	return true;
+}
+
+static bool get_is_buffer_rgb888_3d_2d_fully_synced(CaptureReceived* buffer) {
+	USB8883DSOptimizeCaptureReceived_3D_Forced2DSingleScreen* real_buffer = &buffer->cypress_optimize_received_888_3d_2d;
+	for(int i = 0; i < (TOP_WIDTH_3DS + 1); i++) {
+		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i].header_sound, i))
+			return false;
+	}
+	return true;
+}
+
+static bool get_is_buffer_fully_synched(CaptureReceived* buffer, bool is_3d, bool should_be_3d, InputVideoDataType video_data_type) {
+	bool is_rgb888 = video_data_type == OPTIMIZE_RGB888_FORMAT;
+	if(!is_rgb888) {
+		if(!is_3d)
+			return get_is_buffer_rgb565_fully_synced(buffer);
+		return get_is_buffer_rgb565_3d_fully_synced(buffer);
+	}
+	if(is_3d)
+		return get_is_buffer_rgb888_3d_fully_synced(buffer);
+	if(should_be_3d)
+		return get_is_buffer_rgb888_3d_2d_fully_synced(buffer);
+	return get_is_buffer_rgb888_fully_synced(buffer);
 }
 
 static size_t get_pos_first_synch_in_buffer(uint8_t* buffer) {
@@ -395,14 +486,18 @@ static void copy_slice_data_to_buffer(uint8_t* dst, uint8_t *src, size_t start_s
 	}
 }
 
-static void cypress_output_to_thread(CaptureData* capture_data, uint8_t *buffer_arr, size_t start_slice_index, size_t start_slice_pos, int internal_index, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t read_size, bool is_3d) {
+static void cypress_output_to_thread(CaptureData* capture_data, uint8_t *buffer_arr, size_t start_slice_index, size_t start_slice_pos, int internal_index, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t read_size, bool is_3d, bool should_be_3d, InputVideoDataType video_data_type) {
 	// Output to the other threads...
 	CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(internal_index);
 	copy_slice_data_to_buffer((uint8_t*)&data_buf->capture_buf, buffer_arr, start_slice_index, start_slice_pos, read_size);
+	if(!get_is_buffer_fully_synched(&data_buf->capture_buf, is_3d, should_be_3d, video_data_type)) {
+		capture_data->data_buffers.ReleaseWriterBuffer(internal_index, false);
+		return;
+	}
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - (*clock_start);
 	*clock_start = curr_time;
-	capture_data->data_buffers.WriteToBuffer(NULL, read_size, diff.count(), &capture_data->status.device, internal_index, is_3d);
+	capture_data->data_buffers.WriteToBuffer(NULL, read_size, diff.count(), &capture_data->status.device, internal_index, is_3d, should_be_3d);
 	if (capture_data->status.cooldown_curr_in)
 		capture_data->status.cooldown_curr_in = capture_data->status.cooldown_curr_in - 1;
 	capture_data->status.video_wait.unlock();
@@ -453,7 +548,10 @@ static void cypress_device_read_frame_synchronized(CypressOptimize3DSDeviceCaptu
 	volatile int read_slice_index = *cypress_device_capture_recv_data->first_usable_ring_buffer_slice_index;
 	volatile size_t read_slice_pos = *cypress_device_capture_recv_data->last_used_ring_buffer_slice_pos;
 	int num_consecutive_ready_buffers = get_num_consecutive_ready_ring_buffer_slices(cypress_device_capture_recv_data, read_slice_index);
-	size_t video_in_size = (size_t)cyop_device_get_video_in_size(*cypress_device_capture_recv_data->stored_is_3d, *cypress_device_capture_recv_data->stored_video_data_type);
+	bool should_be_3d_data = *cypress_device_capture_recv_data->stored_is_3d;
+	bool is_3d_data = should_be_3d_data;
+	InputVideoDataType video_data_type = *cypress_device_capture_recv_data->stored_video_data_type;
+	size_t video_in_size = (size_t)cyop_device_get_video_in_size(is_3d_data, should_be_3d_data, video_data_type);
 	size_t curr_consecutive_available_bytes = (num_consecutive_ready_buffers * SINGLE_RING_BUFFER_SLICE_SIZE) - read_slice_pos;
 	if(curr_consecutive_available_bytes >= sizeof(USB3DSOptimizeHeaderData)) {
 		uint8_t tmp_buffer[sizeof(USB3DSOptimizeHeaderData)];
@@ -464,12 +562,16 @@ static void cypress_device_read_frame_synchronized(CypressOptimize3DSDeviceCaptu
 		}
 		else {
 			if(get_expect_extra_header_in_buffer(read_le16(tmp_buffer, 1)))
-				video_in_size = (size_t)cyop_device_get_video_in_size_extra_header(*cypress_device_capture_recv_data->stored_is_3d, *cypress_device_capture_recv_data->stored_video_data_type);
+				video_in_size = (size_t)cyop_device_get_video_in_size_extra_header(is_3d_data, should_be_3d_data, video_data_type);
+			if(get_is_data_2d_only(read_le16(tmp_buffer, 1))) {
+				is_3d_data = false;
+				video_in_size = (size_t)cyop_device_get_video_in_size_extra_header(is_3d_data, should_be_3d_data, video_data_type);
+			}
 		}
 	}
 	if(curr_consecutive_available_bytes >= video_in_size) {
 		// Enough data. Time to do output...
-		cypress_output_to_thread(cypress_device_capture_recv_data->capture_data, cypress_device_capture_recv_data->ring_slice_buffer_arr, read_slice_index, read_slice_pos, 0, cypress_device_capture_recv_data->clock_start, video_in_size, *cypress_device_capture_recv_data->stored_is_3d);
+		cypress_output_to_thread(cypress_device_capture_recv_data->capture_data, cypress_device_capture_recv_data->ring_slice_buffer_arr, read_slice_index, read_slice_pos, 0, cypress_device_capture_recv_data->clock_start, video_in_size, is_3d_data, should_be_3d_data, video_data_type);
 		// Keep the ring buffer going.
 		size_t raw_new_pos = read_slice_pos + video_in_size;
 		int new_slice_index = (int)(read_slice_index + (raw_new_pos / SINGLE_RING_BUFFER_SLICE_SIZE));
@@ -705,7 +807,7 @@ static int restart_captures_cc_reads(CaptureData* capture_data, CypressOptimize3
 	}
 
 	if(set_max_again)
-		CypressSetMaxTransferSize(handlers, get_cy_usb_info(usb_device_desc), (size_t)cyop_device_get_video_in_size_extra_header(stored_is_3d, stored_video_data_type));
+		CypressSetMaxTransferSize(handlers, get_cy_usb_info(usb_device_desc), (size_t)cyop_device_get_video_in_size_extra_header(stored_is_3d, stored_is_3d, stored_video_data_type));
 
 	index = 0;
 	reset_buffer_processing_data(cypress_device_capture_recv_data);
@@ -761,7 +863,7 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 		capture_error_print(true, capture_data, "Capture Start: Failed");
 		return false;
 	}
-	CypressSetMaxTransferSize(handlers, get_cy_usb_info(usb_device_desc), (size_t)cyop_device_get_video_in_size_extra_header(stored_is_3d, stored_video_data_type));
+	CypressSetMaxTransferSize(handlers, get_cy_usb_info(usb_device_desc), (size_t)cyop_device_get_video_in_size_extra_header(stored_is_3d, stored_is_3d, stored_video_data_type));
 	if(!schedule_all_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, "Initial Reads: Failed"))
 		return false;
 
