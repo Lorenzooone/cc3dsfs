@@ -17,4 +17,17 @@ if [ ! -e /expanded_rootfs ]; then
   reboot
 fi
 
+if [ -e /boot/firmware/config.txt ]; then
+  FIRMWARE=/firmware
+else
+  FIRMWARE=
+fi
+
+# Make it so the files can be edited by cc3dsfs...
+GROUP_NAME=boot_files
+GID_GROUP=$(getent group ${GROUP_NAME} | cut -d: -f3)
+
+umount /boot${FIRMWARE}
+mount -o umask=002,gid=${GID_GROUP} /boot${FIRMWARE}
+
 exit 0

@@ -285,7 +285,7 @@ void WindowScreen::after_thread_join() {
 }
 
 void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoDataType video_data_type) {
-	FPSArrayInsertElement(&in_fps, frame_time);
+	FPSArrayInsertElement(&this->in_fps, frame_time);
 	if(!this->done_display)
 		return;
 
@@ -320,7 +320,7 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoD
 		this->curr_frame_texture_pos = (this->curr_frame_texture_pos + 1) % this->num_frames_to_blend;
 		auto curr_time = std::chrono::high_resolution_clock::now();
 		const std::chrono::duration<double> diff = curr_time - this->last_draw_time;
-		FPSArrayInsertElement(&draw_fps, diff.count());
+		FPSArrayInsertElement(&this->draw_fps, diff.count());
 		this->last_draw_time = curr_time;
 		WindowScreen::reset_operations(future_operations);
 		if(out_buf != NULL)

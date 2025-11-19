@@ -4,7 +4,7 @@ If you want to save space, use the Lite version of the OS. The setup is compatib
 
 Turn on the Pi with the SD card and complete the first setup (if any).
 
-Place the cc3dsfs_rpi_mono_setup.zip file in the Pi (either by downloading it, or by using an USB stick).
+Place the cc3dsfs_rpi_kiosk_setup.zip file in the Pi (either by downloading it, by using an USB stick or by placing it inside the bootfs partition).
 
 You will need an active internet connection to complete the setup.
 Decompress all the files of the .zip into a folder.
