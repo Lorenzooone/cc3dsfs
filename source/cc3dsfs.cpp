@@ -969,7 +969,7 @@ int main(int argc, char **argv) {
 		ActualConsoleOutText("                    the data is also saved to the specified profile.");
 		ActualConsoleOutText("  --no_auto_save    Disables automatic save when closing the software.");
 		ActualConsoleOutText("  --list_joysticks  Prints a list of all the detected joysticks.");
-		ActualConsoleOutText("  --touch_file      Path of a file that the program should create before closing.");
+		ActualConsoleOutText("  --touch_file      Path of a file that the program should create when exiting.");
 		#ifdef RASPI
 		ActualConsoleOutText("  --pi_select ID    Specifies ID for the select GPIO button.");
 		ActualConsoleOutText("  --pi_menu ID      Specifies ID for the menu GPIO button.");

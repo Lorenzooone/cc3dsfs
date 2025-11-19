@@ -15,7 +15,8 @@ Double Click on setup.sh and select "Execute in Terminal". Then wait for the scr
 
 ---
 
-By default, the setup will work with a specific GPIO buttons layout. But scripts to account for other button layouts are also included. To change the default, replace the file Desktop/cc3dsfs_script.sh with one of the others included in Desktop/premade_scripts (or make your own).
+By default, the setup will work with a specific GPIO buttons layout. But scripts to account for other button layouts are also included. To change the default, replace the path in boot/firmware/cc3dsfs/cc3dsfs_script_name.txt with one of the others included in boot/firmware/cc3dsfs/premade_scripts (or make your own).
+These files can also be accessed by plugging the Micro SD card into a computer, inside of the cc3dsfs folder in the bootfs partition.
 
 To launch back the Desktop environment (can be useful to update the software), you can use the "Quit Application" "Extra Setting" (or press Esc on a keyboard). This should show a terminal. Then, type:
 startx
