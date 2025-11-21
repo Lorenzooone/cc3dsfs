@@ -55,5 +55,10 @@ hdmi_enable_4kp60=1
 # (e.g. for USB device mode) or if USB support is not required.
 otg_mode=1
 
+[pi5]
+# Enables using more power for USB connections.
+# Allows more CCs to be connected at the same time.
+usb_max_current_enable=1
+
 [all]
 
