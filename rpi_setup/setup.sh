@@ -15,9 +15,10 @@ PROGRAM_NAME=cc3dsfs
 BASE_SOURCE_DIR="."
 BASE_TARGET_DIR=/boot${FIRMWARE}/${PROGRAM_NAME}
 
-
+# cage provided as an alternative to startx.
+# gldriver-test needed for Raspberry Pi 5... Weirdly enough?!
 sudo apt update
-sudo apt -y install xterm xserver-xorg xinit libxcursor1 x11-xserver-utils pipewire pipewire-alsa libharfbuzz-icu0 lsb-release cage
+sudo apt -y install xterm xserver-xorg xinit libxcursor1 x11-xserver-utils pipewire pipewire-alsa libharfbuzz-icu0 lsb-release cage gldriver-test
 if [ $? -ne 0 ]; then
     echo "Error while installing required packages! Exiting early!"
     exit 1

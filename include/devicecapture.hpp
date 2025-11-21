@@ -19,7 +19,7 @@ struct no_access_recap_data {
 void capture_init();
 void capture_close();
 
-bool connect(bool print_failed, CaptureData* capture_data, FrontendData* frontend_data, bool auto_connect_to_first = false);
+bool connect(bool print_failed, CaptureData* capture_data, FrontendData* frontend_data, bool* force_cc_disables, bool auto_connect_to_first = false);
 void captureCall(CaptureData* capture_data);
 void capture_error_print(bool print_failed, CaptureData* capture_data, std::string error_string);
 void capture_error_print(bool print_failed, CaptureData* capture_data, std::string graphical_string, std::string detailed_string);

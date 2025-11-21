@@ -80,7 +80,7 @@ void capture_warning_print(CaptureData* capture_data, std::string warning_string
 	capture_warning_print(capture_data, warning_string, warning_string);
 }
 
-bool connect(bool print_failed, CaptureData* capture_data, FrontendData* frontend_data, bool auto_connect_to_first) {
+bool connect(bool print_failed, CaptureData* capture_data, FrontendData* frontend_data, bool* force_cc_disables, bool auto_connect_to_first) {
 	capture_data->status.new_error_text = false;
 	if (capture_data->status.connected) {
 		capture_data->status.close_success = false;
@@ -97,8 +97,8 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	std::vector<CaptureDevice> devices_list;
 	std::vector<no_access_recap_data> no_access_list;
 	bool devices_allowed_scan[CC_POSSIBLE_DEVICES_END];
-	for(int i = 0; i < CC_POSSIBLE_DEVICES_END; i++)
-		devices_allowed_scan[i] = capture_data->status.devices_allowed_scan[i];
+	for(size_t i = 0; i < CC_POSSIBLE_DEVICES_END; i++)
+		devices_allowed_scan[i] = capture_data->status.devices_allowed_scan[i] & (!force_cc_disables[i]);
 
 	#ifdef USE_CYNI_USB
 	list_devices_cyni_device(devices_list, no_access_list, devices_allowed_scan);

@@ -39,6 +39,8 @@ struct override_all_data {
 	bool always_prevent_mouse_showing = false;
 	bool auto_connect_to_first = false;
 	bool auto_close = false;
+	bool force_disable_nisetro_ds = false;
+	bool force_disable_optimize_old_3ds = false;
 	bool auto_save = true;
 	int loaded_profile = STARTUP_FILE_INDEX;
 	bool mono_app = false;
@@ -552,6 +554,13 @@ static float get_time_multiplier(CaptureData* capture_data, bool should_ignore_d
 	}
 }
 
+static void populate_force_disable_ccs(bool* force_cc_disables, override_all_data &override_data) {
+	for(size_t i = 0; i < CC_POSSIBLE_DEVICES_END; i++)
+		force_cc_disables[i] = false;
+	force_cc_disables[CC_NISETRO_DS] = override_data.force_disable_nisetro_ds;
+	force_cc_disables[CC_OPTIMIZE_O3DS] = override_data.force_disable_optimize_old_3ds;
+}
+
 static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data, override_all_data &override_data, volatile bool* can_do_output) {
 	VideoOutputData *out_buf;
 	double last_frame_time = 0.0;
@@ -569,7 +578,9 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	int ret_val = 0;
 	int poll_timeout = 0;
 	const bool endianness = is_big_endian();
+	bool force_cc_disables[CC_POSSIBLE_DEVICES_END];
 
+	populate_force_disable_ccs(force_cc_disables, override_data);
 	out_buf = new VideoOutputData;
 	memset(out_buf, 0, sizeof(VideoOutputData));
 
@@ -602,7 +613,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	std::thread bot_thread(screen_display_thread, bot_screen);
 	std::thread joint_thread(screen_display_thread, joint_screen);
 
-	capture_data->status.connected = connect(true, capture_data, &frontend_data, override_data.auto_connect_to_first);
+	capture_data->status.connected = connect(true, capture_data, &frontend_data, force_cc_disables, override_data.auto_connect_to_first);
 	if((override_data.quit_on_first_connection_failure || override_data.auto_close) && (!capture_data->status.connected)) {
 		capture_data->status.running = false;
 		ret_val = -3;
@@ -706,7 +717,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		}
 
 		if(top_screen->open_capture() || bot_screen->open_capture() || joint_screen->open_capture()) {
-			capture_data->status.connected = connect(true, capture_data, &frontend_data);
+			capture_data->status.connected = connect(true, capture_data, &frontend_data, force_cc_disables);
 			SuccessConnectionOutTextGenerator(out_text_data, capture_data);
 		}
 
@@ -889,13 +900,13 @@ int main(int argc, char **argv) {
 			continue;
 		if(parse_int_arg(i, argc, argv, override_data.override_top_data.enabled, "--enabled_top"))
 			continue;
-		if(parse_int_arg(i, argc, argv, override_data.override_bot_data.pos_x, "--pos_x_bot"))
+		if(parse_int_arg(i, argc, argv, override_data.override_bot_data.pos_x, "--pos_x_low"))
 			continue;
-		if(parse_int_arg(i, argc, argv, override_data.override_bot_data.pos_y, "--pos_y_bot"))
+		if(parse_int_arg(i, argc, argv, override_data.override_bot_data.pos_y, "--pos_y_low"))
 			continue;
-		if(parse_double_arg(i, argc, argv, override_data.override_bot_data.scaling, "--scaling_bot"))
+		if(parse_double_arg(i, argc, argv, override_data.override_bot_data.scaling, "--scaling_low"))
 			continue;
-		if(parse_int_arg(i, argc, argv, override_data.override_bot_data.enabled, "--enabled_bot"))
+		if(parse_int_arg(i, argc, argv, override_data.override_bot_data.enabled, "--enabled_low"))
 			continue;
 		if(parse_int_arg(i, argc, argv, override_data.volume, "--volume"))
 			continue;
@@ -908,6 +919,10 @@ int main(int argc, char **argv) {
 		if(parse_existence_arg(i, argv, override_data.auto_close, true, "--auto_close"))
 			continue;
 		if(parse_existence_arg(i, argv, override_data.quit_on_first_connection_failure, true, "--failure_close"))
+			continue;
+		if(parse_existence_arg(i, argv, override_data.force_disable_nisetro_ds, true, "--no_nisetro"))
+			continue;
+		if(parse_existence_arg(i, argv, override_data.force_disable_optimize_old_3ds, true, "--no_opt_o3ds_cc"))
 			continue;
 		if(parse_int_arg(i, argc, argv, override_data.loaded_profile, "--profile"))
 			continue;
@@ -949,10 +964,10 @@ int main(int argc, char **argv) {
 		ActualConsoleOutText("  --scaling_top     Overrides the top screen window's scale factor.");
 		ActualConsoleOutText("  --enabled_top     Overrides the presence of the top screen's window.");
 		ActualConsoleOutText("                    1 On, 0 Off.");
-		ActualConsoleOutText("  --pos_x_bot       Set default x position for the bottom screen's window.");
-		ActualConsoleOutText("  --pos_y_bot       Set default y position for the bottom screen's window.");
-		ActualConsoleOutText("  --scaling_bot     Overrides the bottom screen window's scale factor.");
-		ActualConsoleOutText("  --enabled_bot     Overrides the presence of the bottom screen's window.");
+		ActualConsoleOutText("  --pos_x_low       Set default x position for the bottom screen's window.");
+		ActualConsoleOutText("  --pos_y_low       Set default y position for the bottom screen's window.");
+		ActualConsoleOutText("  --scaling_low     Overrides the bottom screen window's scale factor.");
+		ActualConsoleOutText("  --enabled_low     Overrides the presence of the bottom screen's window.");
 		ActualConsoleOutText("                    1 On, 0 Off.");
 		ActualConsoleOutText("  --no_frame_blend  Disables support for frame blending shader.");
 		ActualConsoleOutText("                    May improve compatibility with lower end hardware.");
@@ -964,6 +979,8 @@ int main(int argc, char **argv) {
 		ActualConsoleOutText("  --failure_close   Automatically closes the software if the first connection");
 		ActualConsoleOutText("                    doesn't succeed.");
 		ActualConsoleOutText("  --auto_close      Automatically closes the software on disconnect.");
+		ActualConsoleOutText("  --no_nisetro      Force disables Nisetro DS(i) Capture Card.");
+		ActualConsoleOutText("  --no_opt_o3ds_cc  Force disables Optimize Old 3DS Capture Card.");
 		ActualConsoleOutText("  --profile         Loads the profile with the specified ID at startup");
 		ActualConsoleOutText("                    instead of the default one. When the program closes,");
 		ActualConsoleOutText("                    the data is also saved to the specified profile.");
