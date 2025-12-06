@@ -214,7 +214,7 @@ void WindowScreen::reload() {
 	this->future_operations.call_rotate = true;
 	this->future_operations.call_blur = true;
 	this->future_operations.call_screen_settings_update = true;
-	if(this->m_win.isOpen())
+	if(this->m_win.isOpen() || this->m_info.window_enabled)
 		this->create_window(false);
 	this->prepare_size_ratios(true, true);
 }
@@ -293,7 +293,7 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoD
 	if(this->m_win.isOpen() ^ should_be_open) {
 		if(this->m_win.isOpen())
 			this->close();
-		else
+		else if(!this->future_operations.call_create)
 			this->open();
 	}
 	if(!should_be_open)

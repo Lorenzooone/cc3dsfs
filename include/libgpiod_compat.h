@@ -7,7 +7,7 @@
 // time version is baffling... :/
 // It's the basis of making a library...
 // Do they expect you to use dlopen? Is that what is going on?
-#ifndef GPIOD_CTXLESS_FLAG_OPEN_DRAIN
+#ifndef GPIOD_API
 #define LIBGPIOD3
 #endif
 

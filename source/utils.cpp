@@ -20,6 +20,7 @@
 #include <cstring>
 #include <queue>
 #include <cmath>
+#include <algorithm>
 
 #ifdef SFML_SYSTEM_ANDROID
 // Since we want to get the native activity from SFML, we'll have to use an
