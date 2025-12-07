@@ -30,7 +30,7 @@
 #define PIO_RESET   0x10
 #define PIO_DIR     0x08
 
-#define NISETRO_DS_WANTED_VALUE_BASE 0xFF00
+#define NISETRO_DS_WANTED_VALUE_BASE 0xFC00
 
 static const cyni_device_usb_device cypress_fx2_generic_device = {
 .name = "FX2LP->NiseTro DS", .long_name = "EZ-USB FX2LP -> NiseTro DS(i)",

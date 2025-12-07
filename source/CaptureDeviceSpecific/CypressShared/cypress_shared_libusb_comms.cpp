@@ -129,6 +129,22 @@ static int cypress_libusb_insert_device(std::vector<CaptureDevice> &devices_list
 	return result;
 }
 
+static void cypress_libusb_fix_device_intial_check(const cy_device_usb_device* usb_device_desc, libusb_device *usb_device, libusb_device_descriptor *usb_descriptor) {
+	libusb_device_handle *handle = NULL;
+	if((usb_descriptor->idVendor != usb_device_desc->vid) || (usb_descriptor->idProduct != usb_device_desc->pid))
+		return;
+	uint16_t masked_wanted_bcd_device = usb_device_desc->bcd_device_mask & usb_device_desc->bcd_device_wanted_value;
+
+	if((masked_wanted_bcd_device == 0xFFFF) || (usb_descriptor->bcdDevice != 0xFFFF))
+		return;
+
+	int result = libusb_open(usb_device, &handle);
+	if((result < 0) || (handle == NULL))
+		return;
+	libusb_close(handle);
+	return;
+}
+
 cy_device_device_handlers* cypress_libusb_serial_reconnection(const cy_device_usb_device* usb_device_desc, std::string wanted_serial_number, int &curr_serial_extra_id, CaptureDevice* new_device) {
 	if(!usb_is_initialized())
 		return NULL;
@@ -187,6 +203,16 @@ void cypress_libusb_find_used_serial(const cy_device_usb_device* usb_device_desc
 	ssize_t num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	libusb_device_descriptor usb_descriptor{};
 
+	#ifdef ANDROID_COMPILATION
+	// Fix issue with first look at USB bcdDevice.
+	for(ssize_t i = 0; i < num_devices; i++) {
+		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
+		if(result < 0)
+			continue;
+		cypress_libusb_fix_device_intial_check(usb_device_desc, usb_devices[i], &usb_descriptor);
+	}
+	#endif
+
 	for(ssize_t i = 0; i < num_devices; i++) {
 		cy_device_device_handlers handlers;
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
@@ -225,9 +251,24 @@ void cypress_libusb_find_used_serial(const cy_device_usb_device* usb_device_desc
 void cypress_libusb_list_devices(std::vector<CaptureDevice> &devices_list, bool* no_access_elems, bool* not_supported_elems, int *curr_serial_extra_id_cypress, std::vector<const cy_device_usb_device*> &device_descriptions) {
 	if(!usb_is_initialized())
 		return;
+	if(device_descriptions.size() <= 0)
+		return;
+
 	libusb_device **usb_devices;
 	ssize_t num_devices = libusb_get_device_list(get_usb_ctx(), &usb_devices);
 	libusb_device_descriptor usb_descriptor{};
+
+	#ifdef ANDROID_COMPILATION
+	// Fix issue with first look at USB bcdDevice.
+	for(ssize_t i = 0; i < num_devices; i++) {
+		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);
+		if(result < 0)
+			continue;
+		for(size_t j = 0; j < device_descriptions.size(); j++) {
+			cypress_libusb_fix_device_intial_check(device_descriptions[j], usb_devices[i], &usb_descriptor);
+		}
+	}
+	#endif
 
 	for(ssize_t i = 0; i < num_devices; i++) {
 		int result = libusb_get_device_descriptor(usb_devices[i], &usb_descriptor);

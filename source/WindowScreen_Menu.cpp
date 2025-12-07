@@ -912,6 +912,11 @@ void WindowScreen::setup_connection_menu(std::vector<CaptureDevice> *devices_lis
 	this->connection_menu->insert_data(devices_list);
 }
 
+void WindowScreen::setup_reconnection_menu(bool reset_data) {
+	// Skip the check here. It's special.
+	this->switch_to_menu(RECONNECT_MENU_TYPE, NULL, reset_data);
+}
+
 void WindowScreen::setup_main_menu(bool reset_data, bool skip_setup_check) {
 	if((!skip_setup_check) && (!this->can_setup_menu()))
 		return;
@@ -1515,12 +1520,13 @@ void WindowScreen::poll(bool do_everything) {
 				done = true;
 			continue;
 		}
-		if(this->loaded_menu != CONNECT_MENU_TYPE) {
+		if((this->loaded_menu != CONNECT_MENU_TYPE) && (this->loaded_menu != RECONNECT_MENU_TYPE)) {
 			if(this->main_poll(event_data))
 				continue;
 		}
 		if((this->loaded_menu == DEFAULT_MENU_TYPE) || (this->loaded_menu_ptr == NULL)) {
-			this->no_menu_poll(event_data);
+			if(this->loaded_menu != RECONNECT_MENU_TYPE)
+				this->no_menu_poll(event_data);
 			continue;
 		}
 		if(!this->loaded_menu_ptr->poll(event_data))
@@ -1532,6 +1538,8 @@ void WindowScreen::poll(bool do_everything) {
 			case CONNECT_MENU_TYPE:
 				if(this->check_connection_menu_result() != CONNECTION_MENU_NO_ACTION)
 					done = true;
+				break;
+			case RECONNECT_MENU_TYPE:
 				break;
 			case MAIN_MENU_TYPE:
 				switch(this->main_menu->selected_index) {
@@ -2422,6 +2430,10 @@ int WindowScreen::check_connection_menu_result() {
 }
 
 void WindowScreen::end_connection_menu() {
+	this->setup_no_menu();
+}
+
+void WindowScreen::end_reconnection_menu() {
 	this->setup_no_menu();
 }
 

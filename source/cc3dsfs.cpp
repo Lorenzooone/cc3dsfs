@@ -28,6 +28,8 @@
 #define NO_DATA_CONSECUTIVE_THRESHOLD 4
 #define TIME_AUDIO_DEVICE_CHECK 0.25
 
+#define ANDROID_FIRST_CONNECTION_TIMEOUT 0.5
+
 struct override_all_data {
 	override_win_data override_top_bot_data;
 	override_win_data override_top_data;
@@ -561,6 +563,26 @@ static void populate_force_disable_ccs(bool* force_cc_disables, override_all_dat
 	force_cc_disables[CC_OPTIMIZE_O3DS] = override_data.force_disable_optimize_old_3ds;
 }
 
+static void check_for_first_connection(bool &did_first_connection, std::chrono::time_point<std::chrono::high_resolution_clock> &start_time, CaptureData* capture_data, FrontendData *frontend_data, bool* force_cc_disables, override_all_data &override_data, OutTextData &out_text_data, int &ret_val) {
+	if(did_first_connection)
+		return;
+
+	#ifdef ANDROID_COMPILATION
+	auto curr_time = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> diff = curr_time - start_time;
+	if(diff.count() < ANDROID_FIRST_CONNECTION_TIMEOUT)
+		return;
+	#endif
+
+	capture_data->status.connected = connect(true, capture_data, frontend_data, force_cc_disables, override_data.auto_connect_to_first);
+	if((override_data.quit_on_first_connection_failure || override_data.auto_close) && (!capture_data->status.connected)) {
+		capture_data->status.running = false;
+		ret_val = -3;
+	}
+	SuccessConnectionOutTextGenerator(out_text_data, capture_data);
+	did_first_connection = true;
+}
+
 static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data, override_all_data &override_data, volatile bool* can_do_output) {
 	VideoOutputData *out_buf;
 	double last_frame_time = 0.0;
@@ -572,8 +594,10 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	frontend_data.display_data.force_disable_mouse = override_data.always_prevent_mouse_showing;
 	frontend_data.reload = true;
 	bool skip_io = false;
+	bool did_first_connection = false;
 	const double max_time_no_frames_allowed = MAX_ALLOWED_NO_FRAME_TIME;
-	std::chrono::time_point<std::chrono::high_resolution_clock> last_valid_frame_time = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> start_time = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_valid_frame_time = start_time;
 	OutTextData out_text_data;
 	int ret_val = 0;
 	int poll_timeout = 0;
@@ -613,19 +637,16 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	std::thread bot_thread(screen_display_thread, bot_screen);
 	std::thread joint_thread(screen_display_thread, joint_screen);
 
-	capture_data->status.connected = connect(true, capture_data, &frontend_data, force_cc_disables, override_data.auto_connect_to_first);
-	if((override_data.quit_on_first_connection_failure || override_data.auto_close) && (!capture_data->status.connected)) {
-		capture_data->status.running = false;
-		ret_val = -3;
-	}
-	bool last_connected = capture_data->status.connected;
-	SuccessConnectionOutTextGenerator(out_text_data, capture_data);
+	bool last_connected = false;
 	int no_data_consecutive = 0;
 
 	if(override_data.print_controller_list)
 		joystick_print_all();
 
 	while(capture_data->status.running) {
+		check_for_first_connection(did_first_connection, start_time, capture_data, &frontend_data, force_cc_disables, override_data, out_text_data, ret_val);
+		if(!capture_data->status.running)
+			break;
 
 		bool polled = false;
 		bool poll_everything = true;
@@ -717,8 +738,10 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		}
 
 		if(top_screen->open_capture() || bot_screen->open_capture() || joint_screen->open_capture()) {
-			capture_data->status.connected = connect(true, capture_data, &frontend_data, force_cc_disables);
-			SuccessConnectionOutTextGenerator(out_text_data, capture_data);
+			if(did_first_connection) {
+				capture_data->status.connected = connect(true, capture_data, &frontend_data, force_cc_disables);
+				SuccessConnectionOutTextGenerator(out_text_data, capture_data);
+			}
 		}
 
 		check_close_application(top_screen, capture_data, ret_val);

@@ -81,8 +81,10 @@ public:
 	void after_thread_join();
 	void draw(double frame_time, VideoOutputData* out_buf, InputVideoDataType video_data_type);
 	void setup_connection_menu(std::vector<CaptureDevice> *devices_list, bool reset_data = true);
+	void setup_reconnection_menu(bool reset_data = true);
 	int check_connection_menu_result();
 	void end_connection_menu();
+	void end_reconnection_menu();
 	void update_ds_3ds_connection(bool changed_type);
 	void update_capture_specific_settings();
 	void update_save_menu();

@@ -156,7 +156,7 @@ void list_devices_cyni_device(std::vector<CaptureDevice> &devices_list, std::vec
 	delete[] not_supported_elems;
 }
 
-bool cyni_device_connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* device) {
+bool cyni_device_connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* device, void* info) {
 	const cyni_device_usb_device* usb_device_info = (const cyni_device_usb_device*)device->descriptor;
 	cy_device_device_handlers* handlers = usb_reconnect(usb_device_info, device);
 	if(handlers == NULL) {
@@ -174,12 +174,17 @@ bool cyni_device_connect_usb(bool print_failed, CaptureData* capture_data, Captu
 		cypress_nisetro_connection_end(handlers, usb_device_info);
 		std::string new_serial_number = process_serial_string(next_usb_device_info, std::to_string(free_fw_id));
 		CaptureDevice new_device;
-		for(int i = 0; i < 20; i++) {
-			default_sleep(500);
+		setup_reconnection_device(info);
+		for(int i = 0; i < 100; i++) {
+			default_sleep(100);
 			handlers = usb_find_by_serial_number(next_usb_device_info, new_serial_number, &new_device);
 			if(handlers != NULL)
 				break;
+			// Do periodic polling so OSs don't think the software is locked up
+			if(!wait_reconnection_device(info))
+				break;
 		}
+		end_reconnection_device(info);
 		if(handlers == NULL) {
 			capture_error_print(true, capture_data, "Device reconnection error");
 			return false;

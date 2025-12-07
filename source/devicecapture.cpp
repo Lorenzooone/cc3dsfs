@@ -54,6 +54,35 @@ static int choose_device(std::vector<CaptureDevice> *devices_list, FrontendData*
 	return chosen_index;
 }
 
+void setup_reconnection_device(void* info) {
+	FrontendData* frontend_data = static_cast<FrontendData*>(info);
+	frontend_data->top_screen->setup_reconnection_menu();
+	frontend_data->bot_screen->setup_reconnection_menu();
+	frontend_data->joint_screen->setup_reconnection_menu();
+}
+
+bool wait_reconnection_device(void* info) {
+	FrontendData* frontend_data = static_cast<FrontendData*>(info);
+	update_output(frontend_data);
+	frontend_data->top_screen->poll();
+	frontend_data->bot_screen->poll();
+	frontend_data->joint_screen->poll();
+	if(frontend_data->top_screen->close_capture())
+		return false;
+	if(frontend_data->bot_screen->close_capture())
+		return false;
+	if(frontend_data->joint_screen->close_capture())
+		return false;
+	return true;
+}
+
+void end_reconnection_device(void* info) {
+	FrontendData* frontend_data = static_cast<FrontendData*>(info);
+	frontend_data->top_screen->end_reconnection_menu();
+	frontend_data->bot_screen->end_reconnection_menu();
+	frontend_data->joint_screen->end_reconnection_menu();
+}
+
 void capture_error_print(bool print_failed, CaptureData* capture_data, std::string error_string) {
 	capture_error_print(print_failed, capture_data, error_string, error_string);
 }
@@ -144,11 +173,11 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 
 	// Actual connection
 	#ifdef USE_CYNI_USB
-	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_CYPRESS_NISETRO) && (!cyni_device_connect_usb(print_failed, capture_data, &devices_list[chosen_device])))
+	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_CYPRESS_NISETRO) && (!cyni_device_connect_usb(print_failed, capture_data, &devices_list[chosen_device], frontend_data)))
 		return false;
 	#endif
 	#ifdef USE_CYPRESS_OPTIMIZE
-	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_CYPRESS_OPTIMIZE) && (!cyop_device_connect_usb(print_failed, capture_data, &devices_list[chosen_device])))
+	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_CYPRESS_OPTIMIZE) && (!cyop_device_connect_usb(print_failed, capture_data, &devices_list[chosen_device], frontend_data)))
 		return false;
 	#endif
 	#ifdef USE_FTD3
