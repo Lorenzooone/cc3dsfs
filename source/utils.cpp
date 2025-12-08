@@ -39,6 +39,7 @@
 #define APP_VERSION_MAJOR 1
 #define APP_VERSION_MINOR 3
 #define APP_VERSION_REVISION 0
+#define APP_VERSION_SUBREVISION 1
 #ifdef RASPI
 #define APP_VERSION_LETTER R
 #else
@@ -306,6 +307,9 @@ void complete_threads(void) {
 
 std::string get_version_string(bool get_letter) {
 	std::string version_str = std::to_string(APP_VERSION_MAJOR) + "." + std::to_string(APP_VERSION_MINOR) + "." + std::to_string(APP_VERSION_REVISION);
+	#ifdef APP_VERSION_SUBREVISION
+	version_str += "." + std::to_string(APP_VERSION_SUBREVISION);
+	#endif
 	if(get_letter)
 		return version_str + xstr(APP_VERSION_LETTER);
 	return version_str;

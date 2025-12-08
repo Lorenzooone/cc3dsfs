@@ -77,7 +77,7 @@ static inline void memcpy_data_u16le_origin(uint16_t* dst, uint8_t* src, size_t 
 			dst[i] = (src[(i * 2) + 1] << 8) | src[i * 2];
 }
 
-static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLE(deinterleaved_rgb565_pixels* out_ptr_top, deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top = 1) {
+static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLE(deinterleaved_rgb565_pixels* out_ptr_top, deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, size_t input_halfline, size_t output_halfline, int multiplier_top = 1) {
 	//de-interleave pixels
 	const int bottom_pos = 0;
 	const int top_pos = 1;
@@ -93,7 +93,7 @@ static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLE(deinterle
 	}
 }
 
-static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoTop(deinterleaved_rgb565_pixels* out_ptr_top, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top = 1) {
+static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoTop(deinterleaved_rgb565_pixels* out_ptr_top, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, size_t input_halfline, size_t output_halfline, int multiplier_top = 1) {
 	//de-interleave pixels
 	const int top_pos = 1;
 	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
@@ -105,7 +105,7 @@ static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoTop(de
 	}
 }
 
-static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoBottom(deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
+static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoBottom(deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, size_t input_halfline, size_t output_halfline) {
 	//de-interleave pixels
 	const int bottom_pos = 0;
 	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
@@ -117,7 +117,7 @@ static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptLEMonoBottom
 	}
 }
 
-static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBE(deinterleaved_rgb565_pixels* out_ptr_top, deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top = 1) {
+static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBE(deinterleaved_rgb565_pixels* out_ptr_top, deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, size_t input_halfline, size_t output_halfline, int multiplier_top = 1) {
 	//de-interleave pixels
 	const int bottom_pos = 0;
 	const int top_pos = 1;
@@ -133,7 +133,7 @@ static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBE(deinterle
 	}
 }
 
-static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoTop(deinterleaved_rgb565_pixels* out_ptr_top, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline, int multiplier_top = 1) {
+static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoTop(deinterleaved_rgb565_pixels* out_ptr_top, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, size_t input_halfline, size_t output_halfline, int multiplier_top = 1) {
 	//de-interleave pixels
 	const int top_pos = 1;
 	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
@@ -145,7 +145,7 @@ static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoTop(de
 	}
 }
 
-static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoBottom(deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
+static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoBottom(deinterleaved_rgb565_pixels* out_ptr_bottom, interleaved_rgb565_pixels* in_ptr, uint32_t num_iters, size_t input_halfline, size_t output_halfline) {
 	//de-interleave pixels
 	const int bottom_pos = 0;
 	const size_t real_num_iters = num_iters / INTERLEAVED_RGB565_PIXEL_NUM;
@@ -157,7 +157,7 @@ static inline void usb_rgb565convertInterleaveVideoToOutputDirectOptBEMonoBottom
 	}
 }
 
-static inline void usb_rgb888convertInterleaveU16VideoToOutputDirectOpt(deinterleaved_rgb888_u16_pixels* out_ptr_top, deinterleaved_rgb888_u16_pixels* out_ptr_bottom, interleaved_rgb888_u16_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
+static inline void usb_rgb888convertInterleaveU16VideoToOutputDirectOpt(deinterleaved_rgb888_u16_pixels* out_ptr_top, deinterleaved_rgb888_u16_pixels* out_ptr_bottom, interleaved_rgb888_u16_pixels* in_ptr, uint32_t num_iters, size_t input_halfline, size_t output_halfline) {
 	//de-interleave pixels
 	const int bottom_pos = 0;
 	const int top_pos = 1;
@@ -172,7 +172,7 @@ static inline void usb_rgb888convertInterleaveU16VideoToOutputDirectOpt(deinterl
 	}
 }
 
-static inline void usb_rgb888convertInterleaveU16VideoToOutputDirectOptMonoTop(deinterleaved_rgb888_u16_pixels* out_ptr_top, interleaved_rgb888_u16_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
+static inline void usb_rgb888convertInterleaveU16VideoToOutputDirectOptMonoTop(deinterleaved_rgb888_u16_pixels* out_ptr_top, interleaved_rgb888_u16_pixels* in_ptr, uint32_t num_iters, size_t input_halfline, size_t output_halfline) {
 	//de-interleave pixels
 	const int top_pos = 1;
 	const size_t real_num_iters = num_iters / INTERLEAVED_RGB888_PIXEL_NUM;
@@ -184,7 +184,7 @@ static inline void usb_rgb888convertInterleaveU16VideoToOutputDirectOptMonoTop(d
 	}
 }
 
-static inline void usb_rgb888convertInterleaveU16VideoToOutputDirectOptMonoBottom(deinterleaved_rgb888_u16_pixels* out_ptr_bottom, interleaved_rgb888_u16_pixels* in_ptr, uint32_t num_iters, int input_halfline, int output_halfline) {
+static inline void usb_rgb888convertInterleaveU16VideoToOutputDirectOptMonoBottom(deinterleaved_rgb888_u16_pixels* out_ptr_bottom, interleaved_rgb888_u16_pixels* in_ptr, uint32_t num_iters, size_t input_halfline, size_t output_halfline) {
 	//de-interleave pixels
 	const int bottom_pos = 0;
 	const size_t real_num_iters = num_iters / INTERLEAVED_RGB888_PIXEL_NUM;
@@ -266,7 +266,7 @@ static void ftd3_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_
 	}
 }
 
-static inline void usb_oldDSconvertVideoToOutputHalfLineDirectOptLE(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, int input_halfline, int output_halfline) {
+static inline void usb_oldDSconvertVideoToOutputHalfLineDirectOptLE(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, size_t input_halfline, size_t output_halfline) {
 	//de-interleave pixels
 	const int pixels_size = sizeof(VideoPixelBGR16);
 	const int num_halflines = 2;
@@ -278,7 +278,7 @@ static inline void usb_oldDSconvertVideoToOutputHalfLineDirectOptLE(USBOldDSCapt
 	usb_rgb565convertInterleaveVideoToOutputDirectOptLE(out_ptr_top, out_ptr_bottom, in_ptr, halfline_iters, input_halfline, output_halfline);
 }
 
-static inline void usb_oldDSconvertVideoToOutputHalfLineDirectOptBE(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, int input_halfline, int output_halfline) {
+static inline void usb_oldDSconvertVideoToOutputHalfLineDirectOptBE(USBOldDSCaptureReceived *p_in, VideoOutputData *p_out, size_t input_halfline, size_t output_halfline) {
 	//de-interleave pixels
 	const int pixels_size = sizeof(VideoPixelBGR16);
 	const int num_halflines = 2;
@@ -604,13 +604,13 @@ static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOu
 	memset(p_out->bgr16_video_output_data.screen_data, 0, WIDTH_DS * sizeof(uint16_t));
 
 	if(!is_big_endian) {
-		int input_halfline = 0;
-		for(int i = 0; i < 2; i++) {
+		size_t input_halfline = 0;
+		for(size_t i = 0; i < 2; i++) {
 			if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
 				usb_oldDSconvertVideoToOutputHalfLineDirectOptLE(p_in, p_out, input_halfline++, i);
 		}
 
-		for(int i = 2; i < HEIGHT_DS * 2; i++) {
+		for(size_t i = 2; i < HEIGHT_DS * 2; i++) {
 			if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
 				usb_oldDSconvertVideoToOutputHalfLineDirectOptLE(p_in, p_out, input_halfline++, i);
 			else { // deal with missing half-line
@@ -622,13 +622,13 @@ static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOu
 		}
 	}
 	else {
-		int input_halfline = 0;
-		for(int i = 0; i < 2; i++) {
+		size_t input_halfline = 0;
+		for(size_t i = 0; i < 2; i++) {
 			if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
 				usb_oldDSconvertVideoToOutputHalfLineDirectOptBE(p_in, p_out, input_halfline++, i);
 		}
 
-		for(int i = 2; i < HEIGHT_DS * 2; i++) {
+		for(size_t i = 2; i < HEIGHT_DS * 2; i++) {
 			if(p_in->frameinfo.half_line_flags[(i >> 3)] & (1 << (i & 7)))
 				usb_oldDSconvertVideoToOutputHalfLineDirectOptBE(p_in, p_out, input_halfline++, i);
 			else { // deal with missing half-line
@@ -641,10 +641,10 @@ static void usb_oldDSconvertVideoToOutput(USBOldDSCaptureReceived *p_in, VideoOu
 	}
 	#else
 	if(!is_big_endian)
-		for(int i = 0; i < HEIGHT_DS * 2; i++)
+		for(size_t i = 0; i < HEIGHT_DS * 2; i++)
 			usb_oldDSconvertVideoToOutputHalfLineDirectOptLE(p_in, p_out, i, i);
 	else
-		for(int i = 0; i < HEIGHT_DS * 2; i++)
+		for(size_t i = 0; i < HEIGHT_DS * 2; i++)
 			usb_oldDSconvertVideoToOutputHalfLineDirectOptBE(p_in, p_out, i, i);
 	#endif
 }

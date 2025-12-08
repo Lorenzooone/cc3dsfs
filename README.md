@@ -86,16 +86,16 @@ The software has a GUI which exposes all of the available settings. There are al
 Most of the settings are explained in [Keyboard shortcuts](#Keyboard-shortcuts).
 
 ### Keyboard controls
-- __Enter key__: Used to open the GUI when it is not shown, as well as to confirm the selection of an option. Holding it for 30 seconds will reset the application to its defaults.
+- __Enter key__: Used to open the GUI when it is not shown, as well as to confirm the selection of an option. Holding it for 10 seconds will reset the application to its defaults.
 - __Arrow keys__: Used to change the selected option in the GUI.
 
 ### Mouse controls
-- __Right click__: Used to open the GUI when it is not shown. Holding it for 30 seconds will reset the application to its defaults.
+- __Right click__: Used to open the GUI when it is not shown. Holding it for 10 seconds will reset the application to its defaults.
 - __Left click__: Used to confirm the selection of an option.
 
 ### Joystick controls
 - __Option/Share buttons__: Used to open the GUI when it is not shown.
-- __A/B/X/Y buttons__: Used to confirm the selection of an option. Holding B (X on a PS5 controller) for 30 seconds will reset the application to its defaults.
+- __A/B/X/Y buttons__: Used to confirm the selection of an option. Holding B (X on a PS5 controller) for 10 seconds will reset the application to its defaults.
 - __Dpad/Sitcks__: Used to change the selected option in the GUI.
 
 _Note: Currently only tested using a PS5 controller._

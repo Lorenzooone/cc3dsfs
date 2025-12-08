@@ -164,7 +164,7 @@ private:
 	const float touch_long_press_timer = 1.5f;
 	const float mouse_timeout = 5.0f;
 	const float v_sync_timeout = 5.0f;
-	const float bad_resolution_timeout = 30.0f;
+	const float bad_resolution_timeout = 10.0f;
 	const float menu_change_timeout = 0.3f;
 	const float input_data_format_change_timeout = 1.0f;
 
