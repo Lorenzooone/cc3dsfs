@@ -2440,7 +2440,10 @@ void WindowScreen::end_reconnection_menu() {
 void WindowScreen::update_ds_3ds_connection(bool changed_type) {
 	if(changed_type && (this->curr_menu == CROP_MENU_TYPE))
 		this->setup_no_menu();
-	this->prepare_size_ratios(false, false);
+	if(changed_type)
+		this->prepare_size_ratios(false, false);
+	else
+		this->prepare_size_ratios(true, true);
 	this->future_operations.call_crop = true;
 }
 
