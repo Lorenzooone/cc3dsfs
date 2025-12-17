@@ -16,7 +16,7 @@ INITIAL_CONFIGURATION_MODE=0
 
 ${PREMADE_DIR}/${PROGRAM_NAME}_prepare_script.sh
 
-if [ "$INITIAL_CONFIGURATION_MODE" -eq "1" ]; then
+if [ "$INITIAL_CONFIGURATION_MODE" -eq "0" ]; then
 
 # Rightmost
 ${MAIN_KIOSK_PROGRAM} ${EXTRA_COMMANDS} --enabled_both 1 --pos_x_both 1200 --pos_y_both 0 --profile 5 --auto_connect &
