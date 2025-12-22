@@ -1524,8 +1524,8 @@ void WindowScreen::prepare_size_ratios(bool top_increase, bool bot_increase, boo
 	if(!this->m_info.is_fullscreen)
 		return;
 
-	sf::Vector2f top_screen_size = getShownScreenSize(true, &this->m_info);
-	sf::Vector2f bot_screen_size = getShownScreenSize(false, &this->m_info);
+	sf::Vector2f top_screen_size = getOutputScreenSize(true, &this->m_info);
+	sf::Vector2f bot_screen_size = getOutputScreenSize(false, &this->m_info);
 
 	if(this->m_stype == ScreenType::TOP) {
 		bot_increase = true;
@@ -1609,8 +1609,10 @@ int WindowScreen::get_fullscreen_offset_y(int top_width, int top_height, int bot
 }
 
 void WindowScreen::resize_window_and_out_rects(bool do_work) {
-	sf::Vector2f top_screen_size = getShownScreenSize(true, &this->loaded_info);
-	sf::Vector2f bot_screen_size = getShownScreenSize(false, &this->loaded_info);
+	sf::Vector2f top_screen_tex_size = getShownScreenSize(true, &this->loaded_info);
+	sf::Vector2f bot_screen_tex_size = getShownScreenSize(false, &this->loaded_info);
+	sf::Vector2f top_screen_size = apply_interleaved_aspect_ratio_fix(top_screen_tex_size, true, &this->loaded_info);
+	sf::Vector2f bot_screen_size = apply_interleaved_aspect_ratio_fix(bot_screen_tex_size, false, &this->loaded_info);
 	int top_width = (int)top_screen_size.x;
 	int top_height = (int)top_screen_size.y;
 	float top_scaling = (float)this->loaded_info.scaling;
@@ -1655,9 +1657,11 @@ void WindowScreen::resize_window_and_out_rects(bool do_work) {
 	sf::Vector2f new_bot_screen_size = {(float)bot_width, (float)bot_height};
 	if(do_work) {
 		this->m_out_rect_top.out_rect.setSize(new_top_screen_size);
-		this->m_out_rect_top.out_rect.setTextureRect(sf::IntRect({0, 0}, {(int)top_screen_size.x, (int)top_screen_size.y}));
+		this->m_out_rect_top.out_rect.setTextureRect(sf::IntRect({0, 0}, {(int)top_screen_tex_size.x, (int)top_screen_tex_size.y}));
+		this->m_out_rect_top_right.out_rect.setSize(new_top_screen_size);
+		this->m_out_rect_top_right.out_rect.setTextureRect(sf::IntRect({0, 0}, {(int)top_screen_tex_size.x, (int)top_screen_tex_size.y}));
 		this->m_out_rect_bot.out_rect.setSize(new_bot_screen_size);
-		this->m_out_rect_bot.out_rect.setTextureRect(sf::IntRect({0, 0}, {(int)bot_screen_size.x, (int)bot_screen_size.y}));
+		this->m_out_rect_bot.out_rect.setTextureRect(sf::IntRect({0, 0}, {(int)bot_screen_tex_size.x, (int)bot_screen_tex_size.y}));
 	}
 	this->set_position_screens(new_top_screen_size, new_bot_screen_size, offset_x, offset_y, max_x, max_y, separator_size_x, separator_size_y, do_work);
 	this->m_width_no_manip = this->m_width;
@@ -1793,6 +1797,22 @@ sf::Vector2f WindowScreen::getShownScreenSize(bool is_top, ScreenInfo* info) {
 		height = (*crops)[*crop_kind]->bot_height;
 	}
 	return {(float)width, (float)height};
+}
+
+sf::Vector2f WindowScreen::apply_interleaved_aspect_ratio_fix(sf::Vector2f screen_size, bool is_top, ScreenInfo* info) {
+	if(!is_top)
+		return screen_size;
+	if(!info->interleaved_aspect_ratio_fix)
+		return screen_size;
+	if(!get_3d_enabled(this->capture_status))
+		return screen_size;
+	screen_size.y *= 2.0f;
+	return screen_size;
+}
+
+sf::Vector2f WindowScreen::getOutputScreenSize(bool is_top, ScreenInfo* info) {
+	sf::Vector2f screen_size = getShownScreenSize(is_top, info);
+	return this->apply_interleaved_aspect_ratio_fix(screen_size, is_top, info);
 }
 
 int WindowScreen::get_pos_x_screen_inside_data(bool is_top, bool is_second) {

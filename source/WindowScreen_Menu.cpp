@@ -359,6 +359,15 @@ void WindowScreen::squish_3d_change(bool is_top) {
 	}
 }
 
+void WindowScreen::interleaved_aspect_ratio_fix_change() {
+	this->m_info.interleaved_aspect_ratio_fix = !this->m_info.interleaved_aspect_ratio_fix;
+	bool updated = get_3d_enabled(this->capture_status);
+	if(updated) {
+		this->prepare_size_ratios(false, false);
+		this->future_operations.call_screen_settings_update = true;
+	}
+}
+
 void WindowScreen::offset_change(float &value, float change) {
 	if(change >= 1.0)
 		return;
@@ -2309,6 +2318,9 @@ void WindowScreen::poll(bool do_everything) {
 						break;
 					case MAIN_3D_MENU_SQUISH_BOTTOM_TOGGLE:
 						this->squish_3d_change(false);
+						break;
+					case MAIN_3D_MENU_INTERLEAVED_ASPECT_RATIO_FIX_TOGGLE:
+						this->interleaved_aspect_ratio_fix_change();
 						break;
 					case MAIN_3D_MENU_SECOND_SCREEN_POSITION_SETTINGS:
 						this->setup_second_screen_3d_relpos_menu();

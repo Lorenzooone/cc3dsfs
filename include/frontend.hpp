@@ -295,6 +295,7 @@ private:
 	void request_3d_change();
 	void interleaved_3d_change();
 	void squish_3d_change(bool is_top);
+	void interleaved_aspect_ratio_fix_change();
 	void audio_device_change(audio_output_device_data new_device_data);
 	void is_nitro_capture_type_change(bool positive);
 	void is_nitro_capture_speed_change(bool positive);
@@ -384,6 +385,8 @@ private:
 	std::vector<const CropData*>* get_crop_data_vector(ScreenInfo* info);
 	int* get_crop_index_ptr(ScreenInfo* info);
 	sf::Vector2f getShownScreenSize(bool is_top, ScreenInfo* info);
+	sf::Vector2f apply_interleaved_aspect_ratio_fix(sf::Vector2f screen_size, bool is_top, ScreenInfo* info);
+	sf::Vector2f getOutputScreenSize(bool is_top, ScreenInfo* info);
 	void crop();
 	void setWinSize(bool is_main_thread);
 	bool can_setup_menu();

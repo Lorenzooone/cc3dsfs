@@ -727,11 +727,13 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		int save_index = 0;
 
 		if(top_screen->scheduled_split() || bot_screen->scheduled_split()) {
+			joint_screen->m_info.interleaved_aspect_ratio_fix = top_screen->m_info.interleaved_aspect_ratio_fix;
 			top_screen->m_info.window_enabled = false;
 			bot_screen->m_info.window_enabled = false;
 			joint_screen->m_info.window_enabled = true;
 		}
 		if(joint_screen->scheduled_split()) {
+			top_screen->m_info.interleaved_aspect_ratio_fix = joint_screen->m_info.interleaved_aspect_ratio_fix;
 			top_screen->m_info.window_enabled = true;
 			bot_screen->m_info.window_enabled = true;
 			joint_screen->m_info.window_enabled = false;
@@ -751,14 +753,14 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 			capture_data->status.running = false;
 			ret_val = -4;
 		}
-		
+
 		if((load_index = top_screen->load_data()) || (load_index = bot_screen->load_data()) || (load_index = joint_screen->load_data())) {
 			// This value should only be loaded when starting the program...
 			bool previous_last_connected_ds = frontend_data.display_data.last_connected_ds;
 			load_layout_file(load_index, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, true, false);
 			frontend_data.display_data.last_connected_ds = previous_last_connected_ds;
 		}
-		
+
 		if((save_index = top_screen->save_data()) || (save_index = bot_screen->save_data()) || (save_index = joint_screen->save_data())) {
 			save_layout_file(save_index, &frontend_data, audio_data, out_text_data, &capture_data->status, skip_io, true);
 			top_screen->update_save_menu();

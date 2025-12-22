@@ -608,6 +608,7 @@ void reset_screen_info(ScreenInfo &info) {
 	info.separator_fullscreen_multiplier = DEFAULT_WINDOW_SCALING_VALUE;
 	info.squish_3d_top = false;
 	info.squish_3d_bot = false;
+	info.interleaved_aspect_ratio_fix = true;
 	info.match_bottom_pos_and_second_screen_pos = false;
 }
 
@@ -862,6 +863,10 @@ bool load_screen_info(std::string key, std::string value, std::string base, Scre
 		info.squish_3d_bot = std::stoi(value);
 		return true;
 	}
+	if(key == (base + "interleaved_aspect_ratio_fix")) {
+		info.interleaved_aspect_ratio_fix = std::stoi(value);
+		return true;
+	}
 	if(key == (base + "match_bottom_pos_and_second_screen_pos")) {
 		info.match_bottom_pos_and_second_screen_pos = std::stoi(value);
 		return true;
@@ -916,6 +921,7 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	out += base + "second_screen_pos=" + std::to_string(info.second_screen_pos) + "\n";
 	out += base + "squish_3d_top=" + std::to_string(info.squish_3d_top) + "\n";
 	out += base + "squish_3d_bot=" + std::to_string(info.squish_3d_bot) + "\n";
+	out += base + "interleaved_aspect_ratio_fix=" + std::to_string(info.interleaved_aspect_ratio_fix) + "\n";
 	out += base + "match_bottom_pos_and_second_screen_pos=" + std::to_string(info.match_bottom_pos_and_second_screen_pos) + "\n";
 	return out;
 }
@@ -941,7 +947,7 @@ void joystick_print_all() {
 			continue;
 		num_connected += 1;
 	}
-	
+
 	ActualConsoleOutText("Connected Joysticks: " + std::to_string(num_connected));
 
 	for(unsigned int i = 0; i < sf::Joystick::Count; i++) {

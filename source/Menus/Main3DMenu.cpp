@@ -59,6 +59,12 @@ static const Main3DMenuOptionInfo main_3d_menu_squish_bottom_option = {
 .out_action = MAIN_3D_MENU_SQUISH_BOTTOM_TOGGLE,
 .selectable_joint = true, .selectable_top = false, .selectable_bottom = false};
 
+static const Main3DMenuOptionInfo main_3d_menu_interleaved_aspect_ratio_fix_option = {
+.base_name = "Undo Interleaved Aspect Ratio Fix", .false_name = "Fix Interleaved Aspect Ratio", .is_selectable = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = MAIN_3D_MENU_NO_ACTION,
+.out_action = MAIN_3D_MENU_INTERLEAVED_ASPECT_RATIO_FIX_TOGGLE,
+.selectable_joint = true, .selectable_top = true, .selectable_bottom = false};
+
 static const Main3DMenuOptionInfo main_3d_menu_squish_mono_option = {
 .base_name = "Stretch Screen", .false_name = "Squish Screen", .is_selectable = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = MAIN_3D_MENU_NO_ACTION,
@@ -79,6 +85,7 @@ static const Main3DMenuOptionInfo* pollable_options[] = {
 &main_3d_menu_3d_interleaved_option,
 &main_3d_menu_squish_top_option,
 &main_3d_menu_squish_bottom_option,
+&main_3d_menu_interleaved_aspect_ratio_fix_option,
 &main_3d_menu_squish_mono_option,
 &main_3d_menu_second_screen_position_settings_option,
 };
@@ -223,6 +230,9 @@ void Main3DMenu::prepare(float menu_scaling_factor, int view_size_x, int view_si
 				break;
 			case MAIN_3D_MENU_SQUISH_BOTTOM_TOGGLE:
 				this->labels[index]->setText(this->setTextOptionBool(real_index, info->squish_3d_bot));
+				break;
+			case MAIN_3D_MENU_INTERLEAVED_ASPECT_RATIO_FIX_TOGGLE:
+				this->labels[index]->setText(this->setTextOptionBool(real_index, info->interleaved_aspect_ratio_fix));
 				break;
 			default:
 				break;

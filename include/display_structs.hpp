@@ -81,6 +81,7 @@ struct ScreenInfo {
 	FrameBlendingMode frame_blending_bot;
 	bool squish_3d_top;
 	bool squish_3d_bot;
+	bool interleaved_aspect_ratio_fix;
 	bool window_enabled;
 	int initial_pos_x;
 	int initial_pos_y; 
