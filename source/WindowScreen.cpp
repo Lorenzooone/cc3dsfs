@@ -1056,7 +1056,7 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 	this->m_out_rect_bot.to_process_tex = &this->m_out_rect_bot.out_tex;
 	this->m_out_rect_bot.to_backup_tex = &this->m_out_rect_bot.backup_tex;
 	this->post_texture_conversion_processing(out_rect_bot, this->m_out_rect_bot.to_process_tex, this->m_out_rect_bot.to_backup_tex, in_rect_bot, actually_draw, false, is_debug);
-	bool has_to_do_top_right_screen = get_3d_enabled(this->capture_status) && ((!this->display_data->interleaved_3d) || (!this->shared_texture_available)) && (this->m_stype != ScreenType::BOTTOM) && is_size_valid(out_rect_top.getSize());
+	bool has_to_do_top_right_screen = get_3d_enabled(this->capture_status) && (this->m_stype != ScreenType::BOTTOM) && is_size_valid(out_rect_top.getSize());
 	if(has_to_do_top_right_screen) {
 		out_rect_top_right.setTextureRect(out_rect_top.getTextureRect());
 		this->m_out_rect_top_right.to_process_tex = &this->m_out_rect_top_right.out_tex;
@@ -1069,7 +1069,7 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 	else
 		this->m_win.clear();
 	this->window_bg_processing();
-	bool needs_to_glue_textures_3d = has_to_do_top_right_screen && this->display_data->interleaved_3d && (!this->shared_texture_available);
+	bool needs_to_glue_textures_3d = has_to_do_top_right_screen && this->display_data->interleaved_3d;
 	if(needs_to_glue_textures_3d) {
 		float x_divisor = 2.0f;
 		float y_divisor = 1.0f;
@@ -1865,9 +1865,10 @@ void WindowScreen::crop() {
 		if(is_3d_interleaved && (!this->shared_texture_available))
 			top_screen_size.x /= 2.0f;
 		this->resize_in_rect(this->m_in_rect_top, starting_in_rect_x, starting_in_rect_y, (int)top_screen_size.x, (int)top_screen_size.y);
-		if(is_3d_interleaved && (!this->shared_texture_available)) {
-			int second_screen_x_starting_pos = std::max(0, ((int)((*crops)[*crop_value]->top_x * x_multiplier)) - TOP_WIDTH_3DS);
-			this->resize_in_rect(this->m_in_rect_top_right, second_screen_x_starting_pos, starting_in_rect_y, (int)top_screen_size.x, (int)top_screen_size.y);
+		if(is_3d_interleaved) {
+			int second_screen_x_starting_pos = std::max((int)this->get_pos_x_screen_inside_in_tex(true, true), ((int)((*crops)[*crop_value]->top_x * x_multiplier)) - TOP_WIDTH_3DS);
+			int second_screen_y_starting_pos = (int)(this->get_pos_y_screen_inside_in_tex(true, true) + (*crops)[*crop_value]->top_y);
+			this->resize_in_rect(this->m_in_rect_top_right, second_screen_x_starting_pos, second_screen_y_starting_pos, (int)top_screen_size.x, (int)top_screen_size.y);
 		}
 	}
 	this->loaded_operations.call_screen_settings_update = true;
