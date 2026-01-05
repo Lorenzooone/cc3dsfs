@@ -23,11 +23,11 @@
 
 #define OPTIMIZE_3DS_AUDIO_BUFFER_MAX_SIZE 0x200
 
-enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_FTD2, CAPTURE_CONN_IS_NITRO, CAPTURE_CONN_CYPRESS_NISETRO, CAPTURE_CONN_CYPRESS_OPTIMIZE };
+enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_FTD2, CAPTURE_CONN_IS_NITRO, CAPTURE_CONN_CYPRESS_NISETRO, CAPTURE_CONN_CYPRESS_OPTIMIZE, CAPTURE_CONN_PARTNER_CTR };
 enum InputVideoDataType { VIDEO_DATA_RGB, VIDEO_DATA_BGR, VIDEO_DATA_RGB16, VIDEO_DATA_BGR16 };
 enum CaptureScreensType { CAPTURE_SCREENS_BOTH, CAPTURE_SCREENS_TOP, CAPTURE_SCREENS_BOTTOM, CAPTURE_SCREENS_ENUM_END };
 enum CaptureSpeedsType { CAPTURE_SPEEDS_FULL, CAPTURE_SPEEDS_HALF, CAPTURE_SPEEDS_THIRD, CAPTURE_SPEEDS_QUARTER, CAPTURE_SPEEDS_ENUM_END };
-enum PossibleCaptureDevices { CC_LOOPY_OLD_DS, CC_LOOPY_NEW_DS, CC_LOOPY_OLD_3DS, CC_LOOPY_NEW_N3DSXL, CC_IS_NITRO_EMULATOR, CC_IS_NITRO_CAPTURE, CC_IS_TWL_CAPTURE, CC_NISETRO_DS, CC_OPTIMIZE_O3DS, CC_OPTIMIZE_N3DS, CC_POSSIBLE_DEVICES_END };
+enum PossibleCaptureDevices { CC_LOOPY_OLD_DS, CC_LOOPY_NEW_DS, CC_LOOPY_OLD_3DS, CC_LOOPY_NEW_N3DSXL, CC_IS_NITRO_EMULATOR, CC_IS_NITRO_CAPTURE, CC_IS_TWL_CAPTURE, CC_NISETRO_DS, CC_OPTIMIZE_O3DS, CC_OPTIMIZE_N3DS, CC_PARTNER_CTR, CC_POSSIBLE_DEVICES_END };
 
 // Readers are Audio and Video. So 2.
 // Use 6 extra buffers. 5 for async writing in case the other 2 are busy,
@@ -222,6 +222,35 @@ struct ALIGNED(16) PACKED ISTWLCaptureReceived {
 	ISTWLCaptureAudioReceived audio_capture_in[TWL_CAPTURE_MAX_SAMPLES_CHUNK_NUM];
 };
 
+// Shared basic command structure for Kyoto MicroComputer Partner CTR Capture
+struct ALIGNED(8) PACKED PartnerCTRCaptureCommand {
+	uint16_t magic; // 0xE007, little endian, like everything...
+	uint16_t command;
+	uint32_t payload_size;
+};
+
+// Input data, maybe...? Sent before every screen... Usually empty?
+struct ALIGNED(8) PACKED PartnerCTRCaptureCommandHeader0F {
+	PartnerCTRCaptureCommand command;
+	uint16_t unk[4];
+};
+
+// C4, C5 and C6. C4 is top screen. C5 second top screen. C6 bottom screen.
+struct ALIGNED(8) PACKED PartnerCTRCaptureCommandHeaderCxScreen {
+	PartnerCTRCaptureCommand command;
+	uint8_t index_kind; // Reflects C4, C5 and C6, so either 04, 05 or 06
+	uint8_t index;
+	uint16_t unk[3];
+};
+
+// Sound data, maybe...? Sent every 3 screens in 2D...
+// Every 4 screens in 3D...?
+struct ALIGNED(8) PACKED PartnerCTRCaptureCommandHeaderC7 {
+	PartnerCTRCaptureCommand command;
+	uint32_t index;
+	uint32_t unk[5];
+};
+
 struct ALIGNED(16) PACKED USB5653DSOptimizeCaptureReceived {
 	USB5653DSOptimizeInputColumnData columns_data[TOP_WIDTH_3DS];
 	USB5653DSOptimizePixelData bottom_only_column[HEIGHT_3DS][2];
@@ -317,6 +346,9 @@ struct CaptureDevice {
 	int firmware_id = 0;
 	uint32_t usb_speed = 0x200;
 	bool is_rgb_888 = false;
+	bool is_horizontally_flipped = false;
+	bool is_vertically_flipped = false;
+	bool continuous_3d_screens = true;
 };
 
 struct CaptureStatus {

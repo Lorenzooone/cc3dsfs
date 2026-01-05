@@ -786,6 +786,179 @@ static void usb_is_device_convertVideoToOutput(CaptureReceived *p_in, VideoOutpu
 	}
 }
 
+// To be moved to the appropriate header, later...
+#define PARTNER_CTR_CAPTURE_BASE_COMMAND 0xE007
+#define PARTNER_CTR_CAPTURE_COMMAND_INPUT 0x000F
+#define PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN 0x00C4
+#define PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN 0x00C5
+#define PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN 0x00C6
+#define PARTNER_CTR_CAPTURE_COMMAND_AUDIO 0x00C7
+
+static PartnerCTRCaptureCommand read_partner_ctr_base_command(uint8_t* data) {
+	PartnerCTRCaptureCommand out_cmd;
+	// Important: Ensure the data after the buffers for a single frame
+	// is stopped by wrong magic value...
+	out_cmd.magic = read_le16(data, 0);
+	out_cmd.command = read_le16(data, 1);
+	out_cmd.payload_size = read_le32(data, 1);
+	return out_cmd;
+}
+
+static size_t get_partner_ctr_size_command_header(PartnerCTRCaptureCommand read_command) {
+	switch (read_command.command) {
+		case PARTNER_CTR_CAPTURE_COMMAND_INPUT:
+			return sizeof(PartnerCTRCaptureCommandHeader0F);
+		case PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN:
+			return sizeof(PartnerCTRCaptureCommandHeaderCxScreen);
+		case PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN:
+			return sizeof(PartnerCTRCaptureCommandHeaderCxScreen);
+		case PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN:
+			return sizeof(PartnerCTRCaptureCommandHeaderCxScreen);
+		case PARTNER_CTR_CAPTURE_COMMAND_AUDIO:
+			return sizeof(PartnerCTRCaptureCommandHeaderC7);
+		default:
+			ActualConsoleOutTextError("Partner CTR Capture: Unknown command found! " + std::to_string(read_command.command));
+			return sizeof(PartnerCTRCaptureCommandHeader0F);
+	}
+}
+
+static uint8_t* get_ptr_next_command_partner_ctr(uint8_t* data) {
+	PartnerCTRCaptureCommand read_command = read_partner_ctr_base_command(data);
+	return data + get_partner_ctr_size_command_header(read_command) + read_command.payload_size;
+}
+
+static uint8_t* find_partner_ctr_x_screen(uint8_t* data) {
+	PartnerCTRCaptureCommand read_command = read_partner_ctr_base_command(data);
+	if(read_command.magic != PARTNER_CTR_CAPTURE_BASE_COMMAND)
+		return NULL;
+
+	if((read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN) || (read_command.command == PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN) || (read_command.command == PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN))
+		return data;
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_AUDIO)
+		data = get_ptr_next_command_partner_ctr(data);
+
+	read_command = read_partner_ctr_base_command(data);
+	if(read_command.magic != PARTNER_CTR_CAPTURE_BASE_COMMAND)
+		return NULL;
+
+	if((read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN) || (read_command.command == PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN) || (read_command.command == PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN))
+		return data;
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_INPUT)
+		data = get_ptr_next_command_partner_ctr(data);
+
+	read_command = read_partner_ctr_base_command(data);
+	if(read_command.magic != PARTNER_CTR_CAPTURE_BASE_COMMAND)
+		return NULL;
+
+	if((read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN) || (read_command.command == PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN) || (read_command.command == PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN))
+		return data;
+	ActualConsoleOutTextError("Partner CTR Capture: Unknown command found! " + std::to_string(read_command.command));
+	return NULL;
+}
+
+static bool is_valid_frame_partner_ctr(uint8_t* data, bool enabled_3d, uint8_t** first_screen, uint8_t** second_screen, uint8_t** third_screen) {
+	bool has_top = false;
+	bool has_top_second = !enabled_3d;
+	bool has_bottom = false;
+
+	*first_screen = find_partner_ctr_x_screen(data);
+	if(*first_screen == NULL)
+		return false;
+	PartnerCTRCaptureCommand read_command = read_partner_ctr_base_command(*first_screen);
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN)
+		has_top = true;
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN)
+		has_bottom = true;
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN)
+		has_top_second = true;
+
+	*second_screen = find_partner_ctr_x_screen(get_ptr_next_command_partner_ctr(*first_screen));
+	if(*second_screen == NULL)
+		return false;
+
+	read_command = read_partner_ctr_base_command(*second_screen);
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN)
+		has_top = true;
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN)
+		has_bottom = true;
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN)
+		has_top_second = true;
+
+	if(!enabled_3d)
+		return has_top && has_bottom;
+
+	*third_screen = find_partner_ctr_x_screen(get_ptr_next_command_partner_ctr(*second_screen));
+	if(*third_screen == NULL)
+		return false;
+
+	read_command = read_partner_ctr_base_command(*third_screen);
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN)
+		has_top = true;
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN)
+		has_bottom = true;
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN)
+		has_top_second = true;
+
+	return has_top && has_top_second && has_bottom;
+}
+
+static void convert_partner_ctr_screen_x(uint8_t* screen_ptr, VideoOutputData *p_out) {
+	if(screen_ptr == NULL)
+		return;
+
+	PartnerCTRCaptureCommand read_command = read_partner_ctr_base_command(screen_ptr);
+	VideoPixelRGB* out_screen_data = &p_out->rgb_video_output_data.screen_data[0];
+	screen_ptr += get_partner_ctr_size_command_header(read_command);
+
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN) {
+		for(size_t i = 0; i < HEIGHT_3DS; i++)
+			memcpy(&out_screen_data[i * TOP_WIDTH_3DS], screen_ptr + (i * BOT_WIDTH_3DS * sizeof(VideoPixelRGB)), BOT_WIDTH_3DS * sizeof(VideoPixelRGB));
+		return;
+	}
+
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN) {
+		memcpy(&out_screen_data[TOP_WIDTH_3DS * HEIGHT_3DS], screen_ptr, TOP_WIDTH_3DS * HEIGHT_3DS * sizeof(VideoPixelRGB));
+		return;
+	}
+
+	memcpy(&out_screen_data[2 * TOP_WIDTH_3DS * HEIGHT_3DS], screen_ptr, TOP_WIDTH_3DS * HEIGHT_3DS * sizeof(VideoPixelRGB));
+}
+
+static void usb_partner_ctr_interleave_3d(VideoOutputData *p_out) {
+	VideoPixelRGB buffer_data[TOP_WIDTH_3DS * 2];
+
+	VideoPixelRGB* out_top_screen = &p_out->rgb_video_output_data.screen_data[TOP_WIDTH_3DS * HEIGHT_3DS];
+	VideoPixelRGB* out_second_top_screen = &p_out->rgb_video_output_data.screen_data[2 * TOP_WIDTH_3DS * HEIGHT_3DS];
+	for(size_t i = 0; i < HEIGHT_3DS; i++) {
+		for(size_t j = 0; j < TOP_WIDTH_3DS; j++) {
+			buffer_data[j * 2] = out_top_screen[(i * TOP_WIDTH_3DS) + j];
+			buffer_data[(j * 2) + 1] = out_second_top_screen[(i * TOP_WIDTH_3DS) + j];
+		}
+		memcpy(&out_top_screen[i * TOP_WIDTH_3DS], &buffer_data[0], TOP_WIDTH_3DS * sizeof(VideoPixelRGB));
+		memcpy(&out_second_top_screen[i * TOP_WIDTH_3DS], &buffer_data[TOP_WIDTH_3DS], TOP_WIDTH_3DS * sizeof(VideoPixelRGB));
+	}
+}
+
+static void usb_partner_ctr_convertVideoToOutput(CaptureReceived *p_in, VideoOutputData *p_out, bool enabled_3d, bool interleaved_3d, bool requested_3d) {
+	uint8_t* data = (uint8_t*)p_in;
+	uint8_t* first_screen = NULL;
+	uint8_t* second_screen = NULL;
+	uint8_t* third_screen = NULL;
+
+	if(!is_valid_frame_partner_ctr(data, enabled_3d, &first_screen, &second_screen, &third_screen))
+		return;
+
+	convert_partner_ctr_screen_x(first_screen, p_out);
+	convert_partner_ctr_screen_x(second_screen, p_out);
+	convert_partner_ctr_screen_x(third_screen, p_out);
+
+	if(requested_3d && (!enabled_3d))
+		memcpy(&p_out->rgb_video_output_data.screen_data[2 * TOP_WIDTH_3DS * HEIGHT_3DS], &p_out->rgb_video_output_data.screen_data[TOP_WIDTH_3DS * HEIGHT_3DS], TOP_WIDTH_3DS * HEIGHT_3DS * sizeof(VideoPixelRGB));
+
+	if(requested_3d && interleaved_3d)
+		usb_partner_ctr_interleave_3d(p_out);
+}
+
 bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status, bool interleaved_3d) {
 	CaptureReceived* p_in = (CaptureReceived*)(((uint8_t*)&data_buffer->capture_buf) + data_buffer->unused_offset);
 	bool converted = false;
@@ -829,6 +1002,12 @@ bool convertVideoToOutput(VideoOutputData *p_out, const bool is_big_endian, Capt
 		bool is_rgb888 = video_data_type == VIDEO_DATA_RGB;
 		bool is_n3ds = is_device_optimize_n3ds(&status->device);
 		usb_3ds_optimize_convertVideoToOutput(p_in, p_out, is_data_3d, should_be_3d, is_big_endian, interleaved_3d, is_3d_requested, is_rgb888, is_n3ds);
+		converted = true;
+	}
+	#endif
+	#ifdef USE_PARTNER_CTR
+	if(status->device.cc_type == CAPTURE_CONN_PARTNER_CTR) {
+		usb_partner_ctr_convertVideoToOutput(p_in, p_out, is_data_3d, interleaved_3d, is_3d_requested);
 		converted = true;
 	}
 	#endif
@@ -985,6 +1164,43 @@ static void copyAudioOptimize3DS3DForced2DBE(std::int16_t *p_out, uint64_t &n_sa
 	n_samples = num_inserted * 2;
 }
 
+static void usb_partner_ctr_copyBufferToAudio(uint8_t* buffer_ptr, std::int16_t *p_out, uint64_t &n_samples, const bool is_big_endian) {
+	PartnerCTRCaptureCommand read_command = read_partner_ctr_base_command(buffer_ptr);
+	if(read_command.magic != PARTNER_CTR_CAPTURE_BASE_COMMAND)
+		return;
+	if(read_command.command != PARTNER_CTR_CAPTURE_COMMAND_AUDIO)
+		return;
+
+	buffer_ptr += get_partner_ctr_size_command_header(read_command);
+
+	memcpy_data_u16le_origin((uint16_t*)p_out + n_samples, buffer_ptr, (size_t)read_command.payload_size / 2, is_big_endian);
+
+	n_samples += read_command.payload_size / 2;
+}
+
+static void usb_partner_ctr_copyBufferAfterCommandToAudio(uint8_t* buffer_ptr, std::int16_t *p_out, uint64_t &n_samples, const bool is_big_endian) {
+	if(buffer_ptr == NULL)
+		return;
+
+	usb_partner_ctr_copyBufferToAudio(get_ptr_next_command_partner_ctr(buffer_ptr), p_out, n_samples, is_big_endian);
+}
+
+static void usb_partner_ctr_convertAudioToOutput(CaptureReceived *p_in, std::int16_t *p_out, uint64_t &n_samples, bool enabled_3d, const bool is_big_endian) {
+	uint8_t* data = (uint8_t*)p_in;
+	uint8_t* first_screen = NULL;
+	uint8_t* second_screen = NULL;
+	uint8_t* third_screen = NULL;
+	n_samples = 0;
+
+	if(!is_valid_frame_partner_ctr(data, enabled_3d, &first_screen, &second_screen, &third_screen))
+		return;
+
+	usb_partner_ctr_copyBufferToAudio(data, p_out, n_samples, is_big_endian);
+	usb_partner_ctr_copyBufferAfterCommandToAudio(first_screen, p_out, n_samples, is_big_endian);
+	usb_partner_ctr_copyBufferAfterCommandToAudio(second_screen, p_out, n_samples, is_big_endian);
+	usb_partner_ctr_copyBufferAfterCommandToAudio(third_screen, p_out, n_samples, is_big_endian);
+}
+
 bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, uint16_t &last_buffer_index, const bool is_big_endian, CaptureDataSingleBuffer* data_buffer, CaptureStatus* status) {
 	if(!status->device.has_audio)
 		return true;
@@ -1054,6 +1270,12 @@ bool convertAudioToOutput(std::int16_t *p_out, uint64_t &n_samples, uint16_t &la
 					copyAudioOptimize3DSLE(p_out, n_samples, last_buffer_index, &data_buffer->capture_buf, is_rgb888);
 			}
 		}
+		return true;
+	}
+	#endif
+	#ifdef USE_PARTNER_CTR
+	if(status->device.cc_type == CAPTURE_CONN_PARTNER_CTR) {
+		usb_partner_ctr_convertAudioToOutput(p_in, p_out, n_samples, is_data_3d, is_big_endian);
 		return true;
 	}
 	#endif

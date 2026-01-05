@@ -77,7 +77,13 @@
 
 #define MAX_IN_VIDEO_WIDTH IN_VIDEO_WIDTH_3DS_ROT
 #define MAX_IN_VIDEO_HEIGHT IN_VIDEO_HEIGHT_3DS_3D
-#define MAX_IN_VIDEO_SIZE (MAX_IN_VIDEO_WIDTH * MAX_IN_VIDEO_HEIGHT)
+// While this is technically correct, it is extremely wasteful.
+//#define MAX_IN_VIDEO_SIZE (MAX_IN_VIDEO_WIDTH * MAX_IN_VIDEO_HEIGHT)
+// The real MAX_IN_VIDEO_SIZE is the max between
+// IN_VIDEO_SIZE_DS, IN_VIDEO_SIZE_3DS_3D and IN_VIDEO_SIZE_3DS_3D_ROT...
+// As such, I am forcing this to be IN_VIDEO_SIZE_3DS_3D_ROT,
+// as it is the greatest (due to the wasted space it has)...
+#define MAX_IN_VIDEO_SIZE IN_VIDEO_SIZE_3DS_3D_ROT
 #define MAX_IN_VIDEO_BPP_SIZE IN_VIDEO_BPP_SIZE_3DS
 
 #define MAX_IN_VIDEO_WIDTH_TOP IN_VIDEO_WIDTH_3DS_ROT

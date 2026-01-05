@@ -467,10 +467,12 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data, volatile
 						bool conversion_success = convertAudioToOutput(out_buf[audio_buf_counter], n_samples, last_buffer_index, endianness, data_buffer, &capture_data->status);
 						if(!conversion_success)
 							audio_data->signal_conversion_error();
-						audio.samples.emplace(out_buf[audio_buf_counter], n_samples, out_time);
-						if(++audio_buf_counter >= NUM_CONCURRENT_AUDIO_BUFFERS)
-							audio_buf_counter = 0;
-						audio.samples_wait.unlock();
+						if(n_samples > 0) {
+							audio.samples.emplace(out_buf[audio_buf_counter], n_samples, out_time);
+							if(++audio_buf_counter >= NUM_CONCURRENT_AUDIO_BUFFERS)
+								audio_buf_counter = 0;
+							audio.samples_wait.unlock();
+						}
 					}
 					capture_data->data_buffers.ReleaseReaderBuffer(CAPTURE_READER_AUDIO);
 				}

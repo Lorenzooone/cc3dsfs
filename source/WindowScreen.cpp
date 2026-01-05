@@ -686,8 +686,12 @@ void WindowScreen::execute_single_update_texture(bool &manually_converted, bool 
 		bot_width = WIDTH_DS;
 		bot_height = HEIGHT_DS;
 	}
-	if(get_3d_enabled(this->capture_status))
-		top_width *= 2;
+	if(get_3d_enabled(this->capture_status)) {
+		if(this->capture_status->device.continuous_3d_screens)
+			top_width *= 2;
+		else
+			top_height *= 2;
+	}
 
 	if(is_vertically_rotated(this->capture_status->device.base_rotation)) {
 		std::swap(top_width, top_height);
@@ -967,6 +971,13 @@ void WindowScreen::post_texture_conversion_processing(sf::RectangleShape &rect_d
 		sf::IntRect text_coords_rect = final_in_rect.getTextureRect();
 		text_coords_rect.position.x += this->curr_frame_texture_pos * MAX_IN_VIDEO_WIDTH;
 		final_in_rect.setTextureRect(text_coords_rect);
+		float x_scale = 1;
+		float y_scale = 1;
+		if(capture_status->connected && capture_status->device.is_horizontally_flipped)
+			x_scale = -1;
+		if(capture_status->connected && capture_status->device.is_vertically_flipped)
+			y_scale = -1;
+		final_in_rect.setScale({x_scale, y_scale});
 		if(this->capture_status->connected && actually_draw) {
 			bool use_default_shader = !(this->apply_shaders_to_input(rect_data, to_process_tex_data, backup_tex_data, final_in_rect, is_top));
 			if(use_default_shader)
