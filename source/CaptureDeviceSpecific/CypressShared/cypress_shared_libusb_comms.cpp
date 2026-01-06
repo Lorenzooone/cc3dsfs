@@ -26,25 +26,33 @@ int cypress_libusb_bulk_in(cy_device_device_handlers* handlers, const cy_device_
 }
 
 // Read from ctrl bulk
-int cypress_libusb_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
-	return libusb_bulk_transfer(handlers->usb_handle, usb_device_desc->ep_ctrl_bulk_in, buf, length, transferred, usb_device_desc->bulk_timeout);
+int cypress_libusb_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred, int chosen_endpoint) {
+	if(chosen_endpoint == -1)
+		chosen_endpoint = usb_device_desc->ep_ctrl_bulk_in;
+	return libusb_bulk_transfer(handlers->usb_handle, chosen_endpoint, buf, length, transferred, usb_device_desc->bulk_timeout);
 }
 
 // Write to ctrl bulk
-int cypress_libusb_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
-	return libusb_bulk_transfer(handlers->usb_handle, usb_device_desc->ep_ctrl_bulk_out, buf, length, transferred, usb_device_desc->bulk_timeout);
+int cypress_libusb_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred, int chosen_endpoint) {
+	if(chosen_endpoint == -1)
+		chosen_endpoint = usb_device_desc->ep_ctrl_bulk_out;
+	return libusb_bulk_transfer(handlers->usb_handle, chosen_endpoint, buf, length, transferred, usb_device_desc->bulk_timeout);
 }
 
 void cypress_libusb_pipe_reset_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc) {
 	libusb_clear_halt(handlers->usb_handle, usb_device_desc->ep_bulk_in);
 }
 
-void cypress_libusb_pipe_reset_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc) {
-	libusb_clear_halt(handlers->usb_handle, usb_device_desc->ep_ctrl_bulk_in);
+void cypress_libusb_pipe_reset_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, int chosen_endpoint) {
+	if(chosen_endpoint == -1)
+		chosen_endpoint = usb_device_desc->ep_ctrl_bulk_in;
+	libusb_clear_halt(handlers->usb_handle, chosen_endpoint);
 }
 
-void cypress_libusb_pipe_reset_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc) {
-	libusb_clear_halt(handlers->usb_handle, usb_device_desc->ep_ctrl_bulk_out);
+void cypress_libusb_pipe_reset_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, int chosen_endpoint) {
+	if(chosen_endpoint == -1)
+		chosen_endpoint = usb_device_desc->ep_ctrl_bulk_out;
+	libusb_clear_halt(handlers->usb_handle, chosen_endpoint);
 }
 
 void cypress_libusb_cancell_callback(cy_async_callback_data* cb_data) {
@@ -78,7 +86,13 @@ int cypress_libusb_async_in_start(cy_device_device_handlers* handlers, const cy_
 	return retval;
 }
 
-static bool cypress_libusb_setup_connection(libusb_device_handle* handle, const cy_device_usb_device* usb_device_desc, bool *claimed) {
+static bool cypress_libusb_setup_connection(libusb_device_handle* handle, const cy_device_usb_device* usb_device_desc, bool *claimed, bool &executed_setup) {
+	static bool last_result = false;
+	if(executed_setup)
+		return last_result;
+
+	last_result = false;
+	executed_setup = true;
 	*claimed = false;
 	libusb_check_and_detach_kernel_driver(handle, usb_device_desc->default_interface);
 	int result = libusb_check_and_set_configuration(handle, usb_device_desc->default_config);
@@ -94,6 +108,7 @@ static bool cypress_libusb_setup_connection(libusb_device_handle* handle, const 
 		if(result != LIBUSB_SUCCESS)
 			return false;
 	}
+	last_result = true;
 	return true;
 }
 
@@ -104,6 +119,18 @@ static void read_strings(libusb_device_handle *handle, libusb_device_descriptor 
 	libusb_get_string_descriptor_ascii(handle, usb_descriptor->iSerialNumber, (uint8_t*)serial, 0x100);
 	manufacturer[0xFF] = 0;
 	serial[0xFF] = 0;
+}
+
+static std::string read_real_serial(libusb_device_handle *handle, libusb_device_descriptor *usb_descriptor, const cy_device_usb_device* usb_device_desc, char* serial, int &curr_serial_extra_id, bool *claimed, bool &executed_setup) {
+	if(handle == NULL)
+		return "";
+
+	if(usb_device_desc->get_serial_requires_setup && (!cypress_libusb_setup_connection(handle, usb_device_desc, claimed, executed_setup)))
+		return "";
+
+	cy_device_device_handlers handlers;
+	handlers.usb_handle = handle;
+	return cypress_get_serial(&handlers, usb_device_desc, (std::string)(serial), usb_descriptor->bcdDevice, curr_serial_extra_id);
 }
 
 static int cypress_libusb_insert_device(std::vector<CaptureDevice> &devices_list, const cy_device_usb_device* usb_device_desc, libusb_device *usb_device, libusb_device_descriptor *usb_descriptor, int &curr_serial_extra_id) {
@@ -120,9 +147,12 @@ static int cypress_libusb_insert_device(std::vector<CaptureDevice> &devices_list
 	char serial[0x100];
 	read_strings(handle, usb_descriptor, manufacturer, serial);
 	bool claimed = false;
-	bool result_setup = cypress_libusb_setup_connection(handle, usb_device_desc, &claimed);
-	if(result_setup)
-		cypress_insert_device(devices_list, usb_device_desc, (std::string)(serial), usb_descriptor->bcdDevice, curr_serial_extra_id);
+	bool executed_setup = false;
+	bool result_setup = cypress_libusb_setup_connection(handle, usb_device_desc, &claimed, executed_setup);
+	if(result_setup) {
+		std::string device_serial_number = read_real_serial(handle, usb_descriptor, usb_device_desc, serial, curr_serial_extra_id, &claimed, executed_setup);
+		cypress_insert_device(devices_list, usb_device_desc, device_serial_number);
+	}
 	if(claimed)
 		libusb_release_interface(handle, usb_device_desc->default_interface);
 	libusb_close(handle);
@@ -169,9 +199,10 @@ cy_device_device_handlers* cypress_libusb_serial_reconnection(const cy_device_us
 		char manufacturer[0x100];
 		char serial[0x100];
 		read_strings(handlers.usb_handle, &usb_descriptor, manufacturer, serial);
-		std::string device_serial_number = cypress_get_serial(usb_device_desc, (std::string)(serial), usb_descriptor.bcdDevice, curr_serial_extra_id);
 		bool claimed = false;
-		if((wanted_serial_number == device_serial_number) && (cypress_libusb_setup_connection(handlers.usb_handle, usb_device_desc, &claimed))) {
+		bool executed_setup = false;
+		std::string device_serial_number = read_real_serial(handlers.usb_handle, &usb_descriptor, usb_device_desc, serial, curr_serial_extra_id, &claimed, executed_setup);
+		if((wanted_serial_number == device_serial_number) && (cypress_libusb_setup_connection(handlers.usb_handle, usb_device_desc, &claimed, executed_setup))) {
 			final_handlers = new cy_device_device_handlers;
 			final_handlers->usb_handle = handlers.usb_handle;
 			if(new_device != NULL)
@@ -230,7 +261,10 @@ void cypress_libusb_find_used_serial(const cy_device_usb_device* usb_device_desc
 		char serial[0x100];
 		read_strings(handlers.usb_handle, &usb_descriptor, manufacturer, serial);
 		libusb_close(handlers.usb_handle);
-		std::string device_serial_number = cypress_get_serial(usb_device_desc, (std::string)(serial), usb_descriptor.bcdDevice, curr_serial_extra_id);
+		// This is only called when we can set this stuff ourselves...
+		// For now, do not update it with the setup part, as there is no
+		// case in which it would be used for it...
+		std::string device_serial_number = cypress_get_serial(NULL, usb_device_desc, (std::string)(serial), usb_descriptor.bcdDevice, curr_serial_extra_id);
 		try {
 			int pos = std::stoi(device_serial_number);
 			if((pos < 0) || (pos >= ((int)num_free_fw_ids)))

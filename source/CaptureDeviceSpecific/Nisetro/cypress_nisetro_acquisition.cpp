@@ -99,7 +99,7 @@ static std::string _cypress_nisetro_get_serial(const cyni_device_usb_device* usb
 	return std::to_string((curr_serial_extra_id++) + 1);
 }
 
-std::string cypress_nisetro_get_serial(const void* usb_device_desc, std::string serial, uint16_t bcd_device, int& curr_serial_extra_id) {
+std::string cypress_nisetro_get_serial(cy_device_device_handlers* handlers, const void* usb_device_desc, std::string serial, uint16_t bcd_device, int& curr_serial_extra_id) {
 	if(usb_device_desc == NULL)
 		return "";
 	const cyni_device_usb_device* in_usb_device_desc = (const cyni_device_usb_device*)usb_device_desc;

@@ -121,7 +121,7 @@ static std::string _cypress_optimize_3ds_get_serial(const cyop_device_usb_device
 	return std::to_string((curr_serial_extra_id++) + 1);
 }
 
-std::string cypress_optimize_3ds_get_serial(const void* usb_device_desc, std::string serial, uint16_t bcd_device, int& curr_serial_extra_id) {
+std::string cypress_optimize_3ds_get_serial(cy_device_device_handlers* handlers, const void* usb_device_desc, std::string serial, uint16_t bcd_device, int& curr_serial_extra_id) {
 	if(usb_device_desc == NULL)
 		return "";
 	const cyop_device_usb_device* in_usb_device_desc = (const cyop_device_usb_device*)usb_device_desc;

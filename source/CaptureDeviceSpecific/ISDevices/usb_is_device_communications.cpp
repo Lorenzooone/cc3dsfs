@@ -750,7 +750,7 @@ static int AuthCtrlIn(is_device_device_handlers* handlers, const is_device_usb_d
 	}
 }
 
-int GetDeviceSerial(is_device_device_handlers* handlers, uint8_t* buf, const is_device_usb_device* device_desc) {
+int GetIsDeviceSerial(is_device_device_handlers* handlers, uint8_t* buf, const is_device_usb_device* device_desc) {
 	int ret = 0;
 	uint32_t value = 0;
 	switch(device_desc->device_type) {

@@ -58,7 +58,7 @@ std::string get_serial(const is_device_usb_device* usb_device_desc, is_device_de
 	bool conn_success = true;
 	if(initial_cleanup(usb_device_desc, handlers))
 		conn_success = false;
-	if(conn_success && (GetDeviceSerial(handlers, data, usb_device_desc) != LIBUSB_SUCCESS))
+	if(conn_success && (GetIsDeviceSerial(handlers, data, usb_device_desc) != LIBUSB_SUCCESS))
 		conn_success = false;
 	if(conn_success) {
 		data[IS_DEVICE_REAL_SERIAL_NUMBER_SIZE] = '\0';
