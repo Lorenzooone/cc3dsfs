@@ -20,20 +20,20 @@ ${PREMADE_DIR}/${PROGRAM_NAME}_prepare_script.sh
 if [ "$INITIAL_CONFIGURATION_MODE" -eq "0" ]; then
 
 # Bottom Right
-${MAIN_KIOSK_PROGRAM} ${EXTRA_COMMANDS} --enable_both 0 --enabled_top 1 --pos_x_top 1184 --pos_y_top 618 --scaling_top 2 --profile 6 --auto_connect &
+${MAIN_KIOSK_PROGRAM} ${EXTRA_COMMANDS} --enabled_both 0 --enabled_top 1 --pos_x_top 1184 --pos_y_top 618 --scaling_top 2 --profile 6 --auto_connect &
 sleep ${SLEEP_TIME}
 
 # Bottom Left
-${MAIN_KIOSK_PROGRAM} ${EXTRA_COMMANDS} --enable_both 0 --enabled_top 1 --pos_x_top 224 --pos_y_top 618 --scaling_top 2 --profile 6 --auto_connect &
+${MAIN_KIOSK_PROGRAM} ${EXTRA_COMMANDS} --enabled_both 0 --enabled_top 1 --pos_x_top 224 --pos_y_top 618 --scaling_top 2 --profile 6 --auto_connect &
 sleep ${SLEEP_TIME}
 
 # Top Right
-${MAIN_KIOSK_PROGRAM} ${EXTRA_COMMANDS} --enable_both 0 --enabled_top 1 --pos_x_top 1184 --pos_y_top 78 --scaling_top 2 --profile 6 --auto_connect &
+${MAIN_KIOSK_PROGRAM} ${EXTRA_COMMANDS} --enabled_both 0 --enabled_top 1 --pos_x_top 1184 --pos_y_top 78 --scaling_top 2 --profile 6 --auto_connect &
 sleep ${SLEEP_TIME}
 
 fi
 
 # Top Left
-${MAIN_KIOSK_PROGRAM} ${EXTRA_COMMANDS} --enable_both 0 --enabled_top 1 --pos_x_top 224 --pos_y_top 78 --scaling_top 2 --profile 6 --auto_connect
+${MAIN_KIOSK_PROGRAM} ${EXTRA_COMMANDS} --enabled_both 0 --enabled_top 1 --pos_x_top 224 --pos_y_top 78 --scaling_top 2 --profile 6 --auto_connect
 
 ${PREMADE_DIR}/${PROGRAM_NAME}_post_script.sh $?
