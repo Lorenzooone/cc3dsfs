@@ -3,6 +3,7 @@
 #include "dscapture_ftd2_shared.hpp"
 #include "usb_ds_3ds_capture.hpp"
 #include "usb_is_device_acquisition.hpp"
+#include "cypress_partner_ctr_acquisition.hpp"
 #include "cypress_nisetro_acquisition.hpp"
 #include "cypress_optimize_3ds_acquisition.hpp"
 
@@ -147,6 +148,9 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	#ifdef USE_IS_DEVICES_USB
 	list_devices_is_device(devices_list, no_access_list, devices_allowed_scan);
 	#endif
+	#ifdef USE_PARTNER_CTR
+	list_devices_cypart_device(devices_list, no_access_list, devices_allowed_scan);
+	#endif
 
 	if(devices_list.size() <= 0) {
 		if(no_access_list.size() <= 0)
@@ -196,6 +200,10 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_IS_NITRO) && (!is_device_connect_usb(print_failed, capture_data, &devices_list[chosen_device])))
 		return false;
 	#endif
+	#ifdef USE_PARTNER_CTR
+	if((devices_list[chosen_device].cc_type == CAPTURE_CONN_PARTNER_CTR) && (!cypart_device_connect_usb(print_failed, capture_data, &devices_list[chosen_device])))
+		return false;
+	#endif
 	update_connected_3ds_ds(frontend_data, capture_data->status.device, devices_list[chosen_device]);
 	capture_data->status.device = devices_list[chosen_device];
 
@@ -240,6 +248,10 @@ void captureCall(CaptureData* capture_data) {
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_IS_NITRO)
 			is_device_acquisition_main_loop(capture_data);
 		#endif
+		#ifdef USE_PARTNER_CTR
+		if(capture_data->status.device.cc_type == CAPTURE_CONN_PARTNER_CTR)
+			cypart_device_acquisition_main_loop(capture_data);
+		#endif
 
 		capture_data->status.close_success = false;
 		capture_data->status.connected = false;
@@ -273,6 +285,10 @@ void captureCall(CaptureData* capture_data) {
 		#ifdef USE_IS_DEVICES_USB
 		if(capture_data->status.device.cc_type == CAPTURE_CONN_IS_NITRO)
 			usb_is_device_acquisition_cleanup(capture_data);
+		#endif
+		#ifdef USE_PARTNER_CTR
+		if(capture_data->status.device.cc_type == CAPTURE_CONN_PARTNER_CTR)
+			usb_cypart_device_acquisition_cleanup(capture_data);
 		#endif
 
 		capture_data->status.close_success = false;
@@ -322,6 +338,10 @@ uint64_t get_video_in_size(CaptureData* capture_data, bool is_3d, bool should_be
 	#ifdef USE_IS_DEVICES_USB
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_IS_NITRO)
 		return usb_is_device_get_video_in_size(capture_data);
+	#endif
+	#ifdef USE_PARTNER_CTR
+	if(capture_data->status.device.cc_type == CAPTURE_CONN_PARTNER_CTR)
+		return cypart_device_get_video_in_size(capture_data);
 	#endif
 	return 0;
 }
@@ -481,6 +501,9 @@ void capture_init() {
 	#ifdef USE_IS_DEVICES_USB
 	usb_is_device_init();
 	#endif
+	#ifdef USE_PARTNER_CTR
+	usb_cypart_device_init();
+	#endif
 	#ifdef USE_FTD2
 	ftd2_init_shared();
 	#endif
@@ -498,6 +521,9 @@ void capture_close() {
 	#endif
 	#ifdef USE_IS_DEVICES_USB
 	usb_is_device_close();
+	#endif
+	#ifdef USE_PARTNER_CTR
+	usb_cypart_device_close();
 	#endif
 	#ifdef USE_FTD2
 	ftd2_end_shared();
