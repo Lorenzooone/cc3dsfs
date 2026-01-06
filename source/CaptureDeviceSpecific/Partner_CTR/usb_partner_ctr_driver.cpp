@@ -157,7 +157,7 @@ partner_ctr_device_handlers* partner_ctr_driver_serial_reconnection(CaptureDevic
 	if (device->path != "") {
 		partner_ctr_device_handlers handlers;
 		const partner_ctr_usb_device* usb_device_info = (const partner_ctr_usb_device*)device->descriptor;
-		if (partner_ctr_driver_setup_connection(&handlers, device->path, usb_device_info->read_pipe, usb_device_info->write_pipe, usb_device_info->do_pipe_clear_reset)) {
+		if (partner_ctr_driver_setup_connection(&handlers, device->path, usb_device_info->read_pipe, usb_device_info->write_pipe, true)) {
 			final_handlers = new partner_ctr_device_handlers;
 			final_handlers->usb_handle = NULL;
 			final_handlers->mutex = handlers.mutex;
