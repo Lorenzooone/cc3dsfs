@@ -100,7 +100,7 @@ int StopUsbCaptureDma(is_device_device_handlers* handlers, const is_device_usb_d
 int SetForwardFrameCount(is_device_device_handlers* handlers, uint16_t count, const is_device_usb_device* device_desc);
 int SetForwardFramePermanent(is_device_device_handlers* handlers, const is_device_usb_device* device_desc);
 int GetFrameCounter(is_device_device_handlers* handlers, uint16_t* out, const is_device_usb_device* device_desc);
-int GetDeviceSerial(is_device_device_handlers* handlers, uint8_t* buf, const is_device_usb_device* device_desc);
+int GetIsDeviceSerial(is_device_device_handlers* handlers, uint8_t* buf, const is_device_usb_device* device_desc);
 int UpdateFrameForwardConfig(is_device_device_handlers* handlers, is_device_forward_config_values_colors colors, is_device_forward_config_values_screens screens, is_device_forward_config_values_rate rate, const is_device_usb_device* device_desc);
 int UpdateFrameForwardEnable(is_device_device_handlers* handlers, bool enable, bool restart, const is_device_usb_device* device_desc);
 int ReadLidState(is_device_device_handlers* handlers, bool* out, const is_device_usb_device* device_desc);
