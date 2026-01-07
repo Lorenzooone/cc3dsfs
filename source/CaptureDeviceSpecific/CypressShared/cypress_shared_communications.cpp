@@ -46,16 +46,16 @@ int cypress_bulk_in_async(cy_device_device_handlers* handlers, const cy_device_u
 	return cypress_driver_async_in_start(handlers, usb_device_desc, buf, length, cb_data);
 }
 
-int cypress_ctrl_bulk_in_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
+int cypress_ctrl_bulk_in_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred, int chosen_endpoint) {
 	if(handlers->usb_handle)
-		return cypress_libusb_ctrl_bulk_in(handlers, usb_device_desc, buf, length, transferred);
-	return cypress_driver_ctrl_bulk_in(handlers, usb_device_desc, buf, length, transferred);
+		return cypress_libusb_ctrl_bulk_in(handlers, usb_device_desc, buf, length, transferred, chosen_endpoint);
+	return cypress_driver_ctrl_bulk_in(handlers, usb_device_desc, buf, length, transferred, chosen_endpoint);
 }
 
-int cypress_ctrl_bulk_out_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, const uint8_t* buf, int length, int* transferred) {
+int cypress_ctrl_bulk_out_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, const uint8_t* buf, int length, int* transferred, int chosen_endpoint) {
 	if(handlers->usb_handle)
-		return cypress_libusb_ctrl_bulk_out(handlers, usb_device_desc, (uint8_t*)buf, length, transferred);
-	return cypress_driver_ctrl_bulk_out(handlers, usb_device_desc, (uint8_t*)buf, length, transferred);
+		return cypress_libusb_ctrl_bulk_out(handlers, usb_device_desc, (uint8_t*)buf, length, transferred, chosen_endpoint);
+	return cypress_driver_ctrl_bulk_out(handlers, usb_device_desc, (uint8_t*)buf, length, transferred, chosen_endpoint);
 }
 
 void cypress_pipe_reset_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc) {
@@ -64,16 +64,16 @@ void cypress_pipe_reset_bulk_in(cy_device_device_handlers* handlers, const cy_de
 	return cypress_driver_pipe_reset_bulk_in(handlers, usb_device_desc);
 }
 
-void cypress_pipe_reset_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc) {
+void cypress_pipe_reset_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, int chosen_endpoint) {
 	if(handlers->usb_handle)
-		return cypress_libusb_pipe_reset_ctrl_bulk_in(handlers, usb_device_desc);
-	return cypress_driver_pipe_reset_ctrl_bulk_in(handlers, usb_device_desc);
+		return cypress_libusb_pipe_reset_ctrl_bulk_in(handlers, usb_device_desc, chosen_endpoint);
+	return cypress_driver_pipe_reset_ctrl_bulk_in(handlers, usb_device_desc, chosen_endpoint);
 }
 
-void cypress_pipe_reset_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc) {
+void cypress_pipe_reset_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, int chosen_endpoint) {
 	if(handlers->usb_handle)
-		return cypress_libusb_pipe_reset_ctrl_bulk_out(handlers, usb_device_desc);
-	return cypress_driver_pipe_reset_ctrl_bulk_out(handlers, usb_device_desc);
+		return cypress_libusb_pipe_reset_ctrl_bulk_out(handlers, usb_device_desc, chosen_endpoint);
+	return cypress_driver_pipe_reset_ctrl_bulk_out(handlers, usb_device_desc, chosen_endpoint);
 }
 
 void CypressSetMaxTransferSize(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, size_t new_max_transfer_size) {

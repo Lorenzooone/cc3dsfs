@@ -71,11 +71,11 @@ int cypress_ctrl_in_transfer(cy_device_device_handlers* handlers, const cy_devic
 int cypress_ctrl_out_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, uint8_t request, uint16_t value, uint16_t index, int* transferred);
 int cypress_bulk_in_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred);
 int cypress_bulk_in_async(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t *buf, int length, cy_async_callback_data* cb_data);
-int cypress_ctrl_bulk_in_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred);
-int cypress_ctrl_bulk_out_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, const uint8_t* buf, int length, int* transferred);
+int cypress_ctrl_bulk_in_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred, int chosen_endpoint = -1);
+int cypress_ctrl_bulk_out_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, const uint8_t* buf, int length, int* transferred, int chosen_endpoint = -1);
 void cypress_pipe_reset_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc);
-void cypress_pipe_reset_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc);
-void cypress_pipe_reset_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc);
+void cypress_pipe_reset_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, int chosen_endpoint = -1);
+void cypress_pipe_reset_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, int chosen_endpoint = -1);
 void CypressSetMaxTransferSize(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, size_t new_max_transfer_size);
 void CypressCloseAsyncRead(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, cy_async_callback_data* cb_data);
 void CypressSetupCypressDeviceAsyncThread(cy_device_device_handlers* handlers, std::vector<cy_async_callback_data*> &cb_data_vector, std::thread* thread_ptr, bool* keep_going);

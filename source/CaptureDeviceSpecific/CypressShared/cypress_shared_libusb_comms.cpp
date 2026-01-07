@@ -26,25 +26,33 @@ int cypress_libusb_bulk_in(cy_device_device_handlers* handlers, const cy_device_
 }
 
 // Read from ctrl bulk
-int cypress_libusb_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
-	return libusb_bulk_transfer(handlers->usb_handle, usb_device_desc->ep_ctrl_bulk_in, buf, length, transferred, usb_device_desc->bulk_timeout);
+int cypress_libusb_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred, int chosen_endpoint) {
+	if(chosen_endpoint == -1)
+		chosen_endpoint = usb_device_desc->ep_ctrl_bulk_in;
+	return libusb_bulk_transfer(handlers->usb_handle, chosen_endpoint, buf, length, transferred, usb_device_desc->bulk_timeout);
 }
 
 // Write to ctrl bulk
-int cypress_libusb_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
-	return libusb_bulk_transfer(handlers->usb_handle, usb_device_desc->ep_ctrl_bulk_out, buf, length, transferred, usb_device_desc->bulk_timeout);
+int cypress_libusb_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred, int chosen_endpoint) {
+	if(chosen_endpoint == -1)
+		chosen_endpoint = usb_device_desc->ep_ctrl_bulk_out;
+	return libusb_bulk_transfer(handlers->usb_handle, chosen_endpoint, buf, length, transferred, usb_device_desc->bulk_timeout);
 }
 
 void cypress_libusb_pipe_reset_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc) {
 	libusb_clear_halt(handlers->usb_handle, usb_device_desc->ep_bulk_in);
 }
 
-void cypress_libusb_pipe_reset_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc) {
-	libusb_clear_halt(handlers->usb_handle, usb_device_desc->ep_ctrl_bulk_in);
+void cypress_libusb_pipe_reset_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, int chosen_endpoint) {
+	if(chosen_endpoint == -1)
+		chosen_endpoint = usb_device_desc->ep_ctrl_bulk_in;
+	libusb_clear_halt(handlers->usb_handle, chosen_endpoint);
 }
 
-void cypress_libusb_pipe_reset_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc) {
-	libusb_clear_halt(handlers->usb_handle, usb_device_desc->ep_ctrl_bulk_out);
+void cypress_libusb_pipe_reset_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, int chosen_endpoint) {
+	if(chosen_endpoint == -1)
+		chosen_endpoint = usb_device_desc->ep_ctrl_bulk_out;
+	libusb_clear_halt(handlers->usb_handle, chosen_endpoint);
 }
 
 void cypress_libusb_cancell_callback(cy_async_callback_data* cb_data) {

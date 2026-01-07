@@ -593,31 +593,37 @@ int cypress_driver_bulk_in(cy_device_device_handlers* handlers, const cy_device_
 	return result;
 }
 
-int cypress_driver_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
+int cypress_driver_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred, int chosen_endpoint) {
+	if(chosen_endpoint == -1)
+		chosen_endpoint = usb_device_desc->ep_ctrl_bulk_in;
 	int result = LIBUSB_SUCCESS;
 	#ifdef _WIN32
 	DWORD inner_transfered = 0;
-	if(!cypress_driver_bulk_sync_start(handlers->read_handle, buf, length, &inner_transfered, usb_device_desc->ep_ctrl_bulk_in))
+	if(!cypress_driver_bulk_sync_start(handlers->read_handle, buf, length, &inner_transfered, chosen_endpoint))
 		result = -1;
 	*transferred = inner_transfered;
 	#endif
 	return result;
 }
 
-int cypress_driver_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred) {
+int cypress_driver_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, int* transferred, int chosen_endpoint) {
+	if(chosen_endpoint == -1)
+		chosen_endpoint = usb_device_desc->ep_ctrl_bulk_out;
 	int result = LIBUSB_SUCCESS;
 	#ifdef _WIN32
 	DWORD inner_transfered = 0;
-	if(!cypress_driver_bulk_sync_start(handlers->write_handle, buf, length, &inner_transfered, usb_device_desc->ep_ctrl_bulk_out))
+	if(!cypress_driver_bulk_sync_start(handlers->write_handle, buf, length, &inner_transfered, chosen_endpoint))
 		result = -1;
 	*transferred = inner_transfered;
 	#endif
 	return result;
 }
 
-void cypress_driver_pipe_reset_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc) {
+void cypress_driver_pipe_reset_ctrl_bulk_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, int chosen_endpoint) {
+	if(chosen_endpoint == -1)
+		chosen_endpoint = usb_device_desc->ep_ctrl_bulk_in;
 	#ifdef _WIN32
-	cypress_driver_pipe_reset(handlers->read_handle, usb_device_desc->ep_ctrl_bulk_in);
+	cypress_driver_pipe_reset(handlers->read_handle, chosen_endpoint);
 	#endif
 }
 
@@ -627,9 +633,11 @@ void cypress_driver_pipe_reset_bulk_in(cy_device_device_handlers* handlers, cons
 	#endif
 }
 
-void cypress_driver_pipe_reset_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc) {
+void cypress_driver_pipe_reset_ctrl_bulk_out(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, int chosen_endpoint) {
+	if(chosen_endpoint == -1)
+		chosen_endpoint = usb_device_desc->ep_ctrl_bulk_out;
 	#ifdef _WIN32
-	cypress_driver_pipe_reset(handlers->read_handle, usb_device_desc->ep_ctrl_bulk_out);
+	cypress_driver_pipe_reset(handlers->read_handle, chosen_endpoint);
 	#endif
 }
 
