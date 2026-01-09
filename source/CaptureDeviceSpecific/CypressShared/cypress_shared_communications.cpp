@@ -14,12 +14,12 @@ CaptureDevice cypress_create_device(const cy_device_usb_device* usb_device_desc,
 	return usb_device_desc->create_device_fn(usb_device_desc->full_data, serial, path);
 }
 
-std::string cypress_get_serial(const cy_device_usb_device* usb_device_desc, std::string serial, uint16_t bcd_device, int& curr_serial_extra_id) {
-	return usb_device_desc->get_serial_fn(usb_device_desc->full_data, serial, bcd_device, curr_serial_extra_id);
+std::string cypress_get_serial(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, std::string serial, uint16_t bcd_device, int& curr_serial_extra_id) {
+	return usb_device_desc->get_serial_fn(handlers, usb_device_desc->full_data, serial, bcd_device, curr_serial_extra_id);
 }
 
-void cypress_insert_device(std::vector<CaptureDevice>& devices_list, const cy_device_usb_device* usb_device_desc, std::string serial, uint16_t bcd_device, int& curr_serial_extra_id, std::string path) {
-	devices_list.push_back(cypress_create_device(usb_device_desc, cypress_get_serial(usb_device_desc, serial, bcd_device, curr_serial_extra_id), path));
+void cypress_insert_device(std::vector<CaptureDevice>& devices_list, const cy_device_usb_device* usb_device_desc, std::string real_serial, std::string path) {
+	devices_list.push_back(cypress_create_device(usb_device_desc, real_serial, path));
 }
 
 int cypress_ctrl_in_transfer(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, uint8_t request, uint16_t value, uint16_t index, int* transferred) {
