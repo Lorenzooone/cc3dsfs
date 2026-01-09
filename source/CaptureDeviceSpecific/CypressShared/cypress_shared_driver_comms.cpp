@@ -499,11 +499,11 @@ void cypress_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool*
 				cy_device_device_handlers handlers;
 				bool executed_setup = false;
 				bool result_conn_check = cypress_driver_setup_connection(&handlers, path, usb_device_desc->do_pipe_clear_reset, executed_setup);
-				cypress_driver_end_connection(&handlers);
 				if (result_conn_check) {
 					std::string read_serial = read_real_serial(&handlers, usb_device_desc, path, serial, bcd_device, curr_serial_extra_id_cypress[j], executed_setup);
 					cypress_insert_device(devices_list, usb_device_desc, read_serial, path);
 				}
+				cypress_driver_end_connection(&handlers);
 				break;
 			}
 		}
