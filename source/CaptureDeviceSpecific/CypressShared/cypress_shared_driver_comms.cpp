@@ -374,7 +374,13 @@ static bool cypress_driver_get_device_string_manufacturer_product_serial_number(
 	return true;
 }
 
-static bool cypress_driver_setup_connection(cy_device_device_handlers* handlers, std::string path, bool do_pipe_clear_reset) {
+static bool cypress_driver_setup_connection(cy_device_device_handlers* handlers, std::string path, bool do_pipe_clear_reset, bool& executed_setup) {
+	static bool last_result = false;
+	if (executed_setup)
+		return last_result;
+
+	last_result = false;
+	executed_setup = true;
 	handlers->usb_handle = NULL;
 	handlers->mutex = NULL;
 	handlers->write_handle = INVALID_HANDLE_VALUE;
@@ -403,6 +409,7 @@ static bool cypress_driver_setup_connection(cy_device_device_handlers* handlers,
 			return false;
 		*/
 	}
+	last_result = true;
 	return true;
 }
 
@@ -420,6 +427,16 @@ static void cypress_driver_pipe_reset(HANDLE handle, uint8_t endpoint) {
     DeviceIoControl(handle, IOCTL_ADAPT_RESET_PIPE, &endpoint, sizeof(uint8_t), NULL, 0, &dwBytes, 0);
 }
 
+static std::string read_real_serial(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, std::string path, std::string serial, USHORT bcd_device, int& curr_serial_extra_id, bool& executed_setup) {
+	if (handlers == NULL)
+		return "";
+
+	if (usb_device_desc->get_serial_requires_setup && (!cypress_driver_setup_connection(handlers, path, usb_device_desc->do_pipe_clear_reset, executed_setup)))
+		return "";
+
+	return cypress_get_serial(handlers, usb_device_desc, serial, bcd_device, curr_serial_extra_id);
+}
+
 #endif
 
 cy_device_device_handlers* cypress_driver_serial_reconnection(CaptureDevice* device) {
@@ -427,8 +444,9 @@ cy_device_device_handlers* cypress_driver_serial_reconnection(CaptureDevice* dev
 	#ifdef _WIN32
 	if(device->path != "") {
 		cy_device_device_handlers handlers;
+		bool executed_once = false;
 		const cy_device_usb_device* usb_device_info = (const cy_device_usb_device*)device->descriptor;
-		if(cypress_driver_setup_connection(&handlers, device->path, usb_device_info->do_pipe_clear_reset)) {
+		if(cypress_driver_setup_connection(&handlers, device->path, usb_device_info->do_pipe_clear_reset, executed_once)) {
 			final_handlers = new cy_device_device_handlers;
 			final_handlers->usb_handle = NULL;
 			final_handlers->mutex = handlers.mutex;
@@ -479,10 +497,13 @@ void cypress_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool*
 				if(!result)
 					continue;
 				cy_device_device_handlers handlers;
-				bool result_conn_check = cypress_driver_setup_connection(&handlers, path, usb_device_desc->do_pipe_clear_reset);
+				bool executed_setup = false;
+				bool result_conn_check = cypress_driver_setup_connection(&handlers, path, usb_device_desc->do_pipe_clear_reset, executed_setup);
+				if (result_conn_check) {
+					std::string read_serial = read_real_serial(&handlers, usb_device_desc, path, serial, bcd_device, curr_serial_extra_id_cypress[j], executed_setup);
+					cypress_insert_device(devices_list, usb_device_desc, read_serial, path);
+				}
 				cypress_driver_end_connection(&handlers);
-				if(result_conn_check)
-					cypress_insert_device(devices_list, usb_device_desc, serial, bcd_device, curr_serial_extra_id_cypress[j], path);
 				break;
 			}
 		}
@@ -524,13 +545,14 @@ cy_device_device_handlers* cypress_driver_find_by_serial_number(const cy_device_
 		if((usb_device_desc->vid == vid) && (usb_device_desc->pid == pid) && (masked_wanted_bcd_device == (bcd_device & usb_device_desc->bcd_device_mask))) {
 			std::string manufacturer;
 			std::string serial;
+			cy_device_device_handlers handlers;
+			bool executed_setup = false;
 			if(!cypress_driver_get_device_string_manufacturer_product_serial_number(path, manufacturer, serial, imanufacturer, iserial))
 				continue;
-			std::string read_serial = cypress_get_serial(usb_device_desc, serial, bcd_device, curr_serial_extra_id);
+			std::string read_serial = read_real_serial(&handlers, usb_device_desc, path, serial, bcd_device, curr_serial_extra_id, executed_setup);
 			if(wanted_serial_number != read_serial)
 				continue;
-			cy_device_device_handlers handlers;
-			if(cypress_driver_setup_connection(&handlers, path, usb_device_desc->do_pipe_clear_reset)) {
+			if(cypress_driver_setup_connection(&handlers, path, usb_device_desc->do_pipe_clear_reset, executed_setup)) {
 				final_handlers = new cy_device_device_handlers;
 				final_handlers->usb_handle = NULL;
 				final_handlers->mutex = handlers.mutex;
@@ -673,7 +695,10 @@ void cypress_driver_find_used_serial(const cy_device_usb_device* usb_device_desc
 			std::string serial;
 			if(!cypress_driver_get_device_string_manufacturer_product_serial_number(path, manufacturer, serial, imanufacturer, iserial))
 				continue;
-			std::string read_serial = cypress_get_serial(usb_device_desc, serial, bcd_device, curr_serial_extra_id);
+			// This is only called when we can set this stuff ourselves...
+			// For now, do not update it with the setup part, as there is no
+			// case in which it would be used for it...
+			std::string read_serial = cypress_get_serial(NULL, usb_device_desc, serial, bcd_device, curr_serial_extra_id);
 			try {
 				size_t pos = std::stoi(read_serial);
 				if((pos < 0) || (pos >= num_free_fw_ids))
