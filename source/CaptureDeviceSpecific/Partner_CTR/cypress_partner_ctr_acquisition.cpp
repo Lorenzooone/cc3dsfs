@@ -24,8 +24,6 @@ static cy_device_device_handlers* usb_reconnect(const cypart_device_usb_device* 
 }
 
 static std::string _cypress_partner_ctr_get_serial(cy_device_device_handlers* handlers, const cypart_device_usb_device* usb_device_desc, std::string serial, uint16_t bcd_device, int& curr_serial_extra_id) {
-	if(serial != "")
-		return serial;
 	serial = read_serial_ctr_capture(handlers, usb_device_desc);
 	if(serial != "")
 		return serial;
