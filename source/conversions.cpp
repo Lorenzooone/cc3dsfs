@@ -824,15 +824,16 @@ static uint8_t* find_partner_ctr_x_screen(uint8_t* data) {
 	PartnerCTRCaptureCommand read_command = read_partner_ctr_base_command(data);
 	if(read_command.magic != PARTNER_CTR_CAPTURE_BASE_COMMAND)
 		return NULL;
-
 	if((read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN) || (read_command.command == PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN) || (read_command.command == PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN))
 		return data;
-	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_AUDIO)
+
+	while(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_AUDIO) {
 		data = get_ptr_next_command_partner_ctr(data);
 
-	read_command = read_partner_ctr_base_command(data);
-	if(read_command.magic != PARTNER_CTR_CAPTURE_BASE_COMMAND)
-		return NULL;
+		read_command = read_partner_ctr_base_command(data);
+		if(read_command.magic != PARTNER_CTR_CAPTURE_BASE_COMMAND)
+			return NULL;
+	}
 
 	if((read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN) || (read_command.command == PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN) || (read_command.command == PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN))
 		return data;
@@ -1158,17 +1159,21 @@ static void copyAudioOptimize3DS3DForced2DBE(std::int16_t *p_out, uint64_t &n_sa
 }
 
 static void usb_partner_ctr_copyBufferToAudio(uint8_t* buffer_ptr, std::int16_t *p_out, uint64_t &n_samples, const bool is_big_endian) {
+	uint8_t* audio_buffer_ptr = NULL;
 	PartnerCTRCaptureCommand read_command = read_partner_ctr_base_command(buffer_ptr);
-	if(read_command.magic != PARTNER_CTR_CAPTURE_BASE_COMMAND)
-		return;
-	if(read_command.command != PARTNER_CTR_CAPTURE_COMMAND_AUDIO)
-		return;
 
-	buffer_ptr += get_partner_ctr_size_command_header(read_command);
+	while(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_AUDIO) {
+		if(read_command.magic != PARTNER_CTR_CAPTURE_BASE_COMMAND)
+			return;
+		audio_buffer_ptr = buffer_ptr + get_partner_ctr_size_command_header(read_command);
 
-	memcpy_data_u16le_origin((uint16_t*)p_out + n_samples, buffer_ptr, (size_t)read_command.payload_size / 2, is_big_endian);
+		memcpy_data_u16le_origin((uint16_t*)p_out + n_samples, audio_buffer_ptr, (size_t)read_command.payload_size / 2, is_big_endian);
 
-	n_samples += read_command.payload_size / 2;
+		n_samples += read_command.payload_size / 2;
+
+		buffer_ptr = get_ptr_next_command_partner_ctr(buffer_ptr);
+		read_command = read_partner_ctr_base_command(buffer_ptr);
+	}
 }
 
 static void usb_partner_ctr_copyBufferAfterCommandToAudio(uint8_t* buffer_ptr, std::int16_t *p_out, uint64_t &n_samples, const bool is_big_endian) {

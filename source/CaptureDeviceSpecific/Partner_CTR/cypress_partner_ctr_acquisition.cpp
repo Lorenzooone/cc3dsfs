@@ -250,34 +250,6 @@ static size_t get_partner_ctr_size_command_header(PartnerCTRCaptureCommand read_
 	}
 }
 
-static USB3DSOptimizeColumnInfo convert_to_column_info(uint16_t value) {
-	// The macos compiler requires this... :/
-	USB3DSOptimizeColumnInfo column_info;
-	column_info.has_extra_header_data_2d_only = (value >> 15) & 1;
-	column_info.buffer_num = (value >> 14) & 1;
-	column_info.unk = (value >> 10) & 0xF;
-	column_info.column_index = value & 0x3FF;
-	return column_info;
-}
-
-static bool get_expect_extra_header_in_buffer(uint16_t value) {
-	return convert_to_column_info(value).has_extra_header_data_2d_only;
-}
-
-static bool get_is_data_2d_only(uint16_t value) {
-	return convert_to_column_info(value).has_extra_header_data_2d_only;
-}
-
-static bool get_is_pos_column_synch_in_buffer(uint8_t* buffer, size_t pos_to_check, uint16_t column_index) {
-	if(read_le16(buffer + pos_to_check) != SYNCH_VALUE_PARTNER_CTR)
-		return false;
-	return convert_to_column_info(read_le16(buffer + pos_to_check + 2)).column_index == column_index;
-}
-
-static bool get_is_pos_column_synch_in_buffer(USB3DSOptimizeHeaderSoundData* in_ptr, uint16_t column_index) {
-	return get_is_pos_column_synch_in_buffer((uint8_t*)&in_ptr->header_info, 0, column_index);
-}
-
 static bool get_is_pos_synch_in_buffer(uint8_t* buffer, size_t pos_to_check) {
 	PartnerCTRCaptureCommand base_command = read_partner_ctr_base_command(buffer + pos_to_check);
 	return base_command.magic == SYNCH_VALUE_PARTNER_CTR;
@@ -286,37 +258,6 @@ static bool get_is_pos_synch_in_buffer(uint8_t* buffer, size_t pos_to_check) {
 static bool get_is_pos_first_synch_in_buffer(uint8_t* buffer, size_t pos_to_check) {
 	PartnerCTRCaptureCommand base_command = read_partner_ctr_base_command(buffer + pos_to_check);
 	return (base_command.magic == SYNCH_VALUE_PARTNER_CTR) && (base_command.command == PARTNER_CTR_CAPTURE_COMMAND_INPUT);
-}
-
-static bool get_is_buffer_2d_fully_synced(CaptureReceived* buffer) {
-	USB8883DSOptimizeCaptureReceived* real_buffer = &buffer->cypress_optimize_received_888;
-	USB8883DSOptimizeCaptureReceivedExtraHeader* real_buffer_special = &buffer->cypress_optimize_received_888_extra_header;
-	bool is_special = get_expect_extra_header_in_buffer(read_le16((uint8_t*)&real_buffer->columns_data[0].header_sound.header_info.column_info));
-	for(int i = 0; i < TOP_WIDTH_3DS; i++)
-		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i].header_sound, i))
-			return false;
-	if(is_special && (!get_is_pos_column_synch_in_buffer(&real_buffer_special->columns_data[TOP_WIDTH_3DS].header_sound, TOP_WIDTH_3DS)))
-		return false;
-	return true;
-}
-
-static bool get_is_buffer_3d_fully_synced(CaptureReceived* buffer) {
-	USB8883DSOptimizeCaptureReceived_3D* real_buffer = &buffer->cypress_optimize_received_888_3d;
-	for(int i = 0; i < TOP_WIDTH_3DS; i++) {
-		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i][0].header_sound, i * 2))
-			return false;
-		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i][1].header_sound, (i * 2) + 1))
-			return false;
-	}
-	if(!get_is_pos_column_synch_in_buffer(&real_buffer->bottom_only_column.header_sound, TOP_WIDTH_3DS * 2))
-		return false;
-	return true;
-}
-
-static bool get_is_buffer_fully_synched(CaptureReceived* buffer, bool is_3d) {
-	if(is_3d)
-		return get_is_buffer_3d_fully_synced(buffer);
-	return get_is_buffer_2d_fully_synced(buffer);
 }
 
 static size_t get_pos_first_synch_in_buffer(uint8_t* buffer, int start_pos) {
@@ -358,10 +299,6 @@ static void cypress_output_to_thread(CaptureData* capture_data, uint8_t *buffer_
 	// Output to the other threads...
 	CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(internal_index);
 	copy_slice_data_to_buffer((uint8_t*)&data_buf->capture_buf, buffer_arr, start_slice_index, start_slice_pos, read_size);
-	if(!get_is_buffer_fully_synched(&data_buf->capture_buf, is_3d)) {
-		capture_data->data_buffers.ReleaseWriterBuffer(internal_index, false);
-		return;
-	}
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - (*clock_start);
 	*clock_start = curr_time;
@@ -432,20 +369,23 @@ static size_t get_pos_next_command_partner_ctr(uint8_t* data, size_t slice_index
 static size_t find_pos_partner_ctr_x_screen(uint8_t* data, size_t slice_index, size_t start_pos, size_t curr_pos, size_t available_bytes) {
 	if((curr_pos + sizeof(PartnerCTRCaptureCommand)) > available_bytes)
 		return ERROR_CTR_SCREEN_SEARCH_NOT_ENOUGH_DATA;
+
 	PartnerCTRCaptureCommand read_command = get_command_partner_ctr(data, slice_index, start_pos, curr_pos);
 	if(read_command.magic != PARTNER_CTR_CAPTURE_BASE_COMMAND)
 		return ERROR_CTR_SCREEN_SEARCH_NOT_SYNCHRONIZED;
-
 	if((read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN) || (read_command.command == PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN) || (read_command.command == PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN))
 		return curr_pos;
-	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_AUDIO)
+
+	while(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_AUDIO) {
 		curr_pos = get_pos_next_command_partner_ctr(data, slice_index, start_pos, curr_pos);
 
-	if((curr_pos + sizeof(PartnerCTRCaptureCommand)) > available_bytes)
-		return ERROR_CTR_SCREEN_SEARCH_NOT_ENOUGH_DATA;
-	read_command = get_command_partner_ctr(data, slice_index, start_pos, curr_pos);
-	if(read_command.magic != PARTNER_CTR_CAPTURE_BASE_COMMAND)
-		return ERROR_CTR_SCREEN_SEARCH_NOT_SYNCHRONIZED;
+		if((curr_pos + sizeof(PartnerCTRCaptureCommand)) > available_bytes)
+			return ERROR_CTR_SCREEN_SEARCH_NOT_ENOUGH_DATA;
+
+		read_command = get_command_partner_ctr(data, slice_index, start_pos, curr_pos);
+		if(read_command.magic != PARTNER_CTR_CAPTURE_BASE_COMMAND)
+			return ERROR_CTR_SCREEN_SEARCH_NOT_SYNCHRONIZED;
+	}
 
 	if((read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN) || (read_command.command == PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN) || (read_command.command == PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN))
 		return curr_pos;
@@ -475,13 +415,13 @@ static bool is_valid_frame_partner_ctr(uint8_t* data, size_t slice_index, size_t
 	out_end_pos = 0;
 
 	first_screen_pos = find_pos_partner_ctr_x_screen(data, slice_index, start_pos, 0, available_bytes);
-	out_end_pos = get_pos_next_command_partner_ctr(data, slice_index, start_pos, first_screen_pos);
 	if(first_screen_pos == ERROR_CTR_SCREEN_SEARCH_NOT_ENOUGH_DATA)
 		return false;
 	if(first_screen_pos == ERROR_CTR_SCREEN_SEARCH_NOT_SYNCHRONIZED) {
 		synchronized = false;
 		return false;
 	}
+	out_end_pos = get_pos_next_command_partner_ctr(data, slice_index, start_pos, first_screen_pos);
 
 	PartnerCTRCaptureCommand read_command = get_command_partner_ctr(data, slice_index, start_pos, first_screen_pos);
 	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN)
@@ -492,13 +432,13 @@ static bool is_valid_frame_partner_ctr(uint8_t* data, size_t slice_index, size_t
 		has_top_second = true;
 
 	second_screen_pos = find_pos_partner_ctr_x_screen(data, slice_index, start_pos, out_end_pos, available_bytes);
-	out_end_pos = get_pos_next_command_partner_ctr(data, slice_index, start_pos, second_screen_pos);
 	if(second_screen_pos == ERROR_CTR_SCREEN_SEARCH_NOT_ENOUGH_DATA)
 		return false;
 	if(second_screen_pos == ERROR_CTR_SCREEN_SEARCH_NOT_SYNCHRONIZED) {
 		synchronized = false;
 		return false;
 	}
+	out_end_pos = get_pos_next_command_partner_ctr(data, slice_index, start_pos, second_screen_pos);
 
 	read_command = get_command_partner_ctr(data, slice_index, start_pos, second_screen_pos);
 	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN)
@@ -520,13 +460,13 @@ static bool is_valid_frame_partner_ctr(uint8_t* data, size_t slice_index, size_t
 	}
 
 	third_screen_pos = find_pos_partner_ctr_x_screen(data, slice_index, start_pos, out_end_pos, available_bytes);
-	out_end_pos = get_pos_next_command_partner_ctr(data, slice_index, start_pos, third_screen_pos);
 	if(third_screen_pos == ERROR_CTR_SCREEN_SEARCH_NOT_ENOUGH_DATA)
 		return false;
 	if(third_screen_pos == ERROR_CTR_SCREEN_SEARCH_NOT_SYNCHRONIZED) {
 		synchronized = false;
 		return false;
 	}
+	out_end_pos = get_pos_next_command_partner_ctr(data, slice_index, start_pos, third_screen_pos);
 
 	read_command = get_command_partner_ctr(data, slice_index, start_pos, third_screen_pos);
 	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN)
