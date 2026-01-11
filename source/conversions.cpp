@@ -5,6 +5,7 @@
 #include "usb_ds_3ds_capture.hpp"
 #include "usb_is_device_acquisition.hpp"
 #include "cypress_optimize_3ds_acquisition.hpp"
+#include "cypress_partner_ctr_acquisition.hpp"
 
 #include <cstring>
 
@@ -785,14 +786,6 @@ static void usb_is_device_convertVideoToOutput(CaptureReceived *p_in, VideoOutpu
 		}
 	}
 }
-
-// To be moved to the appropriate header, later...
-#define PARTNER_CTR_CAPTURE_BASE_COMMAND 0xE007
-#define PARTNER_CTR_CAPTURE_COMMAND_INPUT 0x000F
-#define PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN 0x00C4
-#define PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN 0x00C5
-#define PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN 0x00C6
-#define PARTNER_CTR_CAPTURE_COMMAND_AUDIO 0x00C7
 
 static PartnerCTRCaptureCommand read_partner_ctr_base_command(uint8_t* data) {
 	PartnerCTRCaptureCommand out_cmd;

@@ -341,7 +341,7 @@ uint64_t get_video_in_size(CaptureData* capture_data, bool is_3d, bool should_be
 	#endif
 	#ifdef USE_PARTNER_CTR
 	if(capture_data->status.device.cc_type == CAPTURE_CONN_PARTNER_CTR)
-		return cypart_device_get_video_in_size(capture_data);
+		return cypart_device_get_video_in_size(capture_data, is_3d);
 	#endif
 	return 0;
 }
@@ -434,6 +434,8 @@ bool get_device_3d_implemented(CaptureStatus* capture_status) {
 		case CAPTURE_CONN_FTD3:
 			return true;
 		case CAPTURE_CONN_CYPRESS_OPTIMIZE:
+			return true;
+		case CAPTURE_CONN_PARTNER_CTR:
 			return true;
 		default:
 			return false;
