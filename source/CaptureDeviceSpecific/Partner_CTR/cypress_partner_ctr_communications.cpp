@@ -400,6 +400,7 @@ int capture_start(cy_device_device_handlers* handlers, const cypart_device_usb_d
 	return 0;
 }
 
+// Various unknown reads and writes from registers...
 int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb_device* device) {
 	int ret = 0;
 	uint32_t status = 0;
@@ -547,7 +548,34 @@ int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb
 	return 0;
 }
 
+// Various unknown reads and writes from registers...
 int capture_end(cy_device_device_handlers* handlers, const cypart_device_usb_device* device) {
+	int ret = 0;
+
+	ret = write_u32_to_address_partner_ctr(handlers, device, 0xF0000014, 0x00000003);
+	if(ret < 0)
+		return ret;
+
+	ret = write_u32_to_address_partner_ctr(handlers, device, 0xF0000010, 0x00000001);
+	if(ret < 0)
+		return ret;
+
+	default_sleep(80);
+
+	ret = write_u32_to_address_partner_ctr(handlers, device, 0xF000000C, 0x00001000);
+	if(ret < 0)
+		return ret;
+
+	default_sleep(210);
+
+	ret = write_u32_to_address_partner_ctr(handlers, device, 0xF0000014, 0x00000004);
+	if(ret < 0)
+		return ret;
+
+	ret = write_u32_to_address_partner_ctr(handlers, device, 0xF0000014, 0x00000008);
+	if(ret < 0)
+		return ret;
+
 	return 0;
 }
 
