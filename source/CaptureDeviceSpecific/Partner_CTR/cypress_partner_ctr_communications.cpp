@@ -401,7 +401,7 @@ int capture_start(cy_device_device_handlers* handlers, const cypart_device_usb_d
 }
 
 // Various unknown reads and writes from registers...
-int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb_device* device) {
+int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, bool is_3d) {
 	int ret = 0;
 	uint32_t status = 0;
 	uint32_t unk32 = 0;
@@ -580,9 +580,15 @@ int capture_end(cy_device_device_handlers* handlers, const cypart_device_usb_dev
 }
 
 int ReadFrame(cy_device_device_handlers* handlers, uint8_t* buf, int length, const cypart_device_usb_device* device_desc) {
-	return 0;
+	// Maybe making this async would be better for lower end hardware...
+	int num_bytes = 0;
+	cypress_pipe_reset_bulk_in(handlers, get_cy_usb_info(device_desc));
+	int ret = cypress_bulk_in_transfer(handlers, get_cy_usb_info(device_desc), buf, length, &num_bytes);
+	if(num_bytes != length)
+		return LIBUSB_ERROR_INTERRUPTED;
+	return ret;
 }
 
 int ReadFrameAsync(cy_device_device_handlers* handlers, uint8_t* buf, int length, const cypart_device_usb_device* device_desc, cy_async_callback_data* cb_data) {
-	return 0;
+	return cypress_bulk_in_async(handlers, get_cy_usb_info(device_desc), buf, length, cb_data);
 }
