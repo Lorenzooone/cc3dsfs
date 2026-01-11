@@ -299,7 +299,7 @@ static int capture_start_first_unknown_write_and_read_0x1000_0x1002(cy_device_de
 }
 
 // Various unknown reads and writes from registers...
-int capture_init(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, std::string &serial) {
+int capture_start(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, std::string &serial) {
 	int ret = 0;
 	uint32_t status = 0;
 	uint32_t unk32 = 0;
@@ -309,6 +309,8 @@ int capture_init(cy_device_device_handlers* handlers, const cypart_device_usb_de
 	ret = write_u32_to_address_partner_ctr(handlers, device, 0xF0000010, 0x80000000);
 	if(ret < 0)
 		return ret;
+
+	default_sleep(30);
 
 	serial = read_serial_ctr_capture(handlers, device);
 
@@ -398,12 +400,150 @@ int capture_init(cy_device_device_handlers* handlers, const cypart_device_usb_de
 	return 0;
 }
 
-int capture_start(cy_device_device_handlers* handlers, const cypart_device_usb_device* device) {
-	
-	return 0;
-}
-
 int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb_device* device) {
+	int ret = 0;
+	uint32_t status = 0;
+	uint32_t unk32 = 0;
+	uint16_t unk16 = 0;
+	uint8_t buffer_in[16];
+
+	// Stop capture, if one already ongoing...
+	ret = write_u32_to_address_partner_ctr(handlers, device, 0xF0000010, 0x80000000);
+	if(ret < 0)
+		return ret;
+
+	default_sleep(30);
+
+	ret = write_u32_to_address_partner_ctr(handlers, device, 0xF0000010, 0x00000004);
+	if(ret < 0)
+		return ret;
+
+	ret = write_u32_to_address_partner_ctr(handlers, device, 0xF0000010, 0x00000008);
+	if(ret < 0)
+		return ret;
+
+	ret = read_u32_from_address_partner_ctr(handlers, device, 0xF8002010, unk32);
+	if(ret < 0)
+		return ret;
+
+	ret = read_u32_from_address_partner_ctr(handlers, device, 0xF8002010, unk32);
+	if(ret < 0)
+		return ret;
+
+	ret = read_u32_from_address_partner_ctr(handlers, device, 0xF800200C, unk32);
+	if(ret < 0)
+		return ret;
+
+	default_sleep(50);
+
+	ret = read_u32_from_address_partner_ctr(handlers, device, 0xF800200C, unk32);
+	if(ret < 0)
+		return ret;
+
+	default_sleep(180);
+
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, 0x0000);
+	if(ret < 0)
+		return ret;
+
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, 0x0001);
+	if(ret < 0)
+		return ret;
+
+	ret = read_u32_from_address_partner_ctr(handlers, device, 0xF800200C, unk32);
+	if(ret < 0)
+		return ret;
+
+	ret = read_u64_plus_from_address_partner_ctr(handlers, device, 0x01F00000, buffer_in, 16);
+	if(ret < 0)
+		return ret;
+
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, 0x0000);
+	if(ret < 0)
+		return ret;
+
+	ret = read_partner_ctr_status(handlers, device, status);
+	if(ret < 0)
+		return ret;
+	// Act based on status...?
+
+	ret = write_u32_to_address_partner_ctr(handlers, device, 0xF0000010, 0x00000008);
+	if(ret < 0)
+		return ret;
+
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002005, 0x0000);
+	if(ret < 0)
+		return ret;
+
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002005, 0x0000);
+	if(ret < 0)
+		return ret;
+
+	ret = read_u32_from_address_partner_ctr(handlers, device, 0xF8002010, unk32);
+	if(ret < 0)
+		return ret;
+
+	ret = read_u32_from_address_partner_ctr(handlers, device, 0xF8002010, unk32);
+	if(ret < 0)
+		return ret;
+
+	ret = read_u32_from_address_partner_ctr(handlers, device, 0xF800200C, unk32);
+	if(ret < 0)
+		return ret;
+
+	default_sleep(50);
+
+	ret = read_u32_from_address_partner_ctr(handlers, device, 0xF800200C, unk32);
+	if(ret < 0)
+		return ret;
+
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, 0x0078);
+	if(ret < 0)
+		return ret;
+
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, 0x007A);
+	if(ret < 0)
+		return ret;
+
+	default_sleep(12);
+
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, 0x7778);
+	if(ret < 0)
+		return ret;
+
+	default_sleep(70);
+
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, 0x0078);
+	if(ret < 0)
+		return ret;
+
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, 0x0079);
+	if(ret < 0)
+		return ret;
+
+	ret = read_u32_from_address_partner_ctr(handlers, device, 0xF800200C, unk32);
+	if(ret < 0)
+		return ret;
+
+	ret = read_u64_plus_from_address_partner_ctr(handlers, device, 0x02800000, buffer_in, 16);
+	if(ret < 0)
+		return ret;
+
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, 0x0078);
+	if(ret < 0)
+		return ret;
+
+	ret = read_partner_ctr_status(handlers, device, status);
+	if(ret < 0)
+		return ret;
+	// Act based on status...?
+
+	ret = write_u32_to_address_partner_ctr(handlers, device, 0xF0000010, 0x00000008);
+	if(ret < 0)
+		return ret;
+
+	default_sleep(180);
+
 	return 0;
 }
 
