@@ -114,7 +114,7 @@ static int recv_partner_ctr_packet(cy_device_device_handlers* handlers, const cy
 static int write_to_address_partner_ctr(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t address, const uint8_t* data, size_t data_size, uint8_t data_size_byte) {
 	int transferred = 0;
 	const size_t out_data_size = 6 + data_size;
-	uint8_t buffer_out[out_data_size];
+	uint8_t* buffer_out = new uint8_t[out_data_size];
 
 	buffer_out[0] = 0x43;
 	buffer_out[1] = data_size_byte;
@@ -122,6 +122,7 @@ static int write_to_address_partner_ctr(cy_device_device_handlers* handlers, con
 	memcpy(buffer_out + 6, data, data_size);
 
 	int ret = send_partner_ctr_packet(handlers, device, buffer_out, out_data_size, transferred);
+	delete []buffer_out;
 	if(ret < 0)
 		return ret;
 	if(transferred < ((int)out_data_size))
