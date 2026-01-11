@@ -22,6 +22,7 @@ int GetNumCyPartnerCTRDeviceDesc(void);
 const cypart_device_usb_device* GetCyPartnerCTRDeviceDesc(int index);
 const cy_device_usb_device* get_cy_usb_info(const cypart_device_usb_device* usb_device_desc);
 std::string read_serial_ctr_capture(cy_device_device_handlers* handlers, const cypart_device_usb_device* device);
+int capture_init(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, std::string &serial);
 int capture_start(cy_device_device_handlers* handlers, const cypart_device_usb_device* device);
 int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb_device* device);
 int capture_end(cy_device_device_handlers* handlers, const cypart_device_usb_device* device);
