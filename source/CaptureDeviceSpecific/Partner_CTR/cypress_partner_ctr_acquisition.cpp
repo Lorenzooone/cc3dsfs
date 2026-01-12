@@ -299,6 +299,8 @@ static void cypress_output_to_thread(CaptureData* capture_data, uint8_t *buffer_
 	// Output to the other threads...
 	CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(internal_index);
 	copy_slice_data_to_buffer((uint8_t*)&data_buf->capture_buf, buffer_arr, start_slice_index, start_slice_pos, read_size);
+	// Ensure the buffer is ended by non-valid data...
+	write_le16(((uint8_t*)&data_buf->capture_buf) + read_size, 0xFFFF);
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - (*clock_start);
 	*clock_start = curr_time;
@@ -356,12 +358,30 @@ static bool cypress_device_read_frame_not_synchronized(CypressPartnerCTRDeviceCa
 static PartnerCTRCaptureCommand get_command_partner_ctr(uint8_t* data, size_t slice_index, size_t start_pos, size_t curr_pos) {
 	uint8_t tmp_buffer[sizeof(PartnerCTRCaptureCommand)];
 	copy_slice_data_to_buffer(tmp_buffer, data, slice_index, start_pos + curr_pos, sizeof(PartnerCTRCaptureCommand));
+
 	return read_partner_ctr_base_command(tmp_buffer);
+}
+
+static PartnerCTRCaptureCommandHeaderCxScreen get_command_screen_partner_ctr(uint8_t* data, size_t slice_index, size_t start_pos, size_t curr_pos) {
+	uint8_t tmp_buffer[sizeof(PartnerCTRCaptureCommandHeaderCxScreen)];
+	copy_slice_data_to_buffer(tmp_buffer, data, slice_index, start_pos + curr_pos, sizeof(PartnerCTRCaptureCommandHeaderCxScreen));
+
+	PartnerCTRCaptureCommandHeaderCxScreen out_cmd;
+
+	out_cmd.command = read_partner_ctr_base_command(tmp_buffer);
+	out_cmd.index_kind = tmp_buffer[sizeof(PartnerCTRCaptureCommand)];
+	out_cmd.index = read_le16(tmp_buffer + sizeof(PartnerCTRCaptureCommand) + 1);
+	out_cmd.unk = tmp_buffer[sizeof(PartnerCTRCaptureCommand) + 3];
+	for(int i = 0; i < 2; i++)
+		out_cmd.unk2[i] = read_le16(tmp_buffer + sizeof(PartnerCTRCaptureCommand) + 4, i);
+
+	return out_cmd;
 }
 
 static size_t get_pos_next_command_partner_ctr(uint8_t* data, size_t slice_index, size_t start_pos, size_t curr_pos) {
 	uint8_t tmp_buffer[sizeof(PartnerCTRCaptureCommand)];
 	copy_slice_data_to_buffer(tmp_buffer, data, slice_index, start_pos + curr_pos, sizeof(PartnerCTRCaptureCommand));
+
 	PartnerCTRCaptureCommand read_command = read_partner_ctr_base_command(tmp_buffer);
 	return curr_pos + get_partner_ctr_size_command_header(read_command) + read_command.payload_size;
 }
@@ -405,13 +425,15 @@ static size_t find_pos_partner_ctr_x_screen(uint8_t* data, size_t slice_index, s
 }
 
 // Package together a frame
-static bool is_valid_frame_partner_ctr(uint8_t* data, size_t slice_index, size_t start_pos, size_t available_bytes, bool enabled_3d, size_t &out_end_pos, bool &synchronized) {
+static bool is_valid_frame_partner_ctr(uint8_t* data, size_t slice_index, size_t start_pos, size_t available_bytes, bool &enabled_3d, size_t &out_end_pos, bool &synchronized) {
 	bool has_top = false;
-	bool has_top_second = !enabled_3d;
+	bool has_top_second = false;
 	bool has_bottom = false;
 	size_t first_screen_pos = 0;
 	size_t second_screen_pos = 0;
 	size_t third_screen_pos = 0;
+	size_t top_screen_pos = 0;
+	PartnerCTRCaptureCommand top_command;
 	out_end_pos = 0;
 
 	first_screen_pos = find_pos_partner_ctr_x_screen(data, slice_index, start_pos, 0, available_bytes);
@@ -424,8 +446,10 @@ static bool is_valid_frame_partner_ctr(uint8_t* data, size_t slice_index, size_t
 	out_end_pos = get_pos_next_command_partner_ctr(data, slice_index, start_pos, first_screen_pos);
 
 	PartnerCTRCaptureCommand read_command = get_command_partner_ctr(data, slice_index, start_pos, first_screen_pos);
-	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN)
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN) {
 		has_top = true;
+		top_screen_pos = first_screen_pos;
+	}
 	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN)
 		has_bottom = true;
 	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN)
@@ -441,12 +465,24 @@ static bool is_valid_frame_partner_ctr(uint8_t* data, size_t slice_index, size_t
 	out_end_pos = get_pos_next_command_partner_ctr(data, slice_index, start_pos, second_screen_pos);
 
 	read_command = get_command_partner_ctr(data, slice_index, start_pos, second_screen_pos);
-	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN)
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN) {
 		has_top = true;
+		top_screen_pos = second_screen_pos;
+	}
 	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN)
 		has_bottom = true;
 	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN)
 		has_top_second = true;
+
+	if(enabled_3d && has_top) {
+		if(out_end_pos > available_bytes)
+			return false;
+
+		PartnerCTRCaptureCommandHeaderCxScreen top_screen_command = get_command_screen_partner_ctr(data, slice_index, start_pos, top_screen_pos);
+		// Does this frame support 3D?
+		if((top_screen_command.index_kind == PARTNER_CTR_CAPTURE_SCREEN_INDEX_KIND_2D_TOP) && (!has_top_second))
+			enabled_3d = false;
+	}
 
 	if(!enabled_3d) {
 		if(!(has_top && has_bottom)) {
@@ -469,20 +505,16 @@ static bool is_valid_frame_partner_ctr(uint8_t* data, size_t slice_index, size_t
 	out_end_pos = get_pos_next_command_partner_ctr(data, slice_index, start_pos, third_screen_pos);
 
 	read_command = get_command_partner_ctr(data, slice_index, start_pos, third_screen_pos);
-	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN)
+	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_TOP_SCREEN) {
 		has_top = true;
+		top_screen_pos = third_screen_pos;
+	}
 	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN)
 		has_bottom = true;
 	if(read_command.command == PARTNER_CTR_CAPTURE_COMMAND_SECOND_TOP_SCREEN)
 		has_top_second = true;
 
-	if(!(has_top && has_bottom)) {
-		synchronized = false;
-		return false;
-	}
-
-	// TODO: Find what to do here...
-	if(!(has_top && has_top_second && has_bottom)) {
+	if(!(has_top && has_bottom && has_top_second)) {
 		synchronized = false;
 		return false;
 	}
@@ -494,7 +526,7 @@ static bool is_valid_frame_partner_ctr(uint8_t* data, size_t slice_index, size_t
 
 // Package together a frame by calling is_valid_frame_partner_ctr,
 // then try adding to the end of it audio data, if present and read...
-static bool is_valid_frame_partner_ctr_attempt_add_sound(uint8_t* data, size_t slice_index, size_t start_pos, size_t available_bytes, bool enabled_3d, size_t &out_end_pos, bool &synchronized) {
+static bool is_valid_frame_partner_ctr_attempt_add_sound(uint8_t* data, size_t slice_index, size_t start_pos, size_t available_bytes, bool &enabled_3d, size_t &out_end_pos, bool &synchronized) {
 	bool is_valid = is_valid_frame_partner_ctr(data, slice_index, start_pos, available_bytes, enabled_3d, out_end_pos, synchronized);
 	if(!is_valid)
 		return false;
