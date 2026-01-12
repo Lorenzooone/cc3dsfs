@@ -239,8 +239,9 @@ struct ALIGNED(8) PACKED PartnerCTRCaptureCommandHeader0F {
 struct ALIGNED(8) PACKED PartnerCTRCaptureCommandHeaderCxScreen {
 	PartnerCTRCaptureCommand command;
 	uint8_t index_kind; // Reflects C4, C5 and C6, so either 04, 05 or 06
-	uint8_t index;
-	uint16_t unk[3];
+	uint16_t index;
+	uint8_t unk;
+	uint16_t unk2[2];
 };
 
 // Sound data, maybe...? Sent every 3 screens in 2D...

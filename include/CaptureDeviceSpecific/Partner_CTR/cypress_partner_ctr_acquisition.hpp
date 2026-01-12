@@ -15,6 +15,10 @@
 #define PARTNER_CTR_CAPTURE_COMMAND_BOT_SCREEN 0x00C6
 #define PARTNER_CTR_CAPTURE_COMMAND_AUDIO 0x00C7
 
+#define PARTNER_CTR_CAPTURE_SCREEN_INDEX_KIND_2D_TOP 0x04
+#define PARTNER_CTR_CAPTURE_SCREEN_INDEX_KIND_3D_TOP 0x05
+#define PARTNER_CTR_CAPTURE_SCREEN_INDEX_KIND_BOTTOM 0x06
+
 void list_devices_cypart_device(std::vector<CaptureDevice> &devices_list, std::vector<no_access_recap_data> &no_access_list, bool* devices_allowed_scan);
 bool cypart_device_connect_usb(bool print_failed, CaptureData* capture_data, CaptureDevice* device);
 uint64_t cypart_device_get_video_in_size(CaptureStatus* status, bool is_3d);
