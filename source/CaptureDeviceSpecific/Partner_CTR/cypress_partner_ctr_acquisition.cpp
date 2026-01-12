@@ -92,6 +92,7 @@ static CaptureDevice _cypress_partner_ctr_create_device(const cypart_device_usb_
 	CaptureDevice out_device = CaptureDevice(serial, usb_device_desc->name, usb_device_desc->long_name, CAPTURE_CONN_PARTNER_CTR, (void*)usb_device_desc, true, true, true, TOP_WIDTH_3DS, HEIGHT_3DS * 2, TOP_WIDTH_3DS, HEIGHT_3DS * 3, N3DSXL_SAMPLES_IN, 180, 0, HEIGHT_3DS, 0, 2 * HEIGHT_3DS, 0, 0, false, usb_device_desc->video_data_type, 0x200, path);
 	out_device.is_horizontally_flipped = true;
 	out_device.continuous_3d_screens = false;
+	out_device.sample_rate = SAMPLE_RATE_48K;
 	return out_device;
 }
 

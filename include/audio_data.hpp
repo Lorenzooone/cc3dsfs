@@ -7,6 +7,7 @@
 
 enum AudioOutputType {AUDIO_OUTPUT_STEREO, AUDIO_OUTPUT_MONO, AUDIO_OUTPUT_END};
 enum AudioMode {AUDIO_MODE_LOW_LATENCY, AUDIO_MODE_STABLE, AUDIO_MODE_END};
+enum AudioSampleRate { SAMPLE_RATE_DS, SAMPLE_RATE_48K, SAMPLE_RATE_44_1K, SAMPLE_RATE_32K, SAMPLE_RATE_32768, SAMPLE_RATE_INVALID };
 
 struct audio_output_device_data {
 	bool preference_requested = false;

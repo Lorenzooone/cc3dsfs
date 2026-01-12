@@ -455,6 +455,12 @@ static void soundCall(AudioData *audio_data, CaptureData* capture_data, volatile
 
 	while(capture_data->status.running) {
 		if(capture_data->status.connected && capture_data->status.device.has_audio && (*can_do_output)) {
+			if(audio.get_current_sample_rate() != capture_data->status.device.sample_rate) {
+				audio.stop_audio();
+				audio.stop();
+				audio.change_sample_rate(capture_data->status.device.sample_rate);
+			}
+
 			bool timed_out = !capture_data->status.audio_wait.timed_lock();
 
 			if(!capture_data->status.cooldown_curr_in) {
