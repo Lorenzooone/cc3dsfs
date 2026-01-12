@@ -800,10 +800,12 @@ static int restart_captures_cc_reads(CaptureData* capture_data, CypressPartnerCT
 	index = 0;
 	reset_buffer_processing_data(cypress_device_capture_recv_data);
 
-	if(!schedule_all_reads(capture_data, cypress_device_capture_recv_data, index, stored_is_3d, ""))
-		return -1;
 	capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
 	StartCaptureDma(handlers, usb_device_desc, stored_is_3d);
+
+	if(!schedule_all_reads(capture_data, cypress_device_capture_recv_data, index, stored_is_3d, ""))
+		return -1;
+
 	return 0;
 }
 
@@ -824,10 +826,10 @@ static bool cypart_device_acquisition_loop(CaptureData* capture_data, CypressPar
 
 	CypressSetMaxTransferSize(handlers, get_cy_usb_info(usb_device_desc), 0x80000);
 
+	StartCaptureDma(handlers, usb_device_desc, stored_is_3d);
 	if(!schedule_all_reads(capture_data, cypress_device_capture_recv_data, index, stored_is_3d, "Initial Reads: Failed"))
 		return false;
 
-	StartCaptureDma(handlers, usb_device_desc, stored_is_3d);
 	while (capture_data->status.connected && capture_data->status.running) {
 		ret = get_cypress_device_status(cypress_device_capture_recv_data);
 		if(ret < 0) {
