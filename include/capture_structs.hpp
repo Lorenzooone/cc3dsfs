@@ -5,6 +5,7 @@
 #include "hw_defs.hpp"
 #include <mutex>
 #include <string>
+#include "audio_data.hpp"
 
 // It may happen that a frame is lost.
 // This value prevents showing a black frame for that.
@@ -350,6 +351,7 @@ struct CaptureDevice {
 	bool is_horizontally_flipped = false;
 	bool is_vertically_flipped = false;
 	bool continuous_3d_screens = true;
+	AudioSampleRate sample_rate = SAMPLE_RATE_DS;
 };
 
 struct CaptureStatus {

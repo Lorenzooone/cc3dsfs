@@ -25,6 +25,8 @@ public:
 	void update_volume();
 	void start_audio();
 	void stop_audio();
+	AudioSampleRate get_current_sample_rate();
+	void change_sample_rate(AudioSampleRate target);
 	bool hasTooMuchTimeElapsed();
 
 private:
@@ -36,6 +38,7 @@ private:
 	std::int16_t *buffer;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_time_start;
 	std::chrono::time_point<std::chrono::high_resolution_clock> inside_clock_time_start;
+	AudioSampleRate current_sample_rate = SAMPLE_RATE_INVALID;
 
 	bool onGetData(sf::SoundStream::Chunk &data) override;
 	void onSeek(sf::Time timeOffset) override;

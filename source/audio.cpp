@@ -24,9 +24,8 @@ Audio::Audio(AudioData *audio_data) {
 	this->audio_data = audio_data;
 	// Consume old events
 	this->buffer = new std::int16_t[MAX_SAMPLES_IN * (MAX_MAX_AUDIO_LATENCY + 1)];
+	this->change_sample_rate(SAMPLE_RATE_DS);
 	this->audio_data->check_audio_restart_request();
-	sf::SoundStream::initialize(AUDIO_CHANNELS, SAMPLE_RATE_BASE, {sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight});
-	this->setPitch(1.0 / SAMPLE_RATE_DIVISOR);
 	start_audio();
 	setVolume(0);
 	this->final_volume = 0;
@@ -34,6 +33,41 @@ Audio::Audio(AudioData *audio_data) {
 
 Audio::~Audio() {
 	delete []this->buffer;
+}
+
+AudioSampleRate Audio::get_current_sample_rate() {
+	return this->current_sample_rate;
+}
+
+void Audio::change_sample_rate(AudioSampleRate target) {
+	if(target == this->current_sample_rate)
+		return;
+
+	switch(target) {
+		case SAMPLE_RATE_DS:
+			sf::SoundStream::initialize(AUDIO_CHANNELS, SAMPLE_RATE_DS_BASE, {sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight});
+			this->setPitch(1.0 / SAMPLE_RATE_DS_DIVISOR);
+			break;
+		case SAMPLE_RATE_48K:
+			sf::SoundStream::initialize(AUDIO_CHANNELS, 48000, {sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight});
+			this->setPitch(1.0);
+			break;
+		case SAMPLE_RATE_44_1K:
+			sf::SoundStream::initialize(AUDIO_CHANNELS, 44100, {sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight});
+			this->setPitch(1.0);
+			break;
+		case SAMPLE_RATE_32K:
+			sf::SoundStream::initialize(AUDIO_CHANNELS, 32000, {sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight});
+			this->setPitch(1.0);
+			break;
+		case SAMPLE_RATE_32768:
+			sf::SoundStream::initialize(AUDIO_CHANNELS, 32768, {sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight});
+			this->setPitch(1.0);
+			break;
+		default:
+			break;
+	}
+	this->current_sample_rate = target;
 }
 	
 void Audio::update_volume() {
