@@ -456,7 +456,7 @@ int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb
 	if(ret < 0)
 		return ret;
 
-	ret = read_u64_plus_from_address_partner_ctr(handlers, device, 0x01F00000, buffer_in, 16);
+	ret = read_u64_plus_from_address_partner_ctr(handlers, device, (unk32 & 0xFF) << 20, buffer_in, 16);
 	if(ret < 0)
 		return ret;
 
@@ -469,7 +469,7 @@ int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb
 		return ret;
 	// Act based on status...?
 
-	ret = write_u32_to_address_partner_ctr(handlers, device, 0xF0000010, 0x00000008);
+	ret = write_u32_to_address_partner_ctr(handlers, device, 0xF0000010, 0x00000800);
 	if(ret < 0)
 		return ret;
 
@@ -499,27 +499,27 @@ int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb
 	if(ret < 0)
 		return ret;
 
-	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, 0x0078);
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, is_3d ? 0x0078 : 0x0068);
 	if(ret < 0)
 		return ret;
 
-	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, 0x007A);
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, is_3d ? 0x007A : 0x016A);
 	if(ret < 0)
 		return ret;
 
 	default_sleep(12);
 
-	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, 0x7778);
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, is_3d ? 0x7778 : 0x7668);
 	if(ret < 0)
 		return ret;
 
 	default_sleep(70);
 
-	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, 0x0078);
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, is_3d ? 0x0078 : 0x0068);
 	if(ret < 0)
 		return ret;
 
-	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, 0x0079);
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, is_3d ? 0x0079 : 0x0069);
 	if(ret < 0)
 		return ret;
 
@@ -527,11 +527,11 @@ int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb
 	if(ret < 0)
 		return ret;
 
-	ret = read_u64_plus_from_address_partner_ctr(handlers, device, 0x02800000, buffer_in, 16);
+	ret = read_u64_plus_from_address_partner_ctr(handlers, device, (unk32 & 0xFF) << 20, buffer_in, 16);
 	if(ret < 0)
 		return ret;
 
-	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, 0x0078);
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, is_3d ? 0x0078 : 0x0068);
 	if(ret < 0)
 		return ret;
 
@@ -540,11 +540,12 @@ int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb
 		return ret;
 	// Act based on status...?
 
-	ret = write_u32_to_address_partner_ctr(handlers, device, 0xF0000010, 0x00000008);
+	ret = write_u32_to_address_partner_ctr(handlers, device, 0xF0000010, 0x00000800);
 	if(ret < 0)
 		return ret;
 
 	default_sleep(180);
+	// TODO: Wait until delay is 0?
 
 	return 0;
 }
