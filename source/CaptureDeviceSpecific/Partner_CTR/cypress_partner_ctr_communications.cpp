@@ -556,11 +556,13 @@ int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb
 	// Force it to 30 FPS for now. Could be expanded in the future to have more
 	// options, like "top screens only" or "YUV422/YUV420"...
 	// 0x00 == 60, 0x0110 == 30, 0x0120 == 15
+	// 0x00 == RGB888, 0x0100 == YUV422, 0x0120 == YUV420
 	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002005, is_3d ? 0x0110 : 0x0000);
 	if(ret < 0)
 		return ret;
 
 	// 0x00 == 60, 0x10 == 30, 0x20 == 15
+	// 0x00 == RGB888, 0x01 == YUV422, 0x20 == YUV420
 	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002005, is_3d ? 0x0010 : 0x0000);
 	if(ret < 0)
 		return ret;
