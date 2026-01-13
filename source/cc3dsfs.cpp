@@ -577,6 +577,8 @@ static void check_close_application(WindowScreen *screen, CaptureData* capture_d
 static float get_time_multiplier(CaptureData* capture_data, bool should_ignore_data_rate) {
 	if(should_ignore_data_rate)
 		return 1.0;
+	if((capture_data->status.device.cc_type == CAPTURE_CONN_PARTNER_CTR) && get_3d_enabled(&capture_data->status))
+		return 2.0;
 	if(capture_data->status.device.cc_type != CAPTURE_CONN_IS_NITRO)
 		return 1.0;
 	switch(capture_data->status.capture_speed) {
