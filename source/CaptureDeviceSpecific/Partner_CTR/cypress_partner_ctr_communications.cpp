@@ -552,11 +552,16 @@ int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb
 	if(ret < 0)
 		return ret;
 
-	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002005, 0x0000);
+	// Framerate... 3D RGB888 is too much for 60 FPS with all screens...
+	// Force it to 30 FPS for now. Could be expanded in the future to have more
+	// options, like "top screens only" or "YUV422/YUV420"...
+	// 0x00 == 60, 0x0110 == 30, 0x0120 == 15
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002005, is_3d ? 0x0110 : 0x0000);
 	if(ret < 0)
 		return ret;
 
-	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002005, 0x0000);
+	// 0x00 == 60, 0x10 == 30, 0x20 == 15
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002005, is_3d ? 0x0010 : 0x0000);
 	if(ret < 0)
 		return ret;
 
@@ -578,7 +583,8 @@ int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb
 	if(ret < 0)
 		return ret;
 
-	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, is_3d ? 0x0078 : 0x0068);
+	// With 3D 60 fps, this would be 0x0078
+	ret = write_u16_to_address_partner_ctr(handlers, device, 0xF8002004, is_3d ? 0x0878 : 0x0068);
 	if(ret < 0)
 		return ret;
 
