@@ -112,7 +112,7 @@ public:
 private:
 	std::mutex access_mutex;
 	std::condition_variable_any condition;
-	const float base_time_fps = 30;
+	const float base_time_fps = BAD_USB_FPS;
 	int count = 0;
 	float time_multiplier = 1.0f;
 };
@@ -134,7 +134,7 @@ public:
 private:
 	std::mutex access_mutex;
 	std::condition_variable_any condition;
-	const float base_time_fps = 30;
+	const float base_time_fps = BAD_USB_FPS;
 	int* counts;
 	int num_elements;
 	float time_multiplier = 1.0f;
