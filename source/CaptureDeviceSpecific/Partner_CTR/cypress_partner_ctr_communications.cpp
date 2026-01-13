@@ -67,6 +67,8 @@ static const cypart_device_usb_device* all_usb_cypart_device_devices_desc[] = {
 	&cypress_partner_ctr2_device,
 };
 
+static int read_from_address_partner_ctr(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t address, uint8_t* data, size_t data_size, uint8_t data_size_byte);
+
 const cy_device_usb_device* get_cy_usb_info(const cypart_device_usb_device* usb_device_desc) {
 	return &usb_device_desc->usb_device_info;
 }
@@ -130,27 +132,68 @@ static int write_to_address_partner_ctr(cy_device_device_handlers* handlers, con
 	return ret;
 }
 
+// Divide data into chunks and read/send them out...
+static int read_write_generic_data_from_to_address_partner_ctr(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t address, uint8_t* data, size_t data_size, const bool is_write) {
+	size_t max_size = 0x20000;
+	int data_size_byte = 0xF2;
+	size_t curr_pos = 0;
+	int ret = 0;
+
+	while((max_size >= 1) && (data_size > 0)) {
+		int num_iters = (int)(data_size / max_size);
+		for(int i = 0; i < num_iters; i++) {
+			if(is_write)
+				ret = write_to_address_partner_ctr(handlers, device, address + curr_pos, data + curr_pos, max_size, data_size_byte);
+			else
+				ret = read_from_address_partner_ctr(handlers, device, address + curr_pos, data + curr_pos, max_size, data_size_byte);
+			if(ret < 0)
+				return ret;
+			data_size -= max_size;
+			curr_pos += max_size;
+		}
+
+		max_size /= 2;
+
+		switch(max_size) {
+			case 2:
+				data_size_byte = 0x00;
+				break;
+			// Theoretical...? Not observed in any packet...?
+			case 1:
+				data_size_byte = 0x01;
+				break;
+			case 0:
+				data_size_byte = -1;
+				break;
+			default:
+				data_size_byte -= 0x10;
+				break;
+		}
+	}
+
+	return ret;
+}
+
+static int write_generic_data_to_address_partner_ctr(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t address, uint8_t* data, size_t data_size) {
+	return read_write_generic_data_from_to_address_partner_ctr(handlers, device, address, data, data_size, true);
+}
+
 // No packet seems to be sent with this pattern?! Would need to be checked
 // to be sure...
 static int write_u8_to_address_partner_ctr(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t address, uint8_t value) {
-	return write_to_address_partner_ctr(handlers, device, address, &value, sizeof(value), 1);
+	return write_generic_data_to_address_partner_ctr(handlers, device, address, &value, sizeof(value));
 }
 
 static int write_u16_to_address_partner_ctr(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t address, uint16_t value) {
 	uint8_t buffer[sizeof(value)];
 	write_le16(buffer, value);
-	return write_to_address_partner_ctr(handlers, device, address, buffer, sizeof(value), 0);
+	return write_generic_data_to_address_partner_ctr(handlers, device, address, buffer, sizeof(value));
 }
 
 static int write_u32_to_address_partner_ctr(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t address, uint32_t value) {
 	uint8_t buffer[sizeof(value)];
 	write_le32(buffer, value);
-	return write_to_address_partner_ctr(handlers, device, address, buffer, sizeof(value), 2);
-}
-
-// No packet seems to be sent with this pattern?! Based on read packets...
-static int write_u64_plus_to_address_partner_ctr(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t address, const uint8_t* data, size_t data_size) {
-	return write_to_address_partner_ctr(handlers, device, address, data, data_size, ((data_size >> 3) << 4) | 2);
+	return write_generic_data_to_address_partner_ctr(handlers, device, address, buffer, sizeof(value));
 }
 
 // Name is tentative, based on pattern observed in wireshark packets...
@@ -177,28 +220,29 @@ static int read_from_address_partner_ctr(cy_device_device_handlers* handlers, co
 	return ret;
 }
 
+// Divide data into chunks and send them out...
+static int read_generic_data_from_address_partner_ctr(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t address, uint8_t* data, size_t data_size) {
+	return read_write_generic_data_from_to_address_partner_ctr(handlers, device, address, data, data_size, false);
+}
+
 // No packet seems to be read with this pattern?! Would need to be checked
 // to be sure...
 static int read_u8_from_address_partner_ctr(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t address, uint8_t &value) {
-	return read_from_address_partner_ctr(handlers, device, address, &value, sizeof(value), 1);
+	return read_generic_data_from_address_partner_ctr(handlers, device, address, &value, sizeof(value));
 }
 
 static int read_u16_from_address_partner_ctr(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t address, uint16_t &value) {
 	uint8_t buffer[sizeof(value)];
-	int ret = read_from_address_partner_ctr(handlers, device, address, buffer, sizeof(value), 0);
+	int ret = read_generic_data_from_address_partner_ctr(handlers, device, address, buffer, sizeof(value));
 	value = read_le16(buffer);
 	return ret;
 }
 
 static int read_u32_from_address_partner_ctr(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t address, uint32_t &value) {
 	uint8_t buffer[sizeof(value)];
-	int ret = read_from_address_partner_ctr(handlers, device, address, buffer, sizeof(value), 2);
+	int ret = read_generic_data_from_address_partner_ctr(handlers, device, address, buffer, sizeof(value));
 	value = read_le32(buffer);
 	return ret;
-}
-
-static int read_u64_plus_from_address_partner_ctr(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t address, uint8_t* data, size_t data_size) {
-	return read_from_address_partner_ctr(handlers, device, address, data, data_size, ((data_size >> 3) << 4) | 2);
 }
 
 static int read_partner_ctr_status(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t &status) {
@@ -456,7 +500,7 @@ int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb
 	if(ret < 0)
 		return ret;
 
-	ret = read_u64_plus_from_address_partner_ctr(handlers, device, (unk32 & 0xFF) << 20, buffer_in, 16);
+	ret = read_generic_data_from_address_partner_ctr(handlers, device, (unk32 & 0xFF) << 20, buffer_in, 16);
 	if(ret < 0)
 		return ret;
 
@@ -527,7 +571,7 @@ int StartCaptureDma(cy_device_device_handlers* handlers, const cypart_device_usb
 	if(ret < 0)
 		return ret;
 
-	ret = read_u64_plus_from_address_partner_ctr(handlers, device, (unk32 & 0xFF) << 20, buffer_in, 16);
+	ret = read_generic_data_from_address_partner_ctr(handlers, device, (unk32 & 0xFF) << 20, buffer_in, 16);
 	if(ret < 0)
 		return ret;
 
