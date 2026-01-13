@@ -67,6 +67,7 @@ static const cypart_device_usb_device* all_usb_cypart_device_devices_desc[] = {
 	&cypress_partner_ctr2_device,
 };
 
+static int write_to_address_partner_ctr(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t address, const uint8_t* data, size_t data_size, uint8_t data_size_byte);
 static int read_from_address_partner_ctr(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint32_t address, uint8_t* data, size_t data_size, uint8_t data_size_byte);
 
 const cy_device_usb_device* get_cy_usb_info(const cypart_device_usb_device* usb_device_desc) {
@@ -343,6 +344,44 @@ static int capture_start_first_unknown_write_and_read_0x1000_0x1002(cy_device_de
 	return ret;
 }
 
+int set_battery_level(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, int battery_level) {
+	uint16_t unk16 = 0;
+
+	int ret = capture_start_unknown_write_and_read_0x1000_0x1002(handlers, device, 0x005D, 0x0018, 0x0004, unk16);
+	if(ret < 0)
+		return ret;
+
+	return capture_start_unknown_write_and_read_0x1000_0x1002(handlers, device, 0x005D, 0x001A, battery_level, unk16);
+}
+
+int set_charge_kind(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, bool plugged_in, bool charging) {
+	uint16_t unk16 = 0;
+
+	// Is this 015D due to uninitialized data, or...?
+	int ret = capture_start_unknown_write_and_read_0x1000_0x1002(handlers, device, 0x015D, 0x0118, 0x000F, unk16);
+	if(ret < 0)
+		return ret;
+
+	int charge_kind = 0;
+	if(plugged_in)
+		charge_kind |= 1;
+	if(charging)
+		charge_kind |= 2;
+	return capture_start_unknown_write_and_read_0x1000_0x1002(handlers, device, 0x005D, 0x001A, charge_kind, unk16);
+}
+
+int hardware_reset(cy_device_device_handlers* handlers, const cypart_device_usb_device* device) {
+	uint16_t unk16 = 0;
+
+	// Is this 015D due to uninitialized data, or...?
+	int ret = capture_start_unknown_write_and_read_0x1000_0x1002(handlers, device, 0x003D, 0x0018, 0x0001, unk16);
+	if(ret < 0)
+		return ret;
+
+	// Is this FF3D due to uninitialized data, or...?
+	return capture_start_unknown_write_and_read_0x1000_0x1002(handlers, device, 0xFF3D, 0xFF18, 0x0000, unk16);
+}
+
 // Various unknown reads and writes from registers...
 int capture_start(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, std::string &serial) {
 	int ret = 0;
@@ -434,11 +473,7 @@ int capture_start(cy_device_device_handlers* handlers, const cypart_device_usb_d
 	if(ret < 0)
 		return ret;
 
-	ret = capture_start_unknown_write_and_read_0x1000_0x1002(handlers, device, 0x005D, 0x0018, 0x0004, unk16);
-	if(ret < 0)
-		return ret;
-
-	ret = capture_start_unknown_write_and_read_0x1000_0x1002(handlers, device, 0x005D, 0x001A, 0x0064, unk16);
+	ret = set_battery_level(handlers, device, 100);
 	if(ret < 0)
 		return ret;
 
