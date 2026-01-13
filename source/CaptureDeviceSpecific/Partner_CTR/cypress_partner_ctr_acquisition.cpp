@@ -265,8 +265,8 @@ static bool get_is_pos_first_synch_in_buffer(uint8_t* buffer, size_t pos_to_chec
 	return (base_command.magic == SYNCH_VALUE_PARTNER_CTR) && (base_command.command == PARTNER_CTR_CAPTURE_COMMAND_INPUT);
 }
 
-static size_t get_pos_first_synch_in_buffer(uint8_t* buffer, int start_pos) {
-	for(int i = start_pos; i < (SINGLE_RING_BUFFER_SLICE_SIZE / 2); i++) {
+static size_t get_pos_first_synch_in_buffer(uint8_t* buffer, size_t start_pos) {
+	for(size_t i = start_pos; i < (SINGLE_RING_BUFFER_SLICE_SIZE / 2); i++) {
 		if(get_is_pos_first_synch_in_buffer(buffer, i * 2))
 			return i * 2;
 	}
@@ -318,7 +318,7 @@ static void cypress_output_to_thread(CaptureData* capture_data, uint8_t *buffer_
 
 static bool cypress_device_read_frame_not_synchronized(CypressPartnerCTRDeviceCaptureReceivedData* cypress_device_capture_recv_data, int &error) {
 	volatile int first_slice_to_check = *cypress_device_capture_recv_data->first_usable_ring_buffer_slice_index;
-	volatile int first_slice_pos_to_check = *cypress_device_capture_recv_data->last_used_ring_buffer_slice_pos;
+	volatile int first_slice_pos_to_check = (int)*cypress_device_capture_recv_data->last_used_ring_buffer_slice_pos;
 	bool found = false;
 	// Determine which buffer is the first which needs to still be checked
 	for(int i = 0; i < NUM_PARTNER_CTR_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS; i++) {
@@ -438,7 +438,6 @@ static bool is_valid_frame_partner_ctr(uint8_t* data, size_t slice_index, size_t
 	size_t second_screen_pos = 0;
 	size_t third_screen_pos = 0;
 	size_t top_screen_pos = 0;
-	PartnerCTRCaptureCommand top_command;
 	out_end_pos = 0;
 
 	first_screen_pos = find_pos_partner_ctr_x_screen(data, slice_index, start_pos, 0, available_bytes);

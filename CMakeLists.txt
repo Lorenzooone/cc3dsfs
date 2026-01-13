@@ -770,6 +770,7 @@ else()
 	install(FILES ${USB_RULES_DIR}/51-ftd2xx.rules DESTINATION .)
 	install(FILES ${USB_RULES_DIR}/51-nisetro.rules DESTINATION .)
 	install(FILES ${USB_RULES_DIR}/51-optimize.rules DESTINATION .)
+	install(FILES ${USB_RULES_DIR}/51-partnerctr.rules DESTINATION .)
 	install(FILES ${SETUP_SCRIPTS_DIR}/install_usb_rules${SCRIPT_EXTENSION} DESTINATION .)
 endif()
 
