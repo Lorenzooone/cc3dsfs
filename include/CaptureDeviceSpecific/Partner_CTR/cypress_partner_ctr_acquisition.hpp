@@ -25,6 +25,7 @@ uint64_t cypart_device_get_video_in_size(CaptureStatus* status, bool is_3d);
 uint64_t cypart_device_get_video_in_size(CaptureData* capture_data, bool is_3d);
 void cypart_device_acquisition_main_loop(CaptureData* capture_data);
 void usb_cypart_device_acquisition_cleanup(CaptureData* capture_data);
+bool is_device_partner_ctr(CaptureDevice* device);
 void usb_cypart_device_init();
 void usb_cypart_device_close();
 

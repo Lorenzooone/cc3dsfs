@@ -32,6 +32,7 @@
 #include "ActionSelectionMenu.hpp"
 #include "ScalingRatioMenu.hpp"
 #include "ISNitroMenu.hpp"
+#include "PartnerCTRMenu.hpp"
 #include "VideoEffectsMenu.hpp"
 #include "InputMenu.hpp"
 #include "AudioDeviceMenu.hpp"
@@ -191,6 +192,7 @@ private:
 	ShortcutMenu *shortcut_menu;
 	ActionSelectionMenu *action_selection_menu;
 	ISNitroMenu *is_nitro_menu;
+	PartnerCTRMenu *partner_ctr_menu;
 	ScalingRatioMenu *scaling_ratio_menu;
 	VideoEffectsMenu *video_effects_menu;
 	InputMenu *input_menu;
@@ -299,8 +301,12 @@ private:
 	void is_nitro_capture_type_change(bool positive);
 	void is_nitro_capture_speed_change(bool positive);
 	void is_nitro_capture_reset_hw();
+	void generic_battery_change(bool positive, int &battery_percentage, const int *allowed_battery_levels, size_t num_levels);
 	void is_nitro_battery_change(bool positive);
 	void is_nitro_ac_adapter_change();
+	void partner_ctr_battery_change(bool positive);
+	void partner_ctr_ac_adapter_connected_change();
+	void partner_ctr_ac_adapter_charging_change();
 	void crop_value_change(int new_crop_value, bool do_print_notification = true, bool do_cycle = true);
 	void par_value_change(int new_par_value, bool is_top);
 	void offset_change(float &value, float change);
@@ -408,6 +414,7 @@ private:
 	void setup_relative_pos_menu(bool reset_data = true);
 	void setup_scaling_ratio_menu(bool reset_data = true);
 	void setup_is_nitro_menu(bool reset_data = true);
+	void setup_partner_ctr_menu(bool reset_data = true);
 	void setup_video_effects_menu(bool reset_data = true);
 	void setup_input_menu(bool reset_data = true);
 	void setup_separator_menu(bool reset_data = true);

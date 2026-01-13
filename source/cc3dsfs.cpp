@@ -199,18 +199,39 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 			}
 
 			if(key == "is_battery_percentage") {
-				capture_status->battery_percentage =  std::stoi(value);
+				capture_status->is_battery_percentage =  std::stoi(value);
 				// Even though 1 is allowed, it spam-resets the Hardware...
 				// So don't allow it as the initial value!
-				if(capture_status->battery_percentage <= 5)
-					capture_status->battery_percentage = 5;
-				if(capture_status->battery_percentage > 100)
-					capture_status->battery_percentage = 100;
+				if(capture_status->is_battery_percentage <= 5)
+					capture_status->is_battery_percentage = 5;
+				if(capture_status->is_battery_percentage > 100)
+					capture_status->is_battery_percentage = 100;
 				continue;
 			}
 
 			if(key == "is_ac_adapter_connected") {
-				capture_status->ac_adapter_connected =  std::stoi(value);
+				capture_status->is_ac_adapter_connected =  std::stoi(value);
+				continue;
+			}
+
+			if(key == "partner_ctr_battery_percentage") {
+				capture_status->partner_ctr_battery_percentage =  std::stoi(value);
+				// Even though 0 is allowed, it turns off the Hardware...
+				// So don't allow it as the initial value!
+				if(capture_status->partner_ctr_battery_percentage <= 1)
+					capture_status->partner_ctr_battery_percentage = 1;
+				if(capture_status->partner_ctr_battery_percentage > 100)
+					capture_status->partner_ctr_battery_percentage = 100;
+				continue;
+			}
+
+			if(key == "partner_ctr_ac_adapter_connected") {
+				capture_status->partner_ctr_ac_adapter_connected =  std::stoi(value);
+				continue;
+			}
+
+			if(key == "partner_ctr_ac_adapter_charging") {
+				capture_status->partner_ctr_ac_adapter_charging =  std::stoi(value);
 				continue;
 			}
 
@@ -242,8 +263,11 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 static void defaults_reload(FrontendData *frontend_data, AudioData* audio_data, CaptureStatus* capture_status) {
 	capture_status->capture_type = CAPTURE_SCREENS_BOTH;
 	capture_status->capture_speed = CAPTURE_SPEEDS_FULL;
-	capture_status->battery_percentage = 100;
-	capture_status->ac_adapter_connected = true;
+	capture_status->is_battery_percentage = 100;
+	capture_status->is_ac_adapter_connected = true;
+	capture_status->partner_ctr_battery_percentage = 100;
+	capture_status->partner_ctr_ac_adapter_connected = false;
+	capture_status->partner_ctr_ac_adapter_charging = false;
 	capture_status->request_low_bw_format = true;
 	for(int i = 0; i < CC_POSSIBLE_DEVICES_END; i++)
 		capture_status->devices_allowed_scan[i] = true;
@@ -333,8 +357,11 @@ static bool save(const std::string path, const std::string name, const std::stri
 	file << "last_connected_ds=" << display_data.last_connected_ds << std::endl;
 	file << "is_screen_capture_type=" << capture_status->capture_type << std::endl;
 	file << "is_speed_capture=" << capture_status->capture_speed << std::endl;
-	file << "is_battery_percentage=" << capture_status->battery_percentage << std::endl;
-	file << "is_ac_adapter_connected=" << capture_status->ac_adapter_connected << std::endl;
+	file << "is_battery_percentage=" << capture_status->is_battery_percentage << std::endl;
+	file << "is_ac_adapter_connected=" << capture_status->is_ac_adapter_connected << std::endl;
+	file << "partner_ctr_battery_percentage=" << capture_status->partner_ctr_battery_percentage << std::endl;
+	file << "partner_ctr_ac_adapter_connected=" << capture_status->partner_ctr_battery_percentage << std::endl;
+	file << "partner_ctr_ac_adapter_charging=" << capture_status->partner_ctr_battery_percentage << std::endl;
 	file << "optimize_o3ds_scan_for=" << capture_status->devices_allowed_scan[CC_OPTIMIZE_O3DS] << std::endl;
 	file << "nisetro_ds_scan_for=" << capture_status->devices_allowed_scan[CC_NISETRO_DS] << std::endl;
 	file << audio_data->save_audio_data();

@@ -6,7 +6,8 @@
 
 #define FPS_WINDOW_SIZE 64
 
-static const int battery_levels[] = {1, 5, 12, 25, 50, 100};
+static const int is_battery_levels[] = {1, 5, 12, 25, 50, 100};
+static const int partner_ctr_battery_levels[] = {0, 1, 10, 30, 60, 100};
 
 static const sf::VideoMode default_fs_mode_4_5k_macos = sf::VideoMode({4480, 2520});
 static const sf::VideoMode default_fs_mode_4k_macos = sf::VideoMode({4096, 2304});
@@ -117,6 +118,7 @@ void WindowScreen::init_menus() {
 	this->action_selection_menu = new ActionSelectionMenu(this->text_rectangle_pool);
 	this->scaling_ratio_menu = new ScalingRatioMenu(this->text_rectangle_pool);
 	this->is_nitro_menu = new ISNitroMenu(this->text_rectangle_pool);
+	this->partner_ctr_menu = new PartnerCTRMenu(this->text_rectangle_pool);
 	this->video_effects_menu = new VideoEffectsMenu(this->text_rectangle_pool);
 	this->input_menu = new InputMenu(this->text_rectangle_pool);
 	this->audio_device_menu = new AudioDeviceMenu(this->text_rectangle_pool);
@@ -149,6 +151,7 @@ void WindowScreen::destroy_menus() {
 	delete this->action_selection_menu;
 	delete this->scaling_ratio_menu;
 	delete this->is_nitro_menu;
+	delete this->partner_ctr_menu;
 	delete this->video_effects_menu;
 	delete this->input_menu;
 	delete this->audio_device_menu;
@@ -225,16 +228,15 @@ void WindowScreen::is_nitro_capture_reset_hw() {
 	this->capture_status->reset_hardware = true;
 }
 
-void WindowScreen::is_nitro_battery_change(bool positive) {
-	if(this->capture_status->battery_percentage < 1)
-		this->capture_status->battery_percentage = 1;
-	if(this->capture_status->battery_percentage > 100)
-		this->capture_status->battery_percentage = 100;
-	int closest_level = 0;
+void WindowScreen::generic_battery_change(bool positive, int &battery_percentage, const int *allowed_battery_levels, size_t num_levels) {
+	if(battery_percentage < allowed_battery_levels[0])
+		battery_percentage = allowed_battery_levels[0];
+	if(battery_percentage > 100)
+		battery_percentage = 100;
+	size_t closest_level = 0;
 	int curr_diff = 100;
-	const int num_levels = sizeof(battery_levels) / sizeof(battery_levels[0]);
-	for(int i = 0; i < num_levels; i++) {
-		int level_diff = abs(battery_levels[i] - this->capture_status->battery_percentage);
+	for(size_t i = 0; i < num_levels; i++) {
+		int level_diff = abs(allowed_battery_levels[i] - battery_percentage);
 		if(level_diff < curr_diff) {
 			closest_level = i;
 			curr_diff = level_diff;
@@ -244,13 +246,29 @@ void WindowScreen::is_nitro_battery_change(bool positive) {
 		closest_level -= 1;
 	if((positive) && (closest_level < (num_levels - 1)))
 		closest_level += 1;
-	if(battery_levels[closest_level] != this->capture_status->battery_percentage)
+	if(allowed_battery_levels[closest_level] != battery_percentage)
 		this->print_notification("Changing battery level...\nPlease wait...");
-	this->capture_status->battery_percentage = battery_levels[closest_level];
+	battery_percentage = allowed_battery_levels[closest_level];
+}
+
+void WindowScreen::is_nitro_battery_change(bool positive) {
+	this->generic_battery_change(positive, this->capture_status->is_battery_percentage, is_battery_levels, sizeof(is_battery_levels) / sizeof(is_battery_levels[0]));
 }
 
 void WindowScreen::is_nitro_ac_adapter_change() {
-	this->capture_status->ac_adapter_connected = !this->capture_status->ac_adapter_connected;
+	this->capture_status->is_ac_adapter_connected = !this->capture_status->is_ac_adapter_connected;
+}
+
+void WindowScreen::partner_ctr_battery_change(bool positive) {
+	this->generic_battery_change(positive, this->capture_status->partner_ctr_battery_percentage, partner_ctr_battery_levels, sizeof(partner_ctr_battery_levels) / sizeof(partner_ctr_battery_levels[0]));
+}
+
+void WindowScreen::partner_ctr_ac_adapter_connected_change() {
+	this->capture_status->partner_ctr_ac_adapter_connected = !this->capture_status->partner_ctr_ac_adapter_connected;
+}
+
+void WindowScreen::partner_ctr_ac_adapter_charging_change() {
+	this->capture_status->partner_ctr_ac_adapter_charging = !this->capture_status->partner_ctr_ac_adapter_charging;
 }
 
 void WindowScreen::padding_change() {
@@ -1179,6 +1197,15 @@ void WindowScreen::setup_is_nitro_menu(bool reset_data) {
 	}
 }
 
+void WindowScreen::setup_partner_ctr_menu(bool reset_data) {
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != PARTNER_CTR_MENU_TYPE) {
+		this->switch_to_menu(PARTNER_CTR_MENU_TYPE, this->partner_ctr_menu, reset_data);
+		this->partner_ctr_menu->insert_data(&this->capture_status->device);
+	}
+}
+
 void WindowScreen::setup_video_effects_menu(bool reset_data) {
 	if(!this->can_setup_menu())
 		return;
@@ -1602,6 +1629,10 @@ void WindowScreen::poll(bool do_everything) {
 						break;
 					case MAIN_MENU_OPTIMIZE_3DS_SETTINGS:
 						this->setup_optimize_3ds_menu();
+						done = true;
+						break;
+					case MAIN_MENU_PARTNER_CTR_SETTINGS:
+						this->setup_partner_ctr_menu();
 						done = true;
 						break;
 					case MAIN_MENU_SHUTDOWN:
@@ -2158,6 +2189,34 @@ void WindowScreen::poll(bool do_everything) {
 				}
 				this->loaded_menu_ptr->reset_output_option();
 				break;
+			case PARTNER_CTR_MENU_TYPE:
+				switch(this->partner_ctr_menu->selected_index) {
+					case PCTR_MENU_BACK:
+						this->setup_main_menu(false);
+						done = true;
+						break;
+					case PCTR_MENU_NO_ACTION:
+						break;
+					case PCTR_MENU_RESET:
+						this->is_nitro_capture_reset_hw();
+						break;
+					case PCTR_MENU_BATTERY_DEC:
+						this->partner_ctr_battery_change(false);
+						break;
+					case PCTR_MENU_BATTERY_INC:
+						this->partner_ctr_battery_change(true);
+						break;
+					case PCTR_MENU_AC_ADAPTER_CONNECTED_TOGGLE:
+						this->partner_ctr_ac_adapter_connected_change();
+						break;
+					case PCTR_MENU_AC_ADAPTER_CHARGING_TOGGLE:
+						this->partner_ctr_ac_adapter_charging_change();
+						break;
+					default:
+						break;
+				}
+				this->loaded_menu_ptr->reset_output_option();
+				break;
 			case VIDEO_EFFECTS_MENU_TYPE:
 				switch(this->video_effects_menu->selected_index) {
 					case VIDEO_EFFECTS_MENU_BACK:
@@ -2454,6 +2513,8 @@ void WindowScreen::update_capture_specific_settings() {
 	}
 	if(this->curr_menu == ISN_MENU_TYPE)
 		this->setup_no_menu();
+	if(this->curr_menu == PARTNER_CTR_MENU_TYPE)
+		this->setup_no_menu();
 	if(this->curr_menu == OPTIMIZE_3DS_MENU_TYPE)
 		this->setup_no_menu();
 	if(this->curr_menu == OPTIMIZE_SERIAL_KEY_ADD_MENU_TYPE)
@@ -2693,6 +2754,9 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			break;
 		case ISN_MENU_TYPE:
 			this->is_nitro_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->capture_status);
+			break;
+		case PARTNER_CTR_MENU_TYPE:
+			this->partner_ctr_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->capture_status);
 			break;
 		case VIDEO_EFFECTS_MENU_TYPE:
 			this->video_effects_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
