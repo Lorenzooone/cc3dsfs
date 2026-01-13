@@ -18,8 +18,8 @@
 // Such an action is allowed under EU law.
 // No reverse engineering of the original software was done to create this.
 
-#define RESET_TIMEOUT 4.0
-#define BATTERY_TIMEOUT 5.0
+#define RESET_TIMEOUT 10.0
+#define BATTERY_TIMEOUT 10.0
 #define SLEEP_RESET_TIME_MS 2000
 
 #define SYNCH_VALUE_PARTNER_CTR PARTNER_CTR_CAPTURE_BASE_COMMAND

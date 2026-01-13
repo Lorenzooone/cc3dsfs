@@ -360,8 +360,8 @@ static bool save(const std::string path, const std::string name, const std::stri
 	file << "is_battery_percentage=" << capture_status->is_battery_percentage << std::endl;
 	file << "is_ac_adapter_connected=" << capture_status->is_ac_adapter_connected << std::endl;
 	file << "partner_ctr_battery_percentage=" << capture_status->partner_ctr_battery_percentage << std::endl;
-	file << "partner_ctr_ac_adapter_connected=" << capture_status->partner_ctr_battery_percentage << std::endl;
-	file << "partner_ctr_ac_adapter_charging=" << capture_status->partner_ctr_battery_percentage << std::endl;
+	file << "partner_ctr_ac_adapter_connected=" << capture_status->partner_ctr_ac_adapter_connected << std::endl;
+	file << "partner_ctr_ac_adapter_charging=" << capture_status->partner_ctr_ac_adapter_charging << std::endl;
 	file << "optimize_o3ds_scan_for=" << capture_status->devices_allowed_scan[CC_OPTIMIZE_O3DS] << std::endl;
 	file << "nisetro_ds_scan_for=" << capture_status->devices_allowed_scan[CC_NISETRO_DS] << std::endl;
 	file << audio_data->save_audio_data();
