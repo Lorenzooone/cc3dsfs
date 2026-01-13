@@ -208,10 +208,10 @@ void ISNitroMenu::prepare(float menu_scaling_factor, int view_size_x, int view_s
 				this->labels[index]->setText(this->setTextOptionString(real_index, get_capture_speed_name(capture_status->capture_speed)));
 				break;
 			case ISN_MENU_BATTERY_DEC:
-				this->labels[index]->setText(this->setTextOptionInt(real_index, capture_status->battery_percentage));
+				this->labels[index]->setText(this->setTextOptionInt(real_index, capture_status->is_battery_percentage));
 				break;
 			case ISN_MENU_AC_ADAPTER_TOGGLE:
-				this->labels[index]->setText(this->setTextOptionBool(real_index, capture_status->ac_adapter_connected));
+				this->labels[index]->setText(this->setTextOptionBool(real_index, capture_status->is_ac_adapter_connected));
 				break;
 			default:
 				break;

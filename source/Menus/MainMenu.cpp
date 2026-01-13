@@ -1,6 +1,7 @@
 #include "MainMenu.hpp"
 #include "usb_is_device_acquisition.hpp"
 #include "cypress_optimize_3ds_acquisition.hpp"
+#include "cypress_partner_ctr_acquisition.hpp"
 
 #define NUM_TOTAL_MENU_OPTIONS (sizeof(pollable_options)/sizeof(pollable_options[0]))
 
@@ -153,6 +154,13 @@ static const MainMenuOptionInfo opti_3ds_settings_option = {
 .enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = true,
 .out_action = MAIN_MENU_OPTIMIZE_3DS_SETTINGS};
 
+static const MainMenuOptionInfo partner_ctr_settings_option = {
+.base_name = "Partner CTR Settings", .false_name = "",
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.enabled_normal_mode = true, .enabled_mono_mode = true, .is_cc_specific = true,
+.out_action = MAIN_MENU_PARTNER_CTR_SETTINGS};
+
 static const MainMenuOptionInfo* pollable_options[] = {
 &connect_option,
 &windowed_option,
@@ -169,6 +177,7 @@ static const MainMenuOptionInfo* pollable_options[] = {
 &isn_settings_option,
 &ist_settings_option,
 &opti_3ds_settings_option,
+&partner_ctr_settings_option,
 &licenses_option,
 &extra_settings_option,
 &quit_option,
@@ -210,6 +219,10 @@ static bool check_cc_specific_option(const MainMenuOptionInfo* option, CaptureDe
 	#endif
 	#ifdef USE_CYPRESS_OPTIMIZE
 	if((option->out_action == MAIN_MENU_OPTIMIZE_3DS_SETTINGS) && is_device_optimize_3ds(device))
+		return true;
+	#endif
+	#ifdef USE_PARTNER_CTR
+	if((option->out_action == MAIN_MENU_PARTNER_CTR_SETTINGS) && is_device_partner_ctr(device))
 		return true;
 	#endif
 	return false;

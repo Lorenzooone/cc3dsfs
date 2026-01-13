@@ -125,8 +125,8 @@ static int CaptureResetHardware(CaptureData* capture_data, std::chrono::time_poi
 static int CaptureBatteryHandleHardware(CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_battery_set, int &curr_battery_percentage, bool &curr_ac_adapter_connected) {
 	is_device_device_handlers* handlers = (is_device_device_handlers*)capture_data->handle;
 	const is_device_usb_device* usb_device_desc = (const is_device_usb_device*)capture_data->status.device.descriptor;
-	int loaded_battery_percentage = capture_data->status.battery_percentage;
-	bool loaded_ac_adapter_connected = capture_data->status.ac_adapter_connected;
+	int loaded_battery_percentage = capture_data->status.is_battery_percentage;
+	bool loaded_ac_adapter_connected = capture_data->status.is_ac_adapter_connected;
 
 	const auto curr_time_battery = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff_battery = curr_time_battery - clock_last_battery_set;
@@ -174,8 +174,8 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 	uint32_t last_read_frame_index = 0;
 	CaptureScreensType curr_capture_type = capture_data->status.capture_type;
 	CaptureSpeedsType curr_capture_speed = capture_data->status.capture_speed;
-	int curr_battery_percentage = capture_data->status.battery_percentage;
-	bool curr_ac_adapter_connected = capture_data->status.ac_adapter_connected;
+	int curr_battery_percentage = capture_data->status.is_battery_percentage;
+	bool curr_ac_adapter_connected = capture_data->status.is_ac_adapter_connected;
 	bool audio_enabled = true;
 	bool reprocess = false;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_frame = std::chrono::high_resolution_clock::now();

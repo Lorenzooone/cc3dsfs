@@ -371,8 +371,11 @@ struct CaptureStatus {
 	bool key_updated = false;
 	CaptureScreensType capture_type;
 	CaptureSpeedsType capture_speed;
-	int battery_percentage;
-	bool ac_adapter_connected;
+	int is_battery_percentage;
+	bool is_ac_adapter_connected;
+	int partner_ctr_battery_percentage;
+	bool partner_ctr_ac_adapter_connected;
+	bool partner_ctr_ac_adapter_charging;
 	// Needed for possible compatibility issues
 	bool devices_allowed_scan[CC_POSSIBLE_DEVICES_END];
 	ConsumerMutex video_wait;

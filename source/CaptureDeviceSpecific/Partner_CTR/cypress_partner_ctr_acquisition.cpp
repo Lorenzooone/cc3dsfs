@@ -18,6 +18,10 @@
 // Such an action is allowed under EU law.
 // No reverse engineering of the original software was done to create this.
 
+#define RESET_TIMEOUT 4.0
+#define BATTERY_TIMEOUT 5.0
+#define SLEEP_RESET_TIME_MS 2000
+
 #define SYNCH_VALUE_PARTNER_CTR PARTNER_CTR_CAPTURE_BASE_COMMAND
 
 #define TOTAL_WANTED_CONCURRENTLY_RUNNING_BUFFER_SIZE 0x100000
@@ -809,20 +813,97 @@ static int restart_captures_cc_reads(CaptureData* capture_data, CypressPartnerCT
 	return 0;
 }
 
+static bool has_battery_stuff_changed(CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_battery_set, int &curr_battery_percentage, bool &curr_ac_adapter_connected, bool &curr_ac_adapter_charging) {
+	int loaded_battery_percentage = capture_data->status.partner_ctr_battery_percentage;
+	bool loaded_ac_adapter_connected = capture_data->status.partner_ctr_ac_adapter_connected;
+	bool loaded_ac_adapter_charging = capture_data->status.partner_ctr_ac_adapter_charging;
+
+	const auto curr_time_battery = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> diff_battery = curr_time_battery - clock_last_battery_set;
+
+	return !(((curr_battery_percentage == loaded_battery_percentage) || (diff_battery.count() <= BATTERY_TIMEOUT)) && (curr_ac_adapter_connected == loaded_ac_adapter_connected) && (curr_ac_adapter_charging == loaded_ac_adapter_charging));
+}
+
+static bool hardware_reset_requested(CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_reset) {
+	bool reset_hardware = capture_data->status.reset_hardware;
+	capture_data->status.reset_hardware = false;
+
+	const auto curr_time = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> diff = curr_time - clock_last_reset;
+	// Do not reset too fast... In general.
+	return reset_hardware && (diff.count() > RESET_TIMEOUT);
+}
+
+static int CaptureBatteryHandleHardware(CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_battery_set, int &curr_battery_percentage, bool &curr_ac_adapter_connected, bool &curr_ac_adapter_charging, bool force = false) {
+	cy_device_device_handlers* handlers = (cy_device_device_handlers*)capture_data->handle;
+	const cypart_device_usb_device* usb_device_desc = (const cypart_device_usb_device*)capture_data->status.device.descriptor;
+	int loaded_battery_percentage = capture_data->status.partner_ctr_battery_percentage;
+	bool loaded_ac_adapter_connected = capture_data->status.partner_ctr_ac_adapter_connected;
+	bool loaded_ac_adapter_charging = capture_data->status.partner_ctr_ac_adapter_charging;
+
+	const auto curr_time_battery = std::chrono::high_resolution_clock::now();
+
+	if(force || (curr_battery_percentage != loaded_battery_percentage)) {
+		int ret = set_battery_level(handlers, usb_device_desc, loaded_battery_percentage);
+		if(ret < 0) {
+			capture_error_print(true, capture_data, "Battery Set: Failed");
+			return ret;
+		}
+		clock_last_battery_set = curr_time_battery;
+		curr_battery_percentage = loaded_battery_percentage;
+	}
+
+	if(force || (curr_ac_adapter_connected != loaded_ac_adapter_connected) || (curr_ac_adapter_charging != loaded_ac_adapter_charging)) {
+		int ret = set_charge_kind(handlers, usb_device_desc, loaded_ac_adapter_connected, loaded_ac_adapter_charging);
+		if(ret < 0) {
+			capture_error_print(true, capture_data, "AC Adapter Set: Failed");
+			return ret;
+		}
+		curr_ac_adapter_connected = loaded_ac_adapter_connected;
+		curr_ac_adapter_charging = loaded_ac_adapter_charging;
+	}
+
+	return 0;
+}
+
+static int CaptureResetHardware(CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_reset) {
+	cy_device_device_handlers* handlers = (cy_device_device_handlers*)capture_data->handle;
+	const cypart_device_usb_device* usb_device_desc = (const cypart_device_usb_device*)capture_data->status.device.descriptor;
+
+	const auto curr_time = std::chrono::high_resolution_clock::now();
+	clock_last_reset = curr_time;
+
+	int ret = hardware_reset(handlers, usb_device_desc);
+	if(ret < 0)
+		return ret;
+	default_sleep(SLEEP_RESET_TIME_MS);
+	return ret;
+}
+
 static bool cypart_device_acquisition_loop(CaptureData* capture_data, CypressPartnerCTRDeviceCaptureReceivedData* cypress_device_capture_recv_data, bool &stored_is_3d, bool could_use_3d) {
 	cy_device_device_handlers* handlers = (cy_device_device_handlers*)capture_data->handle;
 	const cypart_device_usb_device* usb_device_desc = (const cypart_device_usb_device*)capture_data->status.device.descriptor;
 	uint32_t index = 0;
 	uint64_t device_id = 0;
+	int curr_battery_percentage = capture_data->status.partner_ctr_battery_percentage;
+	bool curr_ac_adapter_connected = capture_data->status.partner_ctr_ac_adapter_connected;
+	bool curr_ac_adapter_charging = capture_data->status.partner_ctr_ac_adapter_charging;
 	std::string read_serial = "";
 	bool force_capture_start_key = false;
 	int ret = capture_start(handlers, usb_device_desc, read_serial);
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_capture_start = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_reset = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_battery_set = std::chrono::high_resolution_clock::now();
 
 	if (ret < 0) {
 		capture_error_print(true, capture_data, "Capture Start: Failed");
 		return false;
 	}
+
+	ret = CaptureBatteryHandleHardware(capture_data, clock_last_battery_set, curr_battery_percentage, curr_ac_adapter_connected, curr_ac_adapter_charging, true);
+
+	if (ret < 0)
+		return false;
 
 	CypressSetMaxTransferSize(handlers, get_cy_usb_info(usb_device_desc), 0x80000);
 
@@ -848,9 +929,26 @@ static bool cypart_device_acquisition_loop(CaptureData* capture_data, CypressPar
 			}
 		}
 		bool is_new_3d = could_use_3d && get_3d_enabled(&capture_data->status);
-		if(is_new_3d != stored_is_3d) {
+		bool updated_battery = has_battery_stuff_changed(capture_data, clock_last_battery_set, curr_battery_percentage, curr_ac_adapter_connected, curr_ac_adapter_charging);
+		bool requested_reset = hardware_reset_requested(capture_data, clock_last_reset);
+		if((is_new_3d != stored_is_3d) || updated_battery || requested_reset) {
 			capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM + NUM_PARTNER_CTR_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS;
 			wait_all_cypress_device_buffers_free(capture_data, cypress_device_capture_recv_data);
+
+			if(updated_battery) {
+				ret = CaptureBatteryHandleHardware(capture_data, clock_last_battery_set, curr_battery_percentage, curr_ac_adapter_connected, curr_ac_adapter_charging);
+				if(ret < 0)
+					return false;
+			}
+
+			if(requested_reset) {
+				ret = CaptureResetHardware(capture_data, clock_last_reset);
+				if(ret < 0) {
+					capture_error_print(true, capture_data, "Hardware Reset: Failed");
+					return false;
+				}
+			}
+
 			ret = restart_captures_cc_reads(capture_data, cypress_device_capture_recv_data, index, stored_is_3d, could_use_3d, false, clock_last_capture_start);
 			if(ret < 0) {
 				capture_error_print(true, capture_data, "Disconnected: Update mode error");
@@ -946,6 +1044,15 @@ void usb_cypart_device_acquisition_cleanup(CaptureData* capture_data) {
 	cypress_partner_ctr_connection_end((cy_device_device_handlers*)capture_data->handle, (const cypart_device_usb_device*)capture_data->status.device.descriptor);
 	capture_data->handle = NULL;
 }
+
+bool is_device_partner_ctr(CaptureDevice* device) {
+	if(device == NULL)
+		return false;
+	if(device->cc_type != CAPTURE_CONN_PARTNER_CTR)
+		return false;
+	return true;
+}
+
 void usb_cypart_device_init() {
 	return usb_init();
 }
