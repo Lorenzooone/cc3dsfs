@@ -22,5 +22,7 @@
     <usb-device vendor-id="3950" product-id="1280" />
     <usb-device vendor-id="3950" product-id="1281" />
     <usb-device vendor-id="3950" product-id="1282" />
+    <usb-device vendor-id="3794" product-id="4" />
+    <usb-device vendor-id="3794" product-id="11" />
 </resources>
 

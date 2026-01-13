@@ -105,12 +105,12 @@ std::string read_serial_ctr_capture(cy_device_device_handlers* handlers, const c
 
 static int send_partner_ctr_packet(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, const uint8_t* data, size_t size_data, int &transferred) {
 	cypress_pipe_reset_ctrl_bulk_out(handlers, get_cy_usb_info(device));
-	return cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), data, size_data, &transferred);
+	return cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), data, (int)size_data, &transferred);
 }
 
 static int recv_partner_ctr_packet(cy_device_device_handlers* handlers, const cypart_device_usb_device* device, uint8_t* data, size_t size_data, int &transferred) {
 	cypress_pipe_reset_ctrl_bulk_in(handlers, get_cy_usb_info(device));
-	return cypress_ctrl_bulk_in_transfer(handlers, get_cy_usb_info(device), data, size_data, &transferred);
+	return cypress_ctrl_bulk_in_transfer(handlers, get_cy_usb_info(device), data, (int)size_data, &transferred);
 }
 
 // Name is tentative, based on pattern observed in wireshark packets...
@@ -144,9 +144,9 @@ static int read_write_generic_data_from_to_address_partner_ctr(cy_device_device_
 		int num_iters = (int)(data_size / max_size);
 		for(int i = 0; i < num_iters; i++) {
 			if(is_write)
-				ret = write_to_address_partner_ctr(handlers, device, address + curr_pos, data + curr_pos, max_size, data_size_byte);
+				ret = write_to_address_partner_ctr(handlers, device, (uint32_t)(address + curr_pos), data + curr_pos, max_size, data_size_byte);
 			else
-				ret = read_from_address_partner_ctr(handlers, device, address + curr_pos, data + curr_pos, max_size, data_size_byte);
+				ret = read_from_address_partner_ctr(handlers, device, (uint32_t)(address + curr_pos), data + curr_pos, max_size, data_size_byte);
 			if(ret < 0)
 				return ret;
 			data_size -= max_size;
