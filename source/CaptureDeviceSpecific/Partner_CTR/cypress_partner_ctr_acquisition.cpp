@@ -266,7 +266,7 @@ static bool get_is_pos_first_synch_in_buffer(uint8_t* buffer, size_t pos_to_chec
 }
 
 static size_t get_pos_first_synch_in_buffer(uint8_t* buffer, size_t start_pos) {
-	for(size_t i = start_pos; i < (SINGLE_RING_BUFFER_SLICE_SIZE / 2); i++) {
+	for(size_t i = (start_pos / 2); i < (SINGLE_RING_BUFFER_SLICE_SIZE / 2); i++) {
 		if(get_is_pos_first_synch_in_buffer(buffer, i * 2))
 			return i * 2;
 	}
@@ -318,6 +318,7 @@ static void cypress_output_to_thread(CaptureData* capture_data, uint8_t *buffer_
 
 static bool cypress_device_read_frame_not_synchronized(CypressPartnerCTRDeviceCaptureReceivedData* cypress_device_capture_recv_data, int &error) {
 	volatile int first_slice_to_check = *cypress_device_capture_recv_data->first_usable_ring_buffer_slice_index;
+	volatile int original_first_slice_to_check = first_slice_to_check;
 	volatile int first_slice_pos_to_check = (int)*cypress_device_capture_recv_data->last_used_ring_buffer_slice_pos;
 	bool found = false;
 	// Determine which buffer is the first which needs to still be checked
@@ -341,7 +342,8 @@ static bool cypress_device_read_frame_not_synchronized(CypressPartnerCTRDeviceCa
 		// Checks all available buffers which have data (but in order).
 		if(cypress_device_capture_recv_data->is_ring_buffer_slice_data_ready_arr[check_index]) {
 			size_t start_result = 0;
-			if(check_index == first_slice_to_check)
+			// Increase by two to prevent looping...
+			if(check_index == original_first_slice_to_check)
 				start_result = first_slice_pos_to_check + 2;
 			size_t result = get_pos_first_synch_in_buffer(&cypress_device_capture_recv_data->ring_slice_buffer_arr[check_index * SINGLE_RING_BUFFER_SLICE_SIZE], start_result);
 			if(result >= SINGLE_RING_BUFFER_SLICE_SIZE) {
