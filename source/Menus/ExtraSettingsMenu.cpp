@@ -5,6 +5,7 @@
 
 struct ExtraSettingsMenuOptionInfo {
 	const std::string base_name;
+	const std::string false_name;
 	const bool is_selectable;
 	const bool active_fullscreen;
 	const bool active_windowed_screen;
@@ -17,63 +18,71 @@ struct ExtraSettingsMenuOptionInfo {
 };
 
 static const ExtraSettingsMenuOptionInfo warning_option = {
-.base_name = "Advanced users only!", .is_selectable = false,
+.base_name = "Advanced users only!", .false_name = "", .is_selectable = false,
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .active_regular = true, .active_mono_app = true,
 .out_action = EXTRA_SETTINGS_MENU_NO_ACTION};
 
 static const ExtraSettingsMenuOptionInfo reset_to_default_option = {
-.base_name = "Reset Settings", .is_selectable = true,
+.base_name = "Reset Settings", .false_name = "", .is_selectable = true,
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .active_regular = true, .active_mono_app = true,
 .out_action = EXTRA_SETTINGS_MENU_RESET_SETTINGS};
 
 static const ExtraSettingsMenuOptionInfo windowed_option = {
-.base_name = "Windowed Mode", .is_selectable = true,
+.base_name = "Windowed Mode",  .false_name = "", .is_selectable = true,
 .active_fullscreen = true, .active_windowed_screen = false,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .active_regular = false, .active_mono_app = true,
 .out_action = EXTRA_SETTINGS_MENU_FULLSCREEN};
 
 static const ExtraSettingsMenuOptionInfo fullscreen_option = {
-.base_name = "Fullscreen Mode", .is_selectable = true,
+.base_name = "Fullscreen Mode",  .false_name = "", .is_selectable = true,
 .active_fullscreen = false, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .active_regular = false, .active_mono_app = true,
 .out_action = EXTRA_SETTINGS_MENU_FULLSCREEN};
 
 static const ExtraSettingsMenuOptionInfo join_screens_option = {
-.base_name = "Join Screens", .is_selectable = true,
+.base_name = "Join Screens",  .false_name = "", .is_selectable = true,
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = false, .active_top_screen = true, .active_bottom_screen = true,
 .active_regular = false, .active_mono_app = true,
 .out_action = EXTRA_SETTINGS_MENU_SPLIT};
 
 static const ExtraSettingsMenuOptionInfo split_screens_option = {
-.base_name = "Split Screens", .is_selectable = true,
+.base_name = "Split Screens",  .false_name = "", .is_selectable = true,
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = false, .active_bottom_screen = false,
 .active_regular = false, .active_mono_app = true,
 .out_action = EXTRA_SETTINGS_MENU_SPLIT};
 
 static const ExtraSettingsMenuOptionInfo quit_option = {
-.base_name = "Quit Application", .is_selectable = true,
+.base_name = "Quit Application",  .false_name = "", .is_selectable = true,
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .active_regular = false, .active_mono_app = true,
 .out_action = EXTRA_SETTINGS_MENU_QUIT_APPLICATION};
 
 static const ExtraSettingsMenuOptionInfo usb_conflict_resolution_menu_option = {
-.base_name = "USB Conflict Resolution", .is_selectable = true,
+.base_name = "USB Conflict Resolution",  .false_name = "", .is_selectable = true,
 .active_fullscreen = true, .active_windowed_screen = true,
 .active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
 .active_regular = true, .active_mono_app = true,
 .out_action = EXTRA_SETTINGS_MENU_USB_CONFLICT_RESOLUTION};
 
+static const ExtraSettingsMenuOptionInfo periodic_connection_try_menu_option = {
+.base_name = "Set Manual Connection",  .false_name = "Set Automatic Connection", .is_selectable = true,
+.active_fullscreen = true, .active_windowed_screen = true,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.active_regular = true, .active_mono_app = true,
+.out_action = EXTRA_SETTINGS_MENU_CHANGE_PERIODIC_CONNECTION_TRY};
+
 static const ExtraSettingsMenuOptionInfo* pollable_options[] = {
 &warning_option,
+&periodic_connection_try_menu_option,
 &reset_to_default_option,
 &windowed_option,
 &fullscreen_option,
@@ -170,9 +179,30 @@ size_t ExtraSettingsMenu::get_num_options() {
 }
 
 std::string ExtraSettingsMenu::get_string_option(int index, int action) {
+	if(action == FALSE_ACTION)
+		return pollable_options[this->options_indexes[index]]->false_name;
 	return pollable_options[this->options_indexes[index]]->base_name;
 }
 
-void ExtraSettingsMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y) {
+void ExtraSettingsMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, bool periodic_connection_try) {
+	int num_pages = this->get_num_pages();
+	if(this->future_data.page >= num_pages)
+		this->future_data.page = num_pages - 1;
+	int start = this->future_data.page * this->num_options_per_screen;
+	for(int i = 0; i < this->num_options_per_screen + 1; i++) {
+		int index = (i * this->single_option_multiplier) + this->elements_start_id;
+		if(!this->future_enabled_labels[index])
+			continue;
+		int real_index = start + i;
+		int option_index = this->options_indexes[real_index];
+		switch(pollable_options[option_index]->out_action) {
+			case EXTRA_SETTINGS_MENU_CHANGE_PERIODIC_CONNECTION_TRY:
+				this->labels[index]->setText(this->setTextOptionBool(real_index, periodic_connection_try));
+				break;
+			default:
+				break;
+		}
+	}
+
 	this->base_prepare(menu_scaling_factor, view_size_x, view_size_y);
 }

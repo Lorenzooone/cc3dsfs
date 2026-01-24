@@ -30,6 +30,8 @@
 
 #define ANDROID_FIRST_CONNECTION_TIMEOUT 0.5
 
+#define PERIOD_CONNECTION_TRY_TIMEOUT 0.5
+
 struct override_all_data {
 	override_win_data override_top_bot_data;
 	override_win_data override_top_data;
@@ -112,6 +114,11 @@ static bool load_shared(const std::string path, const std::string name, SharedDa
 
 					if(key == "enable_buttons_input") {
 						shared_data->input_data.enable_buttons_input = std::stoi(value);
+						continue;
+					}
+
+					if(key == "periodic_connection_try") {
+						shared_data->periodic_connection_try = std::stoi(value);
 						continue;
 					}
 				}
@@ -334,6 +341,7 @@ static bool save_shared(const std::string path, const std::string name, SharedDa
 	file << "enable_controller_input=" << shared_data->input_data.enable_controller_input << std::endl;
 	file << "enable_mouse_input=" << shared_data->input_data.enable_mouse_input << std::endl;
 	file << "enable_buttons_input=" << shared_data->input_data.enable_buttons_input << std::endl;
+	file << "periodic_connection_try=" << shared_data->periodic_connection_try << std::endl;
 
 	file.close();
 	return true;
@@ -600,7 +608,7 @@ static void populate_force_disable_ccs(bool* force_cc_disables, override_all_dat
 	force_cc_disables[CC_OPTIMIZE_O3DS] = override_data.force_disable_optimize_old_3ds;
 }
 
-static void check_for_first_connection(bool &did_first_connection, std::chrono::time_point<std::chrono::high_resolution_clock> &start_time, CaptureData* capture_data, FrontendData *frontend_data, bool* force_cc_disables, override_all_data &override_data, OutTextData &out_text_data, int &ret_val) {
+static void check_for_first_connection(bool &did_first_connection, std::chrono::time_point<std::chrono::high_resolution_clock> &start_time, CaptureData* capture_data, FrontendData *frontend_data, bool* force_cc_disables, override_all_data &override_data, OutTextData &out_text_data, int &ret_val, std::chrono::time_point<std::chrono::high_resolution_clock> &last_connection_time) {
 	if(did_first_connection)
 		return;
 
@@ -618,6 +626,16 @@ static void check_for_first_connection(bool &did_first_connection, std::chrono::
 	}
 	SuccessConnectionOutTextGenerator(out_text_data, capture_data);
 	did_first_connection = true;
+	last_connection_time = std::chrono::high_resolution_clock::now();
+}
+
+static bool should_do_periodic_connection_try(SharedData* shared_data, bool connected, std::chrono::time_point<std::chrono::high_resolution_clock> &last_connection_time) {
+	if(connected || (!shared_data->periodic_connection_try))
+		return false;
+
+	auto curr_time = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> diff = curr_time - last_connection_time;
+	return diff.count() >= PERIOD_CONNECTION_TRY_TIMEOUT;
 }
 
 static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data, override_all_data &override_data, volatile bool* can_do_output) {
@@ -636,6 +654,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	std::chrono::time_point<std::chrono::high_resolution_clock> start_time = std::chrono::high_resolution_clock::now();
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_valid_frame_time = start_time;
 	OutTextData out_text_data;
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_connection_time = std::chrono::high_resolution_clock::now();
 	int ret_val = 0;
 	int poll_timeout = 0;
 	const bool endianness = is_big_endian();
@@ -681,7 +700,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		joystick_print_all();
 
 	while(capture_data->status.running) {
-		check_for_first_connection(did_first_connection, start_time, capture_data, &frontend_data, force_cc_disables, override_data, out_text_data, ret_val);
+		check_for_first_connection(did_first_connection, start_time, capture_data, &frontend_data, force_cc_disables, override_data, out_text_data, ret_val, last_connection_time);
 		if(!capture_data->status.running)
 			break;
 
@@ -738,6 +757,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 					blank_out = true;
 				no_data_consecutive++;
 			}
+			last_connection_time = std::chrono::high_resolution_clock::now();
 		}
 		else {
 			default_sleep();
@@ -774,10 +794,13 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 			joint_screen->m_info.window_enabled = false;
 		}
 
-		if(top_screen->open_capture() || bot_screen->open_capture() || joint_screen->open_capture()) {
+		bool asked_for_connect = top_screen->open_capture() || bot_screen->open_capture() || joint_screen->open_capture();
+		if(asked_for_connect || should_do_periodic_connection_try(&frontend_data.shared_data, capture_data->status.connected, last_connection_time)) {
 			if(did_first_connection) {
-				capture_data->status.connected = connect(true, capture_data, &frontend_data, force_cc_disables);
-				SuccessConnectionOutTextGenerator(out_text_data, capture_data);
+				capture_data->status.connected = connect(asked_for_connect, capture_data, &frontend_data, force_cc_disables);
+				if(capture_data->status.connected || asked_for_connect)
+					SuccessConnectionOutTextGenerator(out_text_data, capture_data);
+				last_connection_time = std::chrono::high_resolution_clock::now();
 			}
 		}
 

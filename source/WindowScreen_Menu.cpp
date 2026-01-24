@@ -2055,6 +2055,9 @@ void WindowScreen::poll(bool do_everything) {
 						this->setup_usb_conflict_resolution_menu();
 						done = true;
 						break;
+					case EXTRA_SETTINGS_MENU_CHANGE_PERIODIC_CONNECTION_TRY:
+						this->shared_data->periodic_connection_try = !this->shared_data->periodic_connection_try;
+						break;
 					default:
 						break;
 				}
@@ -2735,7 +2738,7 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			this->fileconfig_menu->prepare(menu_scaling_factor, view_size_x, view_size_y);
 			break;
 		case EXTRA_MENU_TYPE:
-			this->extra_menu->prepare(menu_scaling_factor, view_size_x, view_size_y);
+			this->extra_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->shared_data->periodic_connection_try);
 			break;
 		case SHORTCUTS_MENU_TYPE:
 			this->shortcut_menu->prepare(menu_scaling_factor, view_size_x, view_size_y);

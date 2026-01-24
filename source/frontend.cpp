@@ -540,6 +540,7 @@ void reset_input_data(InputData* input_data) {
 
 void reset_shared_data(SharedData* shared_data) {
 	reset_input_data(&shared_data->input_data);
+	shared_data->periodic_connection_try = false;
 }
 
 void reset_fullscreen_info(ScreenInfo &info) {

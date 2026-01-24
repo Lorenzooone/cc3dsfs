@@ -109,6 +109,7 @@ struct InputData {
 
 struct SharedData {
 	InputData input_data;
+	volatile bool periodic_connection_try = false;
 };
 
 #pragma pack(push, 1)
