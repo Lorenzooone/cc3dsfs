@@ -97,8 +97,12 @@ static double FPSArrayGetAverage(FPSArray *array) {
 }
 
 void WindowScreen::init_menus() {
+	for(int i = 0; i < NUM_FINGERS_SUPPORTED; i++)
+		this->is_touch_currently_active[i] = false;
+
 	this->last_menu_change_time = std::chrono::high_resolution_clock::now();
 	this->last_data_format_change_time = std::chrono::high_resolution_clock::now();
+
 	this->connection_menu = new ConnectionMenu(this->text_rectangle_pool);
 	this->main_menu = new MainMenu(this->text_rectangle_pool);
 	this->video_menu = new VideoMenu(this->text_rectangle_pool);
@@ -2641,6 +2645,20 @@ void WindowScreen::poll_window(bool do_everything) {
 					if(this->shared_data->input_data.enable_mouse_input)
 						events_queue.emplace(mouse_movement->position);
 				}
+				else if(const auto* touch_began = event->getIf<sf::Event::TouchBegan>()) {
+					if(touch_began->finger < NUM_FINGERS_SUPPORTED) {
+						this->is_touch_currently_active[touch_began->finger] = true;
+						this->touch_position[touch_began->finger] = touch_began->position;
+					}
+				}
+				else if(const auto* touch_moved = event->getIf<sf::Event::TouchMoved>()) {
+					if(touch_moved->finger < NUM_FINGERS_SUPPORTED)
+						this->touch_position[touch_moved->finger] = touch_moved->position;
+				}
+				else if(const auto* touch_ended = event->getIf<sf::Event::TouchEnded>()) {
+					if(touch_ended->finger < NUM_FINGERS_SUPPORTED)
+						this->is_touch_currently_active[touch_ended->finger] = false;
+				}
 			}
 		}
 		if(this->m_win.hasFocus()) {
@@ -2658,11 +2676,11 @@ void WindowScreen::poll_window(bool do_everything) {
 				}
 				if(!found)
 					check_held_reset(false, this->controller_button_action);
-				bool touch_active = sf::Touch::isDown(0);
+				bool touch_active = this->is_touch_currently_active[0];
 				check_held_reset(touch_active, this->touch_action);
 				check_held_reset(touch_active, this->touch_right_click_action);
 				if(touch_active) {
-					sf::Vector2i touch_pos = sf::Touch::getPosition(0, this->m_win);
+					sf::Vector2i touch_pos = this->touch_position[0];
 					auto curr_time = std::chrono::high_resolution_clock::now();
 					const std::chrono::duration<double> diff = curr_time - this->touch_right_click_action.start_time;
 					if(diff.count() > this->touch_long_press_timer) {
@@ -2687,6 +2705,8 @@ void WindowScreen::poll_window(bool do_everything) {
 		}
 	}
 	else {
+		for(int i = 0; i < NUM_FINGERS_SUPPORTED; i++)
+			this->is_touch_currently_active[i] = false;
 		this->reset_held_times();
 		check_held_reset(false, this->touch_right_click_action);
 	}

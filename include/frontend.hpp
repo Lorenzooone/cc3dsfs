@@ -47,6 +47,11 @@
 #include "event_structs.hpp"
 #include "shaders_list.hpp"
 
+// SFML currently does not have a define for the maximum amount of fingers...
+// Make one to "fix this", though it will need code to reject extra
+// fingers... :/ What a mess.
+#define NUM_FINGERS_SUPPORTED 10
+
 struct HeldTime {
 	std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
 	bool started;
@@ -161,6 +166,8 @@ private:
 	HeldTime right_click_action;
 	HeldTime controller_button_action;
 	bool consumed_touch_long_press;
+	bool is_touch_currently_active[NUM_FINGERS_SUPPORTED];
+	sf::Vector2i touch_position[NUM_FINGERS_SUPPORTED];
 	const float touch_short_press_timer = 0.2f;
 	const float touch_long_press_timer = 1.5f;
 	const float mouse_timeout = 5.0f;
