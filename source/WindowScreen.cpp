@@ -284,7 +284,7 @@ void WindowScreen::after_thread_join() {
 	}
 }
 
-void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoDataType video_data_type) {
+void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoDataType video_data_type, bool update_rendered_buffer) {
 	FPSArrayInsertElement(&this->in_fps, frame_time);
 	if(!this->done_display)
 		return;
@@ -323,13 +323,17 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoD
 		FPSArrayInsertElement(&this->draw_fps, diff.count());
 		this->last_draw_time = curr_time;
 		WindowScreen::reset_operations(future_operations);
-		if(out_buf != NULL)
-			memcpy(this->saved_buf, out_buf, sizeof(VideoOutputData));
-		else {
-			memset(this->saved_buf, 0, sizeof(VideoOutputData));
-			this->was_last_frame_null = true;
+		if(update_rendered_buffer) {
+			if(out_buf != NULL) {
+				memcpy(this->saved_buf, out_buf, sizeof(VideoOutputData));
+				this->was_last_frame_null = false;
+			}
+			else {
+				memset(this->saved_buf, 0, sizeof(VideoOutputData));
+				this->was_last_frame_null = true;
+			}
+			this->curr_video_data_type = video_data_type;
 		}
-		this->curr_video_data_type = video_data_type;
 		loaded_info = m_info;
 		m_info.initial_pos_x = DEFAULT_NO_POS_WINDOW_VALUE;
 		m_info.initial_pos_y = DEFAULT_NO_POS_WINDOW_VALUE;
@@ -892,10 +896,8 @@ int WindowScreen::_choose_base_input_shader(bool is_top) {
 }
 
 int WindowScreen::_choose_shader(PossibleShaderTypes shader_type, bool is_top) {
-	if(this->was_last_frame_null) {
-		this->was_last_frame_null = false;
+	if(this->was_last_frame_null)
 		return NO_EFFECT_FRAGMENT_SHADER;
-	}
 	switch(shader_type) {
 		case BASE_FINAL_OUTPUT_SHADER_TYPE:
 			return NO_EFFECT_FRAGMENT_SHADER;

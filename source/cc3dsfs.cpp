@@ -715,6 +715,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		VideoOutputData *chosen_buf = out_buf;
 		InputVideoDataType video_data_type = VIDEO_DATA_RGB;
 		bool blank_out = false;
+		bool update_rendered_buffer = true;
 		bool is_connected = capture_data->status.connected;
 		if(is_connected != last_connected) {
 			update_connected_specific_settings(&frontend_data, capture_data->status.device);
@@ -756,6 +757,8 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 				if(capture_data->status.cooldown_curr_in || (!capture_data->status.connected))
 					blank_out = true;
 				no_data_consecutive++;
+				if(!blank_out)
+					update_rendered_buffer = false;
 			}
 			last_connection_time = std::chrono::high_resolution_clock::now();
 		}
@@ -775,7 +778,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 		*can_do_output = should_do_output(&frontend_data);
 
 		if(*can_do_output)
-			update_output(&frontend_data, last_frame_time, chosen_buf, video_data_type);
+			update_output(&frontend_data, last_frame_time, chosen_buf, video_data_type, update_rendered_buffer);
 
 		if(!frontend_data.shared_data.input_data.fast_poll)
 			poll_all_windows(&frontend_data, poll_everything, polled);

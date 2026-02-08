@@ -85,7 +85,7 @@ public:
 	void display_thread();
 	void end();
 	void after_thread_join();
-	void draw(double frame_time, VideoOutputData* out_buf, InputVideoDataType video_data_type);
+	void draw(double frame_time, VideoOutputData* out_buf, InputVideoDataType video_data_type, bool update_rendered_buffer);
 	void setup_connection_menu(std::vector<CaptureDevice> *devices_list, bool reset_data = true);
 	void setup_reconnection_menu(bool reset_data = true);
 	int check_connection_menu_result();
@@ -473,7 +473,7 @@ void get_par_size(float &width, float &height, float multiplier_factor, const PA
 SecondScreen3DRelativePosition get_second_screen_pos(ScreenInfo* info, ScreenType stype);
 
 bool should_do_output(FrontendData* frontend_data);
-void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL, InputVideoDataType video_data_type = VIDEO_DATA_RGB);
+void update_output(FrontendData* frontend_data, double frame_time = 0.0, VideoOutputData *out_buf = NULL, InputVideoDataType video_data_type = VIDEO_DATA_RGB, bool update_rendered_buffer = true);
 void update_connected_3ds_ds(FrontendData* frontend_data, const CaptureDevice &old_cc_device, const CaptureDevice &new_cc_device);
 void update_connected_specific_settings(FrontendData* frontend_data, const CaptureDevice &cc_device);
 
