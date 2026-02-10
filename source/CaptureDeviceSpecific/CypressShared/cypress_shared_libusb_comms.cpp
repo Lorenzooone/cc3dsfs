@@ -4,6 +4,12 @@
 #include <libusb.h>
 #include "usb_generic.hpp"
 
+#define CYPRESS_EZ_FX2_VID 0x04B4
+#define CYPRESS_EZ_FX2_PID 0x8613
+
+#define CYPRESS_EZ_FX2_BAD_VID_INTRAORAL 0x0547
+#define CYPRESS_EZ_FX2_BAD_PID_INTRAORAL 0x2001
+
 // Read from ctrl_in
 int cypress_libusb_ctrl_in(cy_device_device_handlers* handlers, const cy_device_usb_device* usb_device_desc, uint8_t* buf, int length, uint8_t request, uint16_t value, uint16_t index, int* transferred) {
 	int ret = libusb_control_transfer(handlers->usb_handle, 0xC0, request, value, index, buf, length, usb_device_desc->bulk_timeout);
@@ -317,6 +323,19 @@ void cypress_libusb_list_devices(std::vector<CaptureDevice> &devices_list, bool*
 					not_supported_elems[j] = true;
 				break;
 			}
+			#ifdef _WIN32
+			// The IntraOral vendor overwrote the Infineon driver in a recent Windows Update...
+			// This is terrible, and Microsoft needs to fix this asap.
+			// Prepare a warning, so users can at least understand what is the problem.
+			// They will need to uninstall the devices and remove the driver, even from hidden devices... :/
+			if((device_descriptions[j]->pid == CYPRESS_EZ_FX2_PID) && (device_descriptions[j]->vid == CYPRESS_EZ_FX2_VID)) {
+				// Keep it like this in case multiple vendors do this in the future. :/
+				if((usb_descriptor.idVendor == CYPRESS_EZ_FX2_BAD_VID_INTRAORAL) && (usb_descriptor.idProduct == CYPRESS_EZ_FX2_BAD_PID_INTRAORAL)) {
+					no_access_elems[j] = true;
+					ActualConsoleOutTextError("WARNING: IntraOral device detected. Possible driver issue.");
+				}
+			}
+			#endif
 		}
 	}
 

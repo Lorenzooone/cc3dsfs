@@ -164,7 +164,14 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 				else
 					full_error_part += "VID: " + to_hex_u16(no_access_list[i].vid) + ", PID: " + to_hex_u16(no_access_list[i].pid);
 			}
-			capture_error_print(print_failed, capture_data, "No device was found\nPossible permission error", "No device was found - Possible permission error" + full_error_part);
+			#ifdef _WIN32
+			std::string base_error_string = "No device was found\nPossible driver issue";
+			std::string long_error_string = "No device was found - Possible driver issue" + full_error_part;
+			#else
+			std::string base_error_string = "No device was found\nPossible permission error";
+			std::string long_error_string = "No device was found - Possible permission error" + full_error_part;
+			#endif
+			capture_error_print(print_failed, capture_data, base_error_string, long_error_string);
 		}
 		return false;
 	}
