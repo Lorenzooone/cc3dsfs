@@ -137,6 +137,7 @@ static bool read_3ds_config_3d(bool print_failed, CaptureData* capture_data, Cap
 	buf[0] = 0x98;
 	buf[1] = 0x05;
 	buf[2] = 0x9F;
+	buf[3] = 0;
 
 	if(ftd3_is_error_compat(handlers, ftd3_write_pipe_compat(handlers, BULK_OUT, buf, 4, &transferred))) {
 		capture_error_print(print_failed, capture_data, "Write failed");
@@ -158,6 +159,8 @@ static bool read_3ds_config_3d(bool print_failed, CaptureData* capture_data, Cap
 
 	buf[0] = 0x40;
 	buf[1] = 0;
+	buf[2] = 0;
+	buf[3] = 0;
 
 	if(ftd3_is_error_compat(handlers, ftd3_write_pipe_compat(handlers, BULK_OUT, buf, 4, &transferred))) {
 		capture_error_print(print_failed, capture_data, "Write failed");

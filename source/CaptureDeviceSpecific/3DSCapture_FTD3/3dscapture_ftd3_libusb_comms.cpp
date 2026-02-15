@@ -41,9 +41,12 @@ const size_t ftd3_num_vids = sizeof(ftd3_valid_vids) / sizeof(ftd3_valid_vids[0]
 const uint16_t ftd3_valid_pids[] = {0x601e, 0x601f, 0x602a, 0x602b, 0x602c, 0x602d, 0x602f};
 const size_t ftd3_num_pids = sizeof(ftd3_valid_pids) / sizeof(ftd3_valid_pids[0]);
 
+// Should be different between two commands... Doesn't need to start from 0.
+static int curr_cmd_id = 0;
+
 #pragma pack(push, 1)
 struct ftd3_command_preamble_data {
-	uint32_t unk;
+	uint32_t cmd_id;
 	uint8_t pipe;
 	uint8_t command;
 	uint16_t unk2;
@@ -130,6 +133,7 @@ static int ftd3_libusb_send_command(libusb_device_handle* handle, uint8_t* data,
 static int ftd3_libusb_send_ptr_data_command(libusb_device_handle* handle, uint8_t pipe, uint8_t command) {
 	ftd3_command_with_ptr_data command_with_ptr_data;
 	memset((uint8_t*)&command_with_ptr_data, 0, sizeof(ftd3_command_with_ptr_data));
+	command_with_ptr_data.preamble_data.cmd_id = curr_cmd_id++;
 	command_with_ptr_data.preamble_data.pipe = pipe;
 	command_with_ptr_data.preamble_data.command = command;
 	return ftd3_libusb_send_command(handle, (uint8_t*)&command_with_ptr_data, sizeof(ftd3_command_with_ptr_data));
@@ -138,10 +142,15 @@ static int ftd3_libusb_send_ptr_data_command(libusb_device_handle* handle, uint8
 static int ftd3_libusb_send_len_data_command(libusb_device_handle* handle, uint8_t pipe, uint8_t command, uint32_t length) {
 	ftd3_command_with_len_data command_with_len_data;
 	memset((uint8_t*)&command_with_len_data, 0, sizeof(ftd3_command_with_len_data));
+	command_with_len_data.preamble_data.cmd_id = curr_cmd_id++;
 	command_with_len_data.preamble_data.pipe = pipe;
 	command_with_len_data.preamble_data.command = command;
 	command_with_len_data.len = to_le(length);
 	return ftd3_libusb_send_command(handle, (uint8_t*)&command_with_len_data, sizeof(ftd3_command_with_len_data));
+}
+
+static int ftd3_libusb_send_create_abort_command(libusb_device_handle* handle) {
+	return ftd3_libusb_send_ptr_data_command(handle, FTD3_COMMAND_CREATE_PIPE_ID, FTD3_COMMAND_ABORT_ID);
 }
 
 static int ftd3_libusb_send_create_command(libusb_device_handle* handle) {
@@ -176,6 +185,24 @@ int ftd3_libusb_set_stream_pipe(ftd3_device_device_handlers* handlers, int pipe,
 	return ftd3_libusb_send_len_data_command((libusb_device_handle*)handlers->usb_handle, pipe, FTD3_COMMAND_SET_STREAM_PIPE_ID, (uint32_t)length);
 }
 
+static bool ftd3_libusb_setup_connection_initial_control_in(libusb_device_handle* handle) {
+	uint8_t tmp_buf[4];
+	int transferred = 0;
+	ftd3_device_device_handlers handlers;
+	handlers.usb_handle = handle;
+	int result = ftd3_libusb_ctrl_in(&handlers, FTD3_COMMAND_TIMEOUT, tmp_buf, sizeof(tmp_buf), 3, 1, 0x8000, &transferred);
+	if(result < 0)
+		return false;
+	if(transferred != sizeof(tmp_buf))
+		return false;
+	result = ftd3_libusb_ctrl_in(&handlers, FTD3_COMMAND_TIMEOUT, tmp_buf, sizeof(tmp_buf), 3, 1, 0x8400, &transferred);
+	if(result < 0)
+		return false;
+	if(transferred != sizeof(tmp_buf))
+		return false;
+	return true;
+}
+
 static bool ftd3_libusb_setup_connection(libusb_device_handle* handle, bool* claimed_cmd, bool* claimed_bulk) {
 	*claimed_cmd = false;
 	*claimed_bulk = false;
@@ -190,10 +217,15 @@ static bool ftd3_libusb_setup_connection(libusb_device_handle* handle, bool* cla
 	if(result != LIBUSB_SUCCESS)
 		return false;
 	*claimed_cmd = true;
+	if(!ftd3_libusb_setup_connection_initial_control_in(handle))
+		return false;
 	result = libusb_claim_interface(handle, FTD3_BULK_INTERFACE);
 	if(result != LIBUSB_SUCCESS)
 		return false;
 	*claimed_bulk = true;
+	result = ftd3_libusb_send_create_abort_command(handle);
+	if(result < 0)
+		return false;
 	result = ftd3_libusb_send_create_command(handle);
 	if(result < 0)
 		return false;
