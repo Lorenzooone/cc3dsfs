@@ -951,7 +951,7 @@ void joystick_print_all() {
 
 		ActualConsoleOutText("Joystick " + std::to_string(i + 1) + ":");
 		sf::Joystick::Identification joy_details = sf::Joystick::getIdentification(i);
-		ActualConsoleOutText("\tName: " + joy_details.name);
+		ActualConsoleOutText("\tName: " + joy_details.name.toAnsiString());
 		ActualConsoleOutText("\tVID: " + std::to_string(joy_details.vendorId));
 		ActualConsoleOutText("\tPID: " + std::to_string(joy_details.productId));
 	}
