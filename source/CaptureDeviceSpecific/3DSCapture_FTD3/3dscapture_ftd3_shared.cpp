@@ -189,7 +189,7 @@ static bool read_3ds_config_3d(bool print_failed, CaptureData* capture_data, Cap
 	return true;
 }
 
-static bool load_3ds_cc_firmware(bool print_failed, CaptureData* capture_data, uint8_t firmware_id) {
+static bool load_3ds_cc_firmware(bool print_failed, CaptureData* capture_data, uint8_t firmware_id, bool is_firmware_switch) {
 	uint8_t buf[4] = {0x42, 0x00, 0x00, 0x00};
 	int transferred = 0;
 	ftd3_device_device_handlers* handlers = (ftd3_device_device_handlers*)capture_data->handle;
@@ -209,6 +209,12 @@ static bool load_3ds_cc_firmware(bool print_failed, CaptureData* capture_data, u
 	}
 
 	default_sleep(FTD3_N3DSXL_CFG_WAIT_MS);
+
+	if(is_firmware_switch) {
+		// WHY DOES ADDING THIS HERE ENABLE SOUND WHEN SWITCHING FIRMWARE?!
+		if(!set_spi_access(print_failed, capture_data, true))
+			return false;
+	}
 
 	if(!set_spi_access(print_failed, capture_data, false))
 		return false;
@@ -253,7 +259,7 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 	if(!spi_3ds_cc_stuff(print_failed, capture_data))
 		return false;
 
-	if(!load_3ds_cc_firmware(print_failed, capture_data, 1))
+	if(!load_3ds_cc_firmware(print_failed, capture_data, 1, false))
 		return false;
 
 	if(!read_3ds_config_3d(print_failed, capture_data, device))
@@ -293,7 +299,7 @@ bool ftd3_capture_3d_setup(CaptureData* capture_data, bool first_pass, bool& sto
 		uint8_t firmware_to_use = 0;
 		if(_3d_enabled_result)
 			firmware_to_use = 1;
-		if(!load_3ds_cc_firmware(print_failed, capture_data, firmware_to_use))
+		if(!load_3ds_cc_firmware(print_failed, capture_data, firmware_to_use, true))
 			return false;
 	}
 
