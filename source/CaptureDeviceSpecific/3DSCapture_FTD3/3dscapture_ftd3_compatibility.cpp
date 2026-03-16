@@ -95,15 +95,22 @@ int ftd3_set_stream_pipe_compat(ftd3_device_device_handlers* handlers, int pipe,
 	return 0;
 }
 
-int ftd3_write_pipe_compat(ftd3_device_device_handlers* handlers, int pipe, const uint8_t* data, size_t size, int* num_transferred) {
+int ftd3_write_pipe_compat(ftd3_device_device_handlers* handlers, int pipe, const uint8_t* data, size_t size, int* num_transferred, int timeout_ms) {
 	#ifdef USE_FTD3_LIBUSB
 	if(handlers->usb_handle)
-		return ftd3_libusb_write_pipe(handlers, pipe, data, size, num_transferred);
+		return ftd3_libusb_write_pipe(handlers, pipe, data, size, num_transferred, timeout_ms);
 	#endif
 	#ifdef USE_FTD3XX
 	if(handlers->driver_handle) {
 		ULONG transferred_ftd3xx = 0;
+		ULONG old_timeout_ms = 0;
+		if(timeout_ms >= 0) {
+			FT_GetPipeTimeout(handlers->driver_handle, pipe, &old_timeout_ms);
+			FT_SetPipeTimeout(handlers->driver_handle, pipe, timeout_ms);
+		}
 		int result = FT_WritePipe(handlers->driver_handle, pipe, (uint8_t*)data, (ULONG)size, &transferred_ftd3xx, 0);
+		if(timeout_ms >= 0)
+			FT_SetPipeTimeout(handlers->driver_handle, pipe, old_timeout_ms);
 		if(FT_FAILED(result))
 			return result;
 		*num_transferred = (int)transferred_ftd3xx;
@@ -113,15 +120,22 @@ int ftd3_write_pipe_compat(ftd3_device_device_handlers* handlers, int pipe, cons
 	return 0;
 }
 
-int ftd3_read_pipe_compat(ftd3_device_device_handlers* handlers, int pipe, uint8_t* data, size_t size, int* num_transferred) {
+int ftd3_read_pipe_compat(ftd3_device_device_handlers* handlers, int pipe, uint8_t* data, size_t size, int* num_transferred, int timeout_ms) {
 	#ifdef USE_FTD3_LIBUSB
 	if(handlers->usb_handle)
-		return ftd3_libusb_read_pipe(handlers, pipe, data, size, num_transferred);
+		return ftd3_libusb_read_pipe(handlers, pipe, data, size, num_transferred, timeout_ms);
 	#endif
 	#ifdef USE_FTD3XX
 	if(handlers->driver_handle) {
 		ULONG transferred_ftd3xx = 0;
+		ULONG old_timeout_ms = 0;
+		if(timeout_ms >= 0) {
+			FT_GetPipeTimeout(handlers->driver_handle, pipe, &old_timeout_ms);
+			FT_SetPipeTimeout(handlers->driver_handle, pipe, timeout_ms);
+		}
 		int result = FT_ReadPipe(handlers->driver_handle, pipe, data, (ULONG)size, &transferred_ftd3xx, 0);
+		if(timeout_ms >= 0)
+			FT_SetPipeTimeout(handlers->driver_handle, pipe, old_timeout_ms);
 		if(FT_FAILED(result))
 			return result;
 		*num_transferred = (int)transferred_ftd3xx;

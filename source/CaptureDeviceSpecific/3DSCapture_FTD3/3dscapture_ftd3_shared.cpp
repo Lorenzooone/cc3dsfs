@@ -10,7 +10,7 @@
 #define BULK_OUT 0x02
 #define BULK_IN 0x82
  
-#define FTD3_N3DSXL_CFG_WAIT_MS 120
+#define FTD3_N3DSXL_CFG_WAIT_MS 200
 #define CFG_3DS_3D_SCREEN_POS 3
 
 const std::vector<std::string> valid_3dscapture_descriptions = {"N3DSXL", "N3DSXL.2"};
@@ -97,47 +97,74 @@ static void preemptive_close_connection(CaptureData* capture_data) {
 	capture_data->handle = NULL;
 }
 
-static bool reset_3ds_state(bool print_failed, CaptureData* capture_data) {
-	uint8_t buf[4] = {0x80, 0x01, 0xAB, 0x00};
+static bool set_spi_access(bool print_failed, CaptureData* capture_data, bool enable) {
+	uint8_t buf[4] = {0x40, 0x00, 0x00, 0x00};
 	int transferred = 0;
 	ftd3_device_device_handlers* handlers = (ftd3_device_device_handlers*)capture_data->handle;
 
+	if(enable)
+		buf[1] |= 0x80;
+
+	if(ftd3_is_error_compat(handlers, ftd3_write_pipe_compat(handlers, BULK_OUT, buf, 4, &transferred))) {
+		capture_error_print(print_failed, capture_data, "Setting SPI access failed");
+		preemptive_close_connection(capture_data);
+		return false;
+	}
+
+	return true;
+}
+
+// Checks the upgradable firmware that is available... Not really needed, but
+// it is nice documentation in case of future stuff...
+static bool spi_3ds_cc_stuff(bool print_failed, CaptureData* capture_data) {
+	uint8_t buf[4] = {0x80, 0x01, 0xAB, 0x00};
+	uint8_t buf2[8] = {0x90, 0x08, 0x03, 0x02, 0x00, 0x00, 0x00, 0x00};
+	uint8_t in_buf[0x10];
+	int transferred = 0;
+	ftd3_device_device_handlers* handlers = (ftd3_device_device_handlers*)capture_data->handle;
+
+	if(!set_spi_access(print_failed, capture_data, true))
+		return false;
+
 	if(ftd3_is_error_compat(handlers, ftd3_write_pipe_compat(handlers, BULK_OUT, buf, 4, &transferred))) {
 		capture_error_print(print_failed, capture_data, "Write failed");
 		preemptive_close_connection(capture_data);
 		return false;
 	}
 
-	buf[0] = 0x43;
-	buf[1] = 0;
-	buf[2] = 0;
+	if(ftd3_is_error_compat(handlers, ftd3_write_pipe_compat(handlers, BULK_OUT, buf2, 8, &transferred))) {
+		capture_error_print(print_failed, capture_data, "Write failed");
+		preemptive_close_connection(capture_data);
+		return false;
+	}
+
+	if(ftd3_is_error_compat(handlers, ftd3_read_pipe_compat(handlers, BULK_IN, in_buf, 0x10, &transferred))) {
+		capture_error_print(print_failed, capture_data, "Read failed");
+		preemptive_close_connection(capture_data);
+		return false;
+	}
 
 	if(ftd3_is_error_compat(handlers, ftd3_write_pipe_compat(handlers, BULK_OUT, buf, 4, &transferred))) {
 		capture_error_print(print_failed, capture_data, "Write failed");
 		preemptive_close_connection(capture_data);
 		return false;
 	}
-	default_sleep(FTD3_N3DSXL_CFG_WAIT_MS);
+
+	if(!set_spi_access(print_failed, capture_data, false))
+		return false;
 
 	return true;
 }
 
 static bool read_3ds_config_3d(bool print_failed, CaptureData* capture_data, CaptureDevice* device) {
-	uint8_t buf[4] = {0x40, 0x80, 0x00, 0x00};
+	uint8_t buf[4] = {0x98, 0x05, 0x9F, 0x00};
 	uint8_t in_buf[0x10];
 	int transferred = 0;
+
 	ftd3_device_device_handlers* handlers = (ftd3_device_device_handlers*)capture_data->handle;
 
-	if(ftd3_is_error_compat(handlers, ftd3_write_pipe_compat(handlers, BULK_OUT, buf, 4, &transferred))) {
-		capture_error_print(print_failed, capture_data, "Write failed");
-		preemptive_close_connection(capture_data);
+	if(!set_spi_access(print_failed, capture_data, true))
 		return false;
-	}
-
-	buf[0] = 0x98;
-	buf[1] = 0x05;
-	buf[2] = 0x9F;
-	buf[3] = 0;
 
 	if(ftd3_is_error_compat(handlers, ftd3_write_pipe_compat(handlers, BULK_OUT, buf, 4, &transferred))) {
 		capture_error_print(print_failed, capture_data, "Write failed");
@@ -150,50 +177,63 @@ static bool read_3ds_config_3d(bool print_failed, CaptureData* capture_data, Cap
 		preemptive_close_connection(capture_data);
 		return false;
 	}
-	default_sleep(FTD3_N3DSXL_CFG_WAIT_MS);
 
 	if(transferred >= CFG_3DS_3D_SCREEN_POS) {
 		if(in_buf[CFG_3DS_3D_SCREEN_POS] != 0xc1)
 			device->has_3d = false;
 	}
 
-	buf[0] = 0x40;
-	buf[1] = 0;
-	buf[2] = 0;
-	buf[3] = 0;
-
-	if(ftd3_is_error_compat(handlers, ftd3_write_pipe_compat(handlers, BULK_OUT, buf, 4, &transferred))) {
-		capture_error_print(print_failed, capture_data, "Write failed");
-		preemptive_close_connection(capture_data);
+	if(!set_spi_access(print_failed, capture_data, false))
 		return false;
-	}
-	default_sleep(FTD3_N3DSXL_CFG_WAIT_MS);
 
 	return true;
 }
 
-static bool set_3ds_state(bool print_failed, CaptureData* capture_data, uint8_t cfg_value) {
-	uint8_t buf[4] = {0x40, 0x80, 0x00, 0x00};
+static bool load_3ds_cc_firmware(bool print_failed, CaptureData* capture_data, uint8_t firmware_id) {
+	uint8_t buf[4] = {0x42, 0x00, 0x00, 0x00};
 	int transferred = 0;
 	ftd3_device_device_handlers* handlers = (ftd3_device_device_handlers*)capture_data->handle;
 
+	if(firmware_id >= 2)
+		firmware_id = 1;
+
+	if(!set_spi_access(print_failed, capture_data, true))
+		return false;
+
+	buf[0] += firmware_id;
+
 	if(ftd3_is_error_compat(handlers, ftd3_write_pipe_compat(handlers, BULK_OUT, buf, 4, &transferred))) {
 		capture_error_print(print_failed, capture_data, "Write failed");
 		preemptive_close_connection(capture_data);
 		return false;
 	}
 
-	buf[0] = cfg_value;
-	buf[1] = 0x00;
-
-	if(ftd3_is_error_compat(handlers, ftd3_write_pipe_compat(handlers, BULK_OUT, buf, 4, &transferred))) {
-		capture_error_print(print_failed, capture_data, "Write failed");
-		preemptive_close_connection(capture_data);
-		return false;
-	}
 	default_sleep(FTD3_N3DSXL_CFG_WAIT_MS);
 
+	if(!set_spi_access(print_failed, capture_data, false))
+		return false;
+
 	return true;
+}
+
+static void drain_data(CaptureData* capture_data) {
+	uint8_t* in_buf = new uint8_t[0x100000];
+	int transferred = 0;
+	ftd3_device_device_handlers* handlers = (ftd3_device_device_handlers*)capture_data->handle;
+
+	set_spi_access(false, capture_data, true);
+
+	const auto base_time = std::chrono::high_resolution_clock::now();
+
+	ftd3_read_pipe_compat(handlers, BULK_IN, in_buf, 0x100000, &transferred, FTD3_N3DSXL_CFG_WAIT_MS);
+
+	const auto curr_time = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> diff = curr_time - base_time;
+	int ms_passed = (int)(diff.count() * 1000.0);
+	if(ms_passed < FTD3_N3DSXL_CFG_WAIT_MS)
+		default_sleep((float)(FTD3_N3DSXL_CFG_WAIT_MS - ms_passed + 1));
+
+	delete []in_buf;
 }
 
 bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* device) {
@@ -202,6 +242,7 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 		capture_error_print(print_failed, capture_data, "Create failed");
 		return false;
 	}
+	drain_data(capture_data);
 	preemptive_close_connection(capture_data);
 	capture_data->handle = ftd3_reconnect_compat(device->serial_number, valid_3dscapture_descriptions);
 	if(capture_data->handle == NULL) {
@@ -209,19 +250,10 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 		return false;
 	}
 	
-	if(!reset_3ds_state(print_failed, capture_data))
+	if(!spi_3ds_cc_stuff(print_failed, capture_data))
 		return false;
 
-	if(!set_3ds_state(print_failed, capture_data, 0x42))
-		return false;
-
-	if(!set_3ds_state(print_failed, capture_data, 0x40))
-		return false;
-
-	if(!set_3ds_state(print_failed, capture_data, 0x43))
-		return false;
-
-	if(!set_3ds_state(print_failed, capture_data, 0x40))
+	if(!load_3ds_cc_firmware(print_failed, capture_data, 1))
 		return false;
 
 	if(!read_3ds_config_3d(print_failed, capture_data, device))
@@ -257,13 +289,11 @@ bool ftd3_capture_3d_setup(CaptureData* capture_data, bool first_pass, bool& sto
 
 	bool _3d_enabled_result = get_3d_enabled(&tmp_status);
 	bool update_state = stored_3d_status != _3d_enabled_result;
-	if(update_state) {
-		int state_to_set = 0x42;
+	if(tmp_status.device.has_3d && update_state) {
+		uint8_t firmware_to_use = 0;
 		if(_3d_enabled_result)
-			state_to_set = 0x43;
-		if(!set_3ds_state(print_failed, capture_data, state_to_set))
-			return false;
-		if(!set_3ds_state(print_failed, capture_data, 0x40))
+			firmware_to_use = 1;
+		if(!load_3ds_cc_firmware(print_failed, capture_data, firmware_to_use))
 			return false;
 	}
 

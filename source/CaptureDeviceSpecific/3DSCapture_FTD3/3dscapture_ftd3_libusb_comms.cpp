@@ -120,9 +120,11 @@ int ftd3_libusb_async_in_start(ftd3_device_device_handlers* handlers, int endpoi
 	return retval;
 }
 
-static int ftd3_libusb_send_command(libusb_device_handle* handle, uint8_t* data, size_t length) {
+static int ftd3_libusb_send_command(libusb_device_handle* handle, uint8_t* data, size_t length, int timeout_ms = -1) {
 	int num_transferred = 0;
-	int result = libusb_bulk_transfer(handle, FTD3_COMMAND_BULK_PIPE_ID, data, (int)length, &num_transferred, FTD3_COMMAND_TIMEOUT);
+	if(timeout_ms < 0)
+		timeout_ms = FTD3_COMMAND_TIMEOUT;
+	int result = libusb_bulk_transfer(handle, FTD3_COMMAND_BULK_PIPE_ID, data, (int)length, &num_transferred, timeout_ms);
 	if(result < 0)
 		return result;
 	if(num_transferred != ((int)length))
@@ -130,23 +132,23 @@ static int ftd3_libusb_send_command(libusb_device_handle* handle, uint8_t* data,
 	return result;
 }
 
-static int ftd3_libusb_send_ptr_data_command(libusb_device_handle* handle, uint8_t pipe, uint8_t command) {
+static int ftd3_libusb_send_ptr_data_command(libusb_device_handle* handle, uint8_t pipe, uint8_t command, int timeout_ms = -1) {
 	ftd3_command_with_ptr_data command_with_ptr_data;
 	memset((uint8_t*)&command_with_ptr_data, 0, sizeof(ftd3_command_with_ptr_data));
 	command_with_ptr_data.preamble_data.cmd_id = curr_cmd_id++;
 	command_with_ptr_data.preamble_data.pipe = pipe;
 	command_with_ptr_data.preamble_data.command = command;
-	return ftd3_libusb_send_command(handle, (uint8_t*)&command_with_ptr_data, sizeof(ftd3_command_with_ptr_data));
+	return ftd3_libusb_send_command(handle, (uint8_t*)&command_with_ptr_data, sizeof(ftd3_command_with_ptr_data), timeout_ms);
 }
 
-static int ftd3_libusb_send_len_data_command(libusb_device_handle* handle, uint8_t pipe, uint8_t command, uint32_t length) {
+static int ftd3_libusb_send_len_data_command(libusb_device_handle* handle, uint8_t pipe, uint8_t command, uint32_t length, int timeout_ms = -1) {
 	ftd3_command_with_len_data command_with_len_data;
 	memset((uint8_t*)&command_with_len_data, 0, sizeof(ftd3_command_with_len_data));
 	command_with_len_data.preamble_data.cmd_id = curr_cmd_id++;
 	command_with_len_data.preamble_data.pipe = pipe;
 	command_with_len_data.preamble_data.command = command;
 	command_with_len_data.len = to_le(length);
-	return ftd3_libusb_send_command(handle, (uint8_t*)&command_with_len_data, sizeof(ftd3_command_with_len_data));
+	return ftd3_libusb_send_command(handle, (uint8_t*)&command_with_len_data, sizeof(ftd3_command_with_len_data), timeout_ms);
 }
 
 static int ftd3_libusb_send_create_abort_command(libusb_device_handle* handle) {
@@ -167,18 +169,22 @@ int ftd3_libusb_abort_pipe(ftd3_device_device_handlers* handlers, int pipe) {
 	return ftd3_libusb_send_ptr_data_command((libusb_device_handle*)handlers->usb_handle, pipe, FTD3_COMMAND_DESTROY_ID);
 }
 
-int ftd3_libusb_write_pipe(ftd3_device_device_handlers* handlers, int pipe, const uint8_t* data, size_t length, int* num_transferred) {
-	int result = ftd3_libusb_send_len_data_command((libusb_device_handle*)handlers->usb_handle, pipe, FTD3_COMMAND_RW_OPERATION_PREPARE_ID, (uint32_t)length);
+int ftd3_libusb_write_pipe(ftd3_device_device_handlers* handlers, int pipe, const uint8_t* data, size_t length, int* num_transferred, int timeout_ms) {
+	int result = ftd3_libusb_send_len_data_command((libusb_device_handle*)handlers->usb_handle, pipe, FTD3_COMMAND_RW_OPERATION_PREPARE_ID, (uint32_t)length, timeout_ms);
 	if(result < 0)
 		return result;
-	return ftd3_libusb_bulk_out(handlers, pipe, FTD3_COMMAND_TIMEOUT, data, (int)length, num_transferred);
+	if(timeout_ms < 0)
+		timeout_ms = FTD3_COMMAND_TIMEOUT;
+	return ftd3_libusb_bulk_out(handlers, pipe, timeout_ms, data, (int)length, num_transferred);
 }
 
-int ftd3_libusb_read_pipe(ftd3_device_device_handlers* handlers, int pipe, uint8_t* data, size_t length, int* num_transferred) {
-	int result = ftd3_libusb_send_len_data_command((libusb_device_handle*)handlers->usb_handle, pipe, FTD3_COMMAND_RW_OPERATION_PREPARE_ID, (uint32_t)length);
+int ftd3_libusb_read_pipe(ftd3_device_device_handlers* handlers, int pipe, uint8_t* data, size_t length, int* num_transferred, int timeout_ms) {
+	int result = ftd3_libusb_send_len_data_command((libusb_device_handle*)handlers->usb_handle, pipe, FTD3_COMMAND_RW_OPERATION_PREPARE_ID, (uint32_t)length, timeout_ms);
 	if(result < 0)
 		return result;
-	return ftd3_libusb_bulk_in(handlers, pipe, FTD3_COMMAND_TIMEOUT, data, (int)length, num_transferred);
+	if(timeout_ms < 0)
+		timeout_ms = FTD3_COMMAND_TIMEOUT;
+	return ftd3_libusb_bulk_in(handlers, pipe, timeout_ms, data, (int)length, num_transferred);
 }
 
 int ftd3_libusb_set_stream_pipe(ftd3_device_device_handlers* handlers, int pipe, size_t length) {

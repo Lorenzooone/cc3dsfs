@@ -27,8 +27,8 @@ ftd3_device_device_handlers* ftd3_libusb_serial_reconnection(std::string wanted_
 
 void ftd3_libusb_end_connection(ftd3_device_device_handlers* handlers, bool interface_claimed);
 int ftd3_libusb_abort_pipe(ftd3_device_device_handlers* handlers, int pipe);
-int ftd3_libusb_write_pipe(ftd3_device_device_handlers* handlers, int pipe, const uint8_t* data, size_t length, int* num_transferred);
-int ftd3_libusb_read_pipe(ftd3_device_device_handlers* handlers, int pipe, uint8_t* data, size_t length, int* num_transferred);
+int ftd3_libusb_write_pipe(ftd3_device_device_handlers* handlers, int pipe, const uint8_t* data, size_t length, int* num_transferred, int timeout_ms = -1);
+int ftd3_libusb_read_pipe(ftd3_device_device_handlers* handlers, int pipe, uint8_t* data, size_t length, int* num_transferred, int timeout_ms = -1);
 int ftd3_libusb_set_stream_pipe(ftd3_device_device_handlers* handlers, int pipe, size_t length);
 
 #endif
