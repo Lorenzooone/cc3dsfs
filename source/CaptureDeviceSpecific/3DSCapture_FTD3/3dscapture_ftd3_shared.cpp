@@ -97,7 +97,7 @@ static void preemptive_close_connection(CaptureData* capture_data) {
 	capture_data->handle = NULL;
 }
 
-static bool set_spi_access(bool print_failed, CaptureData* capture_data, bool enable) {
+static bool set_spi_access(bool print_failed, CaptureData* capture_data, bool enable, bool skip_close = false) {
 	uint8_t buf[4] = {0x40, 0x00, 0x00, 0x00};
 	int transferred = 0;
 	ftd3_device_device_handlers* handlers = (ftd3_device_device_handlers*)capture_data->handle;
@@ -105,7 +105,7 @@ static bool set_spi_access(bool print_failed, CaptureData* capture_data, bool en
 	if(enable)
 		buf[1] |= 0x80;
 
-	if(ftd3_is_error_compat(handlers, ftd3_write_pipe_compat(handlers, BULK_OUT, buf, 4, &transferred))) {
+	if(ftd3_is_error_compat(handlers, ftd3_write_pipe_compat(handlers, BULK_OUT, buf, 4, &transferred)) && (!skip_close)) {
 		capture_error_print(print_failed, capture_data, "Setting SPI access failed");
 		preemptive_close_connection(capture_data);
 		return false;
@@ -222,13 +222,14 @@ static bool load_3ds_cc_firmware(bool print_failed, CaptureData* capture_data, u
 	return true;
 }
 
-static void drain_data(CaptureData* capture_data) {
+// Try draining frames without doing any safety checks...
+// Should "fix" some issues with the CC not answering, at times.
+static void drain_data(bool print_failed, CaptureData* capture_data) {
+	set_spi_access(print_failed, capture_data, true, true);
+
 	uint8_t* in_buf = new uint8_t[0x100000];
 	int transferred = 0;
 	ftd3_device_device_handlers* handlers = (ftd3_device_device_handlers*)capture_data->handle;
-
-	set_spi_access(false, capture_data, true);
-
 	const auto base_time = std::chrono::high_resolution_clock::now();
 
 	ftd3_read_pipe_compat(handlers, BULK_IN, in_buf, 0x100000, &transferred, FTD3_N3DSXL_CFG_WAIT_MS);
@@ -248,8 +249,9 @@ bool connect_ftd3(bool print_failed, CaptureData* capture_data, CaptureDevice* d
 		capture_error_print(print_failed, capture_data, "Create failed");
 		return false;
 	}
-	drain_data(capture_data);
+	drain_data(print_failed, capture_data);
 	preemptive_close_connection(capture_data);
+
 	capture_data->handle = ftd3_reconnect_compat(device->serial_number, valid_3dscapture_descriptions);
 	if(capture_data->handle == NULL) {
 		capture_error_print(print_failed, capture_data, "Second Create failed");
