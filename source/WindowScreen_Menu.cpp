@@ -466,8 +466,13 @@ void WindowScreen::force_same_scaling_change() {
 	this->future_operations.call_screen_settings_update = true;
 }
 
+void WindowScreen::change_ratio_cycle() {
+	this->display_data->do_ratio_cycling = !this->display_data->do_ratio_cycling;
+	this->print_notification_on_off("Ratio Cycling", this->display_data->do_ratio_cycling);
+}
+
 void WindowScreen::ratio_change(bool top_priority, bool cycle) {
-	this->prepare_size_ratios(top_priority, !top_priority, cycle);
+	this->prepare_size_ratios(top_priority, !top_priority, cycle || this->display_data->do_ratio_cycling);
 	this->future_operations.call_screen_settings_update = true;
 }
 
@@ -2152,6 +2157,9 @@ void WindowScreen::poll(bool do_everything) {
 					case SCALING_RATIO_MENU_FORCE_SAME_SCALING:
 						this->force_same_scaling_change();
 						break;
+					case SCALING_RATIO_MENU_CHANGE_RATIO_CYCLING:
+						this->change_ratio_cycle();
+						break;
 					default:
 						break;
 				}
@@ -2773,7 +2781,7 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			this->license_menu->prepare(menu_scaling_factor, view_size_x, view_size_y);
 			break;
 		case SCALING_RATIO_MENU_TYPE:
-			this->scaling_ratio_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info);
+			this->scaling_ratio_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, &this->loaded_info, this->display_data->do_ratio_cycling);
 			break;
 		case ISN_MENU_TYPE:
 			this->is_nitro_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->capture_status);

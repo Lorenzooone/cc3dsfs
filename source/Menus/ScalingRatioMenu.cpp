@@ -38,11 +38,17 @@ static const ScalingRatioMenuOptionInfo force_same_scaling_option = {
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = SCALING_RATIO_MENU_NO_ACTION,
 .out_action = SCALING_RATIO_MENU_FORCE_SAME_SCALING};
 
+static const ScalingRatioMenuOptionInfo ratio_cycle_option = {
+.base_name = "Disable Ratios Cycle", .false_name = "Enable Ratios Cycle",
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = SCALING_RATIO_MENU_NO_ACTION,
+.out_action = SCALING_RATIO_MENU_CHANGE_RATIO_CYCLING};
+
 static const ScalingRatioMenuOptionInfo* pollable_options[] = {
 &ratio_option,
 &top_fill_option,
 &bot_fill_option,
 &ratio_algo_option,
+&ratio_cycle_option,
 &force_same_scaling_option,
 };
 
@@ -126,7 +132,7 @@ std::string ScalingRatioMenu::setTextOptionDualPercentage(int index, float value
 	return this->get_string_option(index, DEFAULT_ACTION) + ": " + get_float_str_decimals(value_1, 1) + " - " + get_float_str_decimals(value_2, 1);
 }
 
-void ScalingRatioMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info) {
+void ScalingRatioMenu::prepare(float menu_scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info, bool do_ratio_cycling) {
 	int num_pages = this->get_num_pages();
 	if(this->future_data.page >= num_pages)
 		this->future_data.page = num_pages - 1;
@@ -152,6 +158,9 @@ void ScalingRatioMenu::prepare(float menu_scaling_factor, int view_size_x, int v
 				break;
 			case SCALING_RATIO_MENU_FORCE_SAME_SCALING:
 				this->labels[index]->setText(this->setTextOptionBool(real_index, info->force_same_scaling));
+				break;
+			case SCALING_RATIO_MENU_CHANGE_RATIO_CYCLING:
+				this->labels[index]->setText(this->setTextOptionBool(real_index, do_ratio_cycling));
 				break;
 			default:
 				break;

@@ -339,6 +339,7 @@ private:
 	void second_screen_3d_match_bottom_pos_change();
 	void devices_allowed_change(PossibleCaptureDevices device);
 	void input_video_data_format_request_change(bool positive);
+	void change_ratio_cycle();
 	bool add_new_cc_key(std::string key, CaptureConnectionType conn_type, bool discriminator);
 	bool query_reset_request();
 	void reset_held_times(bool force = true);

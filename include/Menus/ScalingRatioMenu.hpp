@@ -18,13 +18,14 @@ enum ScalingRatioMenuOutAction{
 	SCALING_RATIO_MENU_ALGO_INC,
 	SCALING_RATIO_MENU_ALGO_DEC,
 	SCALING_RATIO_MENU_FORCE_SAME_SCALING,
+	SCALING_RATIO_MENU_CHANGE_RATIO_CYCLING,
 };
 
 class ScalingRatioMenu : public OptionSelectionMenu {
 public:
 	ScalingRatioMenu(TextRectanglePool* text_pool);
 	~ScalingRatioMenu();
-	void prepare(float scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info);
+	void prepare(float scaling_factor, int view_size_x, int view_size_y, ScreenInfo *info, bool do_ratio_cycling);
 	void insert_data();
 	ScalingRatioMenuOutAction selected_index = ScalingRatioMenuOutAction::SCALING_RATIO_MENU_NO_ACTION;
 	void reset_output_option();

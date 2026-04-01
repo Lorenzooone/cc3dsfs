@@ -91,6 +91,7 @@ struct DisplayData {
 	bool last_connected_ds;
 	bool interleaved_3d;
 	bool force_disable_mouse;
+	bool do_ratio_cycling;
 };
 
 struct ExtraButtonShortcuts {

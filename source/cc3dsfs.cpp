@@ -185,6 +185,11 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 				continue;
 			}
 
+			if(key == "do_ratio_cycling") {
+				display_data.do_ratio_cycling = std::stoi(value);
+				continue;
+			}
+
 			if(key == "request_low_bw_format") {
 				capture_status->request_low_bw_format = std::stoi(value);
 				continue;
@@ -361,6 +366,7 @@ static bool save(const std::string path, const std::string name, const std::stri
 	file << save_screen_info("top_", top_info);
 	file << "requested_3d=" << capture_status->requested_3d << std::endl;
 	file << "interleaved_3d=" << display_data.interleaved_3d << std::endl;
+	file << "do_ratio_cycling=" << display_data.do_ratio_cycling << std::endl;
 	file << "request_low_bw_format=" << capture_status->request_low_bw_format << std::endl;
 	file << "last_connected_ds=" << display_data.last_connected_ds << std::endl;
 	file << "is_screen_capture_type=" << capture_status->capture_type << std::endl;
