@@ -703,7 +703,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	int no_data_consecutive = 0;
 
 	if(override_data.print_controller_list)
-		joystick_print_all();
+		joystick_print_all(true);
 
 	while(capture_data->status.running) {
 		check_for_first_connection(did_first_connection, start_time, capture_data, &frontend_data, force_cc_disables, override_data, out_text_data, ret_val, last_connection_time);
@@ -855,6 +855,9 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 			out_text_data.consumed = true;
 		}
 	}
+
+	if(override_data.print_controller_list)
+		joystick_print_all(false);
 
 	top_screen->end();
 	bot_screen->end();

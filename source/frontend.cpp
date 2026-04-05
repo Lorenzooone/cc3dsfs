@@ -935,7 +935,7 @@ void joystick_axis_poll(std::queue<SFEvent> &events_queue) {
 	}
 }
 
-void joystick_print_all() {
+void joystick_print_all(bool start) {
 	int num_connected = 0;
 
 	for(unsigned int i = 0; i < sf::Joystick::Count; i++) {
@@ -943,8 +943,12 @@ void joystick_print_all() {
 			continue;
 		num_connected += 1;
 	}
+
+	std::string initial_str = "Closing ";
+	if(start)
+		initial_str = "Starting ";
 	
-	ActualConsoleOutText("Connected Joysticks: " + std::to_string(num_connected));
+	ActualConsoleOutText(initial_str + "Connected Joysticks: " + std::to_string(num_connected));
 
 	for(unsigned int i = 0; i < sf::Joystick::Count; i++) {
 		if(!sf::Joystick::isConnected(i))
