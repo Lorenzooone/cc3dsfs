@@ -18,7 +18,11 @@ void AudioData::reset() {
 	this->mute = false;
 	this->max_audio_latency = 2;
 	this->output_type = AUDIO_OUTPUT_STEREO;
+	#ifdef __APPLE__
+	this->mode_output = AUDIO_MODE_STABLE;
+	#else
 	this->mode_output = AUDIO_MODE_LOW_LATENCY;
+	#endif
 	this->restart_request = false;
 	this->text_updated = false;
 	#if (defined(RASPI) || defined(ANDROID_COMPILATION))
