@@ -113,16 +113,19 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
 endif()
 
 include(FetchContent)
+
+set(SFML_REPO_AUTHOR "SFML")
+set(SFML_REPO_BRANCH "bugfix/macos_joystick_unplugging")
 # Git shallow clone isn't shallow in cmake... This is bad. :/
 # Replace this if they ever fix it.
 if(SFML_CLONE_USE_GIT_SHALLOW)
 	FetchContent_Declare(SFML
-		GIT_REPOSITORY https://github.com/SFML/SFML.git
-		GIT_TAG master
+		GIT_REPOSITORY https://github.com/${SFML_REPO_AUTHOR}/SFML.git
+		GIT_TAG ${SFML_REPO_BRANCH}
 		GIT_SHALLOW ON)
 else()
 	FetchContent_Declare(SFML
-		URL https://github.com/SFML/SFML/archive/refs/heads/master.zip
+		URL https://github.com/${SFML_REPO_AUTHOR}/SFML/archive/refs/heads/${SFML_REPO_BRANCH}.zip
 	)
 endif()
 
