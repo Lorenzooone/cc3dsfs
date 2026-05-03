@@ -14,6 +14,7 @@ enum USBConflictResolutionMenuOutAction{
 	USBCONRESO_MENU_BACK,
 	USBCONRESO_MENU_NISE_DS,
 	USBCONRESO_MENU_OPTI_O3DS,
+	USBCONRESO_MENU_OPTI_O2DS,
 };
 
 class USBConflictResolutionMenu : public OptionSelectionMenu {

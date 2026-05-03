@@ -43,6 +43,7 @@
 #include "USBConflictResolutionMenu.hpp"
 #include "Optimize3DSMenu.hpp"
 #include "OptimizeSerialKeyAddMenu.hpp"
+#include "OptimizeOldFWConfigMenu.hpp"
 #include "display_structs.hpp"
 #include "event_structs.hpp"
 #include "shaders_list.hpp"
@@ -211,6 +212,7 @@ private:
 	USBConflictResolutionMenu *usb_conflict_resolution_menu;
 	Optimize3DSMenu* optimize_3ds_menu;
 	OptimizeSerialKeyAddMenu* optimize_serial_key_add_menu;
+	OptimizeOldFWConfigMenu* optimize_old_fw_config_menu;
 
 	std::vector<const CropData*> possible_crops;
 	std::vector<const CropData*> possible_crops_ds;
@@ -311,6 +313,7 @@ private:
 	void generic_battery_change(bool positive, int &battery_percentage, const int *allowed_battery_levels, size_t num_levels);
 	void is_nitro_battery_change(bool positive);
 	void is_nitro_ac_adapter_change();
+	void partner_ctr_reset_hw();
 	void partner_ctr_battery_change(bool positive);
 	void partner_ctr_ac_adapter_connected_change();
 	void partner_ctr_ac_adapter_charging_change();
@@ -338,8 +341,9 @@ private:
 	void second_screen_3d_pos_change(int new_second_screen_3d_pos);
 	void second_screen_3d_match_bottom_pos_change();
 	void devices_allowed_change(PossibleCaptureDevices device);
-	void input_video_data_format_request_change(bool positive);
+	void input_video_data_format_request_change(bool positive, bool &target_format);
 	void change_ratio_cycle();
+	void optimize_old_fw_menu_change_param(bool positive);
 	bool add_new_cc_key(std::string key, CaptureConnectionType conn_type, bool discriminator);
 	bool query_reset_request();
 	void reset_held_times(bool force = true);
@@ -432,6 +436,7 @@ private:
 	void setup_usb_conflict_resolution_menu(bool reset_data = true);
 	void setup_optimize_3ds_menu(bool reset_data = true);
 	void setup_optimize_serial_key_add_menu(bool reset_data = true);
+	void setup_optimize_old_fw_config_menu(bool reset_data = true);
 	void update_connection();
 	bool has_menu_textbox();
 };

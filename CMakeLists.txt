@@ -377,7 +377,7 @@ if(CYPRESS_NISETRO_SUPPORT)
 	add_compile_flag("USE_CYNI_USB")
 endif()
 if(OPTIMIZE_3DS_SUPPORT)
-	list(APPEND SOURCE_CPP_EXTRA_FILES ${SOURCE_CPP_CYPRESS_OPTIMIZE_3DS_FILES_BASE_PATH}/cypress_optimize_3ds_communications.cpp ${SOURCE_CPP_CYPRESS_OPTIMIZE_3DS_FILES_BASE_PATH}/cypress_optimize_3ds_acquisition.cpp ${TOOLS_DATA_DIR}/optimize_new_3ds_fw.cpp ${TOOLS_DATA_DIR}/optimize_new_3ds_565_fpga_pl.cpp ${TOOLS_DATA_DIR}/optimize_new_3ds_888_fpga_pl.cpp ${TOOLS_DATA_DIR}/optimize_old_3ds_fw.cpp ${TOOLS_DATA_DIR}/optimize_old_3ds_565_fpga_pl.cpp ${TOOLS_DATA_DIR}/optimize_old_3ds_888_fpga_pl.cpp ${TOOLS_DATA_DIR}/adler_crc32_table_sp.cpp ${TOOLS_DATA_DIR}/optimize_serial_key_to_byte_table.cpp)
+	list(APPEND SOURCE_CPP_EXTRA_FILES ${SOURCE_CPP_CYPRESS_OPTIMIZE_3DS_FILES_BASE_PATH}/cypress_optimize_3ds_communications.cpp ${SOURCE_CPP_CYPRESS_OPTIMIZE_3DS_FILES_BASE_PATH}/cypress_optimize_3ds_acquisition.cpp ${TOOLS_DATA_DIR}/optimize_new_3ds_fw.cpp ${TOOLS_DATA_DIR}/optimize_new_3ds_565_fpga_pl.cpp ${TOOLS_DATA_DIR}/optimize_new_3ds_888_fpga_pl.cpp ${TOOLS_DATA_DIR}/optimize_old_3ds_fw.cpp ${TOOLS_DATA_DIR}/optimize_old_3ds_565_fpga_pl.cpp ${TOOLS_DATA_DIR}/optimize_old_3ds_888_fpga_pl.cpp ${TOOLS_DATA_DIR}/optimize_old_2ds_2014_fw.cpp ${TOOLS_DATA_DIR}/optimize_old_2ds_2014_565_fpga_pl.cpp ${TOOLS_DATA_DIR}/optimize_old_2ds_2014_888_fpga_pl.cpp ${TOOLS_DATA_DIR}/adler_crc32_table_sp.cpp ${TOOLS_DATA_DIR}/optimize_serial_key_to_byte_table.cpp)
 	add_compile_flag("USE_CYPRESS_OPTIMIZE")
 endif()
 if(PARTNER_CTR_SUPPORT)
@@ -529,7 +529,7 @@ else()
 	set_source_files_properties(source/conversions.cpp PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:Release>:-O3;-funroll-loops>")
 endif()
 
-set(EXECUTABLE_SOURCE_FILES source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/TextRectanglePool.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp source/Menus/ScalingRatioMenu.cpp source/Menus/ISNitroMenu.cpp source/Menus/PartnerCTRMenu.cpp source/Menus/VideoEffectsMenu.cpp source/CaptureDataBuffers.cpp source/Menus/InputMenu.cpp source/Menus/AudioDeviceMenu.cpp source/Menus/SeparatorMenu.cpp source/Menus/ColorCorrectionMenu.cpp source/Menus/Main3DMenu.cpp source/Menus/SecondScreen3DRelativePositionMenu.cpp source/Menus/USBConflictResolutionMenu.cpp source/Menus/Optimize3DSMenu.cpp source/Menus/OptimizeSerialKeyAddMenu.cpp source/libgpiod_compat.cpp ${TOOLS_DATA_DIR}/optimize_serial_key_add_table.cpp ${TOOLS_DATA_DIR}/optimize_serial_key_next_char_table.cpp ${TOOLS_DATA_DIR}/optimize_serial_key_prev_char_table.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp ${TOOLS_DATA_DIR}/font_mono_ttf.cpp ${TOOLS_DATA_DIR}/shaders_list.cpp ${SOURCE_CPP_EXTRA_FILES})
+set(EXECUTABLE_SOURCE_FILES source/cc3dsfs.cpp source/utils.cpp source/audio_data.cpp source/audio.cpp source/frontend.cpp source/TextRectangle.cpp source/TextRectanglePool.cpp source/WindowScreen.cpp source/WindowScreen_Menu.cpp source/devicecapture.cpp source/conversions.cpp source/ExtraButtons.cpp source/Menus/ConnectionMenu.cpp source/Menus/OptionSelectionMenu.cpp source/Menus/MainMenu.cpp source/Menus/VideoMenu.cpp source/Menus/CropMenu.cpp source/Menus/PARMenu.cpp source/Menus/RotationMenu.cpp source/Menus/OffsetMenu.cpp source/Menus/AudioMenu.cpp source/Menus/BFIMenu.cpp source/Menus/RelativePositionMenu.cpp source/Menus/ResolutionMenu.cpp source/Menus/FileConfigMenu.cpp source/Menus/ExtraSettingsMenu.cpp source/Menus/StatusMenu.cpp source/Menus/LicenseMenu.cpp source/WindowCommands.cpp source/Menus/ShortcutMenu.cpp source/Menus/ActionSelectionMenu.cpp source/Menus/ScalingRatioMenu.cpp source/Menus/ISNitroMenu.cpp source/Menus/PartnerCTRMenu.cpp source/Menus/VideoEffectsMenu.cpp source/CaptureDataBuffers.cpp source/Menus/InputMenu.cpp source/Menus/AudioDeviceMenu.cpp source/Menus/SeparatorMenu.cpp source/Menus/ColorCorrectionMenu.cpp source/Menus/Main3DMenu.cpp source/Menus/SecondScreen3DRelativePositionMenu.cpp source/Menus/USBConflictResolutionMenu.cpp source/Menus/Optimize3DSMenu.cpp source/Menus/OptimizeSerialKeyAddMenu.cpp source/Menus/OptimizeOldFWConfigMenu.cpp source/libgpiod_compat.cpp ${TOOLS_DATA_DIR}/optimize_serial_key_add_table.cpp ${TOOLS_DATA_DIR}/optimize_serial_key_next_char_table.cpp ${TOOLS_DATA_DIR}/optimize_serial_key_prev_char_table.cpp ${TOOLS_DATA_DIR}/font_ttf.cpp ${TOOLS_DATA_DIR}/font_mono_ttf.cpp ${TOOLS_DATA_DIR}/shaders_list.cpp ${SOURCE_CPP_EXTRA_FILES})
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Android")
 	add_compile_flag("SFML_SYSTEM_ANDROID")
@@ -668,6 +668,27 @@ add_custom_command(
 	COMMENT "Convert FPGA 888 PL binary to C - Optimize Old 3DS"
 	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/optimize_old_3ds_888_fpga_pl.bin ${TOOLS_DATA_DIR} optimize_old_3ds_888_fpga_pl optimize_old_3ds_888_fpga_pl
 	DEPENDS ${CMAKE_SOURCE_DIR}/bin/optimize_old_3ds_888_fpga_pl.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
+)
+
+add_custom_command(
+	OUTPUT ${TOOLS_DATA_DIR}/optimize_old_2ds_2014_fw.cpp
+	COMMENT "Convert fw binary to C - Optimize Old 3DS"
+	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/optimize_old_2ds_2014_fw.bin ${TOOLS_DATA_DIR} optimize_old_2ds_2014_fw optimize_old_2ds_2014_fw
+	DEPENDS ${CMAKE_SOURCE_DIR}/bin/optimize_old_2ds_2014_fw.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
+)
+
+add_custom_command(
+	OUTPUT ${TOOLS_DATA_DIR}/optimize_old_2ds_2014_565_fpga_pl.cpp
+	COMMENT "Convert FPGA 565 PL binary to C - Optimize Old 3DS"
+	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/optimize_old_2ds_2014_565_fpga_pl.bin ${TOOLS_DATA_DIR} optimize_old_2ds_2014_565_fpga_pl optimize_old_2ds_2014_565_fpga_pl
+	DEPENDS ${CMAKE_SOURCE_DIR}/bin/optimize_old_2ds_2014_565_fpga_pl.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
+)
+
+add_custom_command(
+	OUTPUT ${TOOLS_DATA_DIR}/optimize_old_2ds_2014_888_fpga_pl.cpp
+	COMMENT "Convert FPGA 888 PL binary to C - Optimize Old 3DS"
+	COMMAND ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION} ${CMAKE_SOURCE_DIR}/bin/optimize_old_2ds_2014_888_fpga_pl.bin ${TOOLS_DATA_DIR} optimize_old_2ds_2014_888_fpga_pl optimize_old_2ds_2014_888_fpga_pl
+	DEPENDS ${CMAKE_SOURCE_DIR}/bin/optimize_old_2ds_2014_888_fpga_pl.bin ${TOOLS_DATA_DIR}/CMakeBin2C${HOST_FINAL_EXTENSION}
 )
 
 add_custom_command(

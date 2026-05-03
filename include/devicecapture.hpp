@@ -40,6 +40,8 @@ bool set_3d_enabled(CaptureStatus* capture_status, bool new_value);
 float get_framerate_multiplier(CaptureStatus* capture_status);
 KeySaveError save_cc_key(std::string key, CaptureConnectionType conn_type, bool differentiator);
 void check_device_serial_key_update(CaptureStatus* capture_status, bool differentiator, std::string key);
+void sanitize_capture_optimize_old_fw_config_case(CaptureOptimizeOldFirmwareConfigCase* config_case);
+void sanitize_capture_optimize_old_fw_config(CaptureOptimizeOldFirmwareConfig* config);
 void setup_reconnection_device(void* info);
 bool wait_reconnection_device(void* info);
 void end_reconnection_device(void* info);

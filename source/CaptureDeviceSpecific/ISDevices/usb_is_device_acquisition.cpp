@@ -152,7 +152,7 @@ uint64_t usb_is_device_get_video_in_size(CaptureScreensType capture_type, is_dev
 
 
 uint64_t usb_is_device_get_video_in_size(CaptureStatus* status) {
-	return usb_is_device_get_video_in_size(status->capture_type, ((const is_device_usb_device*)(status->device.descriptor))->device_type);
+	return usb_is_device_get_video_in_size(status->device_specific_status.is_status.capture_type, ((const is_device_usb_device*)(status->device.descriptor))->device_type);
 }
 
 
@@ -443,7 +443,7 @@ void is_device_acquisition_main_loop(CaptureData* capture_data) {
 		is_device_capture_recv_data[i].cb_data.is_data_ready = false;
 	}
 	SetupISDeviceAsyncThread((is_device_device_handlers*)capture_data->handle, is_device_capture_recv_data, &async_processing_thread, &is_done_thread, &has_data_been_processed);
-	capture_data->status.reset_hardware = false;
+	capture_data->status.device_specific_status.is_status.reset_hardware = false;
 	switch(((const is_device_usb_device*)(capture_data->status.device.descriptor))->device_type) {
 		case IS_NITRO_EMULATOR_DEVICE:
 			is_nitro_acquisition_emulator_main_loop(capture_data, is_device_capture_recv_data);

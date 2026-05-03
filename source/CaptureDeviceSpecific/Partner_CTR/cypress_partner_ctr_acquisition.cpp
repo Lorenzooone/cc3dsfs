@@ -815,9 +815,9 @@ static int restart_captures_cc_reads(CaptureData* capture_data, CypressPartnerCT
 }
 
 static bool has_battery_stuff_changed(CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_battery_set, int &curr_battery_percentage, bool &curr_ac_adapter_connected, bool &curr_ac_adapter_charging) {
-	int loaded_battery_percentage = capture_data->status.partner_ctr_battery_percentage;
-	bool loaded_ac_adapter_connected = capture_data->status.partner_ctr_ac_adapter_connected;
-	bool loaded_ac_adapter_charging = capture_data->status.partner_ctr_ac_adapter_charging;
+	int loaded_battery_percentage = capture_data->status.device_specific_status.partner_ctr_status.battery_percentage;
+	bool loaded_ac_adapter_connected = capture_data->status.device_specific_status.partner_ctr_status.ac_adapter_connected;
+	bool loaded_ac_adapter_charging = capture_data->status.device_specific_status.partner_ctr_status.ac_adapter_charging;
 
 	const auto curr_time_battery = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff_battery = curr_time_battery - clock_last_battery_set;
@@ -826,8 +826,8 @@ static bool has_battery_stuff_changed(CaptureData* capture_data, std::chrono::ti
 }
 
 static bool hardware_reset_requested(CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_reset) {
-	bool reset_hardware = capture_data->status.reset_hardware;
-	capture_data->status.reset_hardware = false;
+	bool reset_hardware = capture_data->status.device_specific_status.partner_ctr_status.reset_hardware;
+	capture_data->status.device_specific_status.partner_ctr_status.reset_hardware = false;
 
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - clock_last_reset;
@@ -838,9 +838,9 @@ static bool hardware_reset_requested(CaptureData* capture_data, std::chrono::tim
 static int CaptureBatteryHandleHardware(CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_battery_set, int &curr_battery_percentage, bool &curr_ac_adapter_connected, bool &curr_ac_adapter_charging, bool force = false) {
 	cy_device_device_handlers* handlers = (cy_device_device_handlers*)capture_data->handle;
 	const cypart_device_usb_device* usb_device_desc = (const cypart_device_usb_device*)capture_data->status.device.descriptor;
-	int loaded_battery_percentage = capture_data->status.partner_ctr_battery_percentage;
-	bool loaded_ac_adapter_connected = capture_data->status.partner_ctr_ac_adapter_connected;
-	bool loaded_ac_adapter_charging = capture_data->status.partner_ctr_ac_adapter_charging;
+	int loaded_battery_percentage = capture_data->status.device_specific_status.partner_ctr_status.battery_percentage;
+	bool loaded_ac_adapter_connected = capture_data->status.device_specific_status.partner_ctr_status.ac_adapter_connected;
+	bool loaded_ac_adapter_charging = capture_data->status.device_specific_status.partner_ctr_status.ac_adapter_charging;
 
 	const auto curr_time_battery = std::chrono::high_resolution_clock::now();
 
@@ -886,9 +886,9 @@ static bool cypart_device_acquisition_loop(CaptureData* capture_data, CypressPar
 	const cypart_device_usb_device* usb_device_desc = (const cypart_device_usb_device*)capture_data->status.device.descriptor;
 	uint32_t index = 0;
 	uint64_t device_id = 0;
-	int curr_battery_percentage = capture_data->status.partner_ctr_battery_percentage;
-	bool curr_ac_adapter_connected = capture_data->status.partner_ctr_ac_adapter_connected;
-	bool curr_ac_adapter_charging = capture_data->status.partner_ctr_ac_adapter_charging;
+	int curr_battery_percentage = capture_data->status.device_specific_status.partner_ctr_status.battery_percentage;
+	bool curr_ac_adapter_connected = capture_data->status.device_specific_status.partner_ctr_status.ac_adapter_connected;
+	bool curr_ac_adapter_charging = capture_data->status.device_specific_status.partner_ctr_status.ac_adapter_charging;
 	std::string read_serial = "";
 	bool force_capture_start_key = false;
 	int ret = capture_start(handlers, usb_device_desc, read_serial);

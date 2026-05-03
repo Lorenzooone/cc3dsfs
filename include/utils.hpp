@@ -57,6 +57,7 @@ void ActualConsoleOutTextError(std::string out_string);
 void ActualConsoleOutText(std::string out_string);
 std::string get_base_path(bool for_presets, bool do_existence_check=true);
 std::string get_base_path_keys();
+std::string get_base_path_device_specific_configs();
 std::string LayoutNameGenerator(int index);
 std::string LayoutPathGenerator(int index);
 std::string load_layout_name(int index, bool &success);

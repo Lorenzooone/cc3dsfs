@@ -321,7 +321,8 @@ void cypress_libusb_list_devices(std::vector<CaptureDevice> &devices_list, bool*
 					no_access_elems[j] = true;
 				if(result == LIBUSB_ERROR_NOT_SUPPORTED)
 					not_supported_elems[j] = true;
-				break;
+				// Do not break, as there can be multiple CCs with the same PID and VID
+				//break;
 			}
 			#ifdef _WIN32
 			// The IntraOral vendor overwrote the Infineon driver in a recent Windows Update...

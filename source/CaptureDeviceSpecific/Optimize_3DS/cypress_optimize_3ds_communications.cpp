@@ -13,6 +13,10 @@
 #include "optimize_old_3ds_565_fpga_pl.h"
 #include "optimize_old_3ds_888_fpga_pl.h"
 
+#include "optimize_old_2ds_2014_fw.h"
+#include "optimize_old_2ds_2014_565_fpga_pl.h"
+#include "optimize_old_2ds_2014_888_fpga_pl.h"
+
 #include "optimize_serial_key_to_byte_table.h"
 
 // CRC32 table is a slightly edited crc32-adler.
@@ -39,6 +43,7 @@
 
 #define OPTIMIZE_NEW_3DS_WANTED_VALUE_BASE 0xFE00
 #define OPTIMIZE_OLD_3DS_WANTED_VALUE_BASE 0xFD00
+#define OPTIMIZE_OLD_2DS_2014_WANTED_VALUE_BASE 0xFB00
 
 #define OPTIMIZE_NUM_KEY_CHARS SERIAL_KEY_OPTIMIZE_NO_DASHES_SIZE
 #define OPTIMIZE_NUM_KEY_CHARS_WITH_DASHES SERIAL_KEY_OPTIMIZE_WITH_DASHES_SIZE
@@ -49,22 +54,24 @@
 
 const size_t key_bytes_to_serial_bytes_map[OPTIMIZE_NUM_KEY_BYTES] = {0, 7, 8, 9, 1, 4, 6, 3, 10, 2, 11, 5};
 
-const uint8_t start_capture_setup_key_buffer_565_new[]    = { 0x61, 0x07, 0x00, 0x0F, 0x00, 0x3E, 0x00, 0xF8, 0x00, 0x38, 0x00, 0x00, 0x80, 0x00, 0x01, 0x00 };
-const uint8_t start_capture_setup_key_buffer_565_3d_new[] = { 0x61, 0x07, 0x00, 0x0F, 0x00, 0x3E, 0x00, 0xF8, 0x00, 0x3C, 0x00, 0x00, 0x80, 0x00, 0x01, 0x00 };
-const uint8_t start_capture_setup_key_buffer_888_new[]    = { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x28, 0x00, 0x62, 0x00, 0x3A, 0x00, 0x00, 0x80, 0x00, 0x01, 0x00 };
-const uint8_t start_capture_setup_key_buffer_888_3d_new[] = { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x28, 0x00, 0x62, 0x00, 0x16, 0x00, 0x00, 0x80, 0x00, 0x01, 0x00 };
-const uint8_t start_capture_setup_key_buffer_565_old[]    = { 0x61, 0x07, 0x00, 0x26, 0x00, 0x22, 0x00, 0x98, 0x00, 0x08, 0x00, 0x0E, 0x00, 0x00, 0x18, 0x00 };
-const uint8_t start_capture_setup_key_buffer_565_3d_old[] = { 0x61, 0x07, 0x00, 0x26, 0x00, 0x22, 0x00, 0x98, 0x00, 0x08, 0x00, 0x0F, 0x00, 0x00, 0x18, 0x00 };
-const uint8_t start_capture_setup_key_buffer_888_old[]    = { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x20, 0x00, 0x98, 0x00, 0x08, 0x00, 0x0E, 0x00, 0x00, 0x18, 0x00 };
-const uint8_t start_capture_setup_key_buffer_888_3d_old[] = { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x20, 0x00, 0x98, 0x00, 0x08, 0x00, 0x05, 0x00, 0x00, 0x18, 0x00 };
+const uint8_t start_capture_setup_key_buffer_565_new[]			= { 0x61, 0x07, 0x00, 0x0F, 0x00, 0x3E, 0x00, 0xF8, 0x00, 0x38, 0x00, 0x00, 0x80, 0x00, 0x01, 0x00 };
+const uint8_t start_capture_setup_key_buffer_565_3d_new[]		= { 0x61, 0x07, 0x00, 0x0F, 0x00, 0x3E, 0x00, 0xF8, 0x00, 0x3C, 0x00, 0x00, 0x80, 0x00, 0x01, 0x00 };
+const uint8_t start_capture_setup_key_buffer_888_new[]			= { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x28, 0x00, 0x62, 0x00, 0x3A, 0x00, 0x00, 0x80, 0x00, 0x01, 0x00 };
+const uint8_t start_capture_setup_key_buffer_888_3d_new[]		= { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x28, 0x00, 0x62, 0x00, 0x16, 0x00, 0x00, 0x80, 0x00, 0x01, 0x00 };
+const uint8_t start_capture_setup_key_buffer_565_old[]			= { 0x61, 0x07, 0x00, 0x26, 0x00, 0x22, 0x00, 0x98, 0x00, 0x08, 0x00, 0x0E, 0x00, 0x00, 0x18, 0x00 };
+const uint8_t start_capture_setup_key_buffer_565_3d_old[]		= { 0x61, 0x07, 0x00, 0x26, 0x00, 0x22, 0x00, 0x98, 0x00, 0x08, 0x00, 0x0F, 0x00, 0x00, 0x18, 0x00 };
+const uint8_t start_capture_setup_key_buffer_888_old[]			= { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x20, 0x00, 0x98, 0x00, 0x08, 0x00, 0x0E, 0x00, 0x00, 0x18, 0x00 };
+const uint8_t start_capture_setup_key_buffer_888_3d_old[]		= { 0x61, 0x07, 0x00, 0xA6, 0x00, 0x20, 0x00, 0x98, 0x00, 0x08, 0x00, 0x05, 0x00, 0x00, 0x18, 0x00 };
+const uint8_t start_capture_setup_key_buffer_565_old_old2ds[]	= { 0x61, 0x09, 0x00, 0xA0, 0x00, 0x51, 0x00, 0xA0, 0x00, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEB, 0x80, 0x71, 0x01, 0x07 };
+const uint8_t start_capture_setup_key_buffer_888_old_old2ds[]	= { 0x61, 0x09, 0x00, 0x90, 0x00, 0x51, 0x00, 0x90, 0x00, 0x50, 0x00, 0x03, 0x00, 0x00, 0x00, 0xEB, 0x80, 0x71, 0x01, 0x07 };
 
 static const cyop_device_usb_device cypress_optimize_new_3ds_generic_device = {
-.name = "FX2LO->Opt. N3DS", .long_name = "EZ-USB FX2LPO -> Optimize New 3DS",
+.name = "FX2O> Opt. N3DS", .long_name = "EZ-USB FX2LPO -> Optimize New 3DS",
 .device_type = CYPRESS_OPTIMIZE_NEW_3DS_BLANK_DEVICE,
 .firmware_to_load = optimize_new_3ds_fw, .firmware_size = optimize_new_3ds_fw_len,
 .fpga_pl_565 = NULL, .fpga_pl_565_size = 0,
 .fpga_pl_888 = NULL, .fpga_pl_888_size = 0,
-.is_new_device = true,
+.is_new_device = true, .is_old_firmware = false, .is_o2ds = false,
 .next_device = CYPRESS_OPTIMIZE_NEW_3DS_INSTANTIATED_DEVICE,
 .has_bcd_device_serial = false,
 .index_in_allowed_scan = CC_OPTIMIZE_N3DS,
@@ -92,7 +99,7 @@ static const cyop_device_usb_device cypress_optimize_new_3ds_instantiated_device
 .firmware_to_load = NULL, .firmware_size = 0,
 .fpga_pl_565 = optimize_new_3ds_565_fpga_pl, .fpga_pl_565_size = optimize_new_3ds_565_fpga_pl_len,
 .fpga_pl_888 = optimize_new_3ds_888_fpga_pl, .fpga_pl_888_size = optimize_new_3ds_888_fpga_pl_len,
-.is_new_device = true,
+.is_new_device = true, .is_old_firmware = false, .is_o2ds = false,
 .next_device = CYPRESS_OPTIMIZE_NEW_3DS_INSTANTIATED_DEVICE,
 .has_bcd_device_serial = true,
 .index_in_allowed_scan = CC_OPTIMIZE_N3DS,
@@ -115,12 +122,12 @@ static const cyop_device_usb_device cypress_optimize_new_3ds_instantiated_device
 };
 
 static const cyop_device_usb_device cypress_optimize_old_3ds_generic_device = {
-.name = "FX2LP->Opt. O3DS", .long_name = "EZ-USB FX2LP -> Optimize Old 3DS",
+.name = "FX2> Opt. O3DS", .long_name = "EZ-USB FX2LP -> Optimize Old 3DS",
 .device_type = CYPRESS_OPTIMIZE_OLD_3DS_BLANK_DEVICE,
 .firmware_to_load = optimize_old_3ds_fw, .firmware_size = optimize_old_3ds_fw_len,
 .fpga_pl_565 = NULL, .fpga_pl_565_size = 0,
 .fpga_pl_888 = NULL, .fpga_pl_888_size = 0,
-.is_new_device = false,
+.is_new_device = false, .is_old_firmware = false, .is_o2ds = false,
 .next_device = CYPRESS_OPTIMIZE_OLD_3DS_INSTANTIATED_DEVICE,
 .has_bcd_device_serial = false,
 .index_in_allowed_scan = CC_OPTIMIZE_O3DS,
@@ -148,7 +155,7 @@ static const cyop_device_usb_device cypress_optimize_old_3ds_instantiated_device
 .firmware_to_load = NULL, .firmware_size = 0,
 .fpga_pl_565 = optimize_old_3ds_565_fpga_pl, .fpga_pl_565_size = optimize_old_3ds_565_fpga_pl_len,
 .fpga_pl_888 = optimize_old_3ds_888_fpga_pl, .fpga_pl_888_size = optimize_old_3ds_888_fpga_pl_len,
-.is_new_device = false,
+.is_new_device = false, .is_old_firmware = false, .is_o2ds = false,
 .next_device = CYPRESS_OPTIMIZE_OLD_3DS_INSTANTIATED_DEVICE,
 .has_bcd_device_serial = true,
 .index_in_allowed_scan = CC_OPTIMIZE_O3DS,
@@ -170,11 +177,69 @@ static const cyop_device_usb_device cypress_optimize_old_3ds_instantiated_device
 }
 };
 
+static const cyop_device_usb_device cypress_optimize_old_old_2ds_generic_device = {
+.name = "FX2> Opt. O2DS 2014", .long_name = "EZ-USB FX2LP -> Optimize Old 2DS Late 2014",
+.device_type = CYPRESS_OPTIMIZE_OLD_OLD_2DS_BLANK_DEVICE,
+.firmware_to_load = optimize_old_2ds_2014_fw, .firmware_size = optimize_old_2ds_2014_fw_len,
+.fpga_pl_565 = NULL, .fpga_pl_565_size = 0,
+.fpga_pl_888 = NULL, .fpga_pl_888_size = 0,
+.is_new_device = false, .is_old_firmware = true, .is_o2ds = true,
+.next_device = CYPRESS_OPTIMIZE_OLD_OLD_2DS_INSTANTIATED_DEVICE,
+.has_bcd_device_serial = false,
+.index_in_allowed_scan = CC_OPTIMIZE_O_O2DS,
+.usb_device_info = {
+	.vid = 0x04B4, .pid = 0x8613,
+	.default_config = 1, .default_interface = 0,
+	.bulk_timeout = 500,
+	.ep_ctrl_bulk_in = 0, .ep_ctrl_bulk_out = 0,
+	.ep_bulk_in = 0,
+	.max_usb_packet_size = CYPRESS_BASE_USB_PACKET_LIMIT,
+	.do_pipe_clear_reset = false,
+	.alt_interface = 1,
+	.full_data = &cypress_optimize_old_old_2ds_generic_device,
+	.get_serial_requires_setup = false,
+	.get_serial_fn = cypress_optimize_3ds_get_serial,
+	.create_device_fn = cypress_optimize_3ds_create_device,
+	.bcd_device_mask = 0x0000,
+	.bcd_device_wanted_value = 0x0000
+}
+};
+
+static const cyop_device_usb_device cypress_optimize_old_old_2ds_instantiated_device = {
+.name = "Opt. O2DS Late 2014", .long_name = "Optimize Old 2DS Late 2014",
+.device_type = CYPRESS_OPTIMIZE_OLD_OLD_2DS_INSTANTIATED_DEVICE,
+.firmware_to_load = NULL, .firmware_size = 0,
+.fpga_pl_565 = optimize_old_2ds_2014_565_fpga_pl, .fpga_pl_565_size = optimize_old_2ds_2014_565_fpga_pl_len,
+.fpga_pl_888 = optimize_old_2ds_2014_888_fpga_pl, .fpga_pl_888_size = optimize_old_2ds_2014_888_fpga_pl_len,
+.is_new_device = false, .is_old_firmware = true, .is_o2ds = true,
+.next_device = CYPRESS_OPTIMIZE_OLD_OLD_2DS_INSTANTIATED_DEVICE,
+.has_bcd_device_serial = true,
+.index_in_allowed_scan = CC_OPTIMIZE_O_O2DS,
+.usb_device_info = {
+	.vid = 0x04B4, .pid = 0x1004,
+	.default_config = 1, .default_interface = 0,
+	.bulk_timeout = 500,
+	.ep_ctrl_bulk_in = 1 | LIBUSB_ENDPOINT_IN, .ep_ctrl_bulk_out = 1 | LIBUSB_ENDPOINT_OUT,
+	.ep_bulk_in = 2 | LIBUSB_ENDPOINT_IN,
+	.max_usb_packet_size = CYPRESS_OPTIMIZE_OLD_3DS_USB_PACKET_LIMIT,
+	.do_pipe_clear_reset = true,
+	.alt_interface = 0,
+	.full_data = &cypress_optimize_old_old_2ds_instantiated_device,
+	.get_serial_requires_setup = false,
+	.get_serial_fn = cypress_optimize_3ds_get_serial,
+	.create_device_fn = cypress_optimize_3ds_create_device,
+	.bcd_device_mask = 0xFF00,
+	.bcd_device_wanted_value = OPTIMIZE_OLD_2DS_2014_WANTED_VALUE_BASE
+}
+};
+
 static const cyop_device_usb_device* all_usb_cyop_device_devices_desc[] = {
 	&cypress_optimize_new_3ds_generic_device,
 	&cypress_optimize_new_3ds_instantiated_device,
 	&cypress_optimize_old_3ds_generic_device,
 	&cypress_optimize_old_3ds_instantiated_device,
+	&cypress_optimize_old_old_2ds_generic_device,
+	&cypress_optimize_old_old_2ds_instantiated_device,
 };
 
 static uint32_t calc_crc32_adler(uint8_t* data, size_t size) {
@@ -508,7 +573,7 @@ static int read_device_id_serial(cy_device_device_handlers* handlers, const cyop
 	int ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), first_buffer, sizeof(first_buffer), &transferred);
 	if(ret < 0)
 		return ret;
-	if(device->is_new_device) {
+	if(device->is_new_device || device->is_old_firmware) {
 		ret = read_first_unk_value(handlers, device, value32);
 		if(ret < 0)
 			return ret;
@@ -602,9 +667,15 @@ static int insert_device_id(cy_device_device_handlers* handlers, const cyop_devi
 		return ret;
 	uint8_t device_id_buffer_new_3ds[] = {0x71, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0xC3, 0x00, 0x00, 0x02, 0x30, 0xFF, 0x60, 0x65 };
 	uint8_t device_id_buffer_old_3ds[] = {0x71, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2A, 0x0B, 0x01, 0x00, 0x02, 0x30, 0xFF, 0x60, 0x65 };
-	uint8_t* target_device_id_buffer = device_id_buffer_new_3ds;
-	if(!device->is_new_device)
-		target_device_id_buffer = device_id_buffer_old_3ds;
+	//uint8_t device_id_buffer_old_3ds_old_fw[] = {0x71, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3E, 0x7B, 0x00, 0x00, 0x02, 0x30, 0xFF, 0x60, 0x65 };
+	uint8_t device_id_buffer_old_2ds_old_fw[] = {0x71, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x82, 0x00, 0x00, 0x02, 0x30, 0xFF, 0x60, 0x65 };
+	uint8_t* target_device_id_buffer = device_id_buffer_old_3ds;
+	if(device->is_new_device)
+		target_device_id_buffer = device_id_buffer_new_3ds;
+	//if(device->is_old_firmware)
+	//	target_device_id_buffer = device_id_buffer_old_3ds_old_fw;
+	if(device->is_o2ds)
+		target_device_id_buffer = device_id_buffer_old_2ds_old_fw;
 	write_le64(target_device_id_buffer + 1, device_id);
 	ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), target_device_id_buffer, sizeof(device_id_buffer_new_3ds), &transferred);
 	if(ret < 0)
@@ -633,7 +704,8 @@ int capture_start(cy_device_device_handlers* handlers, const cyop_device_usb_dev
 		if(ret < 0)
 			return ret;
 	}
-	ret = start_command_send(handlers, device);
+	if(!device->is_old_firmware)
+		ret = start_command_send(handlers, device);
 	if(ret < 0)
 		return ret;
 	if(device->is_new_device) {
@@ -681,6 +753,11 @@ static const uint8_t* get_start_capture_setup_key_buffer(const cyop_device_usb_d
 			return start_capture_setup_key_buffer_565_3d_new;
 		return start_capture_setup_key_buffer_565_new;
 	}
+	if(device->is_o2ds) {
+		if(is_rgb888)
+			return start_capture_setup_key_buffer_888_old_old2ds;
+		return start_capture_setup_key_buffer_565_old_old2ds;
+	}
 	if(is_rgb888) {
 		if(is_3d)
 			return start_capture_setup_key_buffer_888_3d_old;
@@ -689,6 +766,18 @@ static const uint8_t* get_start_capture_setup_key_buffer(const cyop_device_usb_d
 	if(is_3d)
 		return start_capture_setup_key_buffer_565_3d_old;
 	return start_capture_setup_key_buffer_565_old;
+}
+
+static size_t get_start_capture_setup_key_buffer_size(const cyop_device_usb_device* device, bool is_rgb888, bool is_3d) {
+	if(device->is_old_firmware)
+		return sizeof(start_capture_setup_key_buffer_888_old_old2ds);
+	return sizeof(start_capture_setup_key_buffer_888_new);
+}
+
+static size_t get_start_capture_setup_answer_size(const cyop_device_usb_device* device, bool is_rgb888, bool is_3d) {
+	if(device->is_old_firmware)
+		return 9;
+	return 7;
 }
 
 uint64_t get_device_id_from_key(std::string key, bool is_new_device) {
@@ -725,6 +814,27 @@ bool check_key_valid(std::string key, const cyop_device_usb_device* device) {
 	return check_key_valid(key, device->is_new_device);
 }
 
+static void populate_capture_setup_old_fw_config_case(uint8_t* setup_buffer, CaptureOptimizeOldFirmwareConfigCase* config_case_to_use, bool is_3d_case) {
+	uint8_t low_byte_pos = 3;
+	uint8_t high_byte_pos = 5;
+
+	if(is_3d_case) {
+		low_byte_pos = 7;
+		high_byte_pos = 9;
+	}
+
+	CaptureOptimizeOldFirmwareConfigCase copied_config = *config_case_to_use;
+	sanitize_capture_optimize_old_fw_config_case(&copied_config);
+
+	setup_buffer[low_byte_pos] = (1 << copied_config.top_screen_sync) | (copied_config.top_screen_clock << 6);
+	setup_buffer[high_byte_pos] = (copied_config.top_screen_clock >> 2) | (copied_config.top_screen_data << 1) | (copied_config.low_screen_clock << 4);
+}
+
+static void populate_capture_setup_old_fw_config(uint8_t* setup_buffer, CaptureOptimizeOldFirmwareConfig* config_to_use) {
+	populate_capture_setup_old_fw_config_case(setup_buffer, &config_to_use->mode_2d_only, false);
+	populate_capture_setup_old_fw_config_case(setup_buffer, &config_to_use->mode_regular, true);
+}
+
 static void populate_capture_setup_key_buffer(const cyop_device_usb_device* device, uint8_t* setup_key_buffer, std::string key) {
 	if(key == "")
 		return;
@@ -740,12 +850,17 @@ static void populate_capture_setup_key_buffer(const cyop_device_usb_device* devi
 		setup_key_buffer[13] = key_bytes[10];
 		return;
 	}
+	if(device->is_old_firmware) {
+		setup_key_buffer[15] = key_bytes[11];
+		setup_key_buffer[17] = key_bytes[10];
+		return;
+	}
 	setup_key_buffer[11] |= (key_bytes[11] & 0xF) << 4;
 	setup_key_buffer[13] = ((key_bytes[10] & 0xF) << 4) | (key_bytes[11] >> 4);
 	setup_key_buffer[15] = key_bytes[10] >> 4;
 }
 
-int StartCaptureDma(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_rgb888, bool is_3d, std::string key) {
+int StartCaptureDma(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_rgb888, bool is_3d, CaptureOptimizeOldFirmwareConfig *old_fw_config, std::string key) {
 	const uint8_t mono_buffer[] = { 0x40 };
 	int transferred = 0;
 	int ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), mono_buffer, sizeof(mono_buffer), &transferred);
@@ -756,14 +871,17 @@ int StartCaptureDma(cy_device_device_handlers* handlers, const cyop_device_usb_d
 	if(ret < 0)
 		return ret;
 	const uint8_t* base_setup_key_buffer = get_start_capture_setup_key_buffer(device, is_rgb888, is_3d);
-	uint8_t setup_key_buffer[sizeof(start_capture_setup_key_buffer_888_new)];
-	memcpy(setup_key_buffer, base_setup_key_buffer, sizeof(setup_key_buffer));
+	size_t size_setup_key_buffer = get_start_capture_setup_key_buffer_size(device, is_rgb888, is_3d);
+	uint8_t setup_key_buffer[sizeof(start_capture_setup_key_buffer_888_old_old2ds)];
+	memcpy(setup_key_buffer, base_setup_key_buffer, size_setup_key_buffer);
 	populate_capture_setup_key_buffer(device, setup_key_buffer, key);
-	ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), setup_key_buffer, sizeof(setup_key_buffer), &transferred);
+	if(device->is_old_firmware)
+		populate_capture_setup_old_fw_config(setup_key_buffer, old_fw_config);
+	ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), setup_key_buffer, (int)size_setup_key_buffer, &transferred);
 	if(ret < 0)
 		return ret;
-	uint8_t in_buffer[7];
-	ret = cypress_ctrl_bulk_in_transfer(handlers, get_cy_usb_info(device), in_buffer, sizeof(in_buffer), &transferred);
+	uint8_t in_buffer[0x10];
+	ret = cypress_ctrl_bulk_in_transfer(handlers, get_cy_usb_info(device), in_buffer, (int)get_start_capture_setup_answer_size(device, is_rgb888, is_3d), &transferred);
 	if(ret < 0)
 		return ret;
 	ret = start_command_send(handlers, device);

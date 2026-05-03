@@ -126,13 +126,13 @@ void PartnerCTRMenu::prepare(float menu_scaling_factor, int view_size_x, int vie
 		int option_index = this->options_indexes[real_index];
 		switch(pollable_options[option_index]->out_action) {
 			case PCTR_MENU_BATTERY_DEC:
-				this->labels[index]->setText(this->setTextOptionInt(real_index, capture_status->partner_ctr_battery_percentage));
+				this->labels[index]->setText(this->setTextOptionInt(real_index, capture_status->device_specific_status.partner_ctr_status.battery_percentage));
 				break;
 			case PCTR_MENU_AC_ADAPTER_CONNECTED_TOGGLE:
-				this->labels[index]->setText(this->setTextOptionBool(real_index, capture_status->partner_ctr_ac_adapter_connected));
+				this->labels[index]->setText(this->setTextOptionBool(real_index, capture_status->device_specific_status.partner_ctr_status.ac_adapter_connected));
 				break;
 			case PCTR_MENU_AC_ADAPTER_CHARGING_TOGGLE:
-				this->labels[index]->setText(this->setTextOptionBool(real_index, capture_status->partner_ctr_ac_adapter_charging));
+				this->labels[index]->setText(this->setTextOptionBool(real_index, capture_status->device_specific_status.partner_ctr_status.ac_adapter_charging));
 				break;
 			default:
 				break;

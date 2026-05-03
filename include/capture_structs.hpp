@@ -28,7 +28,7 @@ enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_F
 enum InputVideoDataType { VIDEO_DATA_RGB, VIDEO_DATA_BGR, VIDEO_DATA_RGB16, VIDEO_DATA_BGR16 };
 enum CaptureScreensType { CAPTURE_SCREENS_BOTH, CAPTURE_SCREENS_TOP, CAPTURE_SCREENS_BOTTOM, CAPTURE_SCREENS_ENUM_END };
 enum CaptureSpeedsType { CAPTURE_SPEEDS_FULL, CAPTURE_SPEEDS_HALF, CAPTURE_SPEEDS_THIRD, CAPTURE_SPEEDS_QUARTER, CAPTURE_SPEEDS_ENUM_END };
-enum PossibleCaptureDevices { CC_LOOPY_OLD_DS, CC_LOOPY_NEW_DS, CC_LOOPY_OLD_3DS, CC_LOOPY_NEW_N3DSXL, CC_IS_NITRO_EMULATOR, CC_IS_NITRO_CAPTURE, CC_IS_TWL_CAPTURE, CC_NISETRO_DS, CC_OPTIMIZE_O3DS, CC_OPTIMIZE_N3DS, CC_PARTNER_CTR, CC_POSSIBLE_DEVICES_END };
+enum PossibleCaptureDevices { CC_LOOPY_OLD_DS, CC_LOOPY_NEW_DS, CC_LOOPY_OLD_3DS, CC_LOOPY_NEW_N3DSXL, CC_IS_NITRO_EMULATOR, CC_IS_NITRO_CAPTURE, CC_IS_TWL_CAPTURE, CC_NISETRO_DS, CC_OPTIMIZE_O3DS, CC_OPTIMIZE_N3DS, CC_OPTIMIZE_O_O2DS, CC_PARTNER_CTR, CC_POSSIBLE_DEVICES_END };
 
 // Readers are Audio and Video. So 2.
 // Use 6 extra buffers. 5 for async writing in case the other 2 are busy,
@@ -95,6 +95,13 @@ struct PACKED USB3DSOptimizeColumnInfo {
 	uint16_t has_extra_header_data_2d_only : 1;
 };
 
+struct PACKED USB3DSOptimizeOldFirmwareColumnInfo {
+	uint16_t fixed : 4; // Fixed to 5...?
+	uint16_t column_index : 9;
+	uint16_t extra_column_data : 2; // Can be 1 for RGB888 in 2D mode, always 0 for RGB565...?
+	uint16_t is_first_column : 1;
+};
+
 struct PACKED USB3DSOptimizeHeaderData {
 	uint16_t magic;
 	USB3DSOptimizeColumnInfo column_info;
@@ -105,8 +112,36 @@ struct PACKED USB3DSOptimizeHeaderSoundData {
 	USB3DSOptimizeSingleSoundData samples[2];
 };
 
+// Old firmware RGB565 without sound. O2DS doesn't seem to have ever
+// received RGB565 with sound...
+struct PACKED USB5653DSOptimizeOldFirmwareHeaderData {
+	uint16_t magic; // Magic is 0 if column_index is 1
+	uint16_t unk;
+	uint16_t num_pixels_passed;
+	uint16_t unk2;
+	USB3DSOptimizeOldFirmwareColumnInfo column_info;
+	uint16_t unk3;
+	uint16_t is_frame_not_2d_only;
+	uint16_t unk4;
+};
+
+struct PACKED USB8883DSOptimizeOldFirmwareHeaderData {
+	uint16_t magic; // Magic is 0 if column_info.column_index is 1
+	USB3DSOptimizeOldFirmwareColumnInfo column_info;
+};
+
+struct PACKED USB8883DSOptimizeOldFirmwareHeaderSoundData {
+	USB8883DSOptimizeOldFirmwareHeaderData header_info;
+	USB3DSOptimizeSingleSoundData samples[2];
+};
+
 struct PACKED ALIGNED(16) USB5653DSOptimizeInputColumnData {
 	USB3DSOptimizeHeaderSoundData header_sound;
+	USB5653DSOptimizePixelData pixel[HEIGHT_3DS][2];
+};
+
+struct PACKED ALIGNED(16) USB5653DSOptimizeOldFirmwareInputColumnData {
+	USB5653DSOptimizeOldFirmwareHeaderData header;
 	USB5653DSOptimizePixelData pixel[HEIGHT_3DS][2];
 };
 
@@ -128,6 +163,11 @@ struct PACKED ALIGNED(16) USB8883DSOptimizeInputColumnData {
 struct PACKED ALIGNED(16) USB8883DSOptimizeInputColumnData3D {
 	USB3DSOptimizeHeaderSoundData header_sound;
 	USB8883DSOptimizePixelData pixel[HEIGHT_3DS];
+};
+
+struct PACKED ALIGNED(16) USB8883DSOptimizeOldFirmwareInputColumnData {
+	USB8883DSOptimizeOldFirmwareHeaderSoundData header_sound;
+	USB8883DSOptimizePixelData pixel[HEIGHT_3DS][2];
 };
 
 struct PACKED ISNitroEmulatorVideoInputData {
@@ -263,6 +303,10 @@ struct ALIGNED(16) PACKED USB5653DSOptimizeCaptureReceived_3D {
 	USB5653DSOptimizeInputColumnData bottom_only_column;
 };
 
+struct ALIGNED(16) PACKED USB5653DSOptimizeOldFirmwareCaptureReceived {
+	USB5653DSOptimizeOldFirmwareInputColumnData columns_data[TOP_WIDTH_3DS + 1];
+};
+
 struct ALIGNED(16) PACKED USB8883DSOptimizeCaptureReceived {
 	USB8883DSOptimizeInputColumnData columns_data[TOP_WIDTH_3DS];
 	USB8883DSOptimizePixelData bottom_only_column[HEIGHT_3DS][2];
@@ -275,6 +319,10 @@ struct ALIGNED(16) PACKED USB8883DSOptimizeCaptureReceived_3D {
 
 struct ALIGNED(16) PACKED USB8883DSOptimizeCaptureReceived_3D_Forced2DSingleScreen {
 	USB8883DSOptimizeInputColumnData3D columns_data[TOP_WIDTH_3DS + 1];
+};
+
+struct ALIGNED(16) PACKED USB8883DSOptimizeOldFirmwareCaptureReceived {
+	USB8883DSOptimizeOldFirmwareInputColumnData columns_data[TOP_WIDTH_3DS + 1];
 };
 
 struct ALIGNED(16) PACKED USB5653DSOptimizeCaptureReceivedExtraHeader {
@@ -305,9 +353,11 @@ union CaptureReceived {
 	CypressNisetroDSCaptureReceived cypress_nisetro_capture_received;
 	USB5653DSOptimizeCaptureReceived cypress_optimize_received_565;
 	USB5653DSOptimizeCaptureReceived_3D cypress_optimize_received_565_3d;
+	USB5653DSOptimizeOldFirmwareCaptureReceived cypress_optimize_old_firmware_received_565;
 	USB8883DSOptimizeCaptureReceived cypress_optimize_received_888;
 	USB8883DSOptimizeCaptureReceived_3D cypress_optimize_received_888_3d;
 	USB8883DSOptimizeCaptureReceived_3D_Forced2DSingleScreen cypress_optimize_received_888_3d_2d;
+	USB8883DSOptimizeOldFirmwareCaptureReceived cypress_optimize_old_firmware_received_888;
 	USB5653DSOptimizeCaptureReceivedExtraHeader cypress_optimize_received_565_extra_header;
 	USB8883DSOptimizeCaptureReceivedExtraHeader cypress_optimize_received_888_extra_header;
 };
@@ -354,6 +404,55 @@ struct CaptureDevice {
 	AudioSampleRate sample_rate = SAMPLE_RATE_DS;
 };
 
+struct CaptureOptimizeOldFirmwareConfigCase {
+	uint8_t low_screen_clock = 4; // 0...15
+	uint8_t top_screen_clock = 5; // 0...7
+	uint8_t top_screen_data = 3; // 0...7
+	uint8_t top_screen_sync = 2; // 0...5
+}; // Covered by sanitize_capture_optimize_old_fw_config_case
+
+struct CaptureOptimizeOldFirmwareConfig {
+	CaptureOptimizeOldFirmwareConfigCase mode_2d_only;
+	CaptureOptimizeOldFirmwareConfigCase mode_regular;
+};
+
+struct CaptureStatusOptimize {
+	// Capture-device specific data...
+	// Optimize devices
+	bool request_low_bw_format = true;
+	bool request_low_bw_format_old_2ds = false;
+	bool key_updated = false;
+	CaptureOptimizeOldFirmwareConfig old_fw_config_full_bw_format = {};
+	CaptureOptimizeOldFirmwareConfig old_fw_config_low_bw_format = {};
+};
+
+struct CaptureStatusIS {
+	// Capture-device specific data...
+	// IS devices
+	volatile int curr_delay = 0;
+	volatile bool reset_hardware = false;
+	CaptureScreensType capture_type;
+	CaptureSpeedsType capture_speed;
+	int battery_percentage;
+	bool ac_adapter_connected;
+};
+
+struct CaptureStatusPartnerCTR {
+	// Capture-device specific data...
+	// Partner CTR Capture
+	volatile bool reset_hardware = false;
+	int battery_percentage;
+	bool ac_adapter_connected;
+	bool ac_adapter_charging;
+};
+
+struct CaptureStatusDeviceSpecific {
+	// Capture-device specific data...
+	CaptureStatusOptimize optimize_status;
+	CaptureStatusIS is_status;
+	CaptureStatusPartnerCTR partner_ctr_status;
+};
+
 struct CaptureStatus {
 	CaptureDevice device;
 	std::string graphical_error_text;
@@ -364,18 +463,8 @@ struct CaptureStatus {
 	volatile bool connected = false;
 	volatile bool running = true;
 	volatile bool close_success = true;
-	volatile int curr_delay = 0;
-	volatile bool reset_hardware = false;
 	bool requested_3d = false;
-	bool request_low_bw_format = true;
-	bool key_updated = false;
-	CaptureScreensType capture_type;
-	CaptureSpeedsType capture_speed;
-	int is_battery_percentage;
-	bool is_ac_adapter_connected;
-	int partner_ctr_battery_percentage;
-	bool partner_ctr_ac_adapter_connected;
-	bool partner_ctr_ac_adapter_charging;
+	CaptureStatusDeviceSpecific device_specific_status;
 	// Needed for possible compatibility issues
 	bool devices_allowed_scan[CC_POSSIBLE_DEVICES_END];
 	ConsumerMutex video_wait;

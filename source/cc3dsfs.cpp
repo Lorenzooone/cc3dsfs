@@ -45,6 +45,7 @@ struct override_all_data {
 	bool auto_close = false;
 	bool force_disable_nisetro_ds = false;
 	bool force_disable_optimize_old_3ds = false;
+	bool force_disable_optimize_old_old_2ds = false;
 	bool auto_save = true;
 	int loaded_profile = STARTUP_FILE_INDEX;
 	bool mono_app = false;
@@ -191,7 +192,17 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 			}
 
 			if(key == "request_low_bw_format") {
-				capture_status->request_low_bw_format = std::stoi(value);
+				capture_status->device_specific_status.optimize_status.request_low_bw_format = std::stoi(value);
+				continue;
+			}
+
+			if(key == "request_low_bw_format_optimize") {
+				capture_status->device_specific_status.optimize_status.request_low_bw_format = std::stoi(value);
+				continue;
+			}
+
+			if(key == "request_low_bw_format_old_2ds_optimize") {
+				capture_status->device_specific_status.optimize_status.request_low_bw_format_old_2ds = std::stoi(value);
 				continue;
 			}
 
@@ -201,54 +212,59 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 			}
 
 			if(key == "is_screen_capture_type") {
-				capture_status->capture_type =  static_cast<CaptureScreensType>(std::stoi(value) % CaptureScreensType::CAPTURE_SCREENS_ENUM_END);
+				capture_status->device_specific_status.is_status.capture_type =  static_cast<CaptureScreensType>(std::stoi(value) % CaptureScreensType::CAPTURE_SCREENS_ENUM_END);
 				continue;
 			}
 
 			if(key == "is_speed_capture") {
-				capture_status->capture_speed =  static_cast<CaptureSpeedsType>(std::stoi(value) % CaptureSpeedsType::CAPTURE_SPEEDS_ENUM_END);
+				capture_status->device_specific_status.is_status.capture_speed =  static_cast<CaptureSpeedsType>(std::stoi(value) % CaptureSpeedsType::CAPTURE_SPEEDS_ENUM_END);
 				continue;
 			}
 
 			if(key == "is_battery_percentage") {
-				capture_status->is_battery_percentage =  std::stoi(value);
+				capture_status->device_specific_status.is_status.battery_percentage =  std::stoi(value);
 				// Even though 1 is allowed, it spam-resets the Hardware...
 				// So don't allow it as the initial value!
-				if(capture_status->is_battery_percentage <= 5)
-					capture_status->is_battery_percentage = 5;
-				if(capture_status->is_battery_percentage > 100)
-					capture_status->is_battery_percentage = 100;
+				if(capture_status->device_specific_status.is_status.battery_percentage <= 5)
+					capture_status->device_specific_status.is_status.battery_percentage = 5;
+				if(capture_status->device_specific_status.is_status.battery_percentage > 100)
+					capture_status->device_specific_status.is_status.battery_percentage = 100;
 				continue;
 			}
 
 			if(key == "is_ac_adapter_connected") {
-				capture_status->is_ac_adapter_connected =  std::stoi(value);
+				capture_status->device_specific_status.is_status.ac_adapter_connected =  std::stoi(value);
 				continue;
 			}
 
 			if(key == "partner_ctr_battery_percentage") {
-				capture_status->partner_ctr_battery_percentage =  std::stoi(value);
+				capture_status->device_specific_status.partner_ctr_status.battery_percentage =  std::stoi(value);
 				// Even though 0 is allowed, it turns off the Hardware...
 				// So don't allow it as the initial value!
-				if(capture_status->partner_ctr_battery_percentage <= 1)
-					capture_status->partner_ctr_battery_percentage = 1;
-				if(capture_status->partner_ctr_battery_percentage > 100)
-					capture_status->partner_ctr_battery_percentage = 100;
+				if(capture_status->device_specific_status.partner_ctr_status.battery_percentage <= 1)
+					capture_status->device_specific_status.partner_ctr_status.battery_percentage = 1;
+				if(capture_status->device_specific_status.partner_ctr_status.battery_percentage > 100)
+					capture_status->device_specific_status.partner_ctr_status.battery_percentage = 100;
 				continue;
 			}
 
 			if(key == "partner_ctr_ac_adapter_connected") {
-				capture_status->partner_ctr_ac_adapter_connected =  std::stoi(value);
+				capture_status->device_specific_status.partner_ctr_status.ac_adapter_connected =  std::stoi(value);
 				continue;
 			}
 
 			if(key == "partner_ctr_ac_adapter_charging") {
-				capture_status->partner_ctr_ac_adapter_charging =  std::stoi(value);
+				capture_status->device_specific_status.partner_ctr_status.ac_adapter_charging =  std::stoi(value);
 				continue;
 			}
 
 			if(key == "optimize_o3ds_scan_for") {
 				capture_status->devices_allowed_scan[CC_OPTIMIZE_O3DS] = std::stoi(value);
+				continue;
+			}
+
+			if(key == "optimize_oo2ds_scan_for") {
+				capture_status->devices_allowed_scan[CC_OPTIMIZE_O_O2DS] = std::stoi(value);
 				continue;
 			}
 
@@ -273,14 +289,15 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 }
 
 static void defaults_reload(FrontendData *frontend_data, AudioData* audio_data, CaptureStatus* capture_status) {
-	capture_status->capture_type = CAPTURE_SCREENS_BOTH;
-	capture_status->capture_speed = CAPTURE_SPEEDS_FULL;
-	capture_status->is_battery_percentage = 100;
-	capture_status->is_ac_adapter_connected = true;
-	capture_status->partner_ctr_battery_percentage = 100;
-	capture_status->partner_ctr_ac_adapter_connected = false;
-	capture_status->partner_ctr_ac_adapter_charging = false;
-	capture_status->request_low_bw_format = true;
+	capture_status->device_specific_status.is_status.capture_type = CAPTURE_SCREENS_BOTH;
+	capture_status->device_specific_status.is_status.capture_speed = CAPTURE_SPEEDS_FULL;
+	capture_status->device_specific_status.is_status.battery_percentage = 100;
+	capture_status->device_specific_status.is_status.ac_adapter_connected = true;
+	capture_status->device_specific_status.partner_ctr_status.battery_percentage = 100;
+	capture_status->device_specific_status.partner_ctr_status.ac_adapter_connected = false;
+	capture_status->device_specific_status.partner_ctr_status.ac_adapter_charging = false;
+	capture_status->device_specific_status.optimize_status.request_low_bw_format = true;
+	capture_status->device_specific_status.optimize_status.request_low_bw_format_old_2ds = false;
 	for(int i = 0; i < CC_POSSIBLE_DEVICES_END; i++)
 		capture_status->devices_allowed_scan[i] = true;
 	reset_screen_info(frontend_data->top_screen->m_info);
@@ -367,16 +384,18 @@ static bool save(const std::string path, const std::string name, const std::stri
 	file << "requested_3d=" << capture_status->requested_3d << std::endl;
 	file << "interleaved_3d=" << display_data.interleaved_3d << std::endl;
 	file << "do_ratio_cycling=" << display_data.do_ratio_cycling << std::endl;
-	file << "request_low_bw_format=" << capture_status->request_low_bw_format << std::endl;
+	file << "request_low_bw_format_optimize=" << capture_status->device_specific_status.optimize_status.request_low_bw_format << std::endl;
+	file << "request_low_bw_format_old_2ds_optimize=" << capture_status->device_specific_status.optimize_status.request_low_bw_format_old_2ds << std::endl;
 	file << "last_connected_ds=" << display_data.last_connected_ds << std::endl;
-	file << "is_screen_capture_type=" << capture_status->capture_type << std::endl;
-	file << "is_speed_capture=" << capture_status->capture_speed << std::endl;
-	file << "is_battery_percentage=" << capture_status->is_battery_percentage << std::endl;
-	file << "is_ac_adapter_connected=" << capture_status->is_ac_adapter_connected << std::endl;
-	file << "partner_ctr_battery_percentage=" << capture_status->partner_ctr_battery_percentage << std::endl;
-	file << "partner_ctr_ac_adapter_connected=" << capture_status->partner_ctr_ac_adapter_connected << std::endl;
-	file << "partner_ctr_ac_adapter_charging=" << capture_status->partner_ctr_ac_adapter_charging << std::endl;
+	file << "is_screen_capture_type=" << capture_status->device_specific_status.is_status.capture_type << std::endl;
+	file << "is_speed_capture=" << capture_status->device_specific_status.is_status.capture_speed << std::endl;
+	file << "is_battery_percentage=" << capture_status->device_specific_status.is_status.battery_percentage << std::endl;
+	file << "is_ac_adapter_connected=" << capture_status->device_specific_status.is_status.ac_adapter_connected << std::endl;
+	file << "partner_ctr_battery_percentage=" << capture_status->device_specific_status.partner_ctr_status.battery_percentage << std::endl;
+	file << "partner_ctr_ac_adapter_connected=" << capture_status->device_specific_status.partner_ctr_status.ac_adapter_connected << std::endl;
+	file << "partner_ctr_ac_adapter_charging=" << capture_status->device_specific_status.partner_ctr_status.ac_adapter_charging << std::endl;
 	file << "optimize_o3ds_scan_for=" << capture_status->devices_allowed_scan[CC_OPTIMIZE_O3DS] << std::endl;
+	file << "optimize_oo2ds_scan_for=" << capture_status->devices_allowed_scan[CC_OPTIMIZE_O_O2DS] << std::endl;
 	file << "nisetro_ds_scan_for=" << capture_status->devices_allowed_scan[CC_NISETRO_DS] << std::endl;
 	file << audio_data->save_audio_data();
 
@@ -595,7 +614,7 @@ static float get_time_multiplier(CaptureData* capture_data, bool should_ignore_d
 		return 2.0;
 	if(capture_data->status.device.cc_type != CAPTURE_CONN_IS_NITRO)
 		return 1.0;
-	switch(capture_data->status.capture_speed) {
+	switch(capture_data->status.device_specific_status.is_status.capture_speed) {
 		case CAPTURE_SPEEDS_HALF:
 			return 2.0;
 		case CAPTURE_SPEEDS_THIRD:
@@ -612,6 +631,7 @@ static void populate_force_disable_ccs(bool* force_cc_disables, override_all_dat
 		force_cc_disables[i] = false;
 	force_cc_disables[CC_NISETRO_DS] = override_data.force_disable_nisetro_ds;
 	force_cc_disables[CC_OPTIMIZE_O3DS] = override_data.force_disable_optimize_old_3ds;
+	force_cc_disables[CC_OPTIMIZE_O_O2DS] = override_data.force_disable_optimize_old_old_2ds;
 }
 
 static void check_for_first_connection(bool &did_first_connection, std::chrono::time_point<std::chrono::high_resolution_clock> &start_time, CaptureData* capture_data, FrontendData *frontend_data, bool* force_cc_disables, override_all_data &override_data, OutTextData &out_text_data, int &ret_val, std::chrono::time_point<std::chrono::high_resolution_clock> &last_connection_time) {
@@ -904,6 +924,7 @@ static bool create_out_folder() {
 		create_folder(get_base_path(false));
 	create_folder(get_base_path(true));
 	create_folder(get_base_path_keys());
+	create_folder(get_base_path_device_specific_configs());
 	return success;
 }
 
@@ -1019,6 +1040,8 @@ int main(int argc, char **argv) {
 			continue;
 		if(parse_existence_arg(i, argv, override_data.force_disable_optimize_old_3ds, true, "--no_opt_o3ds_cc"))
 			continue;
+		if(parse_existence_arg(i, argv, override_data.force_disable_optimize_old_old_2ds, true, "--no_opt_o2ds_cc"))
+			continue;
 		if(parse_int_arg(i, argc, argv, override_data.loaded_profile, "--profile"))
 			continue;
 		if(parse_existence_arg(i, argv, override_data.auto_save, false, "--no_auto_save"))
@@ -1076,6 +1099,7 @@ int main(int argc, char **argv) {
 		ActualConsoleOutText("  --auto_close      Automatically closes the software on disconnect.");
 		ActualConsoleOutText("  --no_nisetro      Force disables Nisetro DS(i) Capture Card.");
 		ActualConsoleOutText("  --no_opt_o3ds_cc  Force disables Optimize Old 3DS Capture Card.");
+		ActualConsoleOutText("  --no_opt_o2ds_cc  Force disables Optimize Old 2DS 2014 Capture Card.");
 		ActualConsoleOutText("  --profile         Loads the profile with the specified ID at startup");
 		ActualConsoleOutText("                    instead of the default one. When the program closes,");
 		ActualConsoleOutText("                    the data is also saved to the specified profile.");

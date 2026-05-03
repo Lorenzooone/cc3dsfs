@@ -6,10 +6,20 @@
 	#undef EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS
 #endif
 
-#if (defined(USE_CYNI_USB) && defined(USE_CYPRESS_OPTIMIZE))
+#ifdef EXISTENCE_VALUE_CONFLICT_NISE
+	#undef EXISTENCE_VALUE_CONFLICT_NISE
+#endif
+
+#if defined(USE_CYPRESS_OPTIMIZE)
 	#define EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS true
+	#if defined(USE_CYNI_USB)
+		#define EXISTENCE_VALUE_CONFLICT_NISE true
+	#else
+		#define EXISTENCE_VALUE_CONFLICT_NISE false
+	#endif
 #else
 	#define EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS false
+	#define EXISTENCE_VALUE_CONFLICT_NISE false
 #endif
 
 struct USBConflictResolutionMenuOptionInfo {
@@ -25,20 +35,32 @@ struct USBConflictResolutionMenuOptionInfo {
 };
 
 static const USBConflictResolutionMenuOptionInfo warning_nise_opti_conflict_0 = {
+.base_name = "There are three capture cards",
+.false_name = "", .exists = EXISTENCE_VALUE_CONFLICT_NISE, .is_selectable = false,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = USBCONRESO_MENU_NO_ACTION,
+.out_action = USBCONRESO_MENU_NO_ACTION};
+
+static const USBConflictResolutionMenuOptionInfo warning_nise_opti_conflict_0_alt = {
 .base_name = "There are two capture cards",
-.false_name = "", .exists = EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS, .is_selectable = false,
+.false_name = "", .exists = EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS && (!EXISTENCE_VALUE_CONFLICT_NISE), .is_selectable = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = USBCONRESO_MENU_NO_ACTION,
 .out_action = USBCONRESO_MENU_NO_ACTION};
 
 static const USBConflictResolutionMenuOptionInfo warning_nise_opti_conflict_1 = {
-.base_name = "which use the FX2LP board.",
+.base_name = "that use the FX2LP board.",
 .false_name = "", .exists = EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS, .is_selectable = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = USBCONRESO_MENU_NO_ACTION,
 .out_action = USBCONRESO_MENU_NO_ACTION};
 
 static const USBConflictResolutionMenuOptionInfo warning_nise_opti_conflict_2 = {
-.base_name = "You may disable one to make",
-.false_name = "", .exists = EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS, .is_selectable = false,
+.base_name = "You can disable two to make",
+.false_name = "", .exists = EXISTENCE_VALUE_CONFLICT_NISE, .is_selectable = false,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = USBCONRESO_MENU_NO_ACTION,
+.out_action = USBCONRESO_MENU_NO_ACTION};
+
+static const USBConflictResolutionMenuOptionInfo warning_nise_opti_conflict_2_alt = {
+.base_name = "You can disable one to make",
+.false_name = "", .exists = EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS && (!EXISTENCE_VALUE_CONFLICT_NISE), .is_selectable = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = USBCONRESO_MENU_NO_ACTION,
 .out_action = USBCONRESO_MENU_NO_ACTION};
 
@@ -50,23 +72,32 @@ static const USBConflictResolutionMenuOptionInfo warning_nise_opti_conflict_3 = 
 
 static const USBConflictResolutionMenuOptionInfo nisetro_ds_disable_option = {
 .base_name = "Disable Nisetro DS(i)",
-.false_name = "Enable Nisetro DS(i)", .exists = EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS, .is_selectable = true,
+.false_name = "Enable Nisetro DS(i)", .exists = EXISTENCE_VALUE_CONFLICT_NISE, .is_selectable = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = USBCONRESO_MENU_NO_ACTION,
 .out_action = USBCONRESO_MENU_NISE_DS};
 
 static const USBConflictResolutionMenuOptionInfo optimize_o3ds_disable_option = {
-.base_name = "Disable Optimize Old 3DS",
-.false_name = "Enable Optimize Old 3DS", .exists = EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS, .is_selectable = true,
+.base_name = "Disable Opt. O3DS",
+.false_name = "Enable Opt. O3DS", .exists = EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS, .is_selectable = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = USBCONRESO_MENU_NO_ACTION,
 .out_action = USBCONRESO_MENU_OPTI_O3DS};
 
+static const USBConflictResolutionMenuOptionInfo optimize_o2ds_disable_option = {
+.base_name = "Disable Opt. O2DS Late 2014",
+.false_name = "Enable Opt. O2DS Late 2014", .exists = EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS, .is_selectable = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = USBCONRESO_MENU_NO_ACTION,
+.out_action = USBCONRESO_MENU_OPTI_O2DS};
+
 static const USBConflictResolutionMenuOptionInfo* pollable_options[] = {
 &warning_nise_opti_conflict_0,
+&warning_nise_opti_conflict_0_alt,
 &warning_nise_opti_conflict_1,
 &warning_nise_opti_conflict_2,
+&warning_nise_opti_conflict_2_alt,
 &warning_nise_opti_conflict_3,
-&nisetro_ds_disable_option,
 &optimize_o3ds_disable_option,
+&optimize_o2ds_disable_option,
+&nisetro_ds_disable_option,
 };
 
 USBConflictResolutionMenu::USBConflictResolutionMenu(TextRectanglePool* text_rectangle_pool) : OptionSelectionMenu(){
@@ -80,7 +111,7 @@ USBConflictResolutionMenu::~USBConflictResolutionMenu() {
 }
 
 void USBConflictResolutionMenu::class_setup() {
-	this->num_options_per_screen = 5;
+	this->num_options_per_screen = 6;
 	this->min_elements_text_scaling_factor = num_options_per_screen + 2;
 	this->width_factor_menu = 16;
 	this->width_divisor_menu = 9;
@@ -173,6 +204,9 @@ void USBConflictResolutionMenu::prepare(float menu_scaling_factor, int view_size
 				break;
 			case USBCONRESO_MENU_OPTI_O3DS:
 				this->labels[index]->setText(this->setTextOptionBool(real_index, capture_status->devices_allowed_scan[CC_OPTIMIZE_O3DS]));
+				break;
+			case USBCONRESO_MENU_OPTI_O2DS:
+				this->labels[index]->setText(this->setTextOptionBool(real_index, capture_status->devices_allowed_scan[CC_OPTIMIZE_O_O2DS]));
 				break;
 			default:
 				break;

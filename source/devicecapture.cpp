@@ -130,11 +130,11 @@ bool connect(bool print_failed, CaptureData* capture_data, FrontendData* fronten
 	for(size_t i = 0; i < CC_POSSIBLE_DEVICES_END; i++)
 		devices_allowed_scan[i] = capture_data->status.devices_allowed_scan[i] & (!force_cc_disables[i]);
 
-	#ifdef USE_CYNI_USB
-	list_devices_cyni_device(devices_list, no_access_list, devices_allowed_scan);
-	#endif
 	#ifdef USE_CYPRESS_OPTIMIZE
 	list_devices_cyop_device(devices_list, no_access_list, devices_allowed_scan);
+	#endif
+	#ifdef USE_CYNI_USB
+	list_devices_cyni_device(devices_list, no_access_list, devices_allowed_scan);
 	#endif
 	#ifdef USE_FTD3
 	list_devices_ftd3(devices_list, no_access_list, devices_allowed_scan);
@@ -379,7 +379,7 @@ std::string get_device_serial_key_string(CaptureStatus* capture_status) {
 void check_device_serial_key_update(CaptureStatus* capture_status, bool differentiator, std::string key) {
 	if(get_device_serial_key_string(capture_status) != NO_SERIAL_KEY_STR)
 		return;
-	if(capture_status->key_updated)
+	if(capture_status->device_specific_status.optimize_status.key_updated)
 		return;
 
 	switch(capture_status->device.cc_type) {
@@ -388,7 +388,7 @@ void check_device_serial_key_update(CaptureStatus* capture_status, bool differen
 			if(differentiator != is_device_optimize_n3ds(&capture_status->device))
 				break;
 			if(cyop_is_key_for_device_id(&capture_status->device, key))
-				capture_status->key_updated = true;
+				capture_status->device_specific_status.optimize_status.key_updated = true;
 			#endif
 			break;
 		default:
@@ -431,6 +431,11 @@ bool get_device_can_do_3d(CaptureStatus* capture_status) {
 		return false;
 	if(!capture_status->device.is_3ds)
 		return false;
+	#ifdef USE_CYPRESS_OPTIMIZE
+	// O2DS has no 3D, obviously...
+	if((capture_status->device.cc_type == CAPTURE_CONN_CYPRESS_OPTIMIZE) && is_device_optimize_o2ds(&capture_status->device))
+		return false;
+	#endif
 	return capture_status->device.has_3d;
 }
 
@@ -441,6 +446,13 @@ bool get_device_3d_implemented(CaptureStatus* capture_status) {
 		case CAPTURE_CONN_FTD3:
 			return true;
 		case CAPTURE_CONN_CYPRESS_OPTIMIZE:
+			#ifdef USE_CYPRESS_OPTIMIZE
+			// O2DS has no 3D, obviously.
+			// Also, no old_fw that can do 3D...
+			// Keep both checks in case this changes in the future...
+			if(is_device_optimize_old_fw(&capture_status->device) || is_device_optimize_o2ds(&capture_status->device))
+				return false;
+			#endif
 			return true;
 		case CAPTURE_CONN_PARTNER_CTR:
 			return true;
@@ -482,7 +494,7 @@ float get_framerate_multiplier(CaptureStatus* capture_status) {
 		return 1;
 	if(!get_3d_enabled(capture_status))
 		return 1;
-	if(capture_status->request_low_bw_format)
+	if(capture_status->device_specific_status.optimize_status.request_low_bw_format)
 		return 1;
 	return 0.5;
 }
@@ -501,6 +513,20 @@ KeySaveError save_cc_key(std::string key, CaptureConnectionType conn_type, bool 
 	}
 
 	return error;
+}
+
+void sanitize_capture_optimize_old_fw_config_case(CaptureOptimizeOldFirmwareConfigCase* config_case) {
+	config_case->low_screen_clock &= 0xF; // 0..15, already covers going negative
+	config_case->top_screen_clock &= 7; // 0..7, already covers going negative
+	config_case->top_screen_data &= 7; // 0..7, already covers going negative
+	while(config_case->top_screen_sync >= 0x80)
+		config_case->top_screen_sync += 6; // 0..5, cover going negative with this
+	config_case->top_screen_sync %= 6; // Do the regular check
+}
+
+void sanitize_capture_optimize_old_fw_config(CaptureOptimizeOldFirmwareConfig* config) {
+	sanitize_capture_optimize_old_fw_config_case(&config->mode_2d_only);
+	sanitize_capture_optimize_old_fw_config_case(&config->mode_regular);
 }
 
 void capture_init() {

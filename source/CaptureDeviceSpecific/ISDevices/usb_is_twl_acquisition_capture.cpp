@@ -100,8 +100,8 @@ static int process_frame_and_read(CaptureData* capture_data, int internal_index,
 static int CaptureResetHardware(CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_reset) {
 	is_device_device_handlers* handlers = (is_device_device_handlers*)capture_data->handle;
 	const is_device_usb_device* usb_device_desc = (const is_device_usb_device*)capture_data->status.device.descriptor;
-	bool reset_hardware = capture_data->status.reset_hardware;
-	capture_data->status.reset_hardware = false;
+	bool reset_hardware = capture_data->status.device_specific_status.is_status.reset_hardware;
+	capture_data->status.device_specific_status.is_status.reset_hardware = false;
 	int ret = LIBUSB_SUCCESS;
 	if(!reset_hardware)
 		return ret;
@@ -125,8 +125,8 @@ static int CaptureResetHardware(CaptureData* capture_data, std::chrono::time_poi
 static int CaptureBatteryHandleHardware(CaptureData* capture_data, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_battery_set, int &curr_battery_percentage, bool &curr_ac_adapter_connected) {
 	is_device_device_handlers* handlers = (is_device_device_handlers*)capture_data->handle;
 	const is_device_usb_device* usb_device_desc = (const is_device_usb_device*)capture_data->status.device.descriptor;
-	int loaded_battery_percentage = capture_data->status.is_battery_percentage;
-	bool loaded_ac_adapter_connected = capture_data->status.is_ac_adapter_connected;
+	int loaded_battery_percentage = capture_data->status.device_specific_status.is_status.battery_percentage;
+	bool loaded_ac_adapter_connected = capture_data->status.device_specific_status.is_status.ac_adapter_connected;
 
 	const auto curr_time_battery = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff_battery = curr_time_battery - clock_last_battery_set;
@@ -172,10 +172,10 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 	const is_device_usb_device* usb_device_desc = (const is_device_usb_device*)capture_data->status.device.descriptor;
 	bool is_acquisition_off = true;
 	uint32_t last_read_frame_index = 0;
-	CaptureScreensType curr_capture_type = capture_data->status.capture_type;
-	CaptureSpeedsType curr_capture_speed = capture_data->status.capture_speed;
-	int curr_battery_percentage = capture_data->status.is_battery_percentage;
-	bool curr_ac_adapter_connected = capture_data->status.is_ac_adapter_connected;
+	CaptureScreensType curr_capture_type = capture_data->status.device_specific_status.is_status.capture_type;
+	CaptureSpeedsType curr_capture_speed = capture_data->status.device_specific_status.is_status.capture_speed;
+	int curr_battery_percentage = capture_data->status.device_specific_status.is_status.battery_percentage;
+	bool curr_ac_adapter_connected = capture_data->status.device_specific_status.is_status.ac_adapter_connected;
 	bool audio_enabled = true;
 	bool reprocess = false;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_frame = std::chrono::high_resolution_clock::now();
@@ -235,7 +235,7 @@ void is_twl_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCap
 			return;
 		}
 		if(processed) {
-			curr_capture_speed = capture_data->status.capture_speed;
+			curr_capture_speed = capture_data->status.device_specific_status.is_status.capture_speed;
 			ret = SetLastFrameInfo(handlers, video_address, video_length, audio_address, audio_length, usb_device_desc);
 			if(ret < 0) {
 				capture_error_print(true, capture_data, "Frame Info Set: Failed");

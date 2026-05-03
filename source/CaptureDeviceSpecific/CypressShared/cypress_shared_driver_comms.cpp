@@ -504,7 +504,8 @@ void cypress_driver_list_devices(std::vector<CaptureDevice> &devices_list, bool*
 					cypress_insert_device(devices_list, usb_device_desc, read_serial, path);
 				}
 				cypress_driver_end_connection(&handlers);
-				break;
+				// Do not break, as there can be multiple CCs with the same PID and VID
+				//break;
 			}
 		}
 	}

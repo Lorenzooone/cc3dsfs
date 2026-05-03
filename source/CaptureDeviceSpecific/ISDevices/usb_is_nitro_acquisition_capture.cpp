@@ -41,8 +41,8 @@ static int StartAcquisitionCapture(CaptureData* capture_data, ISDeviceCaptureRec
 }
 
 static int LidReopenCaptureCheck(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data, CaptureScreensType &curr_capture_type, CaptureSpeedsType &curr_capture_speed, bool* is_acquisition_off, uint32_t &index) {
-	curr_capture_type = capture_data->status.capture_type;
-	curr_capture_speed = capture_data->status.capture_speed;
+	curr_capture_type = capture_data->status.device_specific_status.is_status.capture_type;
+	curr_capture_speed = capture_data->status.device_specific_status.is_status.capture_speed;
 	int ret = StartAcquisitionCapture(capture_data, is_device_capture_recv_data, curr_capture_type, curr_capture_speed, is_acquisition_off, index);
 	if(ret < 0)
 		return ret;
@@ -54,8 +54,8 @@ static int LidReopenCaptureCheck(CaptureData* capture_data, ISDeviceCaptureRecei
 static int CaptureResetHardware(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data, CaptureScreensType &curr_capture_type, CaptureSpeedsType &curr_capture_speed, bool *is_acquisition_off, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_reset, uint32_t &index) {
 	is_device_device_handlers* handlers = (is_device_device_handlers*)capture_data->handle;
 	const is_device_usb_device* usb_device_desc = (const is_device_usb_device*)capture_data->status.device.descriptor;
-	bool reset_hardware = capture_data->status.reset_hardware;
-	capture_data->status.reset_hardware = false;
+	bool reset_hardware = capture_data->status.device_specific_status.is_status.reset_hardware;
+	capture_data->status.device_specific_status.is_status.reset_hardware = false;
 	int ret = LIBUSB_SUCCESS;
 	if(!reset_hardware)
 		return ret;
@@ -78,8 +78,8 @@ static int CaptureResetHardware(CaptureData* capture_data, ISDeviceCaptureReceiv
 		return ret;
 	if(!(*is_acquisition_off)) {
 		default_sleep(SLEEP_RESET_TIME_MS);
-		curr_capture_type = capture_data->status.capture_type;
-		curr_capture_speed = capture_data->status.capture_speed;
+		curr_capture_type = capture_data->status.device_specific_status.is_status.capture_type;
+		curr_capture_speed = capture_data->status.device_specific_status.is_status.capture_speed;
 		ret = StartAcquisitionCapture(capture_data, is_device_capture_recv_data, curr_capture_type, curr_capture_speed, is_acquisition_off, index);
 	}
 	if(ret < 0)
@@ -104,8 +104,8 @@ int EndAcquisitionCapture(const is_device_usb_device* usb_device_desc, is_device
 void is_nitro_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceCaptureReceivedData* is_device_capture_recv_data) {
 	bool is_acquisition_off = true;
 	uint32_t index = 0;
-	CaptureScreensType curr_capture_type = capture_data->status.capture_type;
-	CaptureSpeedsType curr_capture_speed = capture_data->status.capture_speed;
+	CaptureScreensType curr_capture_type = capture_data->status.device_specific_status.is_status.capture_type;
+	CaptureSpeedsType curr_capture_speed = capture_data->status.device_specific_status.is_status.capture_speed;
 	int ret = StartAcquisitionCapture(capture_data, is_device_capture_recv_data, curr_capture_type, curr_capture_speed, &is_acquisition_off, index);
 	if(ret < 0) {
 		capture_error_print(true, capture_data, "Capture Start: Failed");
@@ -142,14 +142,14 @@ void is_nitro_acquisition_capture_main_loop(CaptureData* capture_data, ISDeviceC
 		}
 		is_device_read_frame_request(capture_data, is_device_get_free_buffer(capture_data, is_device_capture_recv_data), curr_capture_type, index++);
 
-		if((curr_capture_type != capture_data->status.capture_type) || (curr_capture_speed != capture_data->status.capture_speed)) {
+		if((curr_capture_type != capture_data->status.device_specific_status.is_status.capture_type) || (curr_capture_speed != capture_data->status.device_specific_status.is_status.capture_speed)) {
 			ret = EndAcquisition(capture_data, is_device_capture_recv_data, true, 0, curr_capture_type);
 			if(ret < 0) {
 				capture_error_print(true, capture_data, "Capture End: Failed");
 				return;
 			}
-			curr_capture_type = capture_data->status.capture_type;
-			curr_capture_speed = capture_data->status.capture_speed;
+			curr_capture_type = capture_data->status.device_specific_status.is_status.capture_type;
+			curr_capture_speed = capture_data->status.device_specific_status.is_status.capture_speed;
 			ret = StartAcquisitionCapture(capture_data, is_device_capture_recv_data, curr_capture_type, curr_capture_speed, &is_acquisition_off, index);
 			if(ret < 0) {
 				capture_error_print(true, capture_data, "Capture Restart: Failed");

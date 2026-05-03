@@ -26,6 +26,8 @@
 // No reverse engineering of the original software was done to create this.
 
 #define SYNCH_VALUE_OPTIMIZE 0xCC33
+#define SYNCH_VALUE_OPTIMIZE_OLD_FW_565 0xF800
+#define SYNCH_VALUE_OPTIMIZE_OLD_FW_888 0xFF00
 
 #define TOTAL_WANTED_CONCURRENTLY_RUNNING_BUFFER_SIZE 0x100000
 #define SINGLE_RING_BUFFER_SLICE_SIZE 0x4000
@@ -37,6 +39,7 @@
 
 #define MAX_TIME_WAIT 1.0
 #define CAPTURE_START_AGAIN_NO_KEY_TIME 260.0
+#define CAPTURE_START_FAILING_TIME_SINCE_LAST_PARAM_EDIT 180.0
 
 #define OPTIMIZE_3DS_CYPRESS_USB_WINDOWS_DRIVER CYPRESS_WINDOWS_OPTIMIZE_USB_DRIVER
 
@@ -72,6 +75,8 @@ static int get_cypress_device_status(CypressOptimize3DSDeviceCaptureReceivedData
 static void error_cypress_device_status(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, int error_val);
 static std::string read_key_for_device_id_from_file(uint64_t device_id, bool is_new_device);
 static void add_key_for_device_id_to_file(uint64_t device_id, std::string key, bool is_new_device);
+static void read_old_firmware_config_from_file(uint64_t device_id, CaptureOptimizeOldFirmwareConfig* out_full, CaptureOptimizeOldFirmwareConfig* out_limited);
+static void write_old_firmware_config_to_file(uint64_t device_id, CaptureOptimizeOldFirmwareConfig* to_save_full, CaptureOptimizeOldFirmwareConfig* to_save_limited);
 
 static cy_device_device_handlers* usb_find_by_serial_number(const cyop_device_usb_device* usb_device_desc, std::string wanted_serial_number, CaptureDevice* new_device) {
 	cy_device_device_handlers* final_handlers = NULL;
@@ -220,8 +225,13 @@ bool cyop_device_connect_usb(bool print_failed, CaptureData* capture_data, Captu
 	return true;
 }
 
-uint64_t cyop_device_get_video_in_size(bool is_3d, bool should_be_3d, InputVideoDataType video_data_type) {
+uint64_t cyop_device_get_video_in_size(const cyop_device_usb_device* usb_device_info, bool is_3d, bool should_be_3d, InputVideoDataType video_data_type) {
 	bool is_rgb888 = video_data_type == OPTIMIZE_RGB888_FORMAT;
+	if(usb_device_info->is_old_firmware) {
+		if(is_rgb888)
+			return sizeof(USB8883DSOptimizeOldFirmwareCaptureReceived);
+		return sizeof(USB5653DSOptimizeOldFirmwareCaptureReceived);
+	}
 	if(is_rgb888) {
 		if(should_be_3d) {
 			if(is_3d)
@@ -235,8 +245,13 @@ uint64_t cyop_device_get_video_in_size(bool is_3d, bool should_be_3d, InputVideo
 	return sizeof(USB5653DSOptimizeCaptureReceived);
 }
 
-uint64_t cyop_device_get_video_in_size_extra_header(bool is_3d, bool should_be_3d, InputVideoDataType video_data_type) {
+uint64_t cyop_device_get_video_in_size_extra_header(const cyop_device_usb_device* usb_device_info, bool is_3d, bool should_be_3d, InputVideoDataType video_data_type) {
 	bool is_rgb888 = video_data_type == OPTIMIZE_RGB888_FORMAT;
+	if(usb_device_info->is_old_firmware) {
+		if(is_rgb888)
+			return sizeof(USB8883DSOptimizeOldFirmwareCaptureReceived);
+		return sizeof(USB5653DSOptimizeOldFirmwareCaptureReceived);
+	}
 	if(is_rgb888) {
 		if(should_be_3d) {
 			if(is_3d)
@@ -252,7 +267,7 @@ uint64_t cyop_device_get_video_in_size_extra_header(bool is_3d, bool should_be_3
 
 
 uint64_t cyop_device_get_video_in_size(CaptureStatus* status, bool is_3d, bool should_be_3d, InputVideoDataType video_data_type) {
-	return cyop_device_get_video_in_size(is_3d, should_be_3d, video_data_type);
+	return cyop_device_get_video_in_size((const cyop_device_usb_device*)status->device.descriptor, is_3d, should_be_3d, video_data_type);
 }
 
 
@@ -281,12 +296,25 @@ bool is_device_optimize_o3ds(CaptureDevice* device) {
 	return does_device_match_type(device, CYPRESS_OPTIMIZE_OLD_3DS_INSTANTIATED_DEVICE);
 }
 
+bool is_device_optimize_o2ds(CaptureDevice* device) {
+	const cyop_device_usb_device* usb_device_info = (const cyop_device_usb_device*)device->descriptor;
+	return usb_device_info->is_o2ds;
+}
+
+bool is_device_optimize_old_fw(CaptureDevice* device) {
+	const cyop_device_usb_device* usb_device_info = (const cyop_device_usb_device*)device->descriptor;
+	return usb_device_info->is_old_firmware;
+}
+
 bool is_device_optimize_n3ds(CaptureDevice* device) {
 	return does_device_match_type(device, CYPRESS_OPTIMIZE_NEW_3DS_INSTANTIATED_DEVICE);
 }
 
 static InputVideoDataType extract_wanted_input_video_data_type(CaptureStatus* capture_status) {
-	return capture_status->request_low_bw_format ? OPTIMIZE_RGB565_FORMAT : OPTIMIZE_RGB888_FORMAT;
+	const cyop_device_usb_device* usb_device_info = (const cyop_device_usb_device*)capture_status->device.descriptor;
+	if(usb_device_info->is_o2ds)
+		return capture_status->device_specific_status.optimize_status.request_low_bw_format_old_2ds ? OPTIMIZE_RGB565_FORMAT : OPTIMIZE_RGB888_FORMAT;
+	return capture_status->device_specific_status.optimize_status.request_low_bw_format ? OPTIMIZE_RGB565_FORMAT : OPTIMIZE_RGB888_FORMAT;
 }
 
 static InputVideoDataType extract_wanted_input_video_data_type(CaptureData* capture_data) {
@@ -299,6 +327,12 @@ static bool key_missing_capture_start_again_check_time(const std::chrono::time_p
 	return diff.count() > CAPTURE_START_AGAIN_NO_KEY_TIME;
 }
 
+static bool param_change_capture_allow_issues_time(const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time) {
+	const auto curr_time = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> diff = curr_time - start_time;
+	return diff.count() <= CAPTURE_START_FAILING_TIME_SINCE_LAST_PARAM_EDIT;
+}
+
 static int cypress_device_read_frame_request(CaptureData* capture_data, CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, uint32_t index, bool is_3d, InputVideoDataType video_data_type) {
 	if(cypress_device_capture_recv_data == NULL)
 		return LIBUSB_SUCCESS;
@@ -307,7 +341,7 @@ static int cypress_device_read_frame_request(CaptureData* capture_data, CypressO
 	const cyop_device_usb_device* usb_device_info = (const cyop_device_usb_device*)capture_data->status.device.descriptor;
 	cypress_device_capture_recv_data->index = index;
 	cypress_device_capture_recv_data->cb_data.function = cypress_device_read_frame_cb;
-	//size_t read_size = cyop_device_get_video_in_size(is_3d, is_3d, video_data_type);
+	//size_t read_size = cyop_device_get_video_in_size(usb_device_info, is_3d, is_3d, video_data_type);
 	size_t read_size = SINGLE_RING_BUFFER_SLICE_SIZE;
 	int new_buffer_slice_index = ((*cypress_device_capture_recv_data->last_ring_buffer_slice_allocated) + 1) % NUM_TOTAL_OPTIMIZE_3DS_CYPRESS_BUFFERS;
 	uint8_t* buffer = &cypress_device_capture_recv_data->ring_slice_buffer_arr[new_buffer_slice_index * SINGLE_RING_BUFFER_SLICE_SIZE];
@@ -364,104 +398,174 @@ static USB3DSOptimizeColumnInfo convert_to_column_info(uint16_t value) {
 	return column_info;
 }
 
-static bool get_expect_extra_header_in_buffer(uint16_t value) {
+static USB3DSOptimizeOldFirmwareColumnInfo convert_to_column_info_old_fw(uint16_t value) {
+	// The macos compiler requires this... :/
+	USB3DSOptimizeOldFirmwareColumnInfo column_info;
+	column_info.is_first_column = (value >> 15) & 1;
+	column_info.extra_column_data = (value >> 13) & 3;
+	column_info.column_index = (value >> 4) & 0x1FF;
+	column_info.fixed = value & 0x0F;
+	return column_info;
+}
+
+static bool get_expect_extra_header_in_buffer(const cyop_device_usb_device* usb_device_desc, uint16_t value) {
+	if(usb_device_desc->is_old_firmware)
+		return false;
 	return convert_to_column_info(value).has_extra_header_data_2d_only;
 }
 
-static bool get_is_data_2d_only(uint16_t value) {
+static bool get_is_data_2d_only(const cyop_device_usb_device* usb_device_desc, uint16_t value) {
+	if(usb_device_desc->is_o2ds)
+		return true;
 	return convert_to_column_info(value).has_extra_header_data_2d_only;
 }
 
-static bool get_is_pos_column_synch_in_buffer(uint8_t* buffer, size_t pos_to_check, uint16_t column_index) {
+static bool is_old_fw_column_magic_valid(USB3DSOptimizeOldFirmwareColumnInfo old_fw_column_info, uint16_t magic, uint16_t expected_magic_value) {
+	if(old_fw_column_info.fixed != 5)
+		return false;
+	if((old_fw_column_info.column_index == 1) && (magic != 0))
+		return false;
+	if((old_fw_column_info.column_index != 1) && (magic != expected_magic_value))
+		return false;
+	if((old_fw_column_info.column_index == 0) && (old_fw_column_info.is_first_column == 0))
+		return false;
+	if((old_fw_column_info.column_index != 0) && (old_fw_column_info.is_first_column != 0))
+		return false;
+	return true;
+}
+
+static bool get_is_pos_column_synch_in_buffer(const cyop_device_usb_device* usb_device_desc, bool is_rgb888, uint8_t* buffer, size_t pos_to_check, uint16_t column_index) {
+	if(usb_device_desc->is_old_firmware) {
+		USB3DSOptimizeOldFirmwareColumnInfo old_fw_column_info = convert_to_column_info_old_fw(read_le16(buffer + pos_to_check + 8));
+		uint16_t magic = read_le16(buffer + pos_to_check);
+		if(is_rgb888) {
+			magic ^= 0xA5A5; // For some reason, all bytes are xorred with 0xA5 for Old FW RGB888...
+			old_fw_column_info = convert_to_column_info_old_fw(read_le16(buffer + pos_to_check + 2) ^ 0xA5A5);
+			// extra_column_data is 1 for rgb888 on 2ds...? Would make sense, as it is 2d only...
+			if(!is_old_fw_column_magic_valid(old_fw_column_info, magic, SYNCH_VALUE_OPTIMIZE_OLD_FW_888))
+				return false;
+			return old_fw_column_info.column_index == column_index;
+		}
+		// extra_column_data is 0 for rgb565...?
+		if(!is_old_fw_column_magic_valid(old_fw_column_info, magic, SYNCH_VALUE_OPTIMIZE_OLD_FW_565))
+			return false;
+		return old_fw_column_info.column_index == column_index;
+	}
 	if(read_le16(buffer + pos_to_check) != SYNCH_VALUE_OPTIMIZE)
 		return false;
 	return convert_to_column_info(read_le16(buffer + pos_to_check + 2)).column_index == column_index;
 }
 
-static bool get_is_pos_column_synch_in_buffer(USB3DSOptimizeHeaderSoundData* in_ptr, uint16_t column_index) {
-	return get_is_pos_column_synch_in_buffer((uint8_t*)&in_ptr->header_info, 0, column_index);
+static bool get_is_pos_column_synch_in_buffer(const cyop_device_usb_device* usb_device_desc, bool is_rgb888, uint8_t* buffer, uint16_t column_index) {
+	return get_is_pos_column_synch_in_buffer(usb_device_desc, is_rgb888, buffer, 0, column_index);
 }
 
-static bool get_is_pos_first_synch_in_buffer(uint8_t* buffer, size_t pos_to_check) {
-	return get_is_pos_column_synch_in_buffer(buffer, pos_to_check, 0);
+static bool get_is_pos_first_synch_in_buffer(const cyop_device_usb_device* usb_device_desc, bool is_rgb888, uint8_t* buffer, size_t pos_to_check) {
+	return get_is_pos_column_synch_in_buffer(usb_device_desc, is_rgb888, buffer, pos_to_check, 0);
 }
 
-static bool get_is_buffer_rgb565_fully_synced(CaptureReceived* buffer) {
+static bool get_is_pos_first_synch_in_buffer(const cyop_device_usb_device* usb_device_desc, InputVideoDataType video_data_type, uint8_t* buffer, size_t pos_to_check) {
+	return get_is_pos_first_synch_in_buffer(usb_device_desc, video_data_type == OPTIMIZE_RGB888_FORMAT, buffer, pos_to_check);
+}
+
+static bool get_is_buffer_rgb565_fully_synced(const cyop_device_usb_device* usb_device_desc, CaptureReceived* buffer) {
 	USB5653DSOptimizeCaptureReceived* real_buffer = &buffer->cypress_optimize_received_565;
 	USB5653DSOptimizeCaptureReceivedExtraHeader* real_buffer_special = &buffer->cypress_optimize_received_565_extra_header;
-	bool is_special = get_expect_extra_header_in_buffer(read_le16((uint8_t*)&real_buffer->columns_data[0].header_sound.header_info.column_info));
+	bool is_special = get_expect_extra_header_in_buffer(usb_device_desc, read_le16((uint8_t*)&real_buffer->columns_data[0].header_sound.header_info.column_info));
 	for(int i = 0; i < TOP_WIDTH_3DS; i++)
-		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i].header_sound, i))
+		if(!get_is_pos_column_synch_in_buffer(usb_device_desc, false, (uint8_t*)&real_buffer->columns_data[i].header_sound, i))
 			return false;
-	if(is_special && (!get_is_pos_column_synch_in_buffer(&real_buffer_special->columns_data[TOP_WIDTH_3DS].header_sound, TOP_WIDTH_3DS)))
+	if(is_special && (!get_is_pos_column_synch_in_buffer(usb_device_desc, false, (uint8_t*)&real_buffer_special->columns_data[TOP_WIDTH_3DS].header_sound, TOP_WIDTH_3DS)))
 		return false;
 	return true;
 }
 
-static bool get_is_buffer_rgb565_3d_fully_synced(CaptureReceived* buffer) {
+static bool get_is_buffer_rgb565_3d_fully_synced(const cyop_device_usb_device* usb_device_desc, CaptureReceived* buffer) {
 	USB5653DSOptimizeCaptureReceived_3D* real_buffer = &buffer->cypress_optimize_received_565_3d;
 	for(int i = 0; i < TOP_WIDTH_3DS; i++) {
-		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i].top_r_screen_column.header_sound, i * 2))
+		if(!get_is_pos_column_synch_in_buffer(usb_device_desc, false, (uint8_t*)&real_buffer->columns_data[i].top_r_screen_column.header_sound, i * 2))
 			return false;
-		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i].bot_top_l_screens_column.header_sound, (i * 2) + 1))
+		if(!get_is_pos_column_synch_in_buffer(usb_device_desc, false, (uint8_t*)&real_buffer->columns_data[i].bot_top_l_screens_column.header_sound, (i * 2) + 1))
 			return false;
 	}
-	if(!get_is_pos_column_synch_in_buffer(&real_buffer->bottom_only_column.header_sound, TOP_WIDTH_3DS * 2))
+	if(!get_is_pos_column_synch_in_buffer(usb_device_desc, false, (uint8_t*)&real_buffer->bottom_only_column.header_sound, TOP_WIDTH_3DS * 2))
 			return false;
 	return true;
 }
 
-static bool get_is_buffer_rgb888_fully_synced(CaptureReceived* buffer) {
+static bool get_is_buffer_rgb565_old_firmware_fully_synced(const cyop_device_usb_device* usb_device_desc, CaptureReceived* buffer) {
+	USB5653DSOptimizeOldFirmwareCaptureReceived* real_buffer = &buffer->cypress_optimize_old_firmware_received_565;
+	for(int i = 0; i < TOP_WIDTH_3DS + 1; i++)
+		if(!get_is_pos_column_synch_in_buffer(usb_device_desc, false, (uint8_t*)&real_buffer->columns_data[i].header, i)) {
+			return false;
+		}
+	return true;
+}
+
+static bool get_is_buffer_rgb888_fully_synced(const cyop_device_usb_device* usb_device_desc, CaptureReceived* buffer) {
 	USB8883DSOptimizeCaptureReceived* real_buffer = &buffer->cypress_optimize_received_888;
 	USB8883DSOptimizeCaptureReceivedExtraHeader* real_buffer_special = &buffer->cypress_optimize_received_888_extra_header;
-	bool is_special = get_expect_extra_header_in_buffer(read_le16((uint8_t*)&real_buffer->columns_data[0].header_sound.header_info.column_info));
+	bool is_special = get_expect_extra_header_in_buffer(usb_device_desc, read_le16((uint8_t*)&real_buffer->columns_data[0].header_sound.header_info.column_info));
 	for(int i = 0; i < TOP_WIDTH_3DS; i++)
-		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i].header_sound, i))
+		if(!get_is_pos_column_synch_in_buffer(usb_device_desc, true, (uint8_t*)&real_buffer->columns_data[i].header_sound, i))
 			return false;
-	if(is_special && (!get_is_pos_column_synch_in_buffer(&real_buffer_special->columns_data[TOP_WIDTH_3DS].header_sound, TOP_WIDTH_3DS)))
+	if(is_special && (!get_is_pos_column_synch_in_buffer(usb_device_desc, true, (uint8_t*)&real_buffer_special->columns_data[TOP_WIDTH_3DS].header_sound, TOP_WIDTH_3DS)))
 		return false;
 	return true;
 }
 
-static bool get_is_buffer_rgb888_3d_fully_synced(CaptureReceived* buffer) {
+static bool get_is_buffer_rgb888_3d_fully_synced(const cyop_device_usb_device* usb_device_desc, CaptureReceived* buffer) {
 	USB8883DSOptimizeCaptureReceived_3D* real_buffer = &buffer->cypress_optimize_received_888_3d;
 	for(int i = 0; i < TOP_WIDTH_3DS; i++) {
-		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i][0].header_sound, i * 2))
+		if(!get_is_pos_column_synch_in_buffer(usb_device_desc, true, (uint8_t*)&real_buffer->columns_data[i][0].header_sound, i * 2))
 			return false;
-		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i][1].header_sound, (i * 2) + 1))
+		if(!get_is_pos_column_synch_in_buffer(usb_device_desc, true, (uint8_t*)&real_buffer->columns_data[i][1].header_sound, (i * 2) + 1))
 			return false;
 	}
-	if(!get_is_pos_column_synch_in_buffer(&real_buffer->bottom_only_column.header_sound, TOP_WIDTH_3DS * 2))
+	if(!get_is_pos_column_synch_in_buffer(usb_device_desc, true, (uint8_t*)&real_buffer->bottom_only_column.header_sound, TOP_WIDTH_3DS * 2))
 		return false;
 	return true;
 }
 
-static bool get_is_buffer_rgb888_3d_2d_fully_synced(CaptureReceived* buffer) {
+static bool get_is_buffer_rgb888_3d_2d_fully_synced(const cyop_device_usb_device* usb_device_desc, CaptureReceived* buffer) {
 	USB8883DSOptimizeCaptureReceived_3D_Forced2DSingleScreen* real_buffer = &buffer->cypress_optimize_received_888_3d_2d;
 	for(int i = 0; i < (TOP_WIDTH_3DS + 1); i++) {
-		if(!get_is_pos_column_synch_in_buffer(&real_buffer->columns_data[i].header_sound, i))
+		if(!get_is_pos_column_synch_in_buffer(usb_device_desc, true, (uint8_t*)&real_buffer->columns_data[i].header_sound, i))
 			return false;
 	}
 	return true;
 }
 
-static bool get_is_buffer_fully_synched(CaptureReceived* buffer, bool is_3d, bool should_be_3d, InputVideoDataType video_data_type) {
-	bool is_rgb888 = video_data_type == OPTIMIZE_RGB888_FORMAT;
-	if(!is_rgb888) {
-		if(!is_3d)
-			return get_is_buffer_rgb565_fully_synced(buffer);
-		return get_is_buffer_rgb565_3d_fully_synced(buffer);
-	}
-	if(is_3d)
-		return get_is_buffer_rgb888_3d_fully_synced(buffer);
-	if(should_be_3d)
-		return get_is_buffer_rgb888_3d_2d_fully_synced(buffer);
-	return get_is_buffer_rgb888_fully_synced(buffer);
+static bool get_is_buffer_rgb888_old_firmware_fully_synced(const cyop_device_usb_device* usb_device_desc, CaptureReceived* buffer) {
+	USB8883DSOptimizeOldFirmwareCaptureReceived* real_buffer = &buffer->cypress_optimize_old_firmware_received_888;
+	for(int i = 0; i < TOP_WIDTH_3DS + 1; i++)
+		if(!get_is_pos_column_synch_in_buffer(usb_device_desc, true, (uint8_t*)&real_buffer->columns_data[i].header_sound, i))
+			return false;
+	return true;
 }
 
-static size_t get_pos_first_synch_in_buffer(uint8_t* buffer, size_t start_pos) {
+static bool get_is_buffer_fully_synched(const cyop_device_usb_device* usb_device_desc, CaptureReceived* buffer, bool is_3d, bool should_be_3d, InputVideoDataType video_data_type) {
+	bool is_rgb888 = video_data_type == OPTIMIZE_RGB888_FORMAT;
+	if(usb_device_desc->is_old_firmware) {
+		if(is_rgb888)
+			return get_is_buffer_rgb888_old_firmware_fully_synced(usb_device_desc, buffer);
+		return get_is_buffer_rgb565_old_firmware_fully_synced(usb_device_desc, buffer);
+	}
+	if(!is_rgb888) {
+		if(!is_3d)
+			return get_is_buffer_rgb565_fully_synced(usb_device_desc, buffer);
+		return get_is_buffer_rgb565_3d_fully_synced(usb_device_desc, buffer);
+	}
+	if(is_3d)
+		return get_is_buffer_rgb888_3d_fully_synced(usb_device_desc, buffer);
+	if(should_be_3d)
+		return get_is_buffer_rgb888_3d_2d_fully_synced(usb_device_desc, buffer);
+	return get_is_buffer_rgb888_fully_synced(usb_device_desc, buffer);
+}
+
+static size_t get_pos_first_synch_in_buffer(const cyop_device_usb_device* usb_device_desc, InputVideoDataType video_data_type, uint8_t* buffer, size_t start_pos) {
 	for(size_t i = (start_pos / 2); i < (SINGLE_RING_BUFFER_SLICE_SIZE / 2); i++) {
-		if(get_is_pos_first_synch_in_buffer(buffer, i * 2))
+		if(get_is_pos_first_synch_in_buffer(usb_device_desc, video_data_type, buffer, i * 2))
 			return i * 2;
 	}
 	return SINGLE_RING_BUFFER_SLICE_SIZE + 1;
@@ -494,14 +598,27 @@ static void copy_slice_data_to_buffer(uint8_t* dst, uint8_t *src, size_t start_s
 	}
 }
 
+static void process_data_buffer(const cyop_device_usb_device* usb_device_desc, InputVideoDataType video_data_type, uint64_t* data, size_t size) {
+	if(!usb_device_desc->is_old_firmware)
+		return;
+	bool is_rgb888 = video_data_type == OPTIMIZE_RGB888_FORMAT;
+	if(!is_rgb888)
+		return;
+	// Annoying, but needed to simplify code elsewhere...
+	for(size_t i = 0; i < (size / sizeof(uint64_t)); i++)
+		data[i] ^= 0xA5A5A5A5A5A5A5A5;
+}
+
 static void cypress_output_to_thread(CaptureData* capture_data, uint8_t *buffer_arr, size_t start_slice_index, size_t start_slice_pos, int internal_index, std::chrono::time_point<std::chrono::high_resolution_clock>* clock_start, size_t read_size, bool is_3d, bool should_be_3d, InputVideoDataType video_data_type) {
 	// Output to the other threads...
+	const cyop_device_usb_device* usb_device_desc = (const cyop_device_usb_device*)capture_data->status.device.descriptor;
 	CaptureDataSingleBuffer* data_buf = capture_data->data_buffers.GetWriterBuffer(internal_index);
 	copy_slice_data_to_buffer((uint8_t*)&data_buf->capture_buf, buffer_arr, start_slice_index, start_slice_pos, read_size);
-	if(!get_is_buffer_fully_synched(&data_buf->capture_buf, is_3d, should_be_3d, video_data_type)) {
+	if(!get_is_buffer_fully_synched(usb_device_desc, &data_buf->capture_buf, is_3d, should_be_3d, video_data_type)) {
 		capture_data->data_buffers.ReleaseWriterBuffer(internal_index, false);
 		return;
 	}
+	process_data_buffer(usb_device_desc, video_data_type, (uint64_t*)&data_buf->capture_buf, read_size);
 	const auto curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - (*clock_start);
 	*clock_start = curr_time;
@@ -513,6 +630,8 @@ static void cypress_output_to_thread(CaptureData* capture_data, uint8_t *buffer_
 }
 
 static bool cypress_device_read_frame_not_synchronized(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, int &error) {
+	const cyop_device_usb_device* usb_device_desc = (const cyop_device_usb_device*)cypress_device_capture_recv_data->capture_data->status.device.descriptor;
+	InputVideoDataType video_data_type = *cypress_device_capture_recv_data->stored_video_data_type;
 	volatile int first_slice_to_check = *cypress_device_capture_recv_data->first_usable_ring_buffer_slice_index;
 	volatile int original_first_slice_to_check = first_slice_to_check;
 	volatile int first_slice_pos_to_check = (int)*cypress_device_capture_recv_data->last_used_ring_buffer_slice_pos;
@@ -541,7 +660,7 @@ static bool cypress_device_read_frame_not_synchronized(CypressOptimize3DSDeviceC
 			// Increase by two to prevent looping...
 			if(check_index == original_first_slice_to_check)
 				start_result = first_slice_pos_to_check + 2;
-			size_t result = get_pos_first_synch_in_buffer(&cypress_device_capture_recv_data->ring_slice_buffer_arr[check_index * SINGLE_RING_BUFFER_SLICE_SIZE], start_result);
+			size_t result = get_pos_first_synch_in_buffer(usb_device_desc, video_data_type, &cypress_device_capture_recv_data->ring_slice_buffer_arr[check_index * SINGLE_RING_BUFFER_SLICE_SIZE], start_result);
 			if(result >= SINGLE_RING_BUFFER_SLICE_SIZE) {
 				unlock_buffer_slice_index(cypress_device_capture_recv_data, check_index, true);
 			}
@@ -558,28 +677,41 @@ static bool cypress_device_read_frame_not_synchronized(CypressOptimize3DSDeviceC
 	return true;
 }
 
+static size_t get_header_size_optimize_packet(const cyop_device_usb_device* usb_device_desc, InputVideoDataType video_data_type) {
+	if(!usb_device_desc->is_old_firmware)
+		return sizeof(USB3DSOptimizeHeaderData);
+	bool is_rgb888 = video_data_type == OPTIMIZE_RGB888_FORMAT;
+	if(is_rgb888)
+		return sizeof(USB8883DSOptimizeOldFirmwareHeaderData);
+	return sizeof(USB5653DSOptimizeOldFirmwareHeaderData);
+}
+
 static void cypress_device_read_frame_synchronized(CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data) {
+	const cyop_device_usb_device* usb_device_desc = (const cyop_device_usb_device*)cypress_device_capture_recv_data->capture_data->status.device.descriptor;
 	volatile int read_slice_index = *cypress_device_capture_recv_data->first_usable_ring_buffer_slice_index;
 	volatile size_t read_slice_pos = *cypress_device_capture_recv_data->last_used_ring_buffer_slice_pos;
 	int num_consecutive_ready_buffers = get_num_consecutive_ready_ring_buffer_slices(cypress_device_capture_recv_data, read_slice_index);
 	bool should_be_3d_data = *cypress_device_capture_recv_data->stored_is_3d;
+	if(usb_device_desc->is_o2ds)
+		should_be_3d_data = false;
 	bool is_3d_data = should_be_3d_data;
 	InputVideoDataType video_data_type = *cypress_device_capture_recv_data->stored_video_data_type;
-	size_t video_in_size = (size_t)cyop_device_get_video_in_size(is_3d_data, should_be_3d_data, video_data_type);
+	size_t video_in_size = (size_t)cyop_device_get_video_in_size(usb_device_desc, is_3d_data, should_be_3d_data, video_data_type);
 	size_t curr_consecutive_available_bytes = (num_consecutive_ready_buffers * SINGLE_RING_BUFFER_SLICE_SIZE) - read_slice_pos;
-	if(curr_consecutive_available_bytes >= sizeof(USB3DSOptimizeHeaderData)) {
-		uint8_t tmp_buffer[sizeof(USB3DSOptimizeHeaderData)];
-		copy_slice_data_to_buffer(tmp_buffer, cypress_device_capture_recv_data->ring_slice_buffer_arr, read_slice_index, read_slice_pos, sizeof(USB3DSOptimizeHeaderData));
-		if(!get_is_pos_first_synch_in_buffer(tmp_buffer, 0)) {
+	size_t header_packet_size = get_header_size_optimize_packet(usb_device_desc, video_data_type);
+	if(curr_consecutive_available_bytes >= header_packet_size) {
+		uint8_t tmp_buffer[sizeof(USB5653DSOptimizeOldFirmwareHeaderData)];
+		copy_slice_data_to_buffer(tmp_buffer, cypress_device_capture_recv_data->ring_slice_buffer_arr, read_slice_index, read_slice_pos, header_packet_size);
+		if(!get_is_pos_first_synch_in_buffer(usb_device_desc, video_data_type, tmp_buffer, 0)) {
 			*cypress_device_capture_recv_data->is_synchronized = false;
 			return;
 		}
 		else {
-			if(get_expect_extra_header_in_buffer(read_le16(tmp_buffer, 1)))
-				video_in_size = (size_t)cyop_device_get_video_in_size_extra_header(is_3d_data, should_be_3d_data, video_data_type);
-			if(get_is_data_2d_only(read_le16(tmp_buffer, 1))) {
+			if(get_expect_extra_header_in_buffer(usb_device_desc, read_le16(tmp_buffer, 1)))
+				video_in_size = (size_t)cyop_device_get_video_in_size_extra_header(usb_device_desc, is_3d_data, should_be_3d_data, video_data_type);
+			if(get_is_data_2d_only(usb_device_desc, read_le16(tmp_buffer, 1))) {
 				is_3d_data = false;
-				video_in_size = (size_t)cyop_device_get_video_in_size_extra_header(is_3d_data, should_be_3d_data, video_data_type);
+				video_in_size = (size_t)cyop_device_get_video_in_size_extra_header(usb_device_desc, is_3d_data, should_be_3d_data, video_data_type);
 			}
 		}
 	}
@@ -791,7 +923,26 @@ static void reset_buffer_processing_data(CypressOptimize3DSDeviceCaptureReceived
 	}
 }
 
-static int restart_captures_cc_reads(CaptureData* capture_data, CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, uint32_t &index, InputVideoDataType &stored_video_data_type, bool &stored_is_3d, bool could_use_3d, bool force_capture_start, std::string read_key, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_capture_start) {
+static bool are_old_fw_config_cases_different(CaptureOptimizeOldFirmwareConfigCase &first, CaptureOptimizeOldFirmwareConfigCase &second) {
+	return (first.low_screen_clock != second.low_screen_clock) || (first.top_screen_clock != second.top_screen_clock) || (first.top_screen_data != second.top_screen_data) || (first.top_screen_sync != second.top_screen_sync);
+}
+
+static bool are_old_fw_configs_different(CaptureOptimizeOldFirmwareConfig &first, CaptureOptimizeOldFirmwareConfig &second) {
+	return are_old_fw_config_cases_different(first.mode_2d_only, second.mode_2d_only) || are_old_fw_config_cases_different(first.mode_regular, second.mode_regular);
+}
+
+static bool are_there_changes_present_to_old_fw_config(CaptureData* capture_data, InputVideoDataType &stored_video_data_type, CaptureOptimizeOldFirmwareConfig &stored_old_fw_cfg_full, CaptureOptimizeOldFirmwareConfig &stored_old_fw_cfg_limited) {
+	const cyop_device_usb_device* usb_device_desc = (const cyop_device_usb_device*)capture_data->status.device.descriptor;
+	if(!usb_device_desc->is_old_firmware)
+		return false;
+
+	if(stored_video_data_type == OPTIMIZE_RGB888_FORMAT)
+		return are_old_fw_configs_different(capture_data->status.device_specific_status.optimize_status.old_fw_config_full_bw_format, stored_old_fw_cfg_full);
+
+	return are_old_fw_configs_different(capture_data->status.device_specific_status.optimize_status.old_fw_config_low_bw_format, stored_old_fw_cfg_limited);
+}
+
+static int restart_captures_cc_reads(CaptureData* capture_data, CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, uint64_t device_id, uint32_t &index, InputVideoDataType &stored_video_data_type, bool &stored_is_3d, bool could_use_3d, CaptureOptimizeOldFirmwareConfig &stored_old_fw_cfg_full, CaptureOptimizeOldFirmwareConfig &stored_old_fw_cfg_limited, bool force_capture_start, std::string read_key, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_capture_start, std::chrono::time_point<std::chrono::high_resolution_clock> &clock_last_param_edit) {
 	cy_device_device_handlers* handlers = (cy_device_device_handlers*)capture_data->handle;
 	const cyop_device_usb_device* usb_device_desc = (const cyop_device_usb_device*)capture_data->status.device.descriptor;
 	int retval = end_capture_from_capture_data(capture_data);
@@ -809,6 +960,7 @@ static int restart_captures_cc_reads(CaptureData* capture_data, CypressOptimize3
 		std::string read_key_dummy;
 		retval = capture_start(handlers, usb_device_desc, false, stored_video_data_type == OPTIMIZE_RGB888_FORMAT, device_id_dummy, read_key_dummy);
 		clock_last_capture_start = std::chrono::high_resolution_clock::now();
+		clock_last_param_edit = std::chrono::high_resolution_clock::now(); // Changing the format changes the loaded parameters...
 		capture_data->status.device.video_data_type = stored_video_data_type;
 		if(retval < 0)
 			return retval;
@@ -821,7 +973,15 @@ static int restart_captures_cc_reads(CaptureData* capture_data, CypressOptimize3
 	}
 
 	if(set_max_again)
-		CypressSetMaxTransferSize(handlers, get_cy_usb_info(usb_device_desc), (size_t)cyop_device_get_video_in_size_extra_header(stored_is_3d, stored_is_3d, stored_video_data_type));
+		CypressSetMaxTransferSize(handlers, get_cy_usb_info(usb_device_desc), (size_t)cyop_device_get_video_in_size_extra_header(usb_device_desc, stored_is_3d, stored_is_3d, stored_video_data_type));
+
+	bool present_new_old_fw_config = are_there_changes_present_to_old_fw_config(capture_data, stored_video_data_type, stored_old_fw_cfg_full, stored_old_fw_cfg_limited);
+	if(present_new_old_fw_config) {
+		stored_old_fw_cfg_full = capture_data->status.device_specific_status.optimize_status.old_fw_config_full_bw_format;
+		stored_old_fw_cfg_limited = capture_data->status.device_specific_status.optimize_status.old_fw_config_low_bw_format;
+		write_old_firmware_config_to_file(device_id, &stored_old_fw_cfg_full, &stored_old_fw_cfg_limited);
+		clock_last_param_edit = std::chrono::high_resolution_clock::now(); 
+	}
 
 	index = 0;
 	reset_buffer_processing_data(cypress_device_capture_recv_data);
@@ -829,7 +989,8 @@ static int restart_captures_cc_reads(CaptureData* capture_data, CypressOptimize3
 	if(!schedule_all_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, ""))
 		return -1;
 	capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM;
-	StartCaptureDma(handlers, usb_device_desc, stored_video_data_type == OPTIMIZE_RGB888_FORMAT, stored_is_3d, read_key);
+	CaptureOptimizeOldFirmwareConfig* to_use_old_fw_cfg = stored_video_data_type == OPTIMIZE_RGB888_FORMAT ? &stored_old_fw_cfg_full : &stored_old_fw_cfg_limited;
+	StartCaptureDma(handlers, usb_device_desc, stored_video_data_type == OPTIMIZE_RGB888_FORMAT, stored_is_3d, to_use_old_fw_cfg, read_key);
 	return 0;
 }
 
@@ -854,7 +1015,7 @@ static void cyop_key_check_and_interrogate_file(CaptureStatus* capture_status, c
 
 	capture_status->device.device_id = device_id;
 	capture_status->device.key = read_key;
-	capture_status->key_updated = false;
+	capture_status->device_specific_status.optimize_status.key_updated = false;
 }
 
 static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptimize3DSDeviceCaptureReceivedData* cypress_device_capture_recv_data, InputVideoDataType &stored_video_data_type, bool &stored_is_3d, bool could_use_3d) {
@@ -864,35 +1025,47 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 	uint64_t device_id = 0;
 	std::string read_key = "";
 	bool force_capture_start_key = false;
+	CaptureOptimizeOldFirmwareConfig stored_old_fw_cfg_full = {};
+	CaptureOptimizeOldFirmwareConfig stored_old_fw_cfg_limited = {};
 	int ret = capture_start(handlers, usb_device_desc, true, stored_video_data_type == OPTIMIZE_RGB888_FORMAT, device_id, read_key);
 	capture_data->status.title_check_id += 1;
-	capture_data->status.key_updated = false;
+	capture_data->status.device_specific_status.optimize_status.key_updated = false;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_capture_start = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_param_edit = std::chrono::high_resolution_clock::now();
 
 	bool is_key_valid = false;
 	cyop_key_check_and_interrogate_file(&capture_data->status, usb_device_desc, device_id, is_key_valid, read_key);
+
+	if(usb_device_desc->is_old_firmware)
+		read_old_firmware_config_from_file(device_id, &stored_old_fw_cfg_full, &stored_old_fw_cfg_limited);
+	capture_data->status.device_specific_status.optimize_status.old_fw_config_full_bw_format = stored_old_fw_cfg_full;
+	capture_data->status.device_specific_status.optimize_status.old_fw_config_low_bw_format = stored_old_fw_cfg_limited;
+
 	capture_data->status.device.video_data_type = stored_video_data_type;
 
 	if (ret < 0) {
 		capture_error_print(true, capture_data, "Capture Start: Failed");
 		return false;
 	}
-	CypressSetMaxTransferSize(handlers, get_cy_usb_info(usb_device_desc), (size_t)cyop_device_get_video_in_size_extra_header(stored_is_3d, stored_is_3d, stored_video_data_type));
+
+	CypressSetMaxTransferSize(handlers, get_cy_usb_info(usb_device_desc), (size_t)cyop_device_get_video_in_size_extra_header(usb_device_desc, stored_is_3d, stored_is_3d, stored_video_data_type));
 	if(!schedule_all_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, "Initial Reads: Failed"))
 		return false;
 
-	StartCaptureDma(handlers, usb_device_desc, stored_video_data_type == OPTIMIZE_RGB888_FORMAT, stored_is_3d, read_key);
+	CaptureOptimizeOldFirmwareConfig* to_use_old_fw_cfg = stored_video_data_type == OPTIMIZE_RGB888_FORMAT ? &stored_old_fw_cfg_full : &stored_old_fw_cfg_limited;
+	StartCaptureDma(handlers, usb_device_desc, stored_video_data_type == OPTIMIZE_RGB888_FORMAT, stored_is_3d, to_use_old_fw_cfg, read_key);
 	while (capture_data->status.connected && capture_data->status.running) {
 		ret = get_cypress_device_status(cypress_device_capture_recv_data);
+
 		if(ret < 0) {
 			int cause_error = ret;
 			capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM + NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS;
 			wait_all_cypress_device_buffers_free(capture_data, cypress_device_capture_recv_data);
 			bool has_recovered = false;
-			if(cause_error == LIBUSB_ERROR_TIMEOUT) {
+			if((cause_error == LIBUSB_ERROR_TIMEOUT) || ((cause_error == LIBUSB_ERROR_OTHER) && usb_device_desc->is_old_firmware && param_change_capture_allow_issues_time(clock_last_param_edit))) {
 				force_capture_start_key = (!check_key_matches_device_id(device_id, read_key, usb_device_desc)) && key_missing_capture_start_again_check_time(clock_last_capture_start);
 				cyop_key_check_and_interrogate_file(&capture_data->status, usb_device_desc, device_id, is_key_valid, read_key);
-				int timeout_ret = restart_captures_cc_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, could_use_3d, force_capture_start_key, read_key, clock_last_capture_start);
+				int timeout_ret = restart_captures_cc_reads(capture_data, cypress_device_capture_recv_data, device_id, index, stored_video_data_type, stored_is_3d, could_use_3d, stored_old_fw_cfg_full, stored_old_fw_cfg_limited, force_capture_start_key, read_key, clock_last_capture_start, clock_last_param_edit);
 				if(timeout_ret >= 0) {
 					has_recovered = true;
 					if(force_capture_start_key && (!is_key_valid))
@@ -904,14 +1077,16 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 				return false;
 			}
 		}
+
 		bool is_new_3d = could_use_3d && get_3d_enabled(&capture_data->status);
+		bool present_new_old_fw_config = are_there_changes_present_to_old_fw_config(capture_data, stored_video_data_type, stored_old_fw_cfg_full, stored_old_fw_cfg_limited);
 		InputVideoDataType wanted_input_video_data_type = extract_wanted_input_video_data_type(capture_data);
 		force_capture_start_key = (!is_key_valid) && (!check_key_matches_device_id(device_id, read_key, usb_device_desc)) && key_missing_capture_start_again_check_time(clock_last_capture_start);
-		if((wanted_input_video_data_type != stored_video_data_type) || (is_new_3d != stored_is_3d) || force_capture_start_key || capture_data->status.key_updated) {
+		if((wanted_input_video_data_type != stored_video_data_type) || (is_new_3d != stored_is_3d) || force_capture_start_key || capture_data->status.device_specific_status.optimize_status.key_updated || present_new_old_fw_config) {
 			capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM + NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS;
 			wait_all_cypress_device_buffers_free(capture_data, cypress_device_capture_recv_data);
 			cyop_key_check_and_interrogate_file(&capture_data->status, usb_device_desc, device_id, is_key_valid, read_key);
-			ret = restart_captures_cc_reads(capture_data, cypress_device_capture_recv_data, index, stored_video_data_type, stored_is_3d, could_use_3d, force_capture_start_key, read_key, clock_last_capture_start);
+			ret = restart_captures_cc_reads(capture_data, cypress_device_capture_recv_data, device_id, index, stored_video_data_type, stored_is_3d, could_use_3d, stored_old_fw_cfg_full, stored_old_fw_cfg_limited, force_capture_start_key, read_key, clock_last_capture_start, clock_last_param_edit);
 			if(ret < 0) {
 				capture_error_print(true, capture_data, "Disconnected: Update mode error");
 				return false;
@@ -1010,6 +1185,106 @@ void usb_cyop_device_acquisition_cleanup(CaptureData* capture_data) {
 
 	cypress_optimize_3ds_connection_end((cy_device_device_handlers*)capture_data->handle, (const cyop_device_usb_device*)capture_data->status.device.descriptor);
 	capture_data->handle = NULL;
+}
+
+static std::string get_old_fw_config_file_path(uint64_t device_id) {
+	std::string path = get_base_path_device_specific_configs();
+
+	path += "optimize_old_fw_" + to_hex_u60(device_id) + ".txt";
+	return path;
+}
+
+static std::string write_old_firmware_config_case_string(std::string base, CaptureOptimizeOldFirmwareConfigCase* config_case) {
+	std::string out_str = "";
+
+	out_str += base + "_low_screen_clk" + "=" + std::to_string(config_case->low_screen_clock) + "\n";
+	out_str += base + "_top_screen_clk" + "=" + std::to_string(config_case->top_screen_clock) + "\n";
+	out_str += base + "_top_screen_data" + "=" + std::to_string(config_case->top_screen_data) + "\n";
+	out_str += base + "_top_screen_sync" + "=" + std::to_string(config_case->top_screen_sync) + "\n";
+
+	return out_str;
+}
+
+static bool read_old_firmware_config_case_string(std::string key, std::string value, std::string base, CaptureOptimizeOldFirmwareConfigCase* config_case) {
+
+	if(key == (base + "_low_screen_clk")) {
+		config_case->low_screen_clock = std::stoi(value);
+		return true;
+	}
+
+	if(key == (base + "_top_screen_clk")) {
+		config_case->top_screen_clock = std::stoi(value);
+		return true;
+	}
+
+	if(key == (base + "_top_screen_data")) {
+		config_case->top_screen_data = std::stoi(value);
+		return true;
+	}
+
+	if(key == (base + "_top_screen_sync")) {
+		config_case->top_screen_sync = std::stoi(value);
+		return true;
+	}
+
+	return false;
+}
+
+static void read_old_firmware_config_from_file(uint64_t device_id, CaptureOptimizeOldFirmwareConfig* out_full, CaptureOptimizeOldFirmwareConfig* out_limited) {
+	std::ifstream file(get_old_fw_config_file_path(device_id));
+	std::string line;
+
+	*out_full = {};
+	*out_limited = {};
+	sanitize_capture_optimize_old_fw_config(out_full);
+	sanitize_capture_optimize_old_fw_config(out_limited);
+
+	if((!file) || (!file.is_open()) || (!file.good()))
+		return;
+
+	try {
+		while(std::getline(file, line)) {
+			std::istringstream kvp(line);
+			std::string key;
+
+			if(std::getline(kvp, key, '=')) {
+				std::string value;
+
+				if(std::getline(kvp, value)) {
+					if(read_old_firmware_config_case_string(key, value, "full_2d_mode", &out_full->mode_2d_only))
+						continue;
+
+					if(read_old_firmware_config_case_string(key, value, "full_regular_mode", &out_full->mode_regular))
+						continue;
+
+					if(read_old_firmware_config_case_string(key, value, "limited_2d_mode", &out_limited->mode_2d_only))
+						continue;
+
+					if(read_old_firmware_config_case_string(key, value, "limited_regular_mode", &out_limited->mode_regular))
+						continue;
+				}
+			}
+		}
+	}
+	catch(...) {
+	}
+
+	sanitize_capture_optimize_old_fw_config(out_full);
+	sanitize_capture_optimize_old_fw_config(out_limited);
+}
+
+static void write_old_firmware_config_to_file(uint64_t device_id, CaptureOptimizeOldFirmwareConfig* to_save_full, CaptureOptimizeOldFirmwareConfig* to_save_limited) {
+	std::ofstream file(get_old_fw_config_file_path(device_id));
+	if(!file.good())
+		return;
+
+	file << write_old_firmware_config_case_string("full_2d_mode", &to_save_full->mode_2d_only);
+	file << write_old_firmware_config_case_string("full_regular_mode", &to_save_full->mode_regular);
+
+	file << write_old_firmware_config_case_string("limited_2d_mode", &to_save_limited->mode_2d_only);
+	file << write_old_firmware_config_case_string("limited_regular_mode", &to_save_limited->mode_regular);
+
+	file.close();
 }
 
 bool cyop_is_key_for_device(CaptureDevice* device, std::string key) {

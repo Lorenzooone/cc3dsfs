@@ -14,6 +14,8 @@ enum cypress_optimize_device_type {
 	CYPRESS_OPTIMIZE_NEW_3DS_INSTANTIATED_DEVICE,
 	CYPRESS_OPTIMIZE_OLD_3DS_BLANK_DEVICE,
 	CYPRESS_OPTIMIZE_OLD_3DS_INSTANTIATED_DEVICE,
+	CYPRESS_OPTIMIZE_OLD_OLD_2DS_BLANK_DEVICE,
+	CYPRESS_OPTIMIZE_OLD_OLD_2DS_INSTANTIATED_DEVICE,
 };
 
 struct cyop_device_usb_device {
@@ -27,6 +29,8 @@ struct cyop_device_usb_device {
 	uint8_t* fpga_pl_888;
 	size_t fpga_pl_888_size;
 	bool is_new_device;
+	bool is_old_firmware;
+	bool is_o2ds;
 	cypress_optimize_device_type next_device;
 	bool has_bcd_device_serial;
 	PossibleCaptureDevices index_in_allowed_scan;
@@ -43,7 +47,7 @@ bool load_firmware(cy_device_device_handlers* handlers, const cyop_device_usb_de
 bool read_firmware(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint8_t* buffer_out, size_t read_size);
 bool reset_cpu(cy_device_device_handlers* handlers, const cyop_device_usb_device* device);
 int capture_start(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_first_load, bool is_rgb888, uint64_t &device_id, std::string &read_key);
-int StartCaptureDma(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_rgb888, bool is_3d, std::string key);
+int StartCaptureDma(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, bool is_rgb888, bool is_3d, CaptureOptimizeOldFirmwareConfig *old_fw_config, std::string key);
 int capture_end(cy_device_device_handlers* handlers, const cyop_device_usb_device* device);
 int ReadFrame(cy_device_device_handlers* handlers, uint8_t* buf, int length, const cyop_device_usb_device* device_desc);
 int ReadFrameAsync(cy_device_device_handlers* handlers, uint8_t* buf, int length, const cyop_device_usb_device* device_desc, cy_async_callback_data* cb_data);

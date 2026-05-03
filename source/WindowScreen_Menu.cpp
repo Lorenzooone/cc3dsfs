@@ -133,6 +133,7 @@ void WindowScreen::init_menus() {
 	this->usb_conflict_resolution_menu = new USBConflictResolutionMenu(this->text_rectangle_pool);
 	this->optimize_3ds_menu = new Optimize3DSMenu(this->text_rectangle_pool);
 	this->optimize_serial_key_add_menu = new OptimizeSerialKeyAddMenu(this->text_rectangle_pool);
+	this->optimize_old_fw_config_menu = new OptimizeOldFWConfigMenu(this->text_rectangle_pool);
 }
 
 void WindowScreen::destroy_menus() {
@@ -166,6 +167,7 @@ void WindowScreen::destroy_menus() {
 	delete this->usb_conflict_resolution_menu;
 	delete this->optimize_3ds_menu;
 	delete this->optimize_serial_key_add_menu;
+	delete this->optimize_old_fw_config_menu;
 }
 
 void WindowScreen::set_close(int ret_val) {
@@ -211,25 +213,25 @@ void WindowScreen::fast_poll_change() {
 }
 
 void WindowScreen::is_nitro_capture_type_change(bool positive) {
-	int new_value = (int)(this->capture_status->capture_type);
+	int new_value = (int)(this->capture_status->device_specific_status.is_status.capture_type);
 	if(positive)
 		new_value += 1;
 	else
 		new_value += CAPTURE_SCREENS_ENUM_END - 1;
-	this->capture_status->capture_type = static_cast<CaptureScreensType>(new_value % CAPTURE_SCREENS_ENUM_END);
+	this->capture_status->device_specific_status.is_status.capture_type = static_cast<CaptureScreensType>(new_value % CAPTURE_SCREENS_ENUM_END);
 }
 
 void WindowScreen::is_nitro_capture_speed_change(bool positive) {
-	int new_value = (int)(this->capture_status->capture_speed);
+	int new_value = (int)(this->capture_status->device_specific_status.is_status.capture_speed);
 	if(positive)
 		new_value += 1;
 	else
 		new_value += CAPTURE_SPEEDS_ENUM_END - 1;
-	this->capture_status->capture_speed = static_cast<CaptureSpeedsType>(new_value % CAPTURE_SPEEDS_ENUM_END);
+	this->capture_status->device_specific_status.is_status.capture_speed = static_cast<CaptureSpeedsType>(new_value % CAPTURE_SPEEDS_ENUM_END);
 }
 
 void WindowScreen::is_nitro_capture_reset_hw() {
-	this->capture_status->reset_hardware = true;
+	this->capture_status->device_specific_status.is_status.reset_hardware = true;
 }
 
 void WindowScreen::generic_battery_change(bool positive, int &battery_percentage, const int *allowed_battery_levels, size_t num_levels) {
@@ -256,23 +258,27 @@ void WindowScreen::generic_battery_change(bool positive, int &battery_percentage
 }
 
 void WindowScreen::is_nitro_battery_change(bool positive) {
-	this->generic_battery_change(positive, this->capture_status->is_battery_percentage, is_battery_levels, sizeof(is_battery_levels) / sizeof(is_battery_levels[0]));
+	this->generic_battery_change(positive, this->capture_status->device_specific_status.is_status.battery_percentage, is_battery_levels, sizeof(is_battery_levels) / sizeof(is_battery_levels[0]));
 }
 
 void WindowScreen::is_nitro_ac_adapter_change() {
-	this->capture_status->is_ac_adapter_connected = !this->capture_status->is_ac_adapter_connected;
+	this->capture_status->device_specific_status.is_status.ac_adapter_connected = !this->capture_status->device_specific_status.is_status.ac_adapter_connected;
+}
+
+void WindowScreen::partner_ctr_reset_hw() {
+	this->capture_status->device_specific_status.partner_ctr_status.reset_hardware = true;
 }
 
 void WindowScreen::partner_ctr_battery_change(bool positive) {
-	this->generic_battery_change(positive, this->capture_status->partner_ctr_battery_percentage, partner_ctr_battery_levels, sizeof(partner_ctr_battery_levels) / sizeof(partner_ctr_battery_levels[0]));
+	this->generic_battery_change(positive, this->capture_status->device_specific_status.partner_ctr_status.battery_percentage, partner_ctr_battery_levels, sizeof(partner_ctr_battery_levels) / sizeof(partner_ctr_battery_levels[0]));
 }
 
 void WindowScreen::partner_ctr_ac_adapter_connected_change() {
-	this->capture_status->partner_ctr_ac_adapter_connected = !this->capture_status->partner_ctr_ac_adapter_connected;
+	this->capture_status->device_specific_status.partner_ctr_status.ac_adapter_connected = !this->capture_status->device_specific_status.partner_ctr_status.ac_adapter_connected;
 }
 
 void WindowScreen::partner_ctr_ac_adapter_charging_change() {
-	this->capture_status->partner_ctr_ac_adapter_charging = !this->capture_status->partner_ctr_ac_adapter_charging;
+	this->capture_status->device_specific_status.partner_ctr_status.ac_adapter_charging = !this->capture_status->device_specific_status.partner_ctr_status.ac_adapter_charging;
 }
 
 void WindowScreen::padding_change() {
@@ -618,14 +624,31 @@ void WindowScreen::devices_allowed_change(PossibleCaptureDevices device) {
 	this->capture_status->devices_allowed_scan[device] = !this->capture_status->devices_allowed_scan[device];
 }
 
-void WindowScreen::input_video_data_format_request_change(bool positive) {
+void WindowScreen::input_video_data_format_request_change(bool positive, bool &target_format) {
 	std::chrono::time_point<std::chrono::high_resolution_clock> curr_time = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> diff = curr_time - this->last_data_format_change_time;
 	if(diff.count() < this->input_data_format_change_timeout)
 		return;
-	this->capture_status->request_low_bw_format = !this->capture_status->request_low_bw_format;
+	target_format = !target_format;
 	this->print_notification("Changing data format...\nPlease wait...");
 	this->last_data_format_change_time = curr_time;
+}
+
+void WindowScreen::optimize_old_fw_menu_change_param(bool positive) {
+	CaptureOptimizeOldFirmwareConfig* to_edit_fw_config = &this->capture_status->device_specific_status.optimize_status.old_fw_config_full_bw_format;
+	if(this->capture_status->device_specific_status.optimize_status.request_low_bw_format_old_2ds)
+		to_edit_fw_config = &this->capture_status->device_specific_status.optimize_status.old_fw_config_low_bw_format;
+	
+	CaptureOptimizeOldFirmwareConfig base_fw_config = *to_edit_fw_config;
+
+	uint8_t* to_edit = this->optimize_old_fw_config_menu->get_data_to_edit(&base_fw_config);
+	if(positive)
+		*to_edit += 1;
+	else
+		*to_edit -= 1;
+	sanitize_capture_optimize_old_fw_config(&base_fw_config);
+
+	*to_edit_fw_config = base_fw_config;
 }
 
 bool WindowScreen::add_new_cc_key(std::string key, CaptureConnectionType conn_type, bool discriminator) {
@@ -1284,6 +1307,15 @@ void WindowScreen::setup_optimize_serial_key_add_menu(bool reset_data) {
 	if(this->curr_menu != OPTIMIZE_SERIAL_KEY_ADD_MENU_TYPE) {
 		this->switch_to_menu(OPTIMIZE_SERIAL_KEY_ADD_MENU_TYPE, this->optimize_serial_key_add_menu, reset_data);
 		this->optimize_serial_key_add_menu->insert_data(&this->capture_status->device);
+	}
+}
+
+void WindowScreen::setup_optimize_old_fw_config_menu(bool reset_data) {
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != OPTIMIZE_OLD_FW_CONFIG_MENU) {
+		this->switch_to_menu(OPTIMIZE_OLD_FW_CONFIG_MENU, this->optimize_old_fw_config_menu, reset_data);
+		this->optimize_old_fw_config_menu->insert_data();
 	}
 }
 
@@ -2213,7 +2245,7 @@ void WindowScreen::poll(bool do_everything) {
 					case PCTR_MENU_NO_ACTION:
 						break;
 					case PCTR_MENU_RESET:
-						this->is_nitro_capture_reset_hw();
+						this->partner_ctr_reset_hw();
 						break;
 					case PCTR_MENU_BATTERY_DEC:
 						this->partner_ctr_battery_change(false);
@@ -2426,6 +2458,9 @@ void WindowScreen::poll(bool do_everything) {
 					case USBCONRESO_MENU_OPTI_O3DS:
 						this->devices_allowed_change(CC_OPTIMIZE_O3DS);
 						break;
+					case USBCONRESO_MENU_OPTI_O2DS:
+						this->devices_allowed_change(CC_OPTIMIZE_O_O2DS);
+						break;
 					default:
 						break;
 				}
@@ -2450,11 +2485,20 @@ void WindowScreen::poll(bool do_everything) {
 					case OPTIMIZE3DS_MENU_OPTIMIZE_SERIAL_KEY_MENU:
 						this->setup_optimize_serial_key_add_menu();
 						break;
+					case OPTIMIZE3DS_MENU_OLD_FW_SETTINGS_MENU:
+						this->setup_optimize_old_fw_config_menu();
+						break;
 					case OPTIMIZE3DS_MENU_INPUT_VIDEO_FORMAT_INC:
-						this->input_video_data_format_request_change(true);
+						this->input_video_data_format_request_change(true, this->capture_status->device_specific_status.optimize_status.request_low_bw_format);
 						break;
 					case OPTIMIZE3DS_MENU_INPUT_VIDEO_FORMAT_DEC:
-						this->input_video_data_format_request_change(false);
+						this->input_video_data_format_request_change(false, this->capture_status->device_specific_status.optimize_status.request_low_bw_format);
+						break;
+					case OPTIMIZE2DS_MENU_INPUT_VIDEO_FORMAT_INC:
+						this->input_video_data_format_request_change(true, this->capture_status->device_specific_status.optimize_status.request_low_bw_format_old_2ds);
+						break;
+					case OPTIMIZE2DS_MENU_INPUT_VIDEO_FORMAT_DEC:
+						this->input_video_data_format_request_change(false, this->capture_status->device_specific_status.optimize_status.request_low_bw_format_old_2ds);
 						break;
 					default:
 						break;
@@ -2487,6 +2531,25 @@ void WindowScreen::poll(bool do_everything) {
 					case OPTIMIZE_SERIAL_KEY_ADD_MENU_SELECT_TEXTBOX:
 						break;
 					case OPTIMIZE_SERIAL_KEY_ADD_MENU_KEY_PRINT:
+						break;
+					default:
+						break;
+				}
+				this->loaded_menu_ptr->reset_output_option();
+				break;
+			case OPTIMIZE_OLD_FW_CONFIG_MENU:
+				switch(this->optimize_old_fw_config_menu->selected_index) {
+					case OPTIMIZEOLDFWCONFIG_MENU_BACK:
+						this->setup_optimize_3ds_menu(false);
+						done = true;
+						break;
+					case OPTIMIZEOLDFWCONFIG_MENU_NO_ACTION:
+						break;
+					case OPTIMIZEOLDFWCONFIG_MENU_CHANGE_INC:
+						optimize_old_fw_menu_change_param(true);
+						break;
+					case OPTIMIZEOLDFWCONFIG_MENU_CHANGE_DEC:
+						optimize_old_fw_menu_change_param(false);
 						break;
 					default:
 						break;
@@ -2533,6 +2596,8 @@ void WindowScreen::update_capture_specific_settings() {
 	if(this->curr_menu == OPTIMIZE_3DS_MENU_TYPE)
 		this->setup_no_menu();
 	if(this->curr_menu == OPTIMIZE_SERIAL_KEY_ADD_MENU_TYPE)
+		this->setup_no_menu();
+	if(this->curr_menu == OPTIMIZE_OLD_FW_CONFIG_MENU)
 		this->setup_no_menu();
 }
 
@@ -2818,6 +2883,9 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			break;
 		case OPTIMIZE_SERIAL_KEY_ADD_MENU_TYPE:
 			this->optimize_serial_key_add_menu->prepare(menu_scaling_factor, view_size_x, view_size_y);
+			break;
+		case OPTIMIZE_OLD_FW_CONFIG_MENU:
+			this->optimize_old_fw_config_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->capture_status);
 			break;
 		default:
 			break;

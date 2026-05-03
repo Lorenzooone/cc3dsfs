@@ -324,8 +324,8 @@ void is_nitro_acquisition_emulator_main_loop(CaptureData* capture_data, ISDevice
 	uint16_t last_frame_counter = 0;
 	float single_frame_time = 0;
 	uint16_t curr_frame_counter = 0;
-	CaptureScreensType curr_capture_type = capture_data->status.capture_type;
-	CaptureSpeedsType curr_capture_speed = capture_data->status.capture_speed;
+	CaptureScreensType curr_capture_type = capture_data->status.device_specific_status.is_status.capture_type;
+	CaptureSpeedsType curr_capture_speed = capture_data->status.device_specific_status.is_status.capture_speed;
 	int ret = StartAcquisitionEmulator(handlers, last_frame_counter, single_frame_time, curr_capture_type, curr_capture_speed, usb_device_desc);
 	if (ret < 0) {
 		capture_error_print(true, capture_data, "Capture Start: Failed");
@@ -351,8 +351,8 @@ void is_nitro_acquisition_emulator_main_loop(CaptureData* capture_data, ISDevice
 			clock_last_reset = std::chrono::high_resolution_clock::now();
 			default_sleep(SLEEP_CHECKS_TIME_MS);
 		}
-		capture_data->status.curr_delay = last_frame_counter % FRAME_BUFFER_SIZE;
-		ret = reset_acquisition_frames(capture_data, curr_frame_counter, last_frame_counter, single_frame_time, clock_last_reset, curr_capture_type, capture_data->status.capture_type, curr_capture_speed, capture_data->status.capture_speed, is_device_capture_recv_data);
+		capture_data->status.device_specific_status.is_status.curr_delay = last_frame_counter % FRAME_BUFFER_SIZE;
+		ret = reset_acquisition_frames(capture_data, curr_frame_counter, last_frame_counter, single_frame_time, clock_last_reset, curr_capture_type, capture_data->status.device_specific_status.is_status.capture_type, curr_capture_speed, capture_data->status.device_specific_status.is_status.capture_speed, is_device_capture_recv_data);
 		if(ret < 0) {
 			capture_error_print(true, capture_data, "Disconnected: Frame counter reset error");
 			break;

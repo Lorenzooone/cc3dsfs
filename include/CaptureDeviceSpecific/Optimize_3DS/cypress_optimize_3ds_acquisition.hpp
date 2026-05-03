@@ -23,6 +23,8 @@ void usb_cyop_device_acquisition_cleanup(CaptureData* capture_data);
 bool is_device_optimize_3ds(CaptureDevice* device);
 bool is_device_optimize_o3ds(CaptureDevice* device);
 bool is_device_optimize_n3ds(CaptureDevice* device);
+bool is_device_optimize_o2ds(CaptureDevice* device);
+bool is_device_optimize_old_fw(CaptureDevice* device);
 bool cyop_is_key_for_device_id(CaptureDevice* device, std::string key);
 KeySaveError add_key_to_file(std::string key, bool is_for_new_3ds);
 void usb_cyop_device_init();

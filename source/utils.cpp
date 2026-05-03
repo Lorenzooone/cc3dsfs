@@ -406,6 +406,10 @@ std::string get_base_path_keys() {
 	return get_base_path(false) + "keys/";
 }
 
+std::string get_base_path_device_specific_configs() {
+	return get_base_path(false) + "device_specific_configs/";
+}
+
 std::string LayoutPathGenerator(int index) {
 	return get_base_path(index != STARTUP_FILE_INDEX);
 }
