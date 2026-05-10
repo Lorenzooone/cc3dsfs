@@ -573,7 +573,7 @@ void reset_screen_info(ScreenInfo &info) {
 	info.bot_rotation = 0;
 	info.show_mouse = true;
 	info.v_sync_enabled = false;
-	#if (defined(RASPI) || defined(ANDROID_COMPILATION))
+	#if (defined(RASPI) || defined(ANDROID_COMPILATION) || defined(__APPLE__))
 	info.async = false;
 	#else
 	info.async = true;
