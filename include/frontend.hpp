@@ -132,6 +132,7 @@ private:
 	InputVideoDataType curr_video_data_type;
 	InputVideoDataType last_update_texture_data_type;
 	PossibleSoftwareConvTypes texture_software_based_conv;
+	bool reported_software_conv = false;
 	CaptureStatus* capture_status;
 	std::string win_title;
 	sf::RenderWindow m_win;
@@ -270,7 +271,8 @@ private:
 	ConsumerMutex display_lock;
 	ConsumerMutex *draw_lock;
 	bool done_display;
-	VideoOutputData *saved_buf;
+	VideoOutputData* saved_buf;
+	bool saved_buf_manually_converted;
 	ScreenInfo loaded_info;
 	ScreenOperations future_operations;
 	ScreenOperations loaded_operations;
@@ -356,8 +358,8 @@ private:
 	void window_factory(bool is_main_thread);
 	void opengl_error_out(std::string error_base, std::string error_str);
 	void opengl_error_check(std::string error_base);
-	bool single_update_texture(unsigned int m_texture, InputVideoDataType video_data_type, size_t pos_x_data, size_t pos_y_data, size_t width, size_t height, bool manually_converted);
-	void execute_single_update_texture(bool &manually_converted, bool do_full, bool is_top = false, bool is_second = false);
+	bool single_update_texture(unsigned int m_texture, InputVideoDataType video_data_type, size_t pos_x_data, size_t pos_y_data, size_t width, size_t height);
+	void execute_single_update_texture(bool do_full, bool is_top = false, bool is_second = false);
 	void update_texture();
 	int _choose_base_input_shader(bool is_top);
 	int _choose_color_emulation_shader(bool is_top);

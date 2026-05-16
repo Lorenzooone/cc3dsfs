@@ -115,7 +115,7 @@ endif()
 include(FetchContent)
 
 set(SFML_REPO_AUTHOR "SFML")
-set(SFML_REPO_BRANCH "bugfix/macos_joystick_unplugging")
+set(SFML_REPO_BRANCH "master")
 # Git shallow clone isn't shallow in cmake... This is bad. :/
 # Replace this if they ever fix it.
 if(SFML_CLONE_USE_GIT_SHALLOW)

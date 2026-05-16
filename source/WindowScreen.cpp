@@ -333,6 +333,7 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoD
 				this->was_last_frame_null = true;
 			}
 			this->curr_video_data_type = video_data_type;
+			this->saved_buf_manually_converted = false;
 		}
 		loaded_info = m_info;
 		m_info.initial_pos_x = DEFAULT_NO_POS_WINDOW_VALUE;
@@ -377,6 +378,9 @@ void WindowScreen::update_connection() {
 }
 
 void WindowScreen::print_notification(std::string text, TextKind kind) {
+	if (text == "")
+		return;
+
 	this->notification->setText(text);
 	this->notification->setRectangleKind(kind);
 	this->notification->startTimer(true);
@@ -608,7 +612,7 @@ void WindowScreen::opengl_error_check(std::string error_base) {
 	}
 }
 
-bool WindowScreen::single_update_texture(unsigned int m_texture, InputVideoDataType video_data_type, size_t pos_x_data, size_t pos_y_data, size_t width, size_t height, bool manually_converted) {
+bool WindowScreen::single_update_texture(unsigned int m_texture, InputVideoDataType video_data_type, size_t pos_x_data, size_t pos_y_data, size_t width, size_t height) {
 	if(!(this->saved_buf && m_texture))
 		return false;
 
@@ -619,10 +623,12 @@ bool WindowScreen::single_update_texture(unsigned int m_texture, InputVideoDataT
 	GLenum type = GL_UNSIGNED_BYTE;
 	size_t format_size = sizeof(VideoPixelRGB);
 
-	if(manually_converted && (this->texture_software_based_conv == TO_RGBA_SOFTWARE_CONV))
+	if(this->saved_buf_manually_converted && (this->texture_software_based_conv == TO_RGBA_SOFTWARE_CONV)) {
 		format = GL_RGBA;
+		format_size = sizeof(VideoPixelRGBA);
+	}
 
-	if(!manually_converted) {
+	if(!this->saved_buf_manually_converted) {
 		if(video_data_type == VIDEO_DATA_BGR) {
 			format = GL_BGR;
 			format_size = sizeof(VideoPixelBGR);
@@ -644,7 +650,9 @@ bool WindowScreen::single_update_texture(unsigned int m_texture, InputVideoDataT
 		bool processed = false;
 		if(glCheckInternalError == GL_INVALID_ENUM) {
 			if((format != GL_RGB) || (type != GL_UNSIGNED_BYTE)) {
-				UpdateOutText(this->own_out_text_data, "Switching to software-based texture updating", "", TEXT_KIND_NORMAL);
+				if(!this->reported_software_conv)
+					UpdateOutText(this->own_out_text_data, "Switching to software-based texture updating", "", TEXT_KIND_NORMAL);
+				this->reported_software_conv = true;
 				this->last_update_texture_data_type = video_data_type;
 				this->texture_software_based_conv = TO_RGB_SOFTWARE_CONV;
 				return true;
@@ -652,7 +660,9 @@ bool WindowScreen::single_update_texture(unsigned int m_texture, InputVideoDataT
 		}
 		if(glCheckInternalError == GL_INVALID_OPERATION) {
 			if((format != GL_RGBA) || (type != GL_UNSIGNED_BYTE)) {
-				UpdateOutText(this->own_out_text_data, "Switching to software-based texture updating", "", TEXT_KIND_NORMAL);
+				if (!this->reported_software_conv)
+					UpdateOutText(this->own_out_text_data, "Switching to software-based texture updating", "", TEXT_KIND_NORMAL);
+				this->reported_software_conv = true;
 				this->last_update_texture_data_type = video_data_type;
 				this->texture_software_based_conv = TO_RGBA_SOFTWARE_CONV;
 				return true;
@@ -674,7 +684,7 @@ bool WindowScreen::single_update_texture(unsigned int m_texture, InputVideoDataT
 	return false;
 }
 
-void WindowScreen::execute_single_update_texture(bool &manually_converted, bool do_full, bool is_top, bool is_second) {
+void WindowScreen::execute_single_update_texture(bool do_full, bool is_top, bool is_second) {
 	InputVideoDataType video_data_type = this->curr_video_data_type;
 	size_t top_width = TOP_WIDTH_3DS;
 	size_t top_height = HEIGHT_3DS;
@@ -747,44 +757,44 @@ void WindowScreen::execute_single_update_texture(bool &manually_converted, bool 
 		}
 	}
 
-	if(is_vertically_rotated(this->capture_status->device.base_rotation))
+	if(is_vertically_rotated(this->capture_status->device.base_rotation)) {
+		std::swap(pos_x_conv, pos_y_conv);
 		std::swap(pos_x_data, pos_y_data);
+	}
 
 	unsigned int m_texture = target_texture->getNativeHandle();
 	bool retry = true;
 	while(retry) {
-		bool software_based_conv = manually_converted || ((this->texture_software_based_conv != NO_SOFTWARE_CONV) && (video_data_type == this->last_update_texture_data_type));
+		bool software_based_conv = this->saved_buf_manually_converted || ((this->texture_software_based_conv != NO_SOFTWARE_CONV) && (video_data_type == this->last_update_texture_data_type));
 
 		if(software_based_conv) {
-			if(!manually_converted) {
+			if(!this->saved_buf_manually_converted) {
 				if(this->texture_software_based_conv == TO_RGB_SOFTWARE_CONV)
 					manualConvertOutputToRGB(this->saved_buf, this->saved_buf, pos_x_conv, pos_y_conv, full_width, full_height, video_data_type);
 				if(this->texture_software_based_conv == TO_RGBA_SOFTWARE_CONV)
 					manualConvertOutputToRGBA(this->saved_buf, this->saved_buf, pos_x_conv, pos_y_conv, full_width, full_height, video_data_type);
 			}
-			manually_converted = true;
+			this->saved_buf_manually_converted = true;
 		}
 		else {
 			this->texture_software_based_conv = NO_SOFTWARE_CONV;
 			this->last_update_texture_data_type = video_data_type;
 		}
-
-		retry = this->single_update_texture(m_texture, video_data_type, pos_x_data, pos_y_data, width, height, manually_converted);
+		retry = this->single_update_texture(m_texture, video_data_type, pos_x_data, pos_y_data, width, height);
 	}
 }
 
 void WindowScreen::update_texture() {
-	bool manually_converted = false;
 	if(this->shared_texture_available)
-		this->execute_single_update_texture(manually_converted, true);
+		this->execute_single_update_texture(true);
 	else {
 		if((this->m_stype == ScreenType::TOP) || (this->m_stype == ScreenType::JOINT)) {
-			this->execute_single_update_texture(manually_converted, false, true);
+			this->execute_single_update_texture(false, true);
 			if(get_3d_enabled(this->capture_status))
-				this->execute_single_update_texture(manually_converted, false, true, true);
+				this->execute_single_update_texture(false, true, true);
 		}
 		if((this->m_stype == ScreenType::BOTTOM) || (this->m_stype == ScreenType::JOINT))
-			this->execute_single_update_texture(manually_converted, false, false);
+			this->execute_single_update_texture(false, false);
 	}
 }
 

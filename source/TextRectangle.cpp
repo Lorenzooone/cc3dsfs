@@ -332,6 +332,10 @@ void TextRectangle::setTextWithLineWrapping(int x_limit) {
 }
 
 void TextRectangle::setRealSize(int width, int height, bool check_previous) {
+	if (width < 1)
+		width = 1;
+	if (height < 1)
+		height = 1;
 	this->loaded_data.width = width;
 	this->loaded_data.height = height;
 	this->pos_x_center_contrib = 0;
