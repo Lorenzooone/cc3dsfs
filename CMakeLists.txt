@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build archs for Mac OS X" FORCE)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum OS X deployment version")
 set(CMAKE_PARALLEL_MSVC FALSE CACHE BOOL "Enables parallel compilation with MSVC")
+set(CMAKE_PREPARE_WINDOWS_DRIVERS FALSE CACHE BOOL "Enables preparing files for Windows drivers")
 
 #Workaround due to cmake parallel being broken, and needing to set these
 #flags before the project is defined...
@@ -99,6 +100,7 @@ endif()
 set(FINAL_EXTENSION "")
 set(HOST_FINAL_EXTENSION "")
 set(SETUP_SCRIPTS_DIR ${CMAKE_SOURCE_DIR}/setup_scripts)
+set(DRIVER_SCRIPTS_DIR ${CMAKE_SOURCE_DIR}/driver_scripts)
 set(USB_RULES_DIR ${CMAKE_SOURCE_DIR}/usb_rules)
 set(SCRIPT_EXTENSION "")
 
@@ -107,12 +109,16 @@ if (RASPBERRY_PI_COMPILATION)
 	add_compile_flag("RASPI 1")
 endif()
 
+set(WINDOWS_GENERATOR "x64")
+
 if((${CMAKE_SYSTEM_NAME} STREQUAL "Windows") AND ((${CMAKE_GENERATOR_PLATFORM} MATCHES "ARM64") OR (("${CMAKE_GENERATOR_PLATFORM}" STREQUAL "") AND (${CMAKE_SYSTEM_PROCESSOR} MATCHES "ARM64"))))
 	set(WINDOWS_ARM64 1)
+	set(WINDOWS_GENERATOR "ARM64")
 endif()
 
 if((${CMAKE_SYSTEM_NAME} STREQUAL "Windows") AND ((${CMAKE_GENERATOR_PLATFORM} MATCHES "Win32") OR (("${CMAKE_GENERATOR_PLATFORM}" STREQUAL "") AND ((${CMAKE_SYSTEM_PROCESSOR} MATCHES "Win32") OR (${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86") OR (${CMAKE_SYSTEM_PROCESSOR} MATCHES "X86")))))
 	set(WINDOWS_x86_32 1)
+	set(WINDOWS_GENERATOR "Win32")
 endif()
 
 # Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP in CMake 3.24:
@@ -763,6 +769,16 @@ add_custom_command(
 	VERBATIM
 )
 
+if(WIN32 AND ${CMAKE_PREPARE_WINDOWS_DRIVERS})
+	# Broken on Windows ARM64 for some reason... Even if I swap the sln file...
+	add_custom_command(
+		TARGET ${OUTPUT_NAME}
+		COMMENT "Create WinUSB installer"
+		POST_BUILD COMMAND ${DRIVER_SCRIPTS_DIR}/libwdi/build_wdi.bat ${WINDOWS_GENERATOR} Release ${DRIVER_SCRIPTS_DIR}/libwdi ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+		VERBATIM
+	)
+endif()
+
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 install(TARGETS ${OUTPUT_NAME} DESTINATION .)
 else()
@@ -780,6 +796,12 @@ if(WIN32)
 	endif()
 	if(USE_FTD2XX_FOR_NEW_DS_LOOPY AND WINDOWS_FTD2XX_USE_SHARED_LIB)
 		install(FILES ${FTD2XX_DLL} DESTINATION .)
+	endif()
+	if(${CMAKE_PREPARE_WINDOWS_DRIVERS})
+		install(FILES "driver_scripts/driver_uninstaller_currently_connected.bat" DESTINATION "./drivers/subscripts")
+		install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/wdi-simple.exe" DESTINATION "./drivers/programs")
+		install(DIRECTORY "driver_scripts/cypress_usb" DESTINATION "./drivers/")
+		install(FILES "driver_scripts/optimize_n3ds_o3ds_driver_install.bat" DESTINATION "./drivers")
 	endif()
 endif()
 
