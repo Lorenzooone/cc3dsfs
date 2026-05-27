@@ -25,6 +25,7 @@ if '%errorlevel%' NEQ '0' (
     CD /D "%~dp0"
 :--------------------------------------
 
+call "subscripts\driver_remover_name_based.bat" intraoralsensor.inf
 
 call "subscripts\driver_uninstaller_currently_connected.bat" 04B4 8613
 call "subscripts\driver_uninstaller_currently_connected.bat" 0752 8613
