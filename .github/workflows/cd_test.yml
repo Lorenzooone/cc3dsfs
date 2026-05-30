@@ -1,0 +1,152 @@
+name: CD
+
+on:
+  # Trigger the workflow on push,
+  # but only for the master branch
+  push:
+    branches:
+      - test
+
+jobs:
+  build:
+    name: ${{ matrix.platform.name }} ${{ matrix.config.name }}
+    runs-on: ${{ matrix.platform.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+        - { name: Windows VS2022 x64,    os: windows-2022, flags: -A x64 -DCMAKE_PARALLEL_MSVC=TRUE -DCMAKE_PREPARE_WINDOWS_DRIVERS=TRUE, artifact_name: win64}
+        - { name: Windows VS2022 ARM,    os: windows-2022, flags: -A ARM64 -DCMAKE_PARALLEL_MSVC=TRUE -DCMAKE_PREPARE_WINDOWS_DRIVERS=TRUE, artifact_name: winarm64}
+        - { name: Windows VS2022 Win32,  os: windows-2022, flags: -A Win32 -DCMAKE_PARALLEL_MSVC=TRUE -DCMAKE_PREPARE_WINDOWS_DRIVERS=TRUE, artifact_name: win32}
+        - { name: Linux GCC x64,         os: ubuntu-latest, flags: 64, artifact_name: linux64}
+        - { name: Linux GCC 32,          os: ubuntu-latest, flags: 32, artifact_name: linux32}
+        - { name: Linux GCC ARM 64,      os: ubuntu-latest, flags: arm64, artifact_name: linuxarm64}
+        - { name: Linux GCC ARM 32,      os: ubuntu-latest, flags: arm32, artifact_name: linuxarm32}
+        - { name: macOS Apple Silicon,   os: macos-14, artifact_name: macos  }
+        config:
+        - { name: Static, flags: -DBUILD_SHARED_LIBS=FALSE }
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Restore file modification times
+      if: runner.os == 'Windows'
+      run: |
+        git ls-tree -r --name-only HEAD | while read filename; do
+          commit_date=$(git log -1 --follow --format=%ci -- "$filename")
+          timestamp=$(date -d "$commit_date" +'%Y%m%d%H%M.%S')
+          touch -t "$timestamp" "$filename"
+          mod_time=$(stat -c %y "$filename")
+          echo "File: $filename | Git timestamp: $timestamp | File mtime: $mod_time"
+        done
+      shell: bash
+
+    - name: Cache build folders
+      id: build-cache
+      if: runner.os == 'Windows'
+      uses: actions/cache@v4
+      with:
+        path: |
+          build
+        key: ${{ runner.os }}-${{ matrix.platform.artifact_name }}-build-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.platform.artifact_name }}-build-
+
+    - name: Configure
+      if: runner.os != 'Linux'
+      shell: bash
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ${{matrix.platform.flags}} ${{matrix.config.flags}}
+
+    - name: Build Linux
+      if: runner.os == 'Linux'
+      run: docker run --rm -u root -v ${PWD}:/home/builder/cc3dsfs lorenzooone/cc3dsfs:builder${{matrix.platform.flags}}
+
+    - name: Build Windows
+      if: runner.os == 'Windows'
+      shell: bash
+      run: cmake --build build --config Release
+
+    - name: Build macOS
+      if: runner.os == 'macOS'
+      shell: bash
+      run: cmake --build build --config Release -j
+
+    - name: Pack (not Linux)
+      if: runner.os != 'Linux'
+      shell: bash
+      run: cd build && cpack -G ZIP
+
+    - name: Unpack Codesign Repack
+      if: runner.os == 'macOS'
+      shell: bash
+      run: setup_scripts/macos_bundle_signature.sh cc3dsfs_macos
+
+    - name: Archive resulting artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: cc3dsfs-single-${{matrix.platform.artifact_name}}
+        path: build/cc3dsfs*.zip
+        if-no-files-found: error
+
+  create_pi_setup:
+    name: Create Pi Mono Setup
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Download all Linux ARM artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: cc3dsfs-single-linuxarm*
+        merge-multiple: true
+
+    - name: Execute pi_setup
+      shell: bash
+      run: setup_scripts/rpi_mono_setup_setup.sh
+
+    - name: Archive resulting artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: cc3dsfs-single-rpi-mono
+        path: cc3dsfs_rpi_kiosk_setup.zip
+        if-no-files-found: error
+
+  publish:
+    name: Publishing
+    runs-on: ubuntu-latest
+    needs: create_pi_setup
+    permissions:
+      contents: write
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: cc3dsfs-single-*
+        merge-multiple: true
+
+    - name: Auto-Release the zips
+      uses: IsaacShelton/update-existing-release@v1.3.4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        release: "Automatic Test Build"
+        prerelease: true
+        tag: "test-build"
+        replace: true
+        files: >
+          cc3dsfs_windows_arm64.zip
+          cc3dsfs_windows_x86_64.zip
+          cc3dsfs_windows_x86_32.zip
+          cc3dsfs_linux_x86_32.zip
+          cc3dsfs_linux_x86_64.zip
+          cc3dsfs_linux_arm32.zip
+          cc3dsfs_linux_arm64.zip
+          cc3dsfs_linux_pi32.zip
+          cc3dsfs_linux_pi64.zip
+          cc3dsfs_macos.zip
+          cc3dsfs_rpi_kiosk_setup.zip

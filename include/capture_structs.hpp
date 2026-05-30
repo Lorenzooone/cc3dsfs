@@ -481,6 +481,7 @@ struct CaptureDataSingleBuffer {
 	bool is_3d;
 	bool should_be_3d;
 	InputVideoDataType buffer_video_data_type;
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_write_time;
 };
 
 class CaptureDataBuffers {

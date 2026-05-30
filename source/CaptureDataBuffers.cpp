@@ -84,6 +84,7 @@ void CaptureDataBuffers::ReleaseWriterBuffer(int index, bool update_last_curr_in
 		return;
 	if(curr_writer_pos[index] == -1)
 		return;
+	this->buffers[curr_writer_pos[index]].last_write_time = std::chrono::high_resolution_clock::now();
 	access_mutex.lock();
 	if(update_last_curr_in) {
 		for(int j = 0; j < NUM_CONCURRENT_DATA_BUFFER_READERS; j++)

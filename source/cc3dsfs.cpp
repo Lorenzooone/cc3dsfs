@@ -760,6 +760,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 			CaptureDataSingleBuffer* data_buffer = capture_data->data_buffers.GetReaderBuffer(CAPTURE_READER_VIDEO);
 			if(data_buffer != NULL) {
 				last_frame_time = data_buffer->time_in_buf;
+				printf("IN: %f\n", last_frame_time);
 				if(data_buffer->read >= get_video_in_size(capture_data, data_buffer->is_3d, data_buffer->should_be_3d, data_buffer->buffer_video_data_type)) {
 					if(capture_data->status.cooldown_curr_in || (!capture_data->status.connected))
 						blank_out = true;
@@ -773,7 +774,13 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 					no_data_consecutive = 0;
 					data_processed = true;
 				}
+				auto written_time = data_buffer->last_write_time;
 				capture_data->data_buffers.ReleaseReaderBuffer(CAPTURE_READER_VIDEO);
+				if(data_processed) {
+					auto curr_time = std::chrono::high_resolution_clock::now();
+					std::chrono::duration<double> diff = curr_time - written_time;
+					printf("TRANSFER AND CONVERSION TIME: %f\n", diff.count());
+				}
 			}
 			if(!data_processed) {
 				auto curr_time = std::chrono::high_resolution_clock::now();
