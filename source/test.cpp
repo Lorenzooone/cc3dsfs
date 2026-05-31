@@ -11,7 +11,7 @@
 #define FPS_WINDOW_SIZE 64
 
 #define NUM_NUMBERS 10
-#define NUM_NOTIFICATIONS (2 + NUM_NUMBERS)
+#define NUM_NOTIFICATIONS (3 + NUM_NUMBERS)
 
 static double _FPSArrayGetAverage(FPSArray *array) {
 	int available_fps = FPS_WINDOW_SIZE;
@@ -121,10 +121,17 @@ int main()
 			}
 		}
 
+		int curr_counter = counter;
 		print_notification(notifications[0], get_float_str_decimals(_FPSArrayGetAverage(&draw_fps), 2), TEXT_KIND_NORMAL, 0, 0);
+
+		TextKind kind_num_fixed = TEXT_KIND_NORMAL;
+		if(curr_counter % 2)
+			kind_num_fixed = TEXT_KIND_ERROR;
+		print_notification(notifications[2], std::to_string(curr_counter), kind_num_fixed, 0, 300);
+
 		for(int i = 0; i < NUM_NUMBERS; i++) {
 			TextKind kind_num = TEXT_KIND_NORMAL;
-			if(counter == i)
+			if(curr_counter == i)
 				kind_num = TEXT_KIND_SUCCESS;
 			print_notification(notifications[i + NUM_NOTIFICATIONS - NUM_NUMBERS], std::to_string(i), kind_num, i * 50, 200);
 		}

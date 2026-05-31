@@ -775,8 +775,6 @@ void WindowScreen::execute_single_update_texture(bool do_full, bool is_top, bool
 
 	unsigned int m_texture = target_texture->getNativeHandle();
 	bool retry = true;
-	this->texture_software_based_conv = TO_RGBA_SOFTWARE_CONV;
-
 	while(retry) {
 		bool software_based_conv = this->saved_buf_manually_converted || ((this->texture_software_based_conv != NO_SOFTWARE_CONV) && (video_data_type == this->last_update_texture_data_type));
 
