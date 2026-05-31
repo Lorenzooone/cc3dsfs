@@ -10,6 +10,7 @@ struct Optimize3DSMenuOptionInfo {
 	const bool optimize_o3ds_valid;
 	const bool optimize_n3ds_valid;
 	const bool optimize_o2ds_valid;
+	const bool optimize_n3dsv2_valid;
 	const bool is_inc;
 	const std::string dec_str;
 	const std::string inc_str;
@@ -20,98 +21,121 @@ struct Optimize3DSMenuOptionInfo {
 static const Optimize3DSMenuOptionInfo optimize_o3ds_device_id_option = {
 .base_name = "Old 3DS Device ID:", .false_name = "", .is_selectable = false,
 .optimize_o3ds_valid = true, .optimize_n3ds_valid = false, .optimize_o2ds_valid = false,
+.optimize_n3dsv2_valid = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_NO_ACTION};
 
 static const Optimize3DSMenuOptionInfo optimize_n3ds_device_id_option = {
 .base_name = "New 3DS Device ID:", .false_name = "", .is_selectable = false,
 .optimize_o3ds_valid = false, .optimize_n3ds_valid = true, .optimize_o2ds_valid = false,
+.optimize_n3dsv2_valid = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_NO_ACTION};
 
 static const Optimize3DSMenuOptionInfo optimize_3ds_device_id_option = {
 .base_name = "Device ID", .false_name = "", .is_selectable = false,
 .optimize_o3ds_valid = true, .optimize_n3ds_valid = true, .optimize_o2ds_valid = true,
+.optimize_n3dsv2_valid = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_INFO_DEVICE_ID};
 
 static const Optimize3DSMenuOptionInfo optimize_copy_3ds_device_id_option = {
 .base_name = "Copy Device ID to clipboard", .false_name = "", .is_selectable = true,
 .optimize_o3ds_valid = true, .optimize_n3ds_valid = true, .optimize_o2ds_valid = true,
+.optimize_n3dsv2_valid = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_COPY_DEVICE_ID};
 
 static const Optimize3DSMenuOptionInfo optimize_serial_key_info_option = {
 .base_name = "Serial Key:", .false_name = "", .is_selectable = false,
 .optimize_o3ds_valid = true, .optimize_n3ds_valid = true, .optimize_o2ds_valid = true,
+.optimize_n3dsv2_valid = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_NO_ACTION};
 
 static const Optimize3DSMenuOptionInfo optimize_serial_key_option = {
 .base_name = "", .false_name = "", .is_selectable = false,
 .optimize_o3ds_valid = true, .optimize_n3ds_valid = true, .optimize_o2ds_valid = true,
+.optimize_n3dsv2_valid = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_OPTIMIZE_SERIAL_KEY};
 
 static const Optimize3DSMenuOptionInfo optimize_serial_key_menu_option = {
 .base_name = "Add New Serial Key", .false_name = "", .is_selectable = true,
 .optimize_o3ds_valid = true, .optimize_n3ds_valid = true, .optimize_o2ds_valid = true,
+.optimize_n3dsv2_valid = true,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_OPTIMIZE_SERIAL_KEY_MENU};
 
 static const Optimize3DSMenuOptionInfo optimize_3ds_format_explanation_0 = {
 .base_name = "Possible Data Types:", .false_name = "", .is_selectable = false,
 .optimize_o3ds_valid = true, .optimize_n3ds_valid = true, .optimize_o2ds_valid = true,
+.optimize_n3dsv2_valid = true,
 .is_inc = false, .dec_str = "<", .inc_str = ">", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_NO_ACTION};
 
 static const Optimize3DSMenuOptionInfo optimize_3ds_format_explanation_1 = {
 .base_name = "RGB888 - Full color", .false_name = "", .is_selectable = false,
 .optimize_o3ds_valid = true, .optimize_n3ds_valid = true, .optimize_o2ds_valid = true,
+.optimize_n3dsv2_valid = true,
 .is_inc = false, .dec_str = "<", .inc_str = ">", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_NO_ACTION};
 
 static const Optimize3DSMenuOptionInfo optimize_3ds_format_explanation_2 = {
 .base_name = "more demanding on USB host.", .false_name = "", .is_selectable = false,
 .optimize_o3ds_valid = true, .optimize_n3ds_valid = true, .optimize_o2ds_valid = true,
+.optimize_n3dsv2_valid = true,
 .is_inc = false, .dec_str = "<", .inc_str = ">", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_NO_ACTION};
 
 static const Optimize3DSMenuOptionInfo optimize_3ds_format_explanation_3 = {
 .base_name = "RGB565 - Reduced color", .false_name = "", .is_selectable = false,
 .optimize_o3ds_valid = true, .optimize_n3ds_valid = true, .optimize_o2ds_valid = false,
+.optimize_n3dsv2_valid = true,
 .is_inc = false, .dec_str = "<", .inc_str = ">", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_NO_ACTION};
 
 static const Optimize3DSMenuOptionInfo optimize_3ds_format_explanation_3_alt = {
 .base_name = "RGB565 - No Sound", .false_name = "", .is_selectable = false,
 .optimize_o3ds_valid = false, .optimize_n3ds_valid = false, .optimize_o2ds_valid = true,
+.optimize_n3dsv2_valid = false,
 .is_inc = false, .dec_str = "<", .inc_str = ">", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_NO_ACTION};
 
 static const Optimize3DSMenuOptionInfo optimize_3ds_format_explanation_4 = {
 .base_name = "less demanding on USB host.", .false_name = "", .is_selectable = false,
 .optimize_o3ds_valid = true, .optimize_n3ds_valid = true, .optimize_o2ds_valid = true,
+.optimize_n3dsv2_valid = true,
 .is_inc = false, .dec_str = "<", .inc_str = ">", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_NO_ACTION};
 
 static const Optimize3DSMenuOptionInfo optimize_3ds_change_format = {
 .base_name = "Data Type", .false_name = "", .is_selectable = true,
 .optimize_o3ds_valid = true, .optimize_n3ds_valid = true, .optimize_o2ds_valid = false,
+.optimize_n3dsv2_valid = true,
 .is_inc = true, .dec_str = "<", .inc_str = ">", .inc_out_action = OPTIMIZE3DS_MENU_INPUT_VIDEO_FORMAT_INC,
 .out_action = OPTIMIZE3DS_MENU_INPUT_VIDEO_FORMAT_DEC};
 
 static const Optimize3DSMenuOptionInfo optimize_2ds_change_format = {
 .base_name = "Data Type", .false_name = "", .is_selectable = true,
 .optimize_o3ds_valid = false, .optimize_n3ds_valid = false, .optimize_o2ds_valid = true,
+.optimize_n3dsv2_valid = false,
 .is_inc = true, .dec_str = "<", .inc_str = ">", .inc_out_action = OPTIMIZE2DS_MENU_INPUT_VIDEO_FORMAT_INC,
 .out_action = OPTIMIZE2DS_MENU_INPUT_VIDEO_FORMAT_DEC};
 
 static const Optimize3DSMenuOptionInfo optimize_old_fw_settings_menu = {
 .base_name = "Synch Settings", .false_name = "", .is_selectable = true,
 .optimize_o3ds_valid = false, .optimize_n3ds_valid = false, .optimize_o2ds_valid = true,
+.optimize_n3dsv2_valid = false,
 .is_inc = false, .dec_str = "<", .inc_str = ">", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
 .out_action = OPTIMIZE3DS_MENU_OLD_FW_SETTINGS_MENU};
+
+static const Optimize3DSMenuOptionInfo optimize_n3ds_downgrade_menu = {
+.base_name = "Downgrade to V2", .false_name = "", .is_selectable = true,
+.optimize_o3ds_valid = false, .optimize_n3ds_valid = true, .optimize_o2ds_valid = false,
+.optimize_n3dsv2_valid = false,
+.is_inc = false, .dec_str = "<", .inc_str = ">", .inc_out_action = OPTIMIZE3DS_MENU_NO_ACTION,
+.out_action = OPTIMIZE3DS_MENU_N3DS_DOWNGRADEV2_MENU};
 
 static const Optimize3DSMenuOptionInfo* pollable_options[] = {
 //&optimize_o3ds_device_id_option,
@@ -130,6 +154,7 @@ static const Optimize3DSMenuOptionInfo* pollable_options[] = {
 &optimize_3ds_change_format,
 &optimize_2ds_change_format,
 &optimize_old_fw_settings_menu,
+&optimize_n3ds_downgrade_menu,
 };
 
 Optimize3DSMenu::Optimize3DSMenu(TextRectanglePool* text_rectangle_pool) : OptionSelectionMenu(){
@@ -161,10 +186,12 @@ void Optimize3DSMenu::class_setup() {
 void Optimize3DSMenu::insert_data(CaptureDevice* device) {
 	bool is_o3ds = false;
 	bool is_n3ds = false;
+	bool is_n3dsv2 = false;
 	bool is_o2ds = false;
 	#ifdef USE_CYPRESS_OPTIMIZE
 	is_o3ds = is_device_optimize_o3ds(device);
 	is_n3ds = is_device_optimize_n3ds(device);
+	is_n3dsv2 = is_device_optimize_n3dsv2(device);
 	is_o2ds = is_device_optimize_o2ds(device);
 	#endif
 	this->num_enabled_options = 0;
@@ -176,6 +203,8 @@ void Optimize3DSMenu::insert_data(CaptureDevice* device) {
 			valid = valid && pollable_options[i]->optimize_n3ds_valid;
 		if(is_o2ds)
 			valid = valid && pollable_options[i]->optimize_o2ds_valid;
+		if(is_n3dsv2)
+			valid = valid && pollable_options[i]->optimize_n3dsv2_valid;
 		if(valid) {
 			this->options_indexes[this->num_enabled_options] = (int)i;
 			this->num_enabled_options++;

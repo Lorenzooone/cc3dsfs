@@ -134,6 +134,7 @@ void WindowScreen::init_menus() {
 	this->optimize_3ds_menu = new Optimize3DSMenu(this->text_rectangle_pool);
 	this->optimize_serial_key_add_menu = new OptimizeSerialKeyAddMenu(this->text_rectangle_pool);
 	this->optimize_old_fw_config_menu = new OptimizeOldFWConfigMenu(this->text_rectangle_pool);
+	this->optimize_3ds_downgradev2_menu = new Optimize3DSDowngradeV2Menu(this->text_rectangle_pool);
 }
 
 void WindowScreen::destroy_menus() {
@@ -168,6 +169,7 @@ void WindowScreen::destroy_menus() {
 	delete this->optimize_3ds_menu;
 	delete this->optimize_serial_key_add_menu;
 	delete this->optimize_old_fw_config_menu;
+	delete this->optimize_3ds_downgradev2_menu;
 }
 
 void WindowScreen::set_close(int ret_val) {
@@ -1316,6 +1318,15 @@ void WindowScreen::setup_optimize_old_fw_config_menu(bool reset_data) {
 	if(this->curr_menu != OPTIMIZE_OLD_FW_CONFIG_MENU) {
 		this->switch_to_menu(OPTIMIZE_OLD_FW_CONFIG_MENU, this->optimize_old_fw_config_menu, reset_data);
 		this->optimize_old_fw_config_menu->insert_data();
+	}
+}
+
+void WindowScreen::setup_optimize_n3ds_downgradev2_menu(bool reset_data) {
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != OPTIMIZE_3DS_DOWNGRADEV2_MENU_TYPE) {
+		this->switch_to_menu(OPTIMIZE_3DS_DOWNGRADEV2_MENU_TYPE, this->optimize_3ds_downgradev2_menu, reset_data);
+		this->optimize_3ds_downgradev2_menu->insert_data();
 	}
 }
 
@@ -2500,6 +2511,9 @@ void WindowScreen::poll(bool do_everything) {
 					case OPTIMIZE2DS_MENU_INPUT_VIDEO_FORMAT_DEC:
 						this->input_video_data_format_request_change(false, this->capture_status->device_specific_status.optimize_status.request_low_bw_format_old_2ds);
 						break;
+					case OPTIMIZE3DS_MENU_N3DS_DOWNGRADEV2_MENU:
+						this->setup_optimize_n3ds_downgradev2_menu();
+						break;
 					default:
 						break;
 				}
@@ -2556,6 +2570,23 @@ void WindowScreen::poll(bool do_everything) {
 				}
 				this->loaded_menu_ptr->reset_output_option();
 				break;
+			case OPTIMIZE_3DS_DOWNGRADEV2_MENU_TYPE:
+				switch(this->optimize_3ds_downgradev2_menu->selected_index) {
+					case OPTIMIZE3DS_DOWNGRADEV2_MENU_BACK:
+						this->setup_optimize_3ds_menu(false);
+						done = true;
+						break;
+					case OPTIMIZE3DS_DOWNGRADEV2_MENU_NO_ACTION:
+						break;
+					case OPTIMIZE3DS_DOWNGRADEV2_MENU_CONFIRM:
+						this->capture_status->device_specific_status.optimize_status.request_optimize_n3ds_downgradev2 = true;
+						this->setup_no_menu();
+						break;
+					default:
+						break;
+				}
+				this->loaded_menu_ptr->reset_output_option();
+				break;
 			default:
 				break;
 		}
@@ -2598,6 +2629,8 @@ void WindowScreen::update_capture_specific_settings() {
 	if(this->curr_menu == OPTIMIZE_SERIAL_KEY_ADD_MENU_TYPE)
 		this->setup_no_menu();
 	if(this->curr_menu == OPTIMIZE_OLD_FW_CONFIG_MENU)
+		this->setup_no_menu();
+	if(this->curr_menu == OPTIMIZE_3DS_DOWNGRADEV2_MENU_TYPE)
 		this->setup_no_menu();
 }
 
@@ -2886,6 +2919,9 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			break;
 		case OPTIMIZE_OLD_FW_CONFIG_MENU:
 			this->optimize_old_fw_config_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->capture_status);
+			break;
+		case OPTIMIZE_3DS_DOWNGRADEV2_MENU_TYPE:
+			this->optimize_3ds_downgradev2_menu->prepare(menu_scaling_factor, view_size_x, view_size_y);
 			break;
 		default:
 			break;

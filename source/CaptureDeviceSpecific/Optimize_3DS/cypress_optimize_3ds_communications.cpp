@@ -44,6 +44,7 @@
 #define OPTIMIZE_NEW_3DS_WANTED_VALUE_BASE 0xFE00
 #define OPTIMIZE_OLD_3DS_WANTED_VALUE_BASE 0xFD00
 #define OPTIMIZE_OLD_2DS_2014_WANTED_VALUE_BASE 0xFB00
+#define OPTIMIZE_NEW_3DSV2_WANTED_VALUE_BASE 0xFA00
 
 #define OPTIMIZE_NUM_KEY_CHARS SERIAL_KEY_OPTIMIZE_NO_DASHES_SIZE
 #define OPTIMIZE_NUM_KEY_CHARS_WITH_DASHES SERIAL_KEY_OPTIMIZE_WITH_DASHES_SIZE
@@ -51,6 +52,11 @@
 
 #define OPTIMIZE_EEPROM_NEW_SIZE 0x80
 #define OPTIMIZE_EEPROM_STRUCT_SIZE 0x79
+#define OPTIMIZE_EEPROM_CRC_POS 0x7C
+#define OPTIMIZE_EEPROM_OPERATION_SIZE 0x10
+
+#define OPTIMIZE_N3DS_VID 0x0752
+#define OPTIMIZE_N3DS_PID 0x8613
 
 const size_t key_bytes_to_serial_bytes_map[OPTIMIZE_NUM_KEY_BYTES] = {0, 7, 8, 9, 1, 4, 6, 3, 10, 2, 11, 5};
 
@@ -71,12 +77,13 @@ static const cyop_device_usb_device cypress_optimize_new_3ds_generic_device = {
 .firmware_to_load = optimize_new_3ds_fw, .firmware_size = optimize_new_3ds_fw_len,
 .fpga_pl_565 = NULL, .fpga_pl_565_size = 0,
 .fpga_pl_888 = NULL, .fpga_pl_888_size = 0,
-.is_new_device = true, .is_old_firmware = false, .is_o2ds = false,
+.is_new_device = true, .has_eeprom = true,
+.is_old_firmware = false, .is_o2ds = false,
 .next_device = CYPRESS_OPTIMIZE_NEW_3DS_INSTANTIATED_DEVICE,
 .has_bcd_device_serial = false,
 .index_in_allowed_scan = CC_OPTIMIZE_N3DS,
 .usb_device_info = {
-	.vid = 0x0752, .pid = 0x8613,
+	.vid = OPTIMIZE_N3DS_VID, .pid = OPTIMIZE_N3DS_PID,
 	.default_config = 1, .default_interface = 0,
 	.bulk_timeout = 500,
 	.ep_ctrl_bulk_in = 0, .ep_ctrl_bulk_out = 0,
@@ -99,7 +106,8 @@ static const cyop_device_usb_device cypress_optimize_new_3ds_instantiated_device
 .firmware_to_load = NULL, .firmware_size = 0,
 .fpga_pl_565 = optimize_new_3ds_565_fpga_pl, .fpga_pl_565_size = optimize_new_3ds_565_fpga_pl_len,
 .fpga_pl_888 = optimize_new_3ds_888_fpga_pl, .fpga_pl_888_size = optimize_new_3ds_888_fpga_pl_len,
-.is_new_device = true, .is_old_firmware = false, .is_o2ds = false,
+.is_new_device = true, .has_eeprom = true,
+.is_old_firmware = false, .is_o2ds = false,
 .next_device = CYPRESS_OPTIMIZE_NEW_3DS_INSTANTIATED_DEVICE,
 .has_bcd_device_serial = true,
 .index_in_allowed_scan = CC_OPTIMIZE_N3DS,
@@ -127,7 +135,8 @@ static const cyop_device_usb_device cypress_optimize_old_3ds_generic_device = {
 .firmware_to_load = optimize_old_3ds_fw, .firmware_size = optimize_old_3ds_fw_len,
 .fpga_pl_565 = NULL, .fpga_pl_565_size = 0,
 .fpga_pl_888 = NULL, .fpga_pl_888_size = 0,
-.is_new_device = false, .is_old_firmware = false, .is_o2ds = false,
+.is_new_device = false, .has_eeprom = false,
+.is_old_firmware = false, .is_o2ds = false,
 .next_device = CYPRESS_OPTIMIZE_OLD_3DS_INSTANTIATED_DEVICE,
 .has_bcd_device_serial = false,
 .index_in_allowed_scan = CC_OPTIMIZE_O3DS,
@@ -155,7 +164,8 @@ static const cyop_device_usb_device cypress_optimize_old_3ds_instantiated_device
 .firmware_to_load = NULL, .firmware_size = 0,
 .fpga_pl_565 = optimize_old_3ds_565_fpga_pl, .fpga_pl_565_size = optimize_old_3ds_565_fpga_pl_len,
 .fpga_pl_888 = optimize_old_3ds_888_fpga_pl, .fpga_pl_888_size = optimize_old_3ds_888_fpga_pl_len,
-.is_new_device = false, .is_old_firmware = false, .is_o2ds = false,
+.is_new_device = false, .has_eeprom = false,
+.is_old_firmware = false, .is_o2ds = false,
 .next_device = CYPRESS_OPTIMIZE_OLD_3DS_INSTANTIATED_DEVICE,
 .has_bcd_device_serial = true,
 .index_in_allowed_scan = CC_OPTIMIZE_O3DS,
@@ -183,7 +193,8 @@ static const cyop_device_usb_device cypress_optimize_old_old_2ds_generic_device 
 .firmware_to_load = optimize_old_2ds_2014_fw, .firmware_size = optimize_old_2ds_2014_fw_len,
 .fpga_pl_565 = NULL, .fpga_pl_565_size = 0,
 .fpga_pl_888 = NULL, .fpga_pl_888_size = 0,
-.is_new_device = false, .is_old_firmware = true, .is_o2ds = true,
+.is_new_device = false, .has_eeprom = false,
+.is_old_firmware = true, .is_o2ds = true,
 .next_device = CYPRESS_OPTIMIZE_OLD_OLD_2DS_INSTANTIATED_DEVICE,
 .has_bcd_device_serial = false,
 .index_in_allowed_scan = CC_OPTIMIZE_O_O2DS,
@@ -211,7 +222,8 @@ static const cyop_device_usb_device cypress_optimize_old_old_2ds_instantiated_de
 .firmware_to_load = NULL, .firmware_size = 0,
 .fpga_pl_565 = optimize_old_2ds_2014_565_fpga_pl, .fpga_pl_565_size = optimize_old_2ds_2014_565_fpga_pl_len,
 .fpga_pl_888 = optimize_old_2ds_2014_888_fpga_pl, .fpga_pl_888_size = optimize_old_2ds_2014_888_fpga_pl_len,
-.is_new_device = false, .is_old_firmware = true, .is_o2ds = true,
+.is_new_device = false, .has_eeprom = false,
+.is_old_firmware = true, .is_o2ds = true,
 .next_device = CYPRESS_OPTIMIZE_OLD_OLD_2DS_INSTANTIATED_DEVICE,
 .has_bcd_device_serial = true,
 .index_in_allowed_scan = CC_OPTIMIZE_O_O2DS,
@@ -426,7 +438,7 @@ bool reset_cpu(cy_device_device_handlers* handlers, const cyop_device_usb_device
 
 static bool is_eeprom_data_valid(uint8_t* eeprom_data) {
 	uint32_t crc = calc_crc32_adler(eeprom_data, OPTIMIZE_EEPROM_STRUCT_SIZE);
-	return crc == read_le32(eeprom_data + 0x7C);
+	return crc == read_le32(eeprom_data + OPTIMIZE_EEPROM_CRC_POS);
 }
 
 static std::string extract_key_from_eeprom(uint8_t* eeprom_data) {
@@ -438,7 +450,7 @@ static std::string extract_key_from_eeprom(uint8_t* eeprom_data) {
 }
 
 static int read_device_eeprom(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint8_t* in_buffer, size_t read_size) {
-	const size_t read_block_size = 0x10;
+	const size_t read_block_size = OPTIMIZE_EEPROM_OPERATION_SIZE;
 	const size_t num_reads = (read_size + read_block_size - 1) / read_block_size;
 	int transferred = 0;
 	int ret = 0;
@@ -461,7 +473,7 @@ static int read_device_eeprom(cy_device_device_handlers* handlers, const cyop_de
 }
 
 static int write_device_eeprom(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint8_t* out_buffer, size_t write_size) {
-	const size_t write_block_size = 0x10;
+	const size_t write_block_size = OPTIMIZE_EEPROM_OPERATION_SIZE;
 	const size_t num_writes = (write_size + write_block_size - 1) / write_block_size;
 	int transferred = 0;
 	int ret = 0;
@@ -484,6 +496,39 @@ static int write_device_eeprom(cy_device_device_handlers* handlers, const cyop_d
 			return -1;
 	}
 	return ret;
+}
+
+static int set_eeprom_boot_id(cy_device_device_handlers* handlers, const cyop_device_usb_device* device, uint16_t vid, uint16_t pid, uint16_t device_id) {
+	uint8_t buffer[OPTIMIZE_EEPROM_NEW_SIZE];
+
+	int ret = read_device_eeprom(handlers, device, buffer, OPTIMIZE_EEPROM_NEW_SIZE);
+	if(ret < 0)
+		return ret;
+
+	buffer[0] = 0xC0; //0xC0 makes it use the boot IDs we set
+	write_le16(buffer + 1, vid);
+	write_le16(buffer + 3, pid);
+	write_le16(buffer + 5, device_id);
+	write_le16(buffer + 7, 0);
+
+	uint32_t crc = calc_crc32_adler(buffer, OPTIMIZE_EEPROM_STRUCT_SIZE);
+	write_le32(buffer + OPTIMIZE_EEPROM_CRC_POS, crc);
+
+	return write_device_eeprom(handlers, device, buffer, OPTIMIZE_EEPROM_NEW_SIZE);
+}
+
+int set_eeprom_boot_id_n3ds(cy_device_device_handlers* handlers, const cyop_device_usb_device* device) {
+	return set_eeprom_boot_id(handlers, device, OPTIMIZE_N3DS_VID, OPTIMIZE_N3DS_PID, 0);
+}
+int remove_eeprom_boot_id(cy_device_device_handlers* handlers, const cyop_device_usb_device* device) {
+	uint8_t buffer[OPTIMIZE_EEPROM_OPERATION_SIZE];
+
+	int ret = read_device_eeprom(handlers, device, buffer, OPTIMIZE_EEPROM_OPERATION_SIZE);
+	if(ret < 0)
+		return ret;
+
+	buffer[0] = 0x00; //0xC0 and 0xC2 are reserved, writing 0x00 should remove the boot ID
+	return write_device_eeprom(handlers, device, buffer, OPTIMIZE_EEPROM_OPERATION_SIZE);
 }
 
 static uint64_t bytes_to_serial_device_id(uint8_t* in_buffer) {

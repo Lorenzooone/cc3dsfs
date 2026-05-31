@@ -12,6 +12,8 @@
 enum cypress_optimize_device_type {
 	CYPRESS_OPTIMIZE_NEW_3DS_BLANK_DEVICE,
 	CYPRESS_OPTIMIZE_NEW_3DS_INSTANTIATED_DEVICE,
+	CYPRESS_OPTIMIZE_NEW_3DSV2_BLANK_DEVICE,
+	CYPRESS_OPTIMIZE_NEW_3DSV2_INSTANTIATED_DEVICE,
 	CYPRESS_OPTIMIZE_OLD_3DS_BLANK_DEVICE,
 	CYPRESS_OPTIMIZE_OLD_3DS_INSTANTIATED_DEVICE,
 	CYPRESS_OPTIMIZE_OLD_OLD_2DS_BLANK_DEVICE,
@@ -29,6 +31,7 @@ struct cyop_device_usb_device {
 	uint8_t* fpga_pl_888;
 	size_t fpga_pl_888_size;
 	bool is_new_device;
+	bool has_eeprom;
 	bool is_old_firmware;
 	bool is_o2ds;
 	cypress_optimize_device_type next_device;
@@ -56,5 +59,7 @@ bool check_key_matches_device_id(uint64_t device_id, std::string key, bool is_ne
 bool check_key_matches_device_id(uint64_t device_id, std::string key, const cyop_device_usb_device* device);
 bool check_key_valid(std::string key, bool is_new_device);
 bool check_key_valid(std::string key, const cyop_device_usb_device* device);
+int set_eeprom_boot_id_n3ds(cy_device_device_handlers* handlers, const cyop_device_usb_device* device);
+int remove_eeprom_boot_id(cy_device_device_handlers* handlers, const cyop_device_usb_device* device);
 
 #endif

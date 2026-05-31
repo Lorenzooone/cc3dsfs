@@ -28,7 +28,7 @@ enum CaptureConnectionType { CAPTURE_CONN_FTD3, CAPTURE_CONN_USB, CAPTURE_CONN_F
 enum InputVideoDataType { VIDEO_DATA_RGB, VIDEO_DATA_BGR, VIDEO_DATA_RGB16, VIDEO_DATA_BGR16 };
 enum CaptureScreensType { CAPTURE_SCREENS_BOTH, CAPTURE_SCREENS_TOP, CAPTURE_SCREENS_BOTTOM, CAPTURE_SCREENS_ENUM_END };
 enum CaptureSpeedsType { CAPTURE_SPEEDS_FULL, CAPTURE_SPEEDS_HALF, CAPTURE_SPEEDS_THIRD, CAPTURE_SPEEDS_QUARTER, CAPTURE_SPEEDS_ENUM_END };
-enum PossibleCaptureDevices { CC_LOOPY_OLD_DS, CC_LOOPY_NEW_DS, CC_LOOPY_OLD_3DS, CC_LOOPY_NEW_N3DSXL, CC_IS_NITRO_EMULATOR, CC_IS_NITRO_CAPTURE, CC_IS_TWL_CAPTURE, CC_NISETRO_DS, CC_OPTIMIZE_O3DS, CC_OPTIMIZE_N3DS, CC_OPTIMIZE_O_O2DS, CC_PARTNER_CTR, CC_POSSIBLE_DEVICES_END };
+enum PossibleCaptureDevices { CC_LOOPY_OLD_DS, CC_LOOPY_NEW_DS, CC_LOOPY_OLD_3DS, CC_LOOPY_NEW_N3DSXL, CC_IS_NITRO_EMULATOR, CC_IS_NITRO_CAPTURE, CC_IS_TWL_CAPTURE, CC_NISETRO_DS, CC_OPTIMIZE_O3DS, CC_OPTIMIZE_N3DS, CC_OPTIMIZE_N3DSV2, CC_OPTIMIZE_O_O2DS, CC_PARTNER_CTR, CC_POSSIBLE_DEVICES_END };
 
 // Readers are Audio and Video. So 2.
 // Use 6 extra buffers. 5 for async writing in case the other 2 are busy,
@@ -422,6 +422,8 @@ struct CaptureStatusOptimize {
 	bool request_low_bw_format = true;
 	bool request_low_bw_format_old_2ds = false;
 	bool key_updated = false;
+	bool request_optimize_n3ds_downgradev2 = false;
+	bool request_optimize_n3dsv2_upgrade = false;
 	CaptureOptimizeOldFirmwareConfig old_fw_config_full_bw_format = {};
 	CaptureOptimizeOldFirmwareConfig old_fw_config_low_bw_format = {};
 };

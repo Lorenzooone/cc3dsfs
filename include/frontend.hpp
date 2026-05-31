@@ -44,6 +44,7 @@
 #include "Optimize3DSMenu.hpp"
 #include "OptimizeSerialKeyAddMenu.hpp"
 #include "OptimizeOldFWConfigMenu.hpp"
+#include "Optimize3DSDowngradeV2Menu.hpp"
 #include "display_structs.hpp"
 #include "event_structs.hpp"
 #include "shaders_list.hpp"
@@ -214,6 +215,7 @@ private:
 	Optimize3DSMenu* optimize_3ds_menu;
 	OptimizeSerialKeyAddMenu* optimize_serial_key_add_menu;
 	OptimizeOldFWConfigMenu* optimize_old_fw_config_menu;
+	Optimize3DSDowngradeV2Menu* optimize_3ds_downgradev2_menu;
 
 	std::vector<const CropData*> possible_crops;
 	std::vector<const CropData*> possible_crops_ds;
@@ -439,6 +441,7 @@ private:
 	void setup_optimize_3ds_menu(bool reset_data = true);
 	void setup_optimize_serial_key_add_menu(bool reset_data = true);
 	void setup_optimize_old_fw_config_menu(bool reset_data = true);
+	void setup_optimize_n3ds_downgradev2_menu(bool reset_data = true);
 	void update_connection();
 	bool has_menu_textbox();
 };

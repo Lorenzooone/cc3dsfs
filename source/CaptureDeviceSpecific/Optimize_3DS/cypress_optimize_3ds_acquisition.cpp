@@ -310,6 +310,10 @@ bool is_device_optimize_n3ds(CaptureDevice* device) {
 	return does_device_match_type(device, CYPRESS_OPTIMIZE_NEW_3DS_INSTANTIATED_DEVICE);
 }
 
+bool is_device_optimize_n3dsv2(CaptureDevice* device) {
+	return does_device_match_type(device, CYPRESS_OPTIMIZE_NEW_3DSV2_INSTANTIATED_DEVICE);
+}
+
 static InputVideoDataType extract_wanted_input_video_data_type(CaptureStatus* capture_status) {
 	const cyop_device_usb_device* usb_device_info = (const cyop_device_usb_device*)capture_status->device.descriptor;
 	if(usb_device_info->is_o2ds)
@@ -1030,6 +1034,8 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 	int ret = capture_start(handlers, usb_device_desc, true, stored_video_data_type == OPTIMIZE_RGB888_FORMAT, device_id, read_key);
 	capture_data->status.title_check_id += 1;
 	capture_data->status.device_specific_status.optimize_status.key_updated = false;
+	capture_data->status.device_specific_status.optimize_status.request_optimize_n3ds_downgradev2 = false;
+	capture_data->status.device_specific_status.optimize_status.request_optimize_n3dsv2_upgrade = false;
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_capture_start = std::chrono::high_resolution_clock::now();
 	std::chrono::time_point<std::chrono::high_resolution_clock> clock_last_param_edit = std::chrono::high_resolution_clock::now();
 
@@ -1080,12 +1086,32 @@ static bool cyop_device_acquisition_loop(CaptureData* capture_data, CypressOptim
 
 		bool is_new_3d = could_use_3d && get_3d_enabled(&capture_data->status);
 		bool present_new_old_fw_config = are_there_changes_present_to_old_fw_config(capture_data, stored_video_data_type, stored_old_fw_cfg_full, stored_old_fw_cfg_limited);
+		bool n3ds_downgradev2 = is_device_optimize_n3ds(&capture_data->status.device) && capture_data->status.device_specific_status.optimize_status.request_optimize_n3ds_downgradev2;
+		bool n3dsv2_upgrade = false && is_device_optimize_n3dsv2(&capture_data->status.device) && capture_data->status.device_specific_status.optimize_status.request_optimize_n3dsv2_upgrade;
 		InputVideoDataType wanted_input_video_data_type = extract_wanted_input_video_data_type(capture_data);
 		force_capture_start_key = (!is_key_valid) && (!check_key_matches_device_id(device_id, read_key, usb_device_desc)) && key_missing_capture_start_again_check_time(clock_last_capture_start);
-		if((wanted_input_video_data_type != stored_video_data_type) || (is_new_3d != stored_is_3d) || force_capture_start_key || capture_data->status.device_specific_status.optimize_status.key_updated || present_new_old_fw_config) {
+		if((wanted_input_video_data_type != stored_video_data_type) || (is_new_3d != stored_is_3d) || force_capture_start_key || capture_data->status.device_specific_status.optimize_status.key_updated || present_new_old_fw_config || n3ds_downgradev2 || n3dsv2_upgrade) {
 			capture_data->status.cooldown_curr_in = FIX_PARTIAL_FIRST_FRAME_NUM + NUM_OPTIMIZE_3DS_CYPRESS_CONCURRENTLY_RUNNING_BUFFERS;
 			wait_all_cypress_device_buffers_free(capture_data, cypress_device_capture_recv_data);
 			cyop_key_check_and_interrogate_file(&capture_data->status, usb_device_desc, device_id, is_key_valid, read_key);
+			if(n3ds_downgradev2) {
+				ret = remove_eeprom_boot_id(handlers, usb_device_desc);
+				capture_data->status.device_specific_status.optimize_status.request_optimize_n3ds_downgradev2 = false;
+				if(ret < 0) {
+					capture_error_print(true, capture_data, "Disconnected: Boot param removal error");
+					return false;
+				}
+				capture_warning_print(capture_data, "Downgraded device to V2\nPlease reconnect to the USB\nport to see changes");
+			}
+			if(n3dsv2_upgrade) {
+				ret = set_eeprom_boot_id_n3ds(handlers, usb_device_desc);
+				capture_data->status.device_specific_status.optimize_status.request_optimize_n3dsv2_upgrade = false;
+				if(ret < 0) {
+					capture_error_print(true, capture_data, "Disconnected: Boot param storage error");
+					return false;
+				}
+				capture_warning_print(capture_data, "Upgraded device to V1\nPlease reconnect to the USB\nport to see changes");
+			}
 			ret = restart_captures_cc_reads(capture_data, cypress_device_capture_recv_data, device_id, index, stored_video_data_type, stored_is_3d, could_use_3d, stored_old_fw_cfg_full, stored_old_fw_cfg_limited, force_capture_start_key, read_key, clock_last_capture_start, clock_last_param_edit);
 			if(ret < 0) {
 				capture_error_print(true, capture_data, "Disconnected: Update mode error");
