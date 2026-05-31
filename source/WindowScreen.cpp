@@ -319,7 +319,6 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoD
 		this->last_poll_time = std::chrono::high_resolution_clock::now();
 	}
 	if(this->m_win.isOpen() || this->loaded_operations.call_create) {
-		print_time_since_start_draw("TO REAL START DRAW TIME");
 		this->curr_frame_texture_pos = (this->curr_frame_texture_pos + 1) % this->num_frames_to_blend;
 		WindowScreen::reset_operations(future_operations);
 		if(update_rendered_buffer) {
@@ -355,7 +354,6 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoD
 			this->display_lock.unlock();
 		if((!this->main_thread_owns_window) && ((this->scheduled_work_on_window) || (!this->loaded_info.async)))
 			while(!this->is_thread_done);
-		print_time_since_start_draw("PRE WINDOW DRAW TIME");
 		this->window_factory(true);
 		// This must be done in the main thread for it to work on Windows... :/
 		this->m_win.setMouseCursorVisible(this->loaded_info.show_mouse);
@@ -1099,6 +1097,7 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 		this->m_out_rect_top_right.to_backup_tex = &this->m_out_rect_top_right.backup_tex;
 		this->post_texture_conversion_processing(out_rect_top_right, this->m_out_rect_top_right.to_process_tex, this->m_out_rect_top_right.to_backup_tex, in_rect_top_right, actually_draw, true, is_debug);
 	}
+	print_time_since_start_draw("POST TEXTURE PROCESSING");
 
 	if(is_debug)
 		this->m_win.clear(sf::Color::Green);
@@ -1138,8 +1137,10 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 			this->draw_rect_to_window(out_rect_bot, false);
 		}
 	}
+	print_time_since_start_draw("POST DRAW RECT");
 	this->execute_menu_draws();
 	this->notification->draw(this->m_win);
+	print_time_since_start_draw("POST MENUS");
 	this->m_win.display();
 	this->draw_lock->unlock();
 }
@@ -1151,7 +1152,9 @@ void WindowScreen::window_render_call() {
 		this->m_win.setVerticalSyncEnabled(this->loaded_info.v_sync_enabled);
 	else
 		this->m_win.setVerticalSyncEnabled(false);
+	print_time_since_start_draw("PRE TEXTURE");
 	this->pre_texture_conversion_processing();
+	print_time_since_start_draw("POST TEXTURE");
 
 	this->display_data_to_window(true);
 
