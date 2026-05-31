@@ -229,10 +229,10 @@ void WindowScreen::display_call(bool is_main_thread) {
 	this->prepare_screen_rendering();
 	if(this->m_win.isOpen()) {
 		if(this->main_thread_owns_window != is_main_thread) {
-			this->draw_lock->lock();
+			//this->draw_lock->lock();
 			(void)this->m_win.setActive(true);
 			this->main_thread_owns_window = is_main_thread;
-			this->draw_lock->unlock();
+			//this->draw_lock->unlock();
 		}
 		this->window_render_call();
 	}
@@ -251,18 +251,18 @@ void WindowScreen::display_thread() {
 		}
 	}
 	if(!this->main_thread_owns_window) {
-		this->draw_lock->lock();
+		//this->draw_lock->lock();
 		(void)this->m_win.setActive(false);
-		this->draw_lock->unlock();
+		//this->draw_lock->unlock();
 	}
 	this->done_display = true;
 }
 
 void WindowScreen::end() {
 	if(this->main_thread_owns_window) {
-		this->draw_lock->lock();
+		//this->draw_lock->lock();
 		(void)this->m_win.setActive(false);
-		this->draw_lock->unlock();
+		//this->draw_lock->unlock();
 	}
 	this->display_lock.unlock();
 }
@@ -277,10 +277,10 @@ bool WindowScreen::has_focus() {
 
 void WindowScreen::after_thread_join() {
 	if(this->m_win.isOpen()) {
-		this->draw_lock->lock();
+		//this->draw_lock->lock();
 		(void)this->m_win.setActive(true);
 		this->m_win.close();
-		this->draw_lock->unlock();
+		//this->draw_lock->unlock();
 	}
 }
 
@@ -411,9 +411,9 @@ void WindowScreen::reset_operations(ScreenOperations &operations) {
 void WindowScreen::free_ownership_of_window(bool is_main_thread) {
 	if(is_main_thread == this->main_thread_owns_window) {
 		if((this->scheduled_work_on_window) || (is_main_thread == this->loaded_info.async)) {
-			this->draw_lock->lock();
+			//this->draw_lock->lock();
 			(void)this->m_win.setActive(false);
-			this->draw_lock->unlock();
+			//this->draw_lock->unlock();
 		}
 	}
 }
@@ -521,18 +521,18 @@ bool WindowScreen::window_needs_work() {
 
 void WindowScreen::window_factory(bool is_main_thread) {
 	if(this->loaded_operations.call_close) {
-		this->draw_lock->lock();
+		//this->draw_lock->lock();
 		(void)this->m_win.setActive(true);
 		this->main_thread_owns_window = is_main_thread;
 		this->m_win.close();
 		while(!events_queue.empty())
 			events_queue.pop();
-		this->draw_lock->unlock();
+		//this->draw_lock->unlock();
 		this->loaded_operations.call_close = false;
 		this->loaded_operations.call_create = false;
 	}
 	if(this->loaded_operations.call_create) {
-		this->draw_lock->lock();
+		//this->draw_lock->lock();
 		(void)this->m_win.setActive(true);
 		this->main_thread_owns_window = is_main_thread;
 		bool previously_open = this->m_win.isOpen();
@@ -571,16 +571,16 @@ void WindowScreen::window_factory(bool is_main_thread) {
 			this->m_win.setPosition(prev_pos);
 		this->last_window_creation_time = std::chrono::high_resolution_clock::now();
 		this->update_screen_settings();
-		this->draw_lock->unlock();
+		//this->draw_lock->unlock();
 		this->loaded_operations.call_create = false;
 	}
 	if(this->m_win.isOpen()) {
 		this->setWinSize(is_main_thread);
 	}
 	if((is_main_thread == this->main_thread_owns_window) && (this->main_thread_owns_window == this->loaded_info.async)) {
-		this->draw_lock->lock();
+		//this->draw_lock->lock();
 		(void)this->m_win.setActive(false);
-		this->draw_lock->unlock();
+		//this->draw_lock->unlock();
 	}
 	this->update_connection();
 }
@@ -814,10 +814,10 @@ void WindowScreen::pre_texture_conversion_processing() {
 		return;
 	if(!this->capture_status->connected)
 		return;
-	this->draw_lock->lock();
+	//this->draw_lock->lock();
 	//Place preprocessing window-specific effects here
 	this->update_texture();
-	this->draw_lock->unlock();
+	//this->draw_lock->unlock();
 }
 
 static void transpose_matrix_to_new_one(float target[3][3], const float source[3][3]) {
@@ -1077,7 +1077,7 @@ sf::Vector2f WindowScreen::get_3d_offset_out_rect(ScreenInfo* info, bool is_seco
 }
 
 void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
-	this->draw_lock->lock();
+	//this->draw_lock->lock();
 	sf::RectangleShape out_rect_top = this->m_out_rect_top.out_rect;
 	sf::RectangleShape out_rect_top_right = this->m_out_rect_top_right.out_rect;
 	sf::RectangleShape out_rect_bot = this->m_out_rect_bot.out_rect;
@@ -1142,7 +1142,7 @@ void WindowScreen::display_data_to_window(bool actually_draw, bool is_debug) {
 	this->notification->draw(this->m_win);
 	print_time_since_start_draw("POST MENUS");
 	this->m_win.display();
-	this->draw_lock->unlock();
+	//this->draw_lock->unlock();
 }
 
 void WindowScreen::window_render_call() {
@@ -1923,11 +1923,11 @@ void WindowScreen::setWinSize(bool is_main_thread) {
 	int win_width = this->m_win.getSize().x;
 	int win_height = this->m_win.getSize().y;
 	if((win_width != width) || (win_height != height)) {
-		this->draw_lock->lock();
+		//this->draw_lock->lock();
 		(void)this->m_win.setActive(true);
 		this->main_thread_owns_window = is_main_thread;
 		this->m_win.setSize({(unsigned int)width, (unsigned int)height});
-		this->draw_lock->unlock();
+		//this->draw_lock->unlock();
 	}
 }
 
