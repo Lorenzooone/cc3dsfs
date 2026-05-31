@@ -2469,6 +2469,9 @@ void WindowScreen::poll(bool do_everything) {
 					case USBCONRESO_MENU_OPTI_O3DS:
 						this->devices_allowed_change(CC_OPTIMIZE_O3DS);
 						break;
+					case USBCONRESO_MENU_OPTI_N3DSV2:
+						this->devices_allowed_change(CC_OPTIMIZE_N3DSV2);
+						break;
 					case USBCONRESO_MENU_OPTI_O2DS:
 						this->devices_allowed_change(CC_OPTIMIZE_O_O2DS);
 						break;

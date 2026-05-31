@@ -35,13 +35,13 @@ struct USBConflictResolutionMenuOptionInfo {
 };
 
 static const USBConflictResolutionMenuOptionInfo warning_nise_opti_conflict_0 = {
-.base_name = "There are three capture cards",
+.base_name = "There are four capture cards",
 .false_name = "", .exists = EXISTENCE_VALUE_CONFLICT_NISE, .is_selectable = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = USBCONRESO_MENU_NO_ACTION,
 .out_action = USBCONRESO_MENU_NO_ACTION};
 
 static const USBConflictResolutionMenuOptionInfo warning_nise_opti_conflict_0_alt = {
-.base_name = "There are two capture cards",
+.base_name = "There are three capture cards",
 .false_name = "", .exists = EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS && (!EXISTENCE_VALUE_CONFLICT_NISE), .is_selectable = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = USBCONRESO_MENU_NO_ACTION,
 .out_action = USBCONRESO_MENU_NO_ACTION};
@@ -53,13 +53,13 @@ static const USBConflictResolutionMenuOptionInfo warning_nise_opti_conflict_1 = 
 .out_action = USBCONRESO_MENU_NO_ACTION};
 
 static const USBConflictResolutionMenuOptionInfo warning_nise_opti_conflict_2 = {
-.base_name = "You can disable two to make",
+.base_name = "You can disable three to make",
 .false_name = "", .exists = EXISTENCE_VALUE_CONFLICT_NISE, .is_selectable = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = USBCONRESO_MENU_NO_ACTION,
 .out_action = USBCONRESO_MENU_NO_ACTION};
 
 static const USBConflictResolutionMenuOptionInfo warning_nise_opti_conflict_2_alt = {
-.base_name = "You can disable one to make",
+.base_name = "You can disable two to make",
 .false_name = "", .exists = EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS && (!EXISTENCE_VALUE_CONFLICT_NISE), .is_selectable = false,
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = USBCONRESO_MENU_NO_ACTION,
 .out_action = USBCONRESO_MENU_NO_ACTION};
@@ -82,6 +82,12 @@ static const USBConflictResolutionMenuOptionInfo optimize_o3ds_disable_option = 
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = USBCONRESO_MENU_NO_ACTION,
 .out_action = USBCONRESO_MENU_OPTI_O3DS};
 
+static const USBConflictResolutionMenuOptionInfo optimize_n3dsv2_disable_option = {
+.base_name = "Disable Opt. N3DSv2",
+.false_name = "Enable Opt. N3DSv2", .exists = EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS, .is_selectable = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = USBCONRESO_MENU_NO_ACTION,
+.out_action = USBCONRESO_MENU_OPTI_N3DSV2};
+
 static const USBConflictResolutionMenuOptionInfo optimize_o2ds_disable_option = {
 .base_name = "Disable Opt. O2DS Late 2014",
 .false_name = "Enable Opt. O2DS Late 2014", .exists = EXISTENCE_VALUE_CONFLICT_NISE_OPTI_O3DS, .is_selectable = true,
@@ -96,6 +102,7 @@ static const USBConflictResolutionMenuOptionInfo* pollable_options[] = {
 &warning_nise_opti_conflict_2_alt,
 &warning_nise_opti_conflict_3,
 &optimize_o3ds_disable_option,
+&optimize_n3dsv2_disable_option,
 &optimize_o2ds_disable_option,
 &nisetro_ds_disable_option,
 };
@@ -111,7 +118,7 @@ USBConflictResolutionMenu::~USBConflictResolutionMenu() {
 }
 
 void USBConflictResolutionMenu::class_setup() {
-	this->num_options_per_screen = 6;
+	this->num_options_per_screen = 4;
 	this->min_elements_text_scaling_factor = num_options_per_screen + 2;
 	this->width_factor_menu = 16;
 	this->width_divisor_menu = 9;
@@ -207,6 +214,9 @@ void USBConflictResolutionMenu::prepare(float menu_scaling_factor, int view_size
 				break;
 			case USBCONRESO_MENU_OPTI_O2DS:
 				this->labels[index]->setText(this->setTextOptionBool(real_index, capture_status->devices_allowed_scan[CC_OPTIMIZE_O_O2DS]));
+				break;
+			case USBCONRESO_MENU_OPTI_N3DSV2:
+				this->labels[index]->setText(this->setTextOptionBool(real_index, capture_status->devices_allowed_scan[CC_OPTIMIZE_N3DSV2]));
 				break;
 			default:
 				break;

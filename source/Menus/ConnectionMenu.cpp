@@ -36,6 +36,14 @@ void ConnectionMenu::set_output_option(int index, int action) {
 	this->selected_index = index;
 }
 
+float ConnectionMenu::get_option_text_factor(int index) {
+	if(index < 0)
+		return 1.0f;
+	if(index >= ((int)this->get_num_options()))
+		return 1.0f;
+	return 0.85f;
+}
+
 size_t ConnectionMenu::get_num_options() {
 	return this->devices_list->size();
 }

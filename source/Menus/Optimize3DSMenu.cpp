@@ -253,7 +253,7 @@ static std::string get_data_format_name(bool request_low_bw_format) {
 }
 
 float Optimize3DSMenu::get_option_text_factor(int index) {
-	if(index <= 0)
+	if(index < 0)
 		return 1.0f;
 	if(index >= ((int)this->num_enabled_options))
 		return 1.0f;

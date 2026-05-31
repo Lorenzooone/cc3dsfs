@@ -45,6 +45,7 @@ struct override_all_data {
 	bool auto_close = false;
 	bool force_disable_nisetro_ds = false;
 	bool force_disable_optimize_old_3ds = false;
+	bool force_disable_optimize_new_3ds_v2 = false;
 	bool force_disable_optimize_old_old_2ds = false;
 	bool auto_save = true;
 	int loaded_profile = STARTUP_FILE_INDEX;
@@ -263,6 +264,11 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 				continue;
 			}
 
+			if(key == "optimize_n3dsv2_scan_for") {
+				capture_status->devices_allowed_scan[CC_OPTIMIZE_N3DSV2] = std::stoi(value);
+				continue;
+			}
+
 			if(key == "optimize_oo2ds_scan_for") {
 				capture_status->devices_allowed_scan[CC_OPTIMIZE_O_O2DS] = std::stoi(value);
 				continue;
@@ -395,6 +401,7 @@ static bool save(const std::string path, const std::string name, const std::stri
 	file << "partner_ctr_ac_adapter_connected=" << capture_status->device_specific_status.partner_ctr_status.ac_adapter_connected << std::endl;
 	file << "partner_ctr_ac_adapter_charging=" << capture_status->device_specific_status.partner_ctr_status.ac_adapter_charging << std::endl;
 	file << "optimize_o3ds_scan_for=" << capture_status->devices_allowed_scan[CC_OPTIMIZE_O3DS] << std::endl;
+	file << "optimize_n3dsv2_scan_for=" << capture_status->devices_allowed_scan[CC_OPTIMIZE_N3DSV2] << std::endl;
 	file << "optimize_oo2ds_scan_for=" << capture_status->devices_allowed_scan[CC_OPTIMIZE_O_O2DS] << std::endl;
 	file << "nisetro_ds_scan_for=" << capture_status->devices_allowed_scan[CC_NISETRO_DS] << std::endl;
 	file << audio_data->save_audio_data();
@@ -631,6 +638,7 @@ static void populate_force_disable_ccs(bool* force_cc_disables, override_all_dat
 		force_cc_disables[i] = false;
 	force_cc_disables[CC_NISETRO_DS] = override_data.force_disable_nisetro_ds;
 	force_cc_disables[CC_OPTIMIZE_O3DS] = override_data.force_disable_optimize_old_3ds;
+	force_cc_disables[CC_OPTIMIZE_N3DSV2] = override_data.force_disable_optimize_new_3ds_v2;
 	force_cc_disables[CC_OPTIMIZE_O_O2DS] = override_data.force_disable_optimize_old_old_2ds;
 }
 
@@ -1040,6 +1048,8 @@ int main(int argc, char **argv) {
 			continue;
 		if(parse_existence_arg(i, argv, override_data.force_disable_optimize_old_3ds, true, "--no_opt_o3ds_cc"))
 			continue;
+		if(parse_existence_arg(i, argv, override_data.force_disable_optimize_new_3ds_v2, true, "--no_opt_n3ds2_cc"))
+			continue;
 		if(parse_existence_arg(i, argv, override_data.force_disable_optimize_old_old_2ds, true, "--no_opt_o2ds_cc"))
 			continue;
 		if(parse_int_arg(i, argc, argv, override_data.loaded_profile, "--profile"))
@@ -1099,6 +1109,7 @@ int main(int argc, char **argv) {
 		ActualConsoleOutText("  --auto_close      Automatically closes the software on disconnect.");
 		ActualConsoleOutText("  --no_nisetro      Force disables Nisetro DS(i) Capture Card.");
 		ActualConsoleOutText("  --no_opt_o3ds_cc  Force disables Optimize Old 3DS Capture Card.");
+		ActualConsoleOutText("  --no_opt_n3ds2_cc Force disables Optimize New 3DS V2 Capture Card.");
 		ActualConsoleOutText("  --no_opt_o2ds_cc  Force disables Optimize Old 2DS 2014 Capture Card.");
 		ActualConsoleOutText("  --profile         Loads the profile with the specified ID at startup");
 		ActualConsoleOutText("                    instead of the default one. When the program closes,");

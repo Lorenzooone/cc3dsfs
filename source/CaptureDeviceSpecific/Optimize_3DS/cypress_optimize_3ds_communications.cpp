@@ -129,6 +129,64 @@ static const cyop_device_usb_device cypress_optimize_new_3ds_instantiated_device
 }
 };
 
+static const cyop_device_usb_device cypress_optimize_new_3dsv2_generic_device = {
+.name = "FX2> Opt. N3DSv2", .long_name = "EZ-USB FX2LPO -> Optimize New 3DSv2",
+.device_type = CYPRESS_OPTIMIZE_NEW_3DSV2_BLANK_DEVICE,
+.firmware_to_load = optimize_new_3ds_fw, .firmware_size = optimize_new_3ds_fw_len,
+.fpga_pl_565 = NULL, .fpga_pl_565_size = 0,
+.fpga_pl_888 = NULL, .fpga_pl_888_size = 0,
+.is_new_device = true, .has_eeprom = false,
+.is_old_firmware = false, .is_o2ds = false,
+.next_device = CYPRESS_OPTIMIZE_NEW_3DSV2_INSTANTIATED_DEVICE,
+.has_bcd_device_serial = false,
+.index_in_allowed_scan = CC_OPTIMIZE_N3DSV2,
+.usb_device_info = {
+	.vid = 0x04B4, .pid = 0x8613,
+	.default_config = 1, .default_interface = 0,
+	.bulk_timeout = 500,
+	.ep_ctrl_bulk_in = 0, .ep_ctrl_bulk_out = 0,
+	.ep_bulk_in = 0,
+	.max_usb_packet_size = CYPRESS_BASE_USB_PACKET_LIMIT,
+	.do_pipe_clear_reset = false,
+	.alt_interface = 1,
+	.full_data = &cypress_optimize_new_3dsv2_generic_device,
+	.get_serial_requires_setup = false,
+	.get_serial_fn = cypress_optimize_3ds_get_serial,
+	.create_device_fn = cypress_optimize_3ds_create_device,
+	.bcd_device_mask = 0x0000,
+	.bcd_device_wanted_value = 0x0000
+}
+};
+
+static const cyop_device_usb_device cypress_optimize_new_3dsv2_instantiated_device = {
+.name = "Opt. N3DSv2", .long_name = "Optimize New 3DSv2",
+.device_type = CYPRESS_OPTIMIZE_NEW_3DSV2_INSTANTIATED_DEVICE,
+.firmware_to_load = NULL, .firmware_size = 0,
+.fpga_pl_565 = optimize_new_3ds_565_fpga_pl, .fpga_pl_565_size = optimize_new_3ds_565_fpga_pl_len,
+.fpga_pl_888 = optimize_new_3ds_888_fpga_pl, .fpga_pl_888_size = optimize_new_3ds_888_fpga_pl_len,
+.is_new_device = true, .has_eeprom = false,
+.is_old_firmware = false, .is_o2ds = false,
+.next_device = CYPRESS_OPTIMIZE_NEW_3DSV2_INSTANTIATED_DEVICE,
+.has_bcd_device_serial = true,
+.index_in_allowed_scan = CC_OPTIMIZE_N3DSV2,
+.usb_device_info = {
+	.vid = 0x04B4, .pid = 0x1004,
+	.default_config = 1, .default_interface = 0,
+	.bulk_timeout = 500,
+	.ep_ctrl_bulk_in = 1 | LIBUSB_ENDPOINT_IN, .ep_ctrl_bulk_out = 1 | LIBUSB_ENDPOINT_OUT,
+	.ep_bulk_in = 2 | LIBUSB_ENDPOINT_IN,
+	.max_usb_packet_size = CYPRESS_OPTIMIZE_NEW_3DS_USB_PACKET_LIMIT,
+	.do_pipe_clear_reset = true,
+	.alt_interface = 0,
+	.full_data = &cypress_optimize_new_3dsv2_instantiated_device,
+	.get_serial_requires_setup = false,
+	.get_serial_fn = cypress_optimize_3ds_get_serial,
+	.create_device_fn = cypress_optimize_3ds_create_device,
+	.bcd_device_mask = 0xFF00,
+	.bcd_device_wanted_value = OPTIMIZE_NEW_3DSV2_WANTED_VALUE_BASE
+}
+};
+
 static const cyop_device_usb_device cypress_optimize_old_3ds_generic_device = {
 .name = "FX2> Opt. O3DS", .long_name = "EZ-USB FX2LP -> Optimize Old 3DS",
 .device_type = CYPRESS_OPTIMIZE_OLD_3DS_BLANK_DEVICE,
@@ -250,6 +308,8 @@ static const cyop_device_usb_device* all_usb_cyop_device_devices_desc[] = {
 	&cypress_optimize_new_3ds_instantiated_device,
 	&cypress_optimize_old_3ds_generic_device,
 	&cypress_optimize_old_3ds_instantiated_device,
+	&cypress_optimize_new_3dsv2_generic_device,
+	&cypress_optimize_new_3dsv2_instantiated_device,
 	&cypress_optimize_old_old_2ds_generic_device,
 	&cypress_optimize_old_old_2ds_instantiated_device,
 };
@@ -618,7 +678,7 @@ static int read_device_id_serial(cy_device_device_handlers* handlers, const cyop
 	int ret = cypress_ctrl_bulk_out_transfer(handlers, get_cy_usb_info(device), first_buffer, sizeof(first_buffer), &transferred);
 	if(ret < 0)
 		return ret;
-	if(device->is_new_device || device->is_old_firmware) {
+	if((device->is_new_device && device->has_eeprom) || device->is_old_firmware) {
 		ret = read_first_unk_value(handlers, device, value32);
 		if(ret < 0)
 			return ret;
@@ -753,7 +813,7 @@ int capture_start(cy_device_device_handlers* handlers, const cyop_device_usb_dev
 		ret = start_command_send(handlers, device);
 	if(ret < 0)
 		return ret;
-	if(device->is_new_device) {
+	if(device->is_new_device && device->has_eeprom) {
 		uint8_t eeprom_data[OPTIMIZE_EEPROM_NEW_SIZE];
 		ret = read_device_eeprom(handlers, device, eeprom_data, OPTIMIZE_EEPROM_NEW_SIZE);
 		if(ret < 0)

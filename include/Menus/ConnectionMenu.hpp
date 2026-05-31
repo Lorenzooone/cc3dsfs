@@ -18,6 +18,7 @@ public:
 protected:
 	void set_output_option(int index, int action);
 	size_t get_num_options();
+	float get_option_text_factor(int index);
 	std::string get_string_option(int index, int action);
 	void class_setup();
 private:
