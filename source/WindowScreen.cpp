@@ -285,7 +285,7 @@ void WindowScreen::after_thread_join() {
 }
 
 void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoDataType video_data_type, bool update_rendered_buffer) {
-	auto start_draw_time = std::chrono::high_resolution_clock::now();
+	this->start_draw_time = std::chrono::high_resolution_clock::now();
 	FPSArrayInsertElement(&this->in_fps, frame_time);
 	if(!this->done_display) {
 		return;
@@ -319,6 +319,7 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoD
 		this->last_poll_time = std::chrono::high_resolution_clock::now();
 	}
 	if(this->m_win.isOpen() || this->loaded_operations.call_create) {
+		print_time_since_start_draw("TO REAL START DRAW TIME");
 		this->curr_frame_texture_pos = (this->curr_frame_texture_pos + 1) % this->num_frames_to_blend;
 		WindowScreen::reset_operations(future_operations);
 		if(update_rendered_buffer) {
@@ -354,10 +355,12 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoD
 			this->display_lock.unlock();
 		if((!this->main_thread_owns_window) && ((this->scheduled_work_on_window) || (!this->loaded_info.async)))
 			while(!this->is_thread_done);
+		print_time_since_start_draw("PRE WINDOW DRAW TIME");
 		this->window_factory(true);
 		// This must be done in the main thread for it to work on Windows... :/
 		this->m_win.setMouseCursorVisible(this->loaded_info.show_mouse);
 		this->is_window_factory_done = true;
+		print_time_since_start_draw("POST WINDOW DRAW TIME");
 		if(!this->loaded_info.async)
 			this->display_call(true);
 		auto curr_time = std::chrono::high_resolution_clock::now();
@@ -365,11 +368,16 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoD
 		FPSArrayInsertElement(&this->draw_fps, diff.count());
 		this->last_draw_time = curr_time;
 		printf("OUT: %f\n", diff.count());
-		diff = curr_time - start_draw_time;
-		printf("DRAW TIME: %f\n", diff.count());
+		print_time_since_start_draw("TOTAL DRAW TIME");
 	}
 	else
 		this->was_last_frame_null = true;
+}
+
+void WindowScreen::print_time_since_start_draw(std::string text) {
+		auto curr_time = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> diff = curr_time - this->start_draw_time;
+		printf("%s: %f\n", text.c_str(), diff.count());
 }
 
 void WindowScreen::update_connection() {

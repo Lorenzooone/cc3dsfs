@@ -232,6 +232,7 @@ private:
 	FPSArray in_fps;
 	FPSArray draw_fps;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_draw_time;
+	std::chrono::time_point<std::chrono::high_resolution_clock> start_draw_time;
 	FPSArray poll_fps;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_poll_time;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_menu_change_time;
@@ -281,6 +282,8 @@ private:
 	void destroy_menus();
 	void prepare_menu_draws(int view_size_x, int view_size_y);
 	void execute_menu_draws();
+
+	void print_time_since_start_draw(std::string text);
 
 	static void reset_operations(ScreenOperations &operations);
 	void free_ownership_of_window(bool is_main_thread);
