@@ -926,6 +926,30 @@ static bool create_folder(const std::string path) {
 	return false;
 }
 
+static bool create_file(const std::string path, std::string base_content) {
+	try {
+		#if (!defined(_MSC_VER)) || (_MSC_VER > 1916)
+		bool file_exists = std::filesystem::exists(path);
+		#else
+		bool file_exists = std::experimental::filesystem::exists(path);
+		#endif
+		if(file_exists)
+			return true;
+		std::ofstream file(path, std::ios_base::app | std::ios_base::out);
+		if(!file.good()) {
+			ActualConsoleOutTextError("Error creating file " + path);
+			return false;
+		}
+		file << base_content << std::endl;
+		file.close();
+		return true;
+	}
+	catch(...) {
+		ActualConsoleOutTextError("Error creating file " + path);
+	}
+	return false;
+}
+
 static bool create_out_folder() {
 	bool success = create_folder(get_base_path(false, false));
 	if(!success)
@@ -933,6 +957,8 @@ static bool create_out_folder() {
 	create_folder(get_base_path(true));
 	create_folder(get_base_path_keys());
 	create_folder(get_base_path_device_specific_configs());
+	create_file(get_optimize_keys_file_path(true), "THIS-ISAN-EXAM-PLE0-KEY0\nONE0-LINE-FOR0-ONE0-KEY0");
+	create_file(get_optimize_keys_file_path(false), "THIS-ISAN-EXAM-PLE0-KEY0\nONE0-LINE-FOR0-ONE0-KEY0");
 	return success;
 }
 

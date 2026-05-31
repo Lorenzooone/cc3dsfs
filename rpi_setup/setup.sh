@@ -81,6 +81,7 @@ echo "${HOME}/${KIOSK_SINGLE_EXECUTION_SCRIPT}" >> ${HOME}/.bashrc
 # Copy the real program...
 sudo rm -f ${BASE_TARGET_DIR}/${PROGRAM_NAME}_script.sh
 sudo cp -Rf ${BASE_SOURCE_DIR}/files/main_files/* ${BASE_TARGET_DIR}/
+sudo cp -f ${BASE_SOURCE_DIR}/instructions.txt ${BASE_TARGET_DIR}/
 if [ $(getconf LONG_BIT) -eq 32 ]; then
   $(cd ${HOME} ; rm -f ${PROGRAM_NAME}_link ; ln -s ${BASE_TARGET_DIR}/${PROGRAM_NAME}_versions/${PROGRAM_NAME}_32 ${PROGRAM_NAME}_link)
 else

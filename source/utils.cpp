@@ -410,6 +410,16 @@ std::string get_base_path_device_specific_configs() {
 	return get_base_path(false) + "device_specific_configs/";
 }
 
+std::string get_optimize_keys_file_path(bool is_new_device) {
+	std::string path = get_base_path_keys();
+
+	if(is_new_device)
+		path += "optimize_new_3ds.txt";
+	else
+		path += "optimize_old_3ds.txt";
+	return path;
+}
+
 std::string LayoutPathGenerator(int index) {
 	return get_base_path(index != STARTUP_FILE_INDEX);
 }

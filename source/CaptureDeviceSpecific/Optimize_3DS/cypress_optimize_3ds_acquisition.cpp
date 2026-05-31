@@ -1317,18 +1317,8 @@ bool cyop_is_key_for_device(CaptureDevice* device, std::string key) {
 	return check_key_matches_device_id(device->device_id, key, (const cyop_device_usb_device*)device->descriptor);
 }
 
-static std::string get_keys_file_path(bool is_new_device) {
-	std::string path = get_base_path_keys();
-
-	if(is_new_device)
-		path += "optimize_new_3ds.txt";
-	else
-		path += "optimize_old_3ds.txt";
-	return path;
-}
-
 static std::string read_key_for_device_id_from_file(uint64_t device_id, bool is_new_device) {
-	std::ifstream file(get_keys_file_path(is_new_device));
+	std::ifstream file(get_optimize_keys_file_path(is_new_device));
 	std::string line;
 	std::string out_key = "";
 
@@ -1363,7 +1353,7 @@ static void add_key_for_device_id_to_file(uint64_t device_id, std::string key, b
 	if(read_key_for_device_id_from_file(device_id, is_new_device) == key)
 		return;
 
-	std::ofstream file(get_keys_file_path(is_new_device), std::ios_base::app | std::ios_base::out);
+	std::ofstream file(get_optimize_keys_file_path(is_new_device), std::ios_base::app | std::ios_base::out);
 	file << key << std::endl;
 	file.close();
 }
