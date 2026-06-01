@@ -61,7 +61,7 @@ static void counter_step(bool* to_close, int* counter, double* goal_frametime, C
 	counter_lock->unlock();
 }
 
-int main()
+int main(int argc, char **argv)
 {
 	double goal_frametime = 1.0 / 59.835;
 	bool vsync_requested = false;
@@ -70,6 +70,9 @@ int main()
 	bool target_framerate = false;
 	sf::Font text_font;
 	sf::Font text_font_mono;
+	if(argc > 1) {
+		goal_frametime = 1.0 / (std::stod((argv[1])));
+	}
 	bool font_load_success = text_font.openFromMemory(font_ttf, font_ttf_len);
 	bool font_mono_load_success = text_font_mono.openFromMemory(font_mono_ttf, font_mono_ttf_len);
 	TextRectangle* notifications[NUM_NOTIFICATIONS];
