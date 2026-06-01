@@ -84,7 +84,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 		full_width = bottom_width;
 		full_height = bottom_height;
 	}
-	this->shared_texture_available = this->full_in_tex.resize({(unsigned int)full_width, (unsigned int)full_height});
+	this->shared_texture_available = false; //this->full_in_tex.resize({(unsigned int)full_width, (unsigned int)full_height});
 	if(this->shared_texture_available) {
 		this->m_in_rect_top.setTexture(&this->full_in_tex);
 		this->m_in_rect_top_right.setTexture(&this->full_in_tex);
@@ -366,7 +366,7 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoD
 		FPSArrayInsertElement(&this->draw_fps, diff.count());
 		this->last_draw_time = curr_time;
 		printf("OUT: %f\n", diff.count());
-		print_time_since_start_draw("TOTAL DRAW TIME");
+		print_time_since_start_draw("DISPLAY TIME");
 	}
 	else
 		this->was_last_frame_null = true;
@@ -376,6 +376,7 @@ void WindowScreen::print_time_since_start_draw(std::string text) {
 		auto curr_time = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> diff = curr_time - this->start_draw_time;
 		printf("%s: %f\n", text.c_str(), diff.count());
+		this->start_draw_time = curr_time;
 }
 
 void WindowScreen::update_connection() {
