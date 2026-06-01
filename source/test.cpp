@@ -127,7 +127,7 @@ int main()
 		TextKind kind_num_fixed = TEXT_KIND_SUCCESS;
 		if(curr_counter % 2)
 			kind_num_fixed = TEXT_KIND_ERROR;
-		print_notification(notifications[2], std::to_string(curr_counter), kind_num_fixed, 0, 300);
+		print_notification(notifications[2], "TEST", kind_num_fixed, 0, 300);
 
 		for(int i = 0; i < NUM_NUMBERS; i++) {
 			TextKind kind_num = TEXT_KIND_NORMAL;
