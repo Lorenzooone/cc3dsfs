@@ -51,8 +51,8 @@ static void counter_step(bool* to_close, int* counter, double* goal_frametime, C
 
 		auto curr_time = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> diff = curr_time - last_draw_time;
+		//default_sleep((((*goal_frametime) - diff.count()) * 1000.0) / 2);
 		while(diff.count() < (*goal_frametime)) {
-			default_sleep(((*goal_frametime) - diff.count()) * 1000.0);
 			curr_time = std::chrono::high_resolution_clock::now();
 			diff = curr_time - last_draw_time;
 		}
@@ -63,7 +63,7 @@ static void counter_step(bool* to_close, int* counter, double* goal_frametime, C
 
 int main()
 {
-	double goal_frametime = 1.0 / 60.0;
+	double goal_frametime = 1.0 / 59.835;
 	bool vsync_requested = false;
 	bool vsync_enabled = false;
 	bool target_framerate_requested = false;

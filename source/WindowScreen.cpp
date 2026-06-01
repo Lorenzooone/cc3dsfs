@@ -84,7 +84,7 @@ WindowScreen::WindowScreen(ScreenType stype, CaptureStatus* capture_status, Disp
 		full_width = bottom_width;
 		full_height = bottom_height;
 	}
-	this->shared_texture_available = false; //this->full_in_tex.resize({(unsigned int)full_width, (unsigned int)full_height});
+	this->shared_texture_available = this->full_in_tex.resize({(unsigned int)full_width, (unsigned int)full_height});
 	if(this->shared_texture_available) {
 		this->m_in_rect_top.setTexture(&this->full_in_tex);
 		this->m_in_rect_top_right.setTexture(&this->full_in_tex);
