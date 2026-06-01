@@ -440,13 +440,13 @@ void TextRectangle::updateText(int x_limit) {
 			this->curr_color = sf::Color(90, 150, 210, 192);
 			break;
 		case TEXT_KIND_SUCCESS:
-			this->curr_color = sf::Color(90, 210, 90, 255);
+			this->curr_color = sf::Color(0, 255, 0, 255);
 			break;
 		case TEXT_KIND_WARNING:
 			this->curr_color = sf::Color(200, 200, 90, 192);
 			break;
 		case TEXT_KIND_ERROR:
-			this->curr_color = sf::Color(210, 90, 90, 255);
+			this->curr_color = sf::Color(255, 0, 0, 255);
 			break;
 		case TEXT_KIND_OPAQUE_ERROR:
 			this->curr_color = sf::Color(160, 60, 60, 192);
