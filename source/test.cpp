@@ -124,7 +124,7 @@ int main()
 		int curr_counter = counter;
 		print_notification(notifications[0], get_float_str_decimals(_FPSArrayGetAverage(&draw_fps), 2), TEXT_KIND_NORMAL, 0, 0);
 
-		TextKind kind_num_fixed = TEXT_KIND_NORMAL;
+		TextKind kind_num_fixed = TEXT_KIND_SUCCESS;
 		if(curr_counter % 2)
 			kind_num_fixed = TEXT_KIND_ERROR;
 		print_notification(notifications[2], std::to_string(curr_counter), kind_num_fixed, 0, 300);
@@ -135,6 +135,7 @@ int main()
 				kind_num = TEXT_KIND_SUCCESS;
 			print_notification(notifications[i + NUM_NOTIFICATIONS - NUM_NUMBERS], std::to_string(i), kind_num, i * 50, 200);
 		}
+		auto pre_curr_time = std::chrono::high_resolution_clock::now();
 		for(int i = 0; i < NUM_NOTIFICATIONS; i++)
 			notifications[i]->prepareRenderText();
 		window.clear();
@@ -144,7 +145,9 @@ int main()
 		window.display();
 
 		auto curr_time = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> diff = curr_time - last_draw_time;
+		std::chrono::duration<double> diff = curr_time - pre_curr_time;
+		printf("RENDER TIME: %f\n", diff.count());
+		diff = curr_time - last_draw_time;
 		FPSArrayInsertElement(&draw_fps, diff.count());
 		last_draw_time = curr_time;
 
