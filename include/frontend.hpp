@@ -45,6 +45,7 @@
 #include "OptimizeSerialKeyAddMenu.hpp"
 #include "OptimizeOldFWConfigMenu.hpp"
 #include "Optimize3DSDowngradeV2Menu.hpp"
+#include "OutputFramerateMenu.hpp"
 #include "display_structs.hpp"
 #include "event_structs.hpp"
 #include "shaders_list.hpp"
@@ -216,6 +217,7 @@ private:
 	OptimizeSerialKeyAddMenu* optimize_serial_key_add_menu;
 	OptimizeOldFWConfigMenu* optimize_old_fw_config_menu;
 	Optimize3DSDowngradeV2Menu* optimize_3ds_downgradev2_menu;
+	OutputFramerateMenu* output_framerate_menu;
 
 	std::vector<const CropData*> possible_crops;
 	std::vector<const CropData*> possible_crops_ds;
@@ -442,6 +444,7 @@ private:
 	void setup_optimize_serial_key_add_menu(bool reset_data = true);
 	void setup_optimize_old_fw_config_menu(bool reset_data = true);
 	void setup_optimize_n3ds_downgradev2_menu(bool reset_data = true);
+	void setup_output_framerate_menu(bool reset_data = true);
 	void update_connection();
 	bool has_menu_textbox();
 };
@@ -471,6 +474,7 @@ void reset_input_data(InputData* input_data);
 void reset_shared_data(SharedData* shared_data);
 void reset_fullscreen_info(ScreenInfo &info);
 
+void sanitize_display_data(DisplayData* display_data);
 void sanitize_enabled_info(ScreenInfo &top_bot_info, ScreenInfo &top_info, ScreenInfo &bot_info);
 void override_set_data_to_screen_info(override_win_data &override_win, ScreenInfo &info);
 void reset_screen_info(ScreenInfo &info);
@@ -494,6 +498,7 @@ std::string get_name_non_int_mode(NonIntegerScalingModes input);
 std::string get_name_frame_blending_mode(FrameBlendingMode input);
 std::string get_name_input_colorspace_mode(InputColorspaceMode input);
 bool is_input_data_valid(InputData* input_data, bool consider_buttons);
-void default_sleep(float wanted_ms = -1);
+void default_sleep(double wanted_ms = -1);
+void precise_sleep(double wanted_ms = -1, double divisor = 8, double spin_threshold_ms = 0.5);
 
 #endif

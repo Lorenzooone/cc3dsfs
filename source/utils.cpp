@@ -39,7 +39,7 @@
 #define APP_VERSION_MAJOR 1
 #define APP_VERSION_MINOR 3
 #define APP_VERSION_REVISION 0
-#define APP_VERSION_SUBREVISION 1
+#define APP_VERSION_SUBREVISION 2
 #ifdef RASPI
 #define APP_VERSION_LETTER R
 #else
@@ -313,6 +313,35 @@ std::string get_version_string(bool get_letter) {
 	if(get_letter)
 		return version_str + xstr(APP_VERSION_LETTER);
 	return version_str;
+}
+
+version_t get_version_string_number(std::string version_string) {
+	std::stringstream base(version_string);
+	std::string segment;
+	std::vector<std::string> seglist;
+	version_t num_out = 0;
+
+	try {
+		while(std::getline(base, segment, '.'))
+		   seglist.push_back(segment);
+
+		if(seglist.size() > 0)
+			num_out += std::stoi(seglist[0]) * 0x100 * 0x100 * 0x100;
+
+		if(seglist.size() > 1)
+			num_out += std::stoi(seglist[1]) * 0x100 * 0x100;
+
+		if(seglist.size() > 2)
+			num_out += std::stoi(seglist[2]) * 0x100;
+
+		if(seglist.size() > 3)
+			num_out += std::stoi(seglist[3]);
+	}
+	catch(...) {
+		num_out = 0;
+	}
+
+	return num_out;
 }
 
 std::string get_float_str_decimals(float value, int decimals) {

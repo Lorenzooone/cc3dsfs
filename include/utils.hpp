@@ -49,10 +49,13 @@
 #define SIMPLE_RESET_DATA_INDEX -2
 #define CREATE_NEW_FILE_INDEX -3
 
+typedef uint64_t version_t;
+
 #ifdef ANDROID_COMPILATION
 ANativeActivity* getAndroidNativeActivity();
 #endif
 std::string get_version_string(bool get_letter = true);
+version_t get_version_string_number(std::string version_string);
 void ActualConsoleOutTextError(std::string out_string);
 void ActualConsoleOutText(std::string out_string);
 std::string get_base_path(bool for_presets, bool do_existence_check=true);

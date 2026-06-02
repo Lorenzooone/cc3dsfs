@@ -527,6 +527,14 @@ void reset_display_data(DisplayData* display_data) {
 	display_data->last_connected_ds = false;
 	display_data->interleaved_3d = false;
 	display_data->do_ratio_cycling = false;
+	#if (defined(__APPLE__))
+	// Should this be the default...?
+	//display_data->fixed_output_framerate = true;
+	display_data->fixed_output_framerate = false;
+	#else
+	display_data->fixed_output_framerate = false;
+	#endif
+	display_data->target_fixed_output_framerate = 60.00;
 }
 
 void reset_input_data(InputData* input_data) {
@@ -572,7 +580,13 @@ void reset_screen_info(ScreenInfo &info) {
 	info.top_rotation = 0;
 	info.bot_rotation = 0;
 	info.show_mouse = true;
+	#if (defined(__APPLE__))
+	// Should this be the default...?
+	//info.v_sync_enabled = true;
 	info.v_sync_enabled = false;
+	#else
+	info.v_sync_enabled = false;
+	#endif
 	#if (defined(RASPI) || defined(ANDROID_COMPILATION) || defined(__APPLE__))
 	info.async = false;
 	#else
@@ -922,6 +936,13 @@ std::string save_screen_info(std::string base, const ScreenInfo &info) {
 	return out;
 }
 
+void sanitize_display_data(DisplayData* display_data) {
+	if(display_data->target_fixed_output_framerate < 2.0)
+		display_data->target_fixed_output_framerate = 2.0;
+	if(display_data->target_fixed_output_framerate > 999.99)
+		display_data->target_fixed_output_framerate = 999.99;
+}
+
 void joystick_axis_poll(std::queue<SFEvent> &events_queue) {
 	for(unsigned int i = 0; i < sf::Joystick::Count; i++) {
 		if(!sf::Joystick::isConnected(i))
@@ -1144,10 +1165,26 @@ void update_connected_specific_settings(FrontendData* frontend_data, const Captu
 	}
 }
 
-void default_sleep(float wanted_ms) {
+void default_sleep(double wanted_ms) {
 	if(wanted_ms < 0)
-		wanted_ms = 1000.0f/USB_CHECKS_PER_SECOND;
+		wanted_ms = 1000.0/USB_CHECKS_PER_SECOND;
 	sf::sleep(sf::microseconds((int)(wanted_ms * 1000)));
+}
+
+void precise_sleep(double wanted_ms, double divisor, double spin_threshold_ms) {
+	if(wanted_ms < 0)
+		wanted_ms = 1000.0/USB_CHECKS_PER_SECOND;
+	double elapsed_ms = 0.0;
+	std::chrono::time_point<std::chrono::high_resolution_clock> start_time = std::chrono::high_resolution_clock::now();
+	while(elapsed_ms < wanted_ms){
+		double difference_ms = wanted_ms - elapsed_ms;
+		// Is there a better way to do this?!
+		if(difference_ms > spin_threshold_ms)
+			default_sleep(difference_ms / divisor);
+		std::chrono::time_point<std::chrono::high_resolution_clock> curr_time = std::chrono::high_resolution_clock::now();
+		const std::chrono::duration<double> diff = curr_time - start_time;
+		elapsed_ms = diff.count() * 1000.0;
+	}
 }
 
 void screen_display_thread(WindowScreen *screen) {

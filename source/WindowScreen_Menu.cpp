@@ -96,6 +96,11 @@ static double FPSArrayGetAverage(FPSArray *array) {
 	return fps_sum / available_fps;
 }
 
+static void change_display_data_fixed_framerate(DisplayData* display_data, double change) {
+	display_data->target_fixed_output_framerate += change;
+	sanitize_display_data(display_data);
+}
+
 void WindowScreen::init_menus() {
 	for(int i = 0; i < NUM_FINGERS_SUPPORTED; i++)
 		this->is_touch_currently_active[i] = false;
@@ -135,6 +140,7 @@ void WindowScreen::init_menus() {
 	this->optimize_serial_key_add_menu = new OptimizeSerialKeyAddMenu(this->text_rectangle_pool);
 	this->optimize_old_fw_config_menu = new OptimizeOldFWConfigMenu(this->text_rectangle_pool);
 	this->optimize_3ds_downgradev2_menu = new Optimize3DSDowngradeV2Menu(this->text_rectangle_pool);
+	this->output_framerate_menu = new OutputFramerateMenu(this->text_rectangle_pool);
 }
 
 void WindowScreen::destroy_menus() {
@@ -170,6 +176,7 @@ void WindowScreen::destroy_menus() {
 	delete this->optimize_serial_key_add_menu;
 	delete this->optimize_old_fw_config_menu;
 	delete this->optimize_3ds_downgradev2_menu;
+	delete this->output_framerate_menu;
 }
 
 void WindowScreen::set_close(int ret_val) {
@@ -1330,6 +1337,15 @@ void WindowScreen::setup_optimize_n3ds_downgradev2_menu(bool reset_data) {
 	}
 }
 
+void WindowScreen::setup_output_framerate_menu(bool reset_data) {
+	if(!this->can_setup_menu())
+		return;
+	if(this->curr_menu != OUTPUT_FRAMERATE_MENU_TYPE) {
+		this->switch_to_menu(OUTPUT_FRAMERATE_MENU_TYPE, this->output_framerate_menu, reset_data);
+		this->output_framerate_menu->insert_data();
+	}
+}
+
 void WindowScreen::update_save_menu() {
 	if(this->curr_menu == SAVE_MENU_TYPE) {
 		this->curr_menu = DEFAULT_MENU_TYPE;
@@ -1888,6 +1904,9 @@ void WindowScreen::poll(bool do_everything) {
 						break;
 					case VIDEO_MENU_3D_SETTINGS:
 						this->setup_main_3d_menu();
+						break;
+					case VIDEO_MENU_OUTPUT_FRAMERATE_SETTINGS:
+						this->setup_output_framerate_menu();
 						break;
 					default:
 						break;
@@ -2590,6 +2609,47 @@ void WindowScreen::poll(bool do_everything) {
 				}
 				this->loaded_menu_ptr->reset_output_option();
 				break;
+			case OUTPUT_FRAMERATE_MENU_TYPE:
+				switch(this->output_framerate_menu->selected_index) {
+					case OUTPUT_FRAMERATE_MENU_BACK:
+						this->setup_video_menu(false);
+						done = true;
+						break;
+					case OUTPUT_FRAMERATE_MENU_NO_ACTION:
+						break;
+					case OUTPUT_FRAMERATE_MENU_MODE_INC:
+					case OUTPUT_FRAMERATE_MENU_MODE_DEC:
+						this->display_data->fixed_output_framerate = !this->display_data->fixed_output_framerate;
+						break;
+					case OUTPUT_FRAMERATE_MENU_RATE_001_INC:
+						change_display_data_fixed_framerate(this->display_data, 0.01);
+						break;
+					case OUTPUT_FRAMERATE_MENU_RATE_001_DEC:
+						change_display_data_fixed_framerate(this->display_data, -0.01);
+						break;
+					case OUTPUT_FRAMERATE_MENU_RATE_01_INC:
+						change_display_data_fixed_framerate(this->display_data, 0.1);
+						break;
+					case OUTPUT_FRAMERATE_MENU_RATE_01_DEC:
+						change_display_data_fixed_framerate(this->display_data, -0.1);
+						break;
+					case OUTPUT_FRAMERATE_MENU_RATE_1_INC:
+						change_display_data_fixed_framerate(this->display_data, 1);
+						break;
+					case OUTPUT_FRAMERATE_MENU_RATE_1_DEC:
+						change_display_data_fixed_framerate(this->display_data, -1);
+						break;
+					case OUTPUT_FRAMERATE_MENU_RATE_10_INC:
+						change_display_data_fixed_framerate(this->display_data, 10);
+						break;
+					case OUTPUT_FRAMERATE_MENU_RATE_10_DEC:
+						change_display_data_fixed_framerate(this->display_data, -10);
+						break;
+					default:
+						break;
+				}
+				this->loaded_menu_ptr->reset_output_option();
+				break;
 			default:
 				break;
 		}
@@ -2925,6 +2985,9 @@ void WindowScreen::prepare_menu_draws(int view_size_x, int view_size_y) {
 			break;
 		case OPTIMIZE_3DS_DOWNGRADEV2_MENU_TYPE:
 			this->optimize_3ds_downgradev2_menu->prepare(menu_scaling_factor, view_size_x, view_size_y);
+			break;
+		case OUTPUT_FRAMERATE_MENU_TYPE:
+			this->output_framerate_menu->prepare(menu_scaling_factor, view_size_x, view_size_y, this->display_data);
 			break;
 		default:
 			break;

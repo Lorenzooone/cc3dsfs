@@ -32,6 +32,13 @@ static const VideoMenuOptionInfo async_option = {
 .is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
 .out_action = VIDEO_MENU_ASYNC};
 
+static const VideoMenuOptionInfo framerate_settings_option = {
+.base_name = "Output Framerate Settings", .false_name = "",
+.active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
+.active_joint_screen = true, .active_top_screen = true, .active_bottom_screen = true,
+.is_inc = false, .dec_str = "", .inc_str = "", .inc_out_action = VIDEO_MENU_NO_ACTION,
+.out_action = VIDEO_MENU_OUTPUT_FRAMERATE_SETTINGS};
+
 static const VideoMenuOptionInfo blur_option = {
 .base_name = "Turn Blur Off", .false_name = "Turn Blur On",
 .active_fullscreen = true, .active_windowed_screen = true, .requires_titlebar_possible = false,
@@ -213,6 +220,7 @@ static const VideoMenuOptionInfo* pollable_options[] = {
 &separator_settings_option,
 &vsync_option,
 &async_option,
+&framerate_settings_option,
 &blur_option,
 //&fast_poll_option,
 &small_screen_offset_option,

@@ -62,6 +62,19 @@ static void SuccessConnectionOutTextGenerator(OutTextData &out_text_data, Captur
 	}
 }
 
+static void apply_version_changes_to_data(std::string version_loaded, ScreenInfo &top_info, ScreenInfo &bottom_info, ScreenInfo &joint_info, DisplayData &display_data, AudioData *audio_data, CaptureStatus* capture_status) {
+	version_t loaded_ver_id = get_version_string_number(version_loaded);
+	// Apply patches here...
+	if(loaded_ver_id < get_version_string_number("1.3.0.2")) {
+		#if (defined(__APPLE__))
+		// Should this be the default...?
+		//top_info.v_sync_enabled = true;
+		//bottom_info.v_sync_enabled = true;
+		//joint_info.v_sync_enabled = true;
+		#endif
+	}
+}
+
 static bool load_shared(const std::string path, const std::string name, SharedData* shared_data, OutTextData &out_text_data, bool do_print) {
 	std::ifstream file(path + name);
 	std::string line;
@@ -138,6 +151,7 @@ static bool load_shared(const std::string path, const std::string name, SharedDa
 }
 
 static bool load(const std::string path, const std::string name, ScreenInfo &top_info, ScreenInfo &bottom_info, ScreenInfo &joint_info, DisplayData &display_data, AudioData *audio_data, OutTextData &out_text_data, CaptureStatus* capture_status) {
+	std::string version_loaded = "";
 	std::ifstream file(path + name);
 	std::string line;
 	bool loaded_3d_request = false;
@@ -168,6 +182,11 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 			if(load_screen_info(key, value, "top_", top_info))
 				continue;
 
+			if(key == "version") {
+				version_loaded = value;
+				continue;
+			}
+
 			if(key == "split") {
 				bool split = std::stoi(value);
 				joint_info.window_enabled = !split;
@@ -189,6 +208,16 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 
 			if(key == "do_ratio_cycling") {
 				display_data.do_ratio_cycling = std::stoi(value);
+				continue;
+			}
+
+			if(key == "fixed_output_framerate") {
+				display_data.fixed_output_framerate = std::stoi(value);
+				continue;
+			}
+
+			if(key == "target_fixed_output_framerate") {
+				display_data.target_fixed_output_framerate = std::stod(value);
 				continue;
 			}
 
@@ -291,6 +320,10 @@ static bool load(const std::string path, const std::string name, ScreenInfo &top
 	}
 
 	file.close();
+
+	apply_version_changes_to_data(version_loaded, top_info, bottom_info, joint_info, display_data, audio_data, capture_status);
+	sanitize_display_data(&display_data);
+
 	return result;
 }
 
@@ -390,6 +423,8 @@ static bool save(const std::string path, const std::string name, const std::stri
 	file << "requested_3d=" << capture_status->requested_3d << std::endl;
 	file << "interleaved_3d=" << display_data.interleaved_3d << std::endl;
 	file << "do_ratio_cycling=" << display_data.do_ratio_cycling << std::endl;
+	file << "fixed_output_framerate=" << display_data.fixed_output_framerate << std::endl;
+	file << "target_fixed_output_framerate=" << display_data.target_fixed_output_framerate << std::endl;
 	file << "request_low_bw_format_optimize=" << capture_status->device_specific_status.optimize_status.request_low_bw_format << std::endl;
 	file << "request_low_bw_format_old_2ds_optimize=" << capture_status->device_specific_status.optimize_status.request_low_bw_format_old_2ds << std::endl;
 	file << "last_connected_ds=" << display_data.last_connected_ds << std::endl;
@@ -687,8 +722,9 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	const double max_time_no_frames_allowed = MAX_ALLOWED_NO_FRAME_TIME;
 	std::chrono::time_point<std::chrono::high_resolution_clock> start_time = std::chrono::high_resolution_clock::now();
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_valid_frame_time = start_time;
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_output_check_time = start_time;
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_connection_time = start_time;
 	OutTextData out_text_data;
-	std::chrono::time_point<std::chrono::high_resolution_clock> last_connection_time = std::chrono::high_resolution_clock::now();
 	int ret_val = 0;
 	int poll_timeout = 0;
 	const bool endianness = is_big_endian();
@@ -762,7 +798,20 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 				no_data_consecutive = NO_DATA_CONSECUTIVE_THRESHOLD;
 			capture_data->status.video_wait.update_time_multiplier(get_time_multiplier(capture_data, no_data_consecutive >= NO_DATA_CONSECUTIVE_THRESHOLD));
 
-			bool timed_out = !capture_data->status.video_wait.timed_lock();
+			bool do_periodic_check = frontend_data.display_data.fixed_output_framerate;
+			double target_frametime = 1.0 / frontend_data.display_data.target_fixed_output_framerate;
+			bool timed_out = false;
+			if(do_periodic_check) {
+				auto curr_time = std::chrono::high_resolution_clock::now();
+				std::chrono::duration<double> diff = curr_time - last_output_check_time;
+				double to_sleep_time = target_frametime - diff.count();
+				if(to_sleep_time > 0)
+					precise_sleep(to_sleep_time * 1000.0);
+				last_output_check_time = std::chrono::high_resolution_clock::now();
+				timed_out = true;
+			}
+			else
+				timed_out = !capture_data->status.video_wait.timed_lock();
 
 			bool data_processed = false;
 			CaptureDataSingleBuffer* data_buffer = capture_data->data_buffers.GetReaderBuffer(CAPTURE_READER_VIDEO);
