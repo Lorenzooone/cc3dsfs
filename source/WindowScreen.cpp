@@ -319,6 +319,10 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoD
 		this->last_poll_time = std::chrono::high_resolution_clock::now();
 	}
 	if(this->m_win.isOpen() || this->loaded_operations.call_create) {
+		auto curr_time = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> diff = curr_time - this->last_draw_time;
+		FPSArrayInsertElement(&this->draw_fps, diff.count());
+		this->last_draw_time = curr_time;
 		this->curr_frame_texture_pos = (this->curr_frame_texture_pos + 1) % this->num_frames_to_blend;
 		WindowScreen::reset_operations(future_operations);
 		if(update_rendered_buffer) {
@@ -361,11 +365,6 @@ void WindowScreen::draw(double frame_time, VideoOutputData* out_buf, InputVideoD
 		print_time_since_start_draw("POST WINDOW DRAW TIME");
 		if(!this->loaded_info.async)
 			this->display_call(true);
-		auto curr_time = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> diff = curr_time - this->last_draw_time;
-		FPSArrayInsertElement(&this->draw_fps, diff.count());
-		this->last_draw_time = curr_time;
-		printf("OUT: %f\n", diff.count());
 		print_time_since_start_draw("DISPLAY TIME");
 	}
 	else

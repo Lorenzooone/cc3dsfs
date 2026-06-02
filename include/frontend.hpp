@@ -494,6 +494,7 @@ std::string get_name_non_int_mode(NonIntegerScalingModes input);
 std::string get_name_frame_blending_mode(FrameBlendingMode input);
 std::string get_name_input_colorspace_mode(InputColorspaceMode input);
 bool is_input_data_valid(InputData* input_data, bool consider_buttons);
-void default_sleep(float wanted_ms = -1);
+void default_sleep(double wanted_ms = -1);
+void precise_sleep(double wanted_ms = -1, double divisor = 8.0, double spin_threshold_ms = 0.5);
 
 #endif

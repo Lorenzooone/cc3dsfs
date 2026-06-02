@@ -1144,10 +1144,26 @@ void update_connected_specific_settings(FrontendData* frontend_data, const Captu
 	}
 }
 
-void default_sleep(float wanted_ms) {
+void default_sleep(double wanted_ms) {
 	if(wanted_ms < 0)
-		wanted_ms = 1000.0f/USB_CHECKS_PER_SECOND;
+		wanted_ms = 1000.0/USB_CHECKS_PER_SECOND;
 	sf::sleep(sf::microseconds((int)(wanted_ms * 1000)));
+}
+
+void precise_sleep(double wanted_ms, double divisor, double spin_threshold_ms) {
+	if(wanted_ms < 0)
+		wanted_ms = 1000.0/USB_CHECKS_PER_SECOND;
+	double elapsed_ms = 0.0;
+	std::chrono::time_point<std::chrono::high_resolution_clock> start_time = std::chrono::high_resolution_clock::now();
+	while(elapsed_ms < wanted_ms){
+		double difference_ms = wanted_ms - elapsed_ms;
+		// Is there a better way to do this?!
+		if(difference_ms > spin_threshold_ms)
+			default_sleep(difference_ms / divisor);
+		std::chrono::time_point<std::chrono::high_resolution_clock> curr_time = std::chrono::high_resolution_clock::now();
+		const std::chrono::duration<double> diff = curr_time - start_time;
+		elapsed_ms = diff.count() * 1000.0;
+	}
 }
 
 void screen_display_thread(WindowScreen *screen) {

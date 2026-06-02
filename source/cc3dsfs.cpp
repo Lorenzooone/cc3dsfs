@@ -681,6 +681,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_valid_frame_time = start_time;
 	OutTextData out_text_data;
 	std::chrono::time_point<std::chrono::high_resolution_clock> last_connection_time = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> last_check_time = std::chrono::high_resolution_clock::now();
 	int ret_val = 0;
 	int poll_timeout = 0;
 	const bool endianness = is_big_endian();
@@ -754,7 +755,21 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 				no_data_consecutive = NO_DATA_CONSECUTIVE_THRESHOLD;
 			capture_data->status.video_wait.update_time_multiplier(get_time_multiplier(capture_data, no_data_consecutive >= NO_DATA_CONSECUTIVE_THRESHOLD));
 
-			bool timed_out = !capture_data->status.video_wait.timed_lock();
+			bool do_periodic_check = true;
+			double target_frametime = 1.0 / 60.0;
+			bool timed_out = false;
+			double slack = 0.0003;
+			if(do_periodic_check) {
+				auto curr_time = std::chrono::high_resolution_clock::now();
+				std::chrono::duration<double> diff = curr_time - last_check_time;
+				double to_sleep_time = target_frametime - diff.count();
+				if(to_sleep_time > 0)
+					precise_sleep(to_sleep_time * 1000.0);
+				last_check_time = std::chrono::high_resolution_clock::now();
+				timed_out = true;
+			}
+			else
+				timed_out = !capture_data->status.video_wait.timed_lock();
 
 			bool data_processed = false;
 			CaptureDataSingleBuffer* data_buffer = capture_data->data_buffers.GetReaderBuffer(CAPTURE_READER_VIDEO);
