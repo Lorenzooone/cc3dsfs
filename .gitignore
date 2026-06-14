@@ -6,6 +6,7 @@ cc3dsfs.exe
 *.conf
 *.cfg
 keys/
+install/
 *.a
 *.zip
 ftd3xx/
