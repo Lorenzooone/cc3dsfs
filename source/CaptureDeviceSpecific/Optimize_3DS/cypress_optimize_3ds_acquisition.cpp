@@ -999,7 +999,7 @@ static int restart_captures_cc_reads(CaptureData* capture_data, CypressOptimize3
 }
 
 static void cyop_key_missing_warning_message(CaptureData* capture_data) {
-	capture_warning_print(capture_data, "Key missing!\nClose to Timeout!\nReconfigured FPGA!", "Key missing! Close to Timeout! Reconfigured FPGA!");
+	capture_warning_print(capture_data, "Product Key missing!\nClose to Timeout!\nReconfigured FPGA!", "Product Key missing! Close to Timeout! Reconfigured FPGA!");
 }
 
 static void cyop_key_check_and_interrogate_file(CaptureStatus* capture_status, const cyop_device_usb_device* usb_device_desc, uint64_t device_id, bool &is_key_valid, std::string &read_key) {
@@ -1011,7 +1011,7 @@ static void cyop_key_check_and_interrogate_file(CaptureStatus* capture_status, c
 
 	// This also can only happen during the first connection
 	if(is_key_valid)
-		add_key_for_device_id_to_file(device_id, read_key, usb_device_desc);
+		add_key_for_device_id_to_file(device_id, read_key, usb_device_desc->is_new_device);
 	else {
 		read_key = read_key_for_device_id_from_file(device_id, usb_device_desc->is_new_device);
 		is_key_valid = check_key_matches_device_id(device_id, read_key, usb_device_desc->is_new_device);
