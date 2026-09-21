@@ -7,7 +7,7 @@
 enum JoystickDirection {JOY_DIR_NONE, JOY_DIR_UP, JOY_DIR_DOWN, JOY_DIR_LEFT, JOY_DIR_RIGHT};
 enum JoystickAction {JOY_ACTION_NONE, JOY_ACTION_CONFIRM, JOY_ACTION_NEGATE, JOY_ACTION_MENU};
 
-enum EventType {EVENT_NONE, EVENT_JOYSTICK_BTN_PRESSED, EVENT_JOYSTICK_BTN_RELEASED, EVENT_JOYSTICK_MOVED, EVENT_MOUSE_BTN_PRESSED, EVENT_MOUSE_MOVED, EVENT_KEY_PRESSED, EVENT_TEXT_ENTERED, EVENT_CLOSED, EVENT_KEY_RELEASED, EVENT_MOUSE_BTN_RELEASED};
+enum EventType {EVENT_NONE, EVENT_JOYSTICK_BTN_PRESSED, EVENT_JOYSTICK_BTN_RELEASED, EVENT_JOYSTICK_MOVED, EVENT_MOUSE_BTN_PRESSED, EVENT_MOUSE_MOVED, EVENT_KEY_PRESSED, EVENT_TEXT_ENTERED, EVENT_CLOSED, EVENT_KEY_RELEASED, EVENT_MOUSE_BTN_RELEASED, EVENT_RESIZED};
 
 struct SFEvent {
 	SFEvent(bool pressed, sf::Keyboard::Key code, bool alt, bool control, bool shift, bool system, bool poweroff_cmd = false, bool is_extra = false) : type(pressed ? EVENT_KEY_PRESSED : EVENT_KEY_RELEASED), code(code), alt(alt), control(control), shift(shift), system(system), poweroff_cmd(poweroff_cmd), is_extra(is_extra) {}
@@ -16,6 +16,7 @@ struct SFEvent {
 	SFEvent(uint32_t joystickId, sf::Joystick::Axis axis, float position) : type(EVENT_JOYSTICK_MOVED), joystickId(joystickId), axis(axis), position(position) {}
 	SFEvent(bool pressed, sf::Mouse::Button mouse_button, sf::Vector2i mouse_position) : type(pressed ? EVENT_MOUSE_BTN_PRESSED : EVENT_MOUSE_BTN_RELEASED), mouse_button(mouse_button), mouse_x(mouse_position.x), mouse_y(mouse_position.y) {}
 	SFEvent(sf::Vector2i mouse_position) : type(EVENT_MOUSE_MOVED), mouse_x(mouse_position.x), mouse_y(mouse_position.y) {}
+	SFEvent(sf::Vector2u resized_size) : type(EVENT_RESIZED), width(resized_size.x), height(resized_size.y) {}
 	SFEvent(EventType type) : type(type) {}
 
 	EventType type;
@@ -34,6 +35,8 @@ struct SFEvent {
 	int mouse_y;
 	bool poweroff_cmd;
 	bool is_extra;
+	unsigned int width;
+	unsigned int height;
 };
 
 void joystick_axis_poll(std::queue<SFEvent> &events_queue);

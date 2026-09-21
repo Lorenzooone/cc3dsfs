@@ -30,7 +30,11 @@
 
 #define ANDROID_FIRST_CONNECTION_TIMEOUT 0.5
 
+#ifdef ANDROID_COMPILATION
+#define PERIOD_CONNECTION_TRY_TIMEOUT 2.0
+#else
 #define PERIOD_CONNECTION_TRY_TIMEOUT 0.5
+#endif
 
 struct override_all_data {
 	override_win_data override_top_bot_data;
@@ -882,7 +886,7 @@ static int mainVideoOutputCall(AudioData* audio_data, CaptureData* capture_data,
 
 		bool asked_for_connect = top_screen->open_capture() || bot_screen->open_capture() || joint_screen->open_capture();
 		if(asked_for_connect || should_do_periodic_connection_try(&frontend_data.shared_data, capture_data->status.connected, last_connection_time)) {
-			if(did_first_connection) {
+			if(did_first_connection && (*can_do_output)) {
 				capture_data->status.connected = connect(asked_for_connect, capture_data, &frontend_data, force_cc_disables);
 				if(capture_data->status.connected || asked_for_connect)
 					SuccessConnectionOutTextGenerator(out_text_data, capture_data);

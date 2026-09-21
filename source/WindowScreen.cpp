@@ -1718,10 +1718,28 @@ void WindowScreen::create_window(bool re_prepare_size, bool reset_text) {
 				this->curr_desk_mode = mode_created;
 				success = true;
 			}
+			/*
+			// Test stuff for SFML PR
+			#if defined(ANDROID_COMPILATION)
+			else if(mode_created == sf::VideoMode::getDesktopMode()) {
+				this->curr_desk_mode = sf::VideoMode::getDesktopMode();
+				success = true;
+				this->m_info.failed_fullscreen = true;
+			}
+			#endif
+			*/
 		}
 		if(!success) {
 			this->curr_desk_mode = sf::VideoMode::getDesktopMode();
 			success = this->curr_desk_mode.isValid();
+			/*
+			// Test stuff for SFML PR
+			#if defined(ANDROID_COMPILATION)
+			this->curr_desk_mode = sf::VideoMode::getDesktopMode();
+			success = true;
+			this->m_info.failed_fullscreen = true;
+			#endif
+			*/
 		}
 		#ifdef __APPLE__
 		if(!success) {

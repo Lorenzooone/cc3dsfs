@@ -937,6 +937,32 @@ bool WindowScreen::common_poll(SFEvent &event_data) {
 		case EVENT_JOYSTICK_MOVED:
 			consumed = false;
 			break;
+		case EVENT_RESIZED:
+			if((this->m_info.is_fullscreen) && (this->curr_desk_mode.size.x != event_data.width) && (this->curr_desk_mode.size.y != event_data.height)) {
+				#if defined(ANDROID_COMPILATION)
+				bool was_old_automatic = (this->m_info.fullscreen_mode_width <= 0) || (this->m_info.fullscreen_mode_height <= 0) || (this->m_info.fullscreen_mode_bpp <= 0);
+				this->m_info.fullscreen_mode_width = event_data.width;
+				this->m_info.fullscreen_mode_height = event_data.height;
+				this->m_info.fullscreen_mode_bpp = this->curr_desk_mode.bitsPerPixel;
+				/*
+				// Test stuff for SFML PR
+				this->m_info.fullscreen_mode_width = 0;
+				this->m_info.fullscreen_mode_height = 0;
+				this->m_info.fullscreen_mode_bpp = 0;
+				*/
+				this->create_window(true);
+				if(was_old_automatic) {
+					this->m_info.fullscreen_mode_width = 0;
+					this->m_info.fullscreen_mode_height = 0;
+					this->m_info.fullscreen_mode_bpp = 0;
+				}
+				#else
+				consumed = false;
+				#endif
+			}
+			else
+				consumed = false;
+			break;
 		default:
 			consumed = false;
 			break;
@@ -1128,6 +1154,11 @@ void WindowScreen::setup_resolution_menu(bool reset_data) {
 		return;
 	if(this->curr_menu != RESOLUTION_MENU_TYPE) {
 		this->possible_resolutions.clear();
+		/*
+		#if defined(ANDROID_COMPILATION)
+		this->possible_resolutions.push_back(sf::VideoMode::getDesktopMode());
+		#endif
+		*/
 		std::vector<sf::VideoMode> modes = sf::VideoMode::getFullscreenModes();
 		if(modes.size() > 0) {
 			this->possible_resolutions.push_back(sf::VideoMode({0, 0}, 0));
@@ -2828,6 +2859,9 @@ void WindowScreen::poll_window(bool do_everything) {
 					if(touch_ended->finger < NUM_FINGERS_SUPPORTED)
 						this->is_touch_currently_active[touch_ended->finger] = false;
 				}
+				else if(const auto* resized = event->getIf<sf::Event::Resized>()) {
+					events_queue.emplace(resized->size);
+				}
 			}
 		}
 		if(this->m_win.hasFocus()) {
@@ -2855,13 +2889,19 @@ void WindowScreen::poll_window(bool do_everything) {
 					if(diff.count() > this->touch_long_press_timer) {
 						events_queue.emplace(true, sf::Mouse::Button::Right, touch_pos);
 						this->touch_right_click_action.start_time = std::chrono::high_resolution_clock::now();
+						if(this->curr_menu == DEFAULT_MENU_TYPE)
+							this->can_create_small_touches = false;
 					}
-					const std::chrono::duration<double> difftouch = curr_time - this->last_touch_left_time;
-					if(difftouch.count() > this->touch_short_press_timer) {
-						events_queue.emplace(true, sf::Mouse::Button::Left, touch_pos);
-						this->last_touch_left_time = std::chrono::high_resolution_clock::now();
+					if(this->can_create_small_touches) {
+						const std::chrono::duration<double> difftouch = curr_time - this->last_touch_left_time;
+						if(difftouch.count() > this->touch_short_press_timer) {
+							events_queue.emplace(true, sf::Mouse::Button::Left, touch_pos);
+							this->last_touch_left_time = std::chrono::high_resolution_clock::now();
+						}
 					}
 				}
+				else
+					this->can_create_small_touches = true;
 				if(this->shared_data->input_data.enable_controller_input)
 					joystick_axis_poll(this->events_queue);
 			}
@@ -2869,6 +2909,7 @@ void WindowScreen::poll_window(bool do_everything) {
 				extra_buttons_poll(this->events_queue);
 		}
 		else {
+			this->can_create_small_touches = true;
 			this->reset_held_times();
 			check_held_reset(false, this->touch_right_click_action);
 		}
@@ -2876,6 +2917,7 @@ void WindowScreen::poll_window(bool do_everything) {
 	else {
 		for(int i = 0; i < NUM_FINGERS_SUPPORTED; i++)
 			this->is_touch_currently_active[i] = false;
+		this->can_create_small_touches = true;
 		this->reset_held_times();
 		check_held_reset(false, this->touch_right_click_action);
 	}

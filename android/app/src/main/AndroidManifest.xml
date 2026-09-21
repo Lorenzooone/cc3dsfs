@@ -6,6 +6,7 @@
 
     <application android:label="@string/app_name"
                  android:icon="@drawable/sfml_logo"
+                 android:theme="@style/AppTheme"
                  android:hasCode="false"
                  android:allowBackup="true">
 		<activity android:name="android.app.NativeActivity"

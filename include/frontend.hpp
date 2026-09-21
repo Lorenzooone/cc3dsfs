@@ -170,6 +170,7 @@ private:
 	HeldTime right_click_action;
 	HeldTime controller_button_action;
 	bool consumed_touch_long_press;
+	bool can_create_small_touches = true;
 	bool is_touch_currently_active[NUM_FINGERS_SUPPORTED];
 	sf::Vector2i touch_position[NUM_FINGERS_SUPPORTED];
 	const float touch_short_press_timer = 0.2f;

@@ -51,6 +51,9 @@ sf::VideoMode ResolutionMenu::get_resolution(int index) {
 std::string ResolutionMenu::get_string_option(int index, int action) {
 	sf::VideoMode mode = this->get_resolution(index);
 	if((mode.size.x == 0) && (mode.size.y == 0)) {
+		#if defined(ANDROID_COMPILATION)
+		return "System Preference (Auto Rotate)";
+		#endif
 		return "System Preference (" + std::to_string(this->desktop_resolution.size.x) + " x " + std::to_string(this->desktop_resolution.size.y) + ")";
 	}
 	return std::to_string(mode.size.x) + " x " + std::to_string(mode.size.y);
