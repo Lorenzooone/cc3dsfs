@@ -89,7 +89,9 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: cc3dsfs-single-${{matrix.platform.artifact_name}}
-        path: build/cc3dsfs*.zip
+        path: |
+            build/cc3dsfs*.zip
+            build/cc3dsfs*.tar.gz
         if-no-files-found: error
 
   create_pi_setup:
@@ -143,10 +145,16 @@ jobs:
           cc3dsfs_windows_x86_64.zip
           cc3dsfs_windows_x86_32.zip
           cc3dsfs_linux_x86_32.zip
+          cc3dsfs_linux_x86_32.tar.gz
           cc3dsfs_linux_x86_64.zip
+          cc3dsfs_linux_x86_64.tar.gz
           cc3dsfs_linux_arm32.zip
+          cc3dsfs_linux_arm32.tar.gz
           cc3dsfs_linux_arm64.zip
+          cc3dsfs_linux_arm64.tar.gz
           cc3dsfs_linux_pi32.zip
+          cc3dsfs_linux_pi32.tar.gz
           cc3dsfs_linux_pi64.zip
+          cc3dsfs_linux_pi64.tar.gz
           cc3dsfs_macos.zip
           cc3dsfs_rpi_kiosk_setup.zip
